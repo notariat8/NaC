@@ -60,10 +60,21 @@ class FakeRunner:
     def __init__(self, handler: Callable[[tuple[str, ...]], FakeResult]) -> None:
         self.handler = handler
         self.commands: list[tuple[str, ...]] = []
+        self.bound_commands: list[tuple[tuple[str, ...], dict[str, tuple[Path, str]]]] = []
 
     def run(self, argv: Sequence[str]) -> FakeResult:
         command = tuple(argv)
         self.commands.append(command)
+        return self.handler(command)
+
+    def run_bound(
+        self,
+        argv: Sequence[str],
+        bound_artifacts: dict[str, tuple[Path, str]],
+    ) -> FakeResult:
+        command = tuple(argv)
+        self.commands.append(command)
+        self.bound_commands.append((command, dict(bound_artifacts)))
         return self.handler(command)
 
 
@@ -1439,6 +1450,48 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             )
             self.assertNotIn(("teams", "app", "list"), heads)
             self.assertNotIn(("request",), heads)
+
+    def test_downloaded_teams_package_rejects_extra_files_and_capabilities(self) -> None:
+        cases = (
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID}, {"script.js": b"alert(1)"}),
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID, "permissions": ["identity"]}, {}),
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID, "staticTabs": [{"scopes": ["team"]}]}, {}),
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID, "validDomains": ["evil.example"]}, {}),
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID, "unknownField": "value"}, {}),
+            ({"manifestVersion": "1.17", "version": TEAMS_VERSION, "id": TEAMS_EXTERNAL_ID}, {"a/./b": b"collision"}),
+        )
+        for manifest, extras in cases:
+            with self.subTest(manifest=manifest, extras=extras), tempfile.TemporaryDirectory() as tmp:
+                package_path = Path(tmp) / "teams.zip"
+                with zipfile.ZipFile(package_path, "w") as package:
+                    package.writestr("manifest.json", json.dumps(manifest))
+                    for name, payload in extras.items():
+                        package.writestr(name, payload)
+                with self.assertRaises(DeploymentPlanError):
+                    deployment_module._read_teams_manifest_identity(package_path)
+
+    def test_downloaded_teams_package_is_hash_bound_for_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+            runner = FakeRunner(self._create_handler)
+
+            evidence = run_spfx_site_deployment(plan, runner)
+
+            self.assertEqual(evidence["status"], "PASSED")
+            teams_bindings = [
+                bindings
+                for command, bindings in runner.bound_commands
+                if self._command_head(command) in {
+                    ("teams", "app", "publish"),
+                    ("teams", "app", "update"),
+                }
+            ]
+            self.assertEqual(len(teams_bindings), 1)
+            binding = teams_bindings[0][str(plan.teams_package_path)]
+            self.assertEqual(binding[0], plan.teams_package_path)
+            self.assertEqual(binding[1], deployment_module._sha256(plan.teams_package_path))
 
     def test_submitted_matching_version_stops_with_review_pending_category(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

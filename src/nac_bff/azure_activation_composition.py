@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import signal
@@ -15,6 +15,8 @@ import time
 from typing import Any, Mapping, Protocol
 import urllib.parse
 import urllib.request
+import uuid
+import zipfile
 
 from nac_m365_graph.auth import (
     CertificateClientCredentialsTokenProvider,
@@ -30,6 +32,8 @@ from nac_m365_graph.node_runtime_integrity import (
     MANIFEST_ENV,
     NodeRuntimeIntegrityError,
     build_node_runtime_integrity_payloads,
+    build_node_runtime_manifest,
+    verify_node_runtime_manifest,
 )
 from nac_m365_graph.sealed_toolchain import (
     SealedToolchainError,
@@ -70,6 +74,11 @@ from .azure_activation_runner import (
     ActivationStepError,
     LiveActivationRequest,
 )
+from .approved_git_tree import (
+    ApprovedGitTreeError,
+    ApprovedTreeSnapshot,
+    GitApprovedTreeSource,
+)
 from .azure_activation_attestations import (
     AZURE_CLI_EXECUTION_PATH,
     BUILD_NODE_EXECUTION_PATH,
@@ -99,16 +108,37 @@ from .live_synthetic_workspace import (
 
 
 _LIVE_CONTRACT = Path("workflows/contracts/m365-azure-bff-live-activation.contract.json")
-_BICEP_TEMPLATE = Path("deploy/runtime/azure/nac-bff/infra/main.bicep")
+_BICEP_TEMPLATE = Path("deploy/runtime/azure/nac-bff/infra/compiled/main.json")
 _FUNCTION_BUILD = Path("deploy/runtime/azure/nac-bff/build_package.py")
 _SPFX_ROOT = Path("spfx/nac-bpmn-viewer")
+_SPFX_BUILD_OUTPUT_DIRECTORIES = frozenset(
+    {
+        ".heft",
+        "bin",
+        "coverage",
+        "dist",
+        "jest-output",
+        "lib",
+        "lib-commonjs",
+        "lib-dts",
+        "lib-esm",
+        "logs",
+        "obj",
+        "release",
+        "sharepoint",
+        "solution",
+        "temp",
+    }
+)
 _PREPARED_ROOT = Path("prepared")
 _PREPARED_FUNCTION = _PREPARED_ROOT / "nac-bff-function.zip"
-_PREPARED_BICEP = _PREPARED_ROOT / "main.bicep"
+_PREPARED_BICEP = _PREPARED_ROOT / "main.json"
 _PREPARED_BICEP_PARAMETERS = _PREPARED_ROOT / "main.parameters.json"
 _PREPARED_INPUTS_MANIFEST = _PREPARED_ROOT / "prepared-inputs.redacted.json"
 _PREPARED_SPFX_ROOT = _PREPARED_ROOT / "spfx"
 _PREPARED_SPFX_BUILD_ROOT = _PREPARED_ROOT / "spfx-build"
+_PREPARED_SPFX_REPRO_BUILD_ROOT = _PREPARED_ROOT / "spfx-build-repro"
+_APPROVED_TREE_ROOT = _PREPARED_ROOT / "approved-tree"
 _FUNCTION_URL = f"https://{FUNCTION_APP}.azurewebsites.net"
 _BFF_URL = (
     f"{_FUNCTION_URL}/v1/workspaces/{WORKSPACE_ID}/matters/NAC-SYN-MATTER-001"
@@ -168,6 +198,17 @@ class LocalBuildPort(Protocol):
     def build_spfx(
         self, repo_root: Path, isolated_build_root: Path
     ) -> tuple[str, Path]: ...
+
+
+class ApprovedTreePort(Protocol):
+    def materialize(
+        self,
+        repo_root: Path,
+        target_root: Path,
+        *,
+        approved_commit: str,
+        approved_tree: str,
+    ) -> ApprovedTreeSnapshot: ...
 
 
 class HttpReadinessPort(Protocol):
@@ -398,34 +439,72 @@ class LocalBuildAdapter:
             shutil.copytree(
                 source,
                 build_root,
-                symlinks=False,
+                symlinks=True,
                 ignore=shutil.ignore_patterns(
                     "node_modules",
-                    "lib",
-                    "temp",
-                    "dist",
-                    "coverage",
-                    "sharepoint",
+                    *_SPFX_BUILD_OUTPUT_DIRECTORIES,
+                ),
+            )
+            build_node_runtime_manifest(
+                build_root,
+                excluded_top_level_directories=frozenset(
+                    {"node_modules", *_SPFX_BUILD_OUTPUT_DIRECTORIES}
                 ),
             )
         except OSError:
             raise ActivationStepError("SPFX_ISOLATED_BUILD_COPY_FAILED") from None
         self._run(
-            [str(node), str(npm_cli), "ci", "--ignore-scripts"],
+            [str(node), str(npm_cli), "ci", "--ignore-scripts", "--force"],
             cwd=build_root,
             timeout=600,
             attestations=((node, True, self._node_sha256),),
             node_runtime=(npm_cli.parent.parent, self._npm_cli_sha256),
         )
-        self._run(
-            [str(node), str(npm_cli), "run", "build"],
-            cwd=build_root,
-            timeout=900,
-            attestations=((node, True, self._node_sha256),),
-            node_runtime=(npm_cli.parent.parent, self._npm_cli_sha256),
+        dependencies_root = build_root / "node_modules"
+        heft_entry = dependencies_root / "@rushstack/heft/bin/heft"
+        try:
+            dependencies = build_node_runtime_manifest(
+                build_root,
+                excluded_top_level_directories=_SPFX_BUILD_OUTPUT_DIRECTORIES,
+            )
+        except NodeRuntimeIntegrityError:
+            raise ActivationStepError("SPFX_DEPENDENCY_ATTESTATION_FAILED") from None
+        if heft_entry.relative_to(build_root).as_posix() not in {
+            item.relative_path for item in dependencies.files
+        }:
+            raise ActivationStepError("SPFX_DEPENDENCY_ATTESTATION_FAILED")
+        build_commands = (
+            ("test", "--clean", "--production"),
+            ("package-solution", "--production"),
         )
+        for command in build_commands:
+            self._verify_spfx_dependencies(build_root, dependencies.digest)
+            self._run(
+                [str(node), str(heft_entry), *command],
+                cwd=build_root,
+                timeout=900,
+                attestations=((node, True, self._node_sha256),),
+                node_runtime=(build_root, dependencies.digest),
+                node_runtime_excluded_directories=(
+                    _SPFX_BUILD_OUTPUT_DIRECTORIES
+                ),
+                force_wasi_native_fallback=True,
+            )
+            self._verify_spfx_dependencies(build_root, dependencies.digest)
         package = build_root / PACKAGE_RELATIVE_PATH.relative_to(_SPFX_ROOT)
+        _normalize_zip_archive(package)
         return _sha256_file(package), package
+
+    @staticmethod
+    def _verify_spfx_dependencies(root: Path, expected_digest: str) -> None:
+        try:
+            verify_node_runtime_manifest(
+                root,
+                expected_digest=expected_digest,
+                excluded_top_level_directories=_SPFX_BUILD_OUTPUT_DIRECTORIES,
+            )
+        except NodeRuntimeIntegrityError:
+            raise ActivationStepError("SPFX_DEPENDENCY_ATTESTATION_FAILED") from None
 
     def _resolve_python_toolchain(self) -> Path | None:
         if self._python_binary is None or self._python_sha256 is None:
@@ -476,6 +555,8 @@ class LocalBuildAdapter:
         timeout: int = 300,
         attestations: tuple[tuple[Path, bool, str | None], ...] = (),
         node_runtime: tuple[Path, str | None] | None = None,
+        node_runtime_excluded_directories: frozenset[str] = frozenset(),
+        force_wasi_native_fallback: bool = False,
     ) -> None:
         try:
             with tempfile.TemporaryDirectory(prefix="nac-build-runtime-") as temporary:
@@ -499,6 +580,8 @@ class LocalBuildAdapter:
                     "PATH": "/usr/bin:/bin",
                     "TMPDIR": str(build_tmp),
                 }
+                if force_wasi_native_fallback:
+                    env["NAPI_RS_FORCE_WASI"] = "error"
                 if (
                     any(expected is None for _, _, expected in attestations)
                     or not attestations
@@ -518,6 +601,9 @@ class LocalBuildAdapter:
                     runtime_payloads = build_node_runtime_integrity_payloads(
                         runtime_path,
                         expected_digest=runtime_digest,
+                        excluded_top_level_directories=(
+                            node_runtime_excluded_directories
+                        ),
                     )
                 with sealed_toolchain(executables) as sealed:
                     replacements = {
@@ -554,6 +640,8 @@ class LocalBuildAdapter:
                         ) as runtime_sealed:
                             env[MANIFEST_ENV] = runtime_sealed.paths[0]
                             env["NODE"] = sealed.paths[0]
+                            env["NAC_NODE_RUNTIME_PRELOADER"] = runtime_sealed.paths[1]
+                            env["NAC_NODE_RUNTIME_ESM_LOADER"] = runtime_sealed.paths[2]
                             process_argv = [
                                 sealed.paths[0],
                                 "--preserve-symlinks",
@@ -594,6 +682,112 @@ class LocalBuildAdapter:
             raise ActivationStepError("LOCAL_BUILD_FAILED") from None
         if result.returncode != 0:
             raise ActivationStepError("LOCAL_BUILD_FAILED")
+
+
+
+_SPFX_PACKAGE_GUID_RE = re.compile(
+    rb"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+    re.IGNORECASE,
+)
+
+
+def _normalize_spfx_package_xml_ids(
+    records: list[tuple[str, bool, bytes]],
+) -> list[tuple[str, bool, bytes]]:
+    random_ids: dict[bytes, bytes] = {}
+    for name, is_directory, data in records:
+        if is_directory:
+            continue
+        controlled = name in {
+            "ClientSideAssets.xml",
+            "ClientSideAssets.xml.config.xml",
+        } or (
+            name.startswith("feature_") and name.endswith(".xml.config.xml")
+        )
+        if not controlled:
+            continue
+        matches = _SPFX_PACKAGE_GUID_RE.findall(data)
+        if len(matches) != 1:
+            raise ActivationStepError("SPFX_PACKAGE_XML_ID_INVALID")
+        deterministic = str(
+            uuid.uuid5(uuid.UUID(SOLUTION_PRODUCT_ID), f"nac-sppkg:{name}")
+        ).encode("ascii")
+        random_ids[matches[0].lower()] = deterministic
+    if len(random_ids) != 3:
+        raise ActivationStepError("SPFX_PACKAGE_XML_ID_SET_INVALID")
+
+    normalized: list[tuple[str, bool, bytes]] = []
+    for name, is_directory, data in records:
+        value = data
+        for random_id, deterministic in random_ids.items():
+            value = re.sub(re.escape(random_id), deterministic, value, flags=re.IGNORECASE)
+        normalized.append((name, is_directory, value))
+    return normalized
+
+
+def _normalize_zip_archive(path: Path) -> None:
+    temporary = path.with_name(f".{path.name}.normalized.tmp")
+    try:
+        with zipfile.ZipFile(path, "r") as source:
+            records: list[tuple[str, bool, bytes]] = []
+            seen: set[str] = set()
+            for info in source.infolist():
+                name = info.filename
+                pure = PurePosixPath(name.rstrip("/"))
+                canonical = pure.as_posix()
+                expected_name = canonical + "/" if info.is_dir() else canonical
+                unix_mode = (info.external_attr >> 16) & 0o170000
+                if (
+                    not name
+                    or name.startswith("/")
+                    or "\\" in name
+                    or canonical in {"", "."}
+                    or ".." in pure.parts
+                    or name != expected_name
+                    or canonical in seen
+                    or unix_mode == stat.S_IFLNK
+                    or info.flag_bits & 0x1
+                ):
+                    raise ActivationStepError("SPFX_PACKAGE_ARCHIVE_INVALID")
+                seen.add(canonical)
+                records.append((name, info.is_dir(), b"" if info.is_dir() else source.read(info)))
+        records = _normalize_spfx_package_xml_ids(records)
+        with zipfile.ZipFile(
+            temporary,
+            "x",
+            compression=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+            strict_timestamps=True,
+        ) as target:
+            for name, is_directory, data in sorted(records):
+                normalized_name = name.rstrip("/") + "/" if is_directory else name
+                info = zipfile.ZipInfo(normalized_name, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.create_system = 3
+                info.external_attr = (
+                    (stat.S_IFDIR | 0o755) if is_directory else (stat.S_IFREG | 0o644)
+                ) << 16
+                target.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+        descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    except ActivationStepError:
+        raise
+    except (OSError, zipfile.BadZipFile, KeyError, RuntimeError):
+        raise ActivationStepError("SPFX_PACKAGE_NORMALIZATION_FAILED") from None
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 class HttpReadinessAdapter:
@@ -637,6 +831,7 @@ class AzureBffLiveExecutionPort:
         local_build: LocalBuildPort,
         http_readiness: HttpReadinessPort,
         synthetic: SyntheticWorkspacePort,
+        approved_tree_source: ApprovedTreePort | None = None,
         m365_readback_attempts: int = 5,
         m365_readback_delay_seconds: float = 0.5,
         sleep: Any = time.sleep,
@@ -649,6 +844,7 @@ class AzureBffLiveExecutionPort:
         self._build = local_build
         self._http_readiness = http_readiness
         self._synthetic = synthetic
+        self._approved_tree_source = approved_tree_source
         if m365_readback_attempts < 1 or m365_readback_delay_seconds < 0:
             raise ValueError("invalid M365 readback policy")
         self._m365_readback_attempts = m365_readback_attempts
@@ -662,6 +858,7 @@ class AzureBffLiveExecutionPort:
         self._spfx_package_sha256: str | None = None
         self._bicep_sha256: str | None = None
         self._static_inputs_sha256: str | None = None
+        self._approved_tree_snapshot_sha256: str | None = None
         self._bicep_parameters_sha256: str | None = None
         self._prepared_inputs_sha256: str | None = None
         self._prepared_inputs_manifest_sha256: str | None = None
@@ -1071,31 +1268,71 @@ class AzureBffLiveExecutionPort:
             raise ActivationStepError("PREPARED_ARTIFACT_SCOPE_INVALID")
         prepared.mkdir(parents=True, exist_ok=True, mode=0o700)
 
+        build_repo_root = self._repo_root
+        if self._approved_tree_source is not None:
+            try:
+                snapshot = self._approved_tree_source.materialize(
+                    self._repo_root,
+                    run_dir / _APPROVED_TREE_ROOT,
+                    approved_commit=context.approved_commit,
+                    approved_tree=context.approved_tree,
+                )
+            except ApprovedGitTreeError as exc:
+                raise ActivationStepError(str(exc)) from None
+            build_repo_root = snapshot.root
+            self._approved_tree_snapshot_sha256 = snapshot.manifest_sha256
+
         function_path = (run_dir / _PREPARED_FUNCTION).resolve()
         function_digest = self._build.build_function_package(
-            self._repo_root, function_path
+            build_repo_root, function_path
         )
         _require_digest(function_digest, function_path)
 
         spfx_build_root = (run_dir / _PREPARED_SPFX_BUILD_ROOT).resolve()
         spfx_digest, built_package = self._build.build_spfx(
-            self._repo_root, spfx_build_root
+            build_repo_root, spfx_build_root
         )
         if spfx_build_root not in built_package.resolve().parents:
             raise ActivationStepError("SPFX_ISOLATED_BUILD_SCOPE_INVALID")
         _require_digest(spfx_digest, built_package)
+        if self._approved_tree_source is not None:
+            repro_build_root = (
+                run_dir / _PREPARED_SPFX_REPRO_BUILD_ROOT
+            ).resolve()
+            repro_digest, repro_package = self._build.build_spfx(
+                build_repo_root, repro_build_root
+            )
+            if repro_build_root not in repro_package.resolve().parents:
+                raise ActivationStepError("SPFX_ISOLATED_BUILD_SCOPE_INVALID")
+            _require_digest(repro_digest, repro_package)
+            if repro_digest != spfx_digest:
+                raise ActivationStepError("SPFX_REPRODUCIBILITY_FAILED")
         spfx_root = (run_dir / _PREPARED_SPFX_ROOT).resolve()
         package_path = spfx_root / PACKAGE_RELATIVE_PATH
-        _copy_snapshot(built_package, package_path)
+        _copy_snapshot(
+            built_package,
+            package_path,
+            expected_sha256=spfx_digest,
+        )
         build_config = (
             spfx_build_root / PACKAGE_CONFIG_RELATIVE_PATH.relative_to(_SPFX_ROOT)
         )
-        _copy_snapshot(build_config, spfx_root / PACKAGE_CONFIG_RELATIVE_PATH)
+        build_config_digest = _stable_file_sha256(build_config)
+        _copy_snapshot(
+            build_config,
+            spfx_root / PACKAGE_CONFIG_RELATIVE_PATH,
+            expected_sha256=build_config_digest,
+        )
         _require_digest(spfx_digest, package_path)
 
         bicep_path = (run_dir / _PREPARED_BICEP).resolve()
-        _copy_snapshot(self._repo_root / _BICEP_TEMPLATE, bicep_path)
-        bicep_digest = _sha256_file(bicep_path)
+        bicep_source = build_repo_root / _BICEP_TEMPLATE
+        bicep_digest = _stable_file_sha256(bicep_source)
+        _copy_snapshot(
+            bicep_source,
+            bicep_path,
+            expected_sha256=bicep_digest,
+        )
 
         self._function_package_path = function_path
         self._function_package_sha256 = function_digest
@@ -1135,6 +1372,7 @@ class AzureBffLiveExecutionPort:
             "approved_commit_sha": context.approved_commit,
             "approved_tree_sha": context.approved_tree,
             "activation_hash": context.activation_hash,
+            "approved_tree_snapshot_sha256": self._approved_tree_snapshot_sha256,
             "bicep_snapshot_sha256": self._bicep_sha256,
             "bicep_parameters_snapshot_sha256": parameters_digest,
             "function_package_sha256": self._function_package_sha256,
@@ -1159,6 +1397,7 @@ class AzureBffLiveExecutionPort:
             "approved_commit_sha": context.approved_commit,
             "approved_tree_sha": context.approved_tree,
             "activation_hash": context.activation_hash,
+            "approved_tree_snapshot_sha256": self._approved_tree_snapshot_sha256,
             "bicep_snapshot_sha256": self._bicep_sha256,
             "function_package_sha256": self._function_package_sha256,
             "spfx_package_sha256": self._spfx_package_sha256,
@@ -1293,7 +1532,7 @@ class AzureBffLiveExecutionPort:
             self._bicep_parameters_sha256,
             "BICEP_PARAMETERS_SNAPSHOT_MISSING",
         )
-        result = self._azure_json(
+        result = self._azure_json_bound(
             [
                 "deployment",
                 "group",
@@ -1308,7 +1547,14 @@ class AzureBffLiveExecutionPort:
                 f"@{parameters}",
                 "--mode",
                 "Incremental",
-            ]
+            ],
+            {
+                str(bicep): (bicep, str(self._bicep_sha256)),
+                str(parameters): (
+                    parameters,
+                    str(self._bicep_parameters_sha256),
+                ),
+            },
         )
         self._validate_deployment_readback(result, require_current_binding=False)
         properties = result["properties"]
@@ -1386,7 +1632,7 @@ class AzureBffLiveExecutionPort:
             self._function_package_sha256,
             "FUNCTION_PACKAGE_NOT_PREPARED",
         )
-        self._azure_json(
+        self._azure_json_bound(
             [
                 "functionapp",
                 "deployment",
@@ -1400,7 +1646,13 @@ class AzureBffLiveExecutionPort:
                 str(package),
                 "--build-remote",
                 "true",
-            ]
+            ],
+            {
+                str(package): (
+                    package,
+                    str(self._function_package_sha256),
+                )
+            },
         )
         self._http_readiness.wait_for_status(f"{_FUNCTION_URL}/healthz", 200)
         self._function_deployment_input_sha256 = self._function_package_sha256
@@ -1431,7 +1683,16 @@ class AzureBffLiveExecutionPort:
         )
         if self._spfx_plan is None:
             raise ActivationStepError("SPFX_PLAN_NOT_PREPARED")
-        evidence = run_spfx_site_deployment(self._spfx_plan, self._m365)
+        evidence = run_spfx_site_deployment(
+            self._spfx_plan,
+            self._m365,
+            bound_artifacts={
+                str(self._spfx_package_path): (
+                    self._spfx_package_path,
+                    str(self._spfx_package_sha256),
+                )
+            },
+        )
         package_evidence = evidence.get("package")
         if (
             evidence.get("status") != "PASSED"
@@ -1827,6 +2088,7 @@ class AzureBffLiveExecutionPort:
             "approved_commit_sha",
             "approved_tree_sha",
             "activation_hash",
+            "approved_tree_snapshot_sha256",
             "bicep_snapshot_sha256",
             "bicep_parameters_snapshot_sha256",
             "function_package_sha256",
@@ -1845,6 +2107,7 @@ class AzureBffLiveExecutionPort:
             "approved_commit_sha": context.approved_commit,
             "approved_tree_sha": context.approved_tree,
             "activation_hash": context.activation_hash,
+            "approved_tree_snapshot_sha256": self._approved_tree_snapshot_sha256,
             "bicep_snapshot_sha256": self._bicep_sha256,
             "bicep_parameters_snapshot_sha256": self._bicep_parameters_sha256,
             "function_package_sha256": self._function_package_sha256,
@@ -1884,6 +2147,22 @@ class AzureBffLiveExecutionPort:
         data = result.get("data")
         if result.get("ok") is not True or not isinstance(data, dict):
             raise ActivationStepError(str(result.get("code") or "AZURE_CLI_COMMAND_FAILED"))
+        return data
+
+    def _azure_json_bound(
+        self,
+        argv: list[str],
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+    ) -> dict[str, Any]:
+        run_bound = getattr(self._azure, "run_bound", None)
+        if not callable(run_bound):
+            raise ActivationStepError("AZURE_CLI_ARTIFACT_BINDING_UNAVAILABLE")
+        result = run_bound(argv, bound_artifacts)
+        data = result.get("data")
+        if result.get("ok") is not True or not isinstance(data, dict):
+            raise ActivationStepError(
+                str(result.get("code") or "AZURE_CLI_COMMAND_FAILED")
+            )
         return data
 
     def _m365_json(self, argv: tuple[str, ...]) -> Any:
@@ -2048,6 +2327,7 @@ def build_live_activation_execution_port(
         ),
         http_readiness=HttpReadinessAdapter(),
         synthetic=LiveSyntheticWorkspaceManager(graph),
+        approved_tree_source=GitApprovedTreeSource(),
     )
 
 
@@ -2734,20 +3014,106 @@ def _field(row: Mapping[str, Any], *names: str) -> Any:
     return None
 
 
-def _copy_snapshot(source: Path, destination: Path) -> None:
+def _stable_file_bytes(source: Path) -> bytes:
+    descriptor = -1
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+    )
     try:
-        if source.is_symlink() or not source.is_file() or destination.exists():
+        named_before = source.lstat()
+        descriptor = os.open(source, flags)
+        before = os.fstat(descriptor)
+        if (
+            stat.S_ISLNK(named_before.st_mode)
+            or not stat.S_ISREG(before.st_mode)
+            or before.st_uid not in {0, os.geteuid()}
+            or before.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            or (before.st_dev, before.st_ino)
+            != (named_before.st_dev, named_before.st_ino)
+        ):
             raise OSError
-        destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        shutil.copyfile(source, destination)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        named_after = source.lstat()
+        signature = lambda value: (
+            value.st_dev,
+            value.st_ino,
+            value.st_mode,
+            value.st_uid,
+            value.st_gid,
+            value.st_size,
+            value.st_mtime_ns,
+            value.st_ctime_ns,
+        )
+        if (
+            signature(before) != signature(after)
+            or signature(after) != signature(named_after)
+        ):
+            raise OSError
+        return b"".join(chunks)
     except OSError:
         raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED") from None
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def _stable_file_sha256(source: Path) -> str:
+    return hashlib.sha256(_stable_file_bytes(source)).hexdigest()
+
+
+def _copy_snapshot(
+    source: Path,
+    destination: Path,
+    *,
+    expected_sha256: str,
+) -> None:
+    if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
+        raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED")
+    payload = _stable_file_bytes(source)
+    if hashlib.sha256(payload).hexdigest() != expected_sha256:
+        raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
+    descriptor = -1
+    try:
+        if destination.exists() or destination.is_symlink():
+            raise OSError
+        destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        descriptor = os.open(
+            destination,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0),
+            0o600,
+        )
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError
+            view = view[written:]
+        os.fsync(descriptor)
+        os.fchmod(descriptor, 0o400)
+    except OSError:
+        raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED") from None
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    _require_digest(expected_sha256, destination)
 
 
 def _require_digest(expected: str, path: Path) -> None:
     if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
         raise ActivationStepError("BUILD_ARTIFACT_HASH_INVALID")
-    if _sha256_file(path) != expected:
+    if _stable_file_sha256(path) != expected:
         raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
 
 

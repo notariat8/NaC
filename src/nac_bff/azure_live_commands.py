@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
 import hashlib
 import json
 import math
@@ -12,10 +13,20 @@ from dataclasses import dataclass
 from typing import Callable, Mapping, Sequence
 
 from nac_bff.azure_activation import FUNCTION_APP, LOCATION, RESOURCE_GROUP
+from nac_bff.azure_cli_sealed_runtime import (
+    SealedAzureCliRuntime,
+    prepare_sealed_azure_cli_runtime,
+    sealed_runtime_failure_code,
+)
+from nac_m365_graph.sealed_toolchain import (
+    SealedToolchainError,
+    sealed_artifacts,
+)
 
 
 EXPECTED_TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
 EXPECTED_SUBSCRIPTION_ID = "37cd9645-6cb9-4278-88ee-e80377cd951c"
+EXPECTED_CLOUD_NAME = "AzureCloud"
 AZURE_CLI_TOOLCHAIN_SHA256_ENV = "NAC_AZURE_CLI_EXPECTED_TOOLCHAIN_SHA256"
 # Compatibility symbol for callers importing the former constant. The value now
 # names the full toolchain attestation, never a wrapper-only digest.
@@ -58,8 +69,6 @@ _ENV_ALLOWLIST = frozenset(
         "LANG",
         "LC_ALL",
         "PATH",
-        "REQUESTS_CA_BUNDLE",
-        "SSL_CERT_FILE",
         "TMPDIR",
     }
 )
@@ -94,6 +103,20 @@ class AzureCliAdapter:
             expected_binary_sha256=self._expected_binary_sha256,
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
+        )
+
+    def run_bound(
+        self,
+        argv: object,
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+    ) -> dict[str, object]:
+        return run_azure_cli(
+            argv,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=self._timeout_seconds,
+            bound_artifacts=bound_artifacts,
         )
 
     def check_readiness(self) -> dict[str, object]:
@@ -140,6 +163,7 @@ def build_azure_cli_env(
         for key, value in source.items()
         if key in _ENV_ALLOWLIST and isinstance(value, str) and value
     }
+    child["PATH"] = "/usr/bin:/bin"
     child["AZURE_CORE_COLLECT_TELEMETRY"] = "0"
     child["AZURE_CORE_NO_COLOR"] = "true"
     child["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -155,6 +179,7 @@ def run_azure_cli(
     expected_binary_sha256: str | None = None,
     environ: Mapping[str, str] | None = None,
     timeout_seconds: float = 120,
+    bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
 ) -> dict[str, object]:
     """Run one allowlisted Azure CLI command and return parsed JSON only."""
 
@@ -164,6 +189,28 @@ def run_azure_cli(
             ok=False,
             code=validation_code,
             command=None,
+        )
+
+    bindings = tuple((bound_artifacts or {}).items())
+    if any(
+        sum(
+            token == argument or token == f"@{argument}"
+            for token in command
+        ) != 1
+        for argument, _ in bindings
+    ):
+        return _command_result(
+            ok=False,
+            code="AZURE_CLI_ARTIFACT_BINDING_INVALID",
+            command=family,
+        )
+
+    cloud_config_code = _azure_cloud_config_boundary(environ)
+    if cloud_config_code is not None:
+        return _command_result(
+            ok=False,
+            code=cloud_config_code,
+            command=family,
         )
 
     resolved_binary, binary_code = _resolve_azure_cli_binary(
@@ -188,13 +235,13 @@ def run_azure_cli(
             command=family,
         )
 
-    process_argv = [str(resolved_binary), *command]
+    azure_argv = [*command]
     if family != _ACCOUNT_SHOW and not any(
         token == "--subscription" or token.startswith("--subscription=")
         for token in command
     ):
-        process_argv.extend(["--subscription", EXPECTED_SUBSCRIPTION_ID])
-    process_argv.extend(["--output", "json", "--only-show-errors"])
+        azure_argv.extend(["--subscription", EXPECTED_SUBSCRIPTION_ID])
+    azure_argv.extend(["--output", "json", "--only-show-errors"])
 
     # Resolve performs the preflight attestation. Re-attest immediately before
     # process creation so wrapper, interpreter, venv and packages cannot change
@@ -214,16 +261,61 @@ def run_azure_cli(
             command=family,
         )
 
+    runtime = _prepare_bound_runtime(
+        resolved_binary,
+        expected_sha256=expected_attestation,
+    )
+    if runtime is None:
+        return _command_result(
+            ok=False,
+            code="AZURE_CLI_RUNTIME_BINDING_FAILED",
+            command=family,
+        )
+
     try:
-        completed = subprocess.run(
-            process_argv,
-            check=False,
-            capture_output=True,
-            text=True,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            timeout=timeout_seconds,
-            env=build_azure_cli_env(environ),
+        with ExitStack() as stack:
+            stack.enter_context(runtime)
+            artifact_sealed = stack.enter_context(
+                sealed_artifacts(
+                    tuple(
+                        (path, expected_sha256)
+                        for _, (path, expected_sha256) in bindings
+                    )
+                )
+            ) if bindings else None
+            replacements = {
+                argument: artifact_sealed.paths[index]
+                for index, (argument, _) in enumerate(bindings)
+            } if artifact_sealed is not None else {}
+            bound_argv = [
+                (
+                    f"@{replacements[token[1:]]}"
+                    if token.startswith("@") and token[1:] in replacements
+                    else replacements.get(token, token)
+                )
+                for token in azure_argv
+            ]
+            artifact_fds = (
+                artifact_sealed.pass_fds
+                if artifact_sealed is not None
+                else ()
+            )
+            completed = subprocess.run(
+                runtime.command(bound_argv),
+                check=False,
+                capture_output=True,
+                text=True,
+                shell=False,
+                stdin=subprocess.DEVNULL,
+                timeout=timeout_seconds,
+                env=build_azure_cli_env(environ),
+                pass_fds=runtime.pass_fds + artifact_fds,
+            )
+    except SealedToolchainError:
+        return _command_result(
+            ok=False,
+            code="AZURE_CLI_ARTIFACT_BINDING_FAILED",
+            command=family,
         )
     except subprocess.TimeoutExpired:
         return _command_result(
@@ -239,9 +331,10 @@ def run_azure_cli(
         )
 
     if completed.returncode != 0:
+        runtime_code = sealed_runtime_failure_code(completed.returncode)
         return _command_result(
             ok=False,
-            code="AZURE_CLI_COMMAND_FAILED",
+            code=runtime_code or "AZURE_CLI_COMMAND_FAILED",
             command=family,
             returncode=completed.returncode,
         )
@@ -313,9 +406,12 @@ def check_azure_cli_readiness(
             subscription_ready=False,
         )
 
+    cloud_ready = account.get("environmentName") == EXPECTED_CLOUD_NAME
     tenant_ready = account.get("tenantId") == EXPECTED_TENANT_ID
     subscription_ready = account.get("id") == EXPECTED_SUBSCRIPTION_ID
-    if not tenant_ready:
+    if not cloud_ready:
+        code = "AZURE_CLI_CLOUD_MISMATCH"
+    elif not tenant_ready:
         code = "AZURE_CLI_TENANT_MISMATCH"
     elif not subscription_ready:
         code = "AZURE_CLI_SUBSCRIPTION_MISMATCH"
@@ -325,9 +421,41 @@ def check_azure_cli_readiness(
         code=code,
         binary_ready=True,
         account_ready=True,
+        cloud_ready=cloud_ready,
         tenant_ready=tenant_ready,
         subscription_ready=subscription_ready,
     )
+
+
+def _azure_cloud_config_boundary(
+    environ: Mapping[str, str] | None,
+) -> str | None:
+    source = os.environ if environ is None else environ
+    configured = source.get("AZURE_CONFIG_DIR")
+    if configured:
+        config_root = Path(configured).expanduser()
+    else:
+        home = source.get("HOME")
+        if not home:
+            return "AZURE_CLI_CONFIG_HOME_MISSING"
+        config_root = Path(home).expanduser() / ".azure"
+    if not config_root.is_absolute():
+        return "AZURE_CLI_CONFIG_PATH_INVALID"
+    try:
+        metadata = config_root.lstat()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return "AZURE_CLI_CONFIG_UNTRUSTED"
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        return "AZURE_CLI_CONFIG_UNTRUSTED"
+    try:
+        (config_root / "clouds.config").lstat()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
+    return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -462,7 +590,7 @@ _COMMAND_SCHEMAS = {
         validators={
             "--name": _single_matching(_DEPLOYMENT_NAME_RE),
             "--resource-group": _single_exact(RESOURCE_GROUP),
-            "--template-file": _absolute_file(".bicep", "main.bicep"),
+            "--template-file": _absolute_file(".json", "main.json"),
             "--parameters": _deployment_parameters_file,
             "--mode": _single_exact("Incremental"),
             **_COMMON_VALIDATORS,
@@ -625,6 +753,40 @@ def _executable_path(
     return path, "AZURE_CLI_BINARY_TRUSTED"
 
 
+def _prepare_bound_runtime(
+    path: Path,
+    *,
+    expected_sha256: str | None,
+) -> SealedAzureCliRuntime | None:
+    if expected_sha256 is None or not isinstance(expected_sha256, str):
+        return None
+    normalized = expected_sha256.lower()
+    if re.fullmatch(r"[0-9a-f]{64}", normalized) is None:
+        return None
+    try:
+        metadata = path.lstat()
+    except OSError:
+        return None
+    attestation, _code = _toolchain_attestation(path, metadata)
+    if (
+        attestation is None
+        or attestation.digest != normalized
+        or attestation.interpreter_path is None
+        or attestation.interpreter_digest is None
+        or attestation.package_root is None
+        or attestation.package_digest is None
+        or not attestation.runtime_uids
+    ):
+        return None
+    return prepare_sealed_azure_cli_runtime(
+        package_root=attestation.package_root,
+        package_digest=attestation.package_digest,
+        interpreter_path=attestation.interpreter_path,
+        interpreter_digest=attestation.interpreter_digest,
+        allowed_uids=set(attestation.runtime_uids),
+    )
+
+
 def calculate_azure_cli_toolchain_sha256(
     path: str | os.PathLike[str],
 ) -> str | None:
@@ -649,6 +811,11 @@ def calculate_azure_cli_toolchain_sha256(
 class _ToolchainAttestation:
     digest: str
     requires_expected: bool
+    interpreter_path: Path | None = None
+    interpreter_digest: str | None = None
+    package_root: Path | None = None
+    package_digest: str | None = None
+    runtime_uids: frozenset[int] = frozenset()
 
 
 def _toolchain_attestation(
@@ -669,19 +836,7 @@ def _toolchain_attestation(
     first_line = prefix if newline < 0 else prefix[: newline + 1]
 
     if first_line.startswith(b"\x7fELF"):
-        if metadata.st_uid != 0:
-            return None, "AZURE_CLI_BINARY_UNTRUSTED"
-        digest = _attestation_digest(
-            ("schema", _ATTESTATION_SCHEMA),
-            ("kind", "root-native-elf"),
-            ("path", str(path)),
-            ("mode", oct(stat.S_IMODE(metadata.st_mode))),
-            ("content", content_digest),
-        )
-        return (
-            _ToolchainAttestation(digest=digest, requires_expected=False),
-            "AZURE_CLI_BINARY_TRUSTED",
-        )
+        return None, "AZURE_CLI_BINARY_UNTRUSTED"
 
     if not first_line.startswith(b"#!") or len(first_line) > 4096:
         return None, "AZURE_CLI_BINARY_UNTRUSTED"
@@ -705,6 +860,9 @@ def _toolchain_attestation(
     )
     if interpreter_records is None:
         return None, interpreter_code
+    interpreter_values = dict(interpreter_records)
+    interpreter_path = Path(interpreter_values["interpreter_path"])
+    interpreter_digest = interpreter_values["interpreter_content"]
 
     venv_root = path.parent.parent
     if not _strict_directory(venv_root, allowed_uids={0, metadata.st_uid}):
@@ -771,7 +929,15 @@ def _toolchain_attestation(
         ("wrapper_src_tree", source_digest),
     )
     return (
-        _ToolchainAttestation(digest=digest, requires_expected=True),
+        _ToolchainAttestation(
+            digest=digest,
+            requires_expected=True,
+            interpreter_path=interpreter_path,
+            interpreter_digest=interpreter_digest,
+            package_root=package_root,
+            package_digest=package_digest,
+            runtime_uids=frozenset({0, metadata.st_uid}),
+        ),
         "AZURE_CLI_BINARY_TRUSTED",
     )
 
@@ -1064,12 +1230,14 @@ def _readiness_result(
     code: str,
     binary_ready: bool,
     account_ready: bool,
+    cloud_ready: bool = False,
     tenant_ready: bool,
     subscription_ready: bool,
 ) -> dict[str, object]:
     ready = (
         binary_ready
         and account_ready
+        and cloud_ready
         and tenant_ready
         and subscription_ready
     )
@@ -1078,12 +1246,14 @@ def _readiness_result(
         "ready": ready,
         "code": code,
         "bindings": {
+            "cloud_name": EXPECTED_CLOUD_NAME,
             "tenant_id": EXPECTED_TENANT_ID,
             "subscription_id": EXPECTED_SUBSCRIPTION_ID,
         },
         "checks": [
             {"id": "binary", "status": "READY" if binary_ready else "NOT_READY"},
             {"id": "account", "status": "READY" if account_ready else "NOT_READY"},
+            {"id": "cloud", "status": "READY" if cloud_ready else "NOT_READY"},
             {"id": "tenant", "status": "READY" if tenant_ready else "NOT_READY"},
             {
                 "id": "subscription",

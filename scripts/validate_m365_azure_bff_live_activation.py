@@ -26,6 +26,9 @@ SEALED_TOOLCHAIN_PATH = Path("src/nac_m365_graph/sealed_toolchain.py")
 NODE_RUNTIME_INTEGRITY_PATH = Path(
     "src/nac_m365_graph/node_runtime_integrity.py"
 )
+AZURE_CLI_SEALED_RUNTIME_PATH = Path(
+    "src/nac_bff/azure_cli_sealed_runtime.py"
+)
 BFF_TEST_ENVIRONMENT_PATH = Path("src/nac_bff/test_environment.py")
 README_PATH = Path("workflows/contracts/README.md")
 QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
@@ -75,7 +78,7 @@ SUMMARY_COUNT_FIELDS = [
 ]
 PREPARED_INPUT_FIELDS = [
     "schema_version", "approved_commit_sha", "approved_tree_sha", "activation_hash",
-    "bicep_snapshot_sha256", "bicep_parameters_snapshot_sha256",
+    "approved_tree_snapshot_sha256", "bicep_snapshot_sha256", "bicep_parameters_snapshot_sha256",
     "function_package_sha256", "spfx_package_sha256", "prepared_inputs_sha256",
 ]
 STEP_IDS = [
@@ -233,7 +236,18 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "build_node_runtime_manifest", "build_node_runtime_integrity_payloads",
         "NODE_RUNTIME_MODULE_SHA256_MISMATCH",
         "NODE_RUNTIME_MODULE_NOT_ALLOWED", "NODE_RUNTIME_NATIVE_ADDON_REJECTED",
+        "NODE_RUNTIME_CHILD_LOADER_BINDING_MISSING",
+        "NODE_RUNTIME_NODE_SUBPROCESS_REJECTED", "integrityPromisesReadFile",
+        "integrityCreateReadStream", "NAC_NODE_RUNTIME_PRELOADER",
+        "NAC_NODE_RUNTIME_ESM_LOADER",
         "O_NOFOLLOW", "commonjs_preloader", "esm_loader",
+    ),
+    AZURE_CLI_SEALED_RUNTIME_PATH: (
+        "nac-azure-cli-sealed-runtime-v1", "F_ADD_SEALS", "F_SEAL_WRITE",
+        "clone_newuser", "clone_newns", "ms_remount", "ms_rdonly",
+        "copy_private_azure_config", "validate_private_azure_profile",
+        "azureProfile.json", "clouds.config", "AZURE_CONFIG_DIR",
+        "AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE",
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
         '"status": status_code', '"error": {"code": code}',
@@ -428,6 +442,89 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "runtime_native_node_addons_allowed": False,
                 "runtime_module_symlinks_allowed": False,
                 "linux_memfd_and_proc_fd_required": True,
+                "azure_cli_runtime_bundle_digest_field": (
+                    "azure_cli_toolchain_sha256"
+                ),
+                "azure_cli_runtime_bytes_mode": (
+                    "sealed_interpreter_bootstrap_manifest_plus_verified_"
+                    "private_readonly_mount_namespace_copy"
+                ),
+                "azure_cli_original_wrapper_execution_allowed": False,
+                "azure_cli_private_user_and_mount_namespace_required": True,
+                "azure_cli_namespace_unavailable_behavior": (
+                    "fail_closed_before_provider_request"
+                ),
+                "azure_cli_extension_loading_allowed": False,
+                "azure_cli_extensions_mode": (
+                    "empty_readonly_private_roots_and_dynamic_install_disabled"
+                ),
+                "azure_cli_cloud_name_exact": "AzureCloud",
+                "azure_cli_custom_cloud_config_allowed": False,
+                "azure_cli_config_mode": (
+                    "stable_nofollow_copy_to_private_mount_namespace_tmpfs_plus_"
+                    "per_process_exact_profile_binding"
+                ),
+                "azure_deployment_template_mode": (
+                    "repo_compiled_reproducible_hash_bound_arm_json"
+                ),
+                "azure_bicep_runtime_compilation_allowed": False,
+                "node_child_process_loader_mode": (
+                    "fork_only_immutable_preload_bound_node_manifest_node_"
+                    "options_parent_pid_pinned_sealed_memfd_paths_with_execpath_"
+                    "and_clean_execargv_all_public_and_low_level_spawn_"
+                    "exec_execfile_commonjs_esm_prototype_and_process_binding_"
+                    "variants_rejected"
+                ),
+                "spfx_build_dependency_digest_mode": (
+                    "post_npm_ci_full_input_tree_manifest_excluding_declared_"
+                    "fresh_generated_outputs_verified_before_between_and_after_"
+                    "direct_heft_steps"
+                ),
+                "runtime_manifest_asset_read_mode": (
+                    "manifest_bound_sync_callback_promise_read_stream_and_"
+                    "open_as_blob_assets_per_read_nofollow_fstat_captured_"
+                    "primordials_and_callback_stream_delivery_sha256_external_"
+                    "alias_realpath_inode_"
+                    "classification_descriptor_apis_fail_closed_and_esm_"
+                    "loader_uses_verified_byte_read"
+                ),
+                "node_runtime_extension_mode": (
+                    "pinned_commonjs_load_cache_extensions_resolver_prototype_"
+                    "container_load_require_compile_with_preexecution_module_"
+                    "instance_require_null_prototype_cache_container_pending_active_"
+                    "completed_cache_identity_"
+                    "provenance_canonical_node_builtin_ids_manifest_verified_"
+                    "pirates_only_js_transform_nonreplaceable_cjs_json_"
+                    "native_terminals_and_captured_set_candidate_iteration_"
+                    "stream_listener_push_emit"
+                ),
+                "node_worker_loader_mode": (
+                    "manifest_allowlisted_worker_entry_with_explicit_parent_"
+                    "pid_pinned_sealed_loader_execargv"
+                ),
+                "spfx_native_resolver_mode": (
+                    "exact_pinned_wasm32_wasi_with_force_wasi_and_manifest_"
+                    "verified_wasm_bytes"
+                ),
+                "spfx_generated_output_read_mode": (
+                    "fresh_isolated_clean_declared_outputs_stable_nofollow_"
+                    "reads_symlink_safe_atomic_verified_runtime_asset_copy_"
+                    "native_addons_blocked_and_final_package_sha256"
+                ),
+                "provider_artifact_binding_mode": (
+                    "expected_sha256_pre_and_post_verified_private_readonly_by_default_"
+                    "filename_preserving_snapshot_via_inherited_directory_fd_"
+                    "attested_provider_same_account_attacker_excluded"
+                ),
+                "spfx_package_reproducibility_mode": (
+                    "two_independent_builds_sorted_zip_fixed_metadata_and_solution_"
+                    "uuid5_normalized_generated_xml_ids"
+                ),
+                "teams_package_binding_mode": (
+                    "stable_single_descriptor_bytes_canonical_root_only_zip_exact_"
+                    "capability_free_manifest_allowlist_png_validation_and_post_"
+                    "download_sha256_provider_binding"
+                ),
             }
             if any(
                 toolchain.get(key) != value
@@ -485,6 +582,23 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                       "domain prepared-input manifest fields", errors)
         if len(prepared.get("artifacts_exact", [])) != 4:
             errors.append("domain must bind exactly four prebuilt deployment inputs")
+        if prepared.get("snapshot_copy_mode") != (
+            "exclusive_destination_plus_source_nofollow_stable_fstat_and_"
+            "expected_sha256"
+        ):
+            errors.append("domain prepared-input snapshot copy mode differs")
+        if prepared.get("source_materialization_mode") != (
+            "trusted_git_archive_from_exact_approved_commit_tree_with_ls_tree_"
+            "blob_mode_blob_id_and_per_file_sha256_verification_symlink_gitlink_"
+            "and_traversal_rejected"
+        ):
+            errors.append("domain approved-tree materialization mode differs")
+        if prepared.get("provider_artifact_handoff_mode") != (
+            "private_readonly_by_default_filename_preserving_expected_sha256_"
+            "pre_and_post_verified_snapshot_no_mutable_source_path_attested_"
+            "provider_same_account_attacker_excluded"
+        ):
+            errors.append("domain provider artifact handoff mode differs")
 
     target = domain.get("exact_target")
     if not isinstance(target, dict):

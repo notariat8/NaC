@@ -374,6 +374,7 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
                 "approved_commit_sha": COMMIT,
                 "approved_tree_sha": "0" * 40,
                 "activation_hash": ACTIVATION_HASH,
+                "approved_tree_snapshot_sha256": "1" * 64,
                 "bicep_snapshot_sha256": digests["main.bicep"],
                 "bicep_parameters_snapshot_sha256": digests[
                     "main.parameters.json"
@@ -391,6 +392,7 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
             )
 
             port = object.__new__(AzureBffLiveExecutionPort)
+            port._approved_tree_snapshot_sha256 = "1" * 64
             port._bicep_path = paths["main.bicep"]
             port._bicep_sha256 = digests["main.bicep"]
             port._bicep_parameters_path = paths["main.parameters.json"]

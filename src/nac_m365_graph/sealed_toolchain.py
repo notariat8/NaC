@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import tempfile
 from typing import Iterator, Sequence
 
 
@@ -91,6 +92,95 @@ def sealed_payloads(
             except OSError:
                 pass
 
+
+
+@contextmanager
+def sealed_artifacts(
+    specifications: Sequence[tuple[Path, str]],
+) -> Iterator[SealedToolchain]:
+    """Expose verified payload copies under their original file names.
+
+    Some provider CLIs resolve input paths or derive upload names from their
+    basename. A sealed memfd cannot satisfy that contract, so artifact inputs
+    use a private, read-only-by-default directory inherited by the attested
+    provider process. Mode and SHA-256 are verified again after provider use.
+    """
+
+    names = [Path(path).name for path, _ in specifications]
+    if (
+        len(names) != len(set(names))
+        or any(not name or name in {".", ".."} for name in names)
+        or not Path("/proc/self/fd").is_dir()
+    ):
+        raise SealedToolchainError("SEALED_ARTIFACT_NAMES_INVALID")
+
+    directory_fd = -1
+    try:
+        with tempfile.TemporaryDirectory(prefix="nac-sealed-artifacts-") as temporary:
+            root = Path(temporary)
+            os.chmod(root, 0o700)
+            for path, expected_sha256 in specifications:
+                payload = _read_verified_bytes(
+                    Path(path),
+                    executable=False,
+                    expected_sha256=expected_sha256,
+                )
+                destination = root / Path(path).name
+                descriptor = os.open(
+                    destination,
+                    os.O_WRONLY
+                    | os.O_CREAT
+                    | os.O_EXCL
+                    | getattr(os, "O_NOFOLLOW", 0)
+                    | getattr(os, "O_CLOEXEC", 0),
+                    0o400,
+                )
+                try:
+                    _write_all(descriptor, payload)
+                    os.fsync(descriptor)
+                    os.fchmod(descriptor, 0o400)
+                finally:
+                    os.close(descriptor)
+            os.chmod(root, 0o500)
+            directory_fd = os.open(
+                root,
+                os.O_RDONLY
+                | getattr(os, "O_DIRECTORY", 0)
+                | getattr(os, "O_CLOEXEC", 0),
+            )
+            try:
+                yield SealedToolchain(
+                    paths=tuple(
+                        f"/proc/self/fd/{directory_fd}/{name}" for name in names
+                    ),
+                    pass_fds=(directory_fd,),
+                )
+            finally:
+                for path, expected_sha256 in specifications:
+                    destination = root / Path(path).name
+                    metadata = destination.lstat()
+                    if (
+                        not stat.S_ISREG(metadata.st_mode)
+                        or stat.S_IMODE(metadata.st_mode) != 0o400
+                    ):
+                        raise SealedToolchainError(
+                            "SEALED_ARTIFACT_POST_USE_MODE_MISMATCH"
+                        )
+                    _read_verified_bytes(
+                        destination,
+                        executable=False,
+                        expected_sha256=expected_sha256,
+                    )
+    except SealedToolchainError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise SealedToolchainError("SEALED_ARTIFACT_BINDING_FAILED") from exc
+    finally:
+        if directory_fd >= 0:
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
 
 def _sealed_snapshot(
     path: Path,

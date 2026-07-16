@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import os
 import re
+import stat
 import time
 import xml.etree.ElementTree as ET
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Protocol, Sequence
+from pathlib import Path, PurePosixPath
+from typing import Any, Mapping, Protocol, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -54,6 +57,43 @@ _GUID_RE = re.compile(
 _TEAMS_VERSION_RE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
+_TEAMS_MANIFEST_VERSION_RE = re.compile(r"^1[.][0-9]{1,2}$")
+_ALLOWED_TEAMS_ARCHIVE_ENTRIES = frozenset(
+    {"manifest.json", "color.png", "outline.png"}
+)
+_FORBIDDEN_TEAMS_CAPABILITY_FIELDS = frozenset(
+    {
+        "authorization",
+        "permissions",
+        "devicePermissions",
+        "bots",
+        "composeExtensions",
+        "connectors",
+        "activities",
+        "meetingExtensionDefinition",
+        "staticTabs",
+        "configurableTabs",
+        "webApplicationInfo",
+        "validDomains",
+    }
+)
+_ALLOWED_TEAMS_MANIFEST_FIELDS = frozenset(
+    {
+        "$schema",
+        "manifestVersion",
+        "version",
+        "id",
+        "packageName",
+        "developer",
+        "name",
+        "description",
+        "icons",
+        "accentColor",
+        "localizationInfo",
+    }
+)
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+_MAX_TEAMS_PACKAGE_BYTES = 5 * 1024 * 1024
 _ALLOWED_COMMAND_PREFIXES = {
     ("spo", "app", "list"),
     ("spo", "app", "add"),
@@ -296,6 +336,7 @@ def run_spfx_site_deployment(
     command_runner: ControlPlaneCommandRunner,
     *,
     readback_policy: ReadbackPolicy = DEFAULT_READBACK_POLICY,
+    bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
 ) -> dict[str, Any]:
     evidence = _new_evidence(plan)
     try:
@@ -310,6 +351,7 @@ def run_spfx_site_deployment(
     evidence["steps"].append({"name": "verify_package_sha256", "status": "PASSED"})
 
     command_count = 0
+    runtime_bound_artifacts = dict(bound_artifacts or {})
     allowed_teams_catalog_detail_id: str | None = None
     allowed_teams_manifest_app_id: str | None = None
 
@@ -329,7 +371,18 @@ def run_spfx_site_deployment(
         )
         command_count += 1
         try:
-            result = command_runner.run(command)
+            command_bindings = {
+                argument: binding
+                for argument, binding in runtime_bound_artifacts.items()
+                if command.count(argument) == 1
+            }
+            if command_bindings:
+                run_bound = getattr(command_runner, "run_bound", None)
+                if not callable(run_bound):
+                    raise _StepFailure(step, "sealed_artifact_runner_required")
+                result = run_bound(command, command_bindings)
+            else:
+                result = command_runner.run(command)
             returncode = int(result.returncode)
             stdout = result.stdout if isinstance(result.stdout, str) else ""
             stderr = result.stderr if isinstance(result.stderr, str) else ""
@@ -676,8 +729,14 @@ def run_spfx_site_deployment(
                 ),
             )
             passed("download_teams_package", "update")
-            teams_manifest_app_id, teams_manifest_version = _read_teams_manifest_identity(
-                plan.teams_package_path
+            (
+                teams_manifest_app_id,
+                teams_manifest_version,
+                teams_package_sha256,
+            ) = _read_teams_manifest_identity(plan.teams_package_path)
+            runtime_bound_artifacts[str(plan.teams_package_path)] = (
+                plan.teams_package_path,
+                teams_package_sha256,
             )
             allowed_teams_manifest_app_id = teams_manifest_app_id
             teams_installed_apps_url = _teams_installed_apps_url(teams_manifest_app_id)
@@ -1491,10 +1550,40 @@ def _has_installed_teams_app(
     return len(matches) == 1
 
 
-def _read_teams_manifest_identity(path: Path) -> tuple[str, str]:
+def _read_teams_manifest_identity(path: Path) -> tuple[str, str, str]:
     try:
-        with zipfile.ZipFile(path) as package:
-            payload = json.loads(package.read("manifest.json").decode("utf-8"))
+        package_bytes = _stable_teams_package_bytes(path)
+        with zipfile.ZipFile(io.BytesIO(package_bytes)) as package:
+            records: dict[str, bytes] = {}
+            canonical_names: set[str] = set()
+            for info in package.infolist():
+                name = info.filename
+                canonical = PurePosixPath(name).as_posix()
+                unix_mode = (info.external_attr >> 16) & 0o170000
+                if (
+                    not name
+                    or name.startswith("/")
+                    or "\\" in name
+                    or canonical != name
+                    or canonical in canonical_names
+                    or canonical not in _ALLOWED_TEAMS_ARCHIVE_ENTRIES
+                    or info.is_dir()
+                    or info.flag_bits & 0x1
+                    or unix_mode == stat.S_IFLNK
+                    or info.file_size > _MAX_TEAMS_PACKAGE_BYTES
+                ):
+                    raise DeploymentPlanError(
+                        "downloaded Teams package archive is invalid"
+                    )
+                canonical_names.add(canonical)
+                records[canonical] = package.read(info)
+            if "manifest.json" not in records:
+                raise DeploymentPlanError(
+                    "downloaded Teams package is missing a valid manifest"
+                )
+            payload = json.loads(records["manifest.json"].decode("utf-8"))
+    except DeploymentPlanError:
+        raise
     except (
         OSError,
         zipfile.BadZipFile,
@@ -1502,16 +1591,110 @@ def _read_teams_manifest_identity(path: Path) -> tuple[str, str]:
         UnicodeDecodeError,
         json.JSONDecodeError,
     ) as exc:
-        raise DeploymentPlanError("downloaded Teams package is missing a valid manifest") from exc
+        raise DeploymentPlanError(
+            "downloaded Teams package is missing a valid manifest"
+        ) from exc
     if not isinstance(payload, dict):
         raise DeploymentPlanError("downloaded Teams manifest must be an object")
     app_id = payload.get("id")
     version = payload.get("version")
+    manifest_version = payload.get("manifestVersion")
     if not isinstance(app_id, str) or not _GUID_RE.fullmatch(app_id):
         raise DeploymentPlanError("downloaded Teams manifest app id is invalid")
     if not isinstance(version, str) or not _TEAMS_VERSION_RE.fullmatch(version):
         raise DeploymentPlanError("downloaded Teams manifest version is invalid")
-    return app_id.lower(), version
+    if (
+        not isinstance(manifest_version, str)
+        or not _TEAMS_MANIFEST_VERSION_RE.fullmatch(manifest_version)
+    ):
+        raise DeploymentPlanError("downloaded Teams manifestVersion is invalid")
+    if (
+        not set(payload).issubset(_ALLOWED_TEAMS_MANIFEST_FIELDS)
+        or any(
+            field in payload and payload.get(field) not in (None, [], {}, "")
+            for field in _FORBIDDEN_TEAMS_CAPABILITY_FIELDS
+        )
+    ):
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+    icons = payload.get("icons")
+    if icons is not None:
+        if (
+            not isinstance(icons, dict)
+            or set(icons) != {"color", "outline"}
+            or icons.get("color") != "color.png"
+            or icons.get("outline") != "outline.png"
+        ):
+            raise DeploymentPlanError("downloaded Teams manifest icons are invalid")
+        for icon_name in ("color.png", "outline.png"):
+            if not records.get(icon_name, b"").startswith(_PNG_SIGNATURE):
+                raise DeploymentPlanError("downloaded Teams package icon is invalid")
+    elif any(name != "manifest.json" for name in records):
+        raise DeploymentPlanError("downloaded Teams package has unreferenced icons")
+    return app_id.lower(), version, hashlib.sha256(package_bytes).hexdigest()
+
+
+def _stable_teams_package_bytes(path: Path) -> bytes:
+    descriptor = -1
+    try:
+        named_before = path.lstat()
+        descriptor = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0),
+        )
+        opened = os.fstat(descriptor)
+        identity = (
+            opened.st_dev, opened.st_ino, opened.st_mode, opened.st_size,
+            opened.st_mtime_ns, opened.st_ctime_ns,
+        )
+        if (
+            stat.S_ISLNK(named_before.st_mode)
+            or not stat.S_ISREG(opened.st_mode)
+            or (named_before.st_dev, named_before.st_ino)
+            != (opened.st_dev, opened.st_ino)
+            or opened.st_size < 1
+            or opened.st_size > _MAX_TEAMS_PACKAGE_BYTES
+        ):
+            raise DeploymentPlanError(
+                "downloaded Teams package must be one stable regular file"
+            )
+        chunks: list[bytes] = []
+        remaining = opened.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise DeploymentPlanError(
+                    "downloaded Teams package changed while reading"
+                )
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        final = os.fstat(descriptor)
+        named_after = path.lstat()
+        final_identity = (
+            final.st_dev, final.st_ino, final.st_mode, final.st_size,
+            final.st_mtime_ns, final.st_ctime_ns,
+        )
+        named_identity = (
+            named_after.st_dev, named_after.st_ino, named_after.st_mode,
+            named_after.st_size, named_after.st_mtime_ns, named_after.st_ctime_ns,
+        )
+        if identity != final_identity or final_identity != named_identity:
+            raise DeploymentPlanError(
+                "downloaded Teams package changed while reading"
+            )
+        return b"".join(chunks)
+    except DeploymentPlanError:
+        raise
+    except OSError as exc:
+        raise DeploymentPlanError(
+            "downloaded Teams package stable read failed"
+        ) from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
 
 
 def _page_exists(payload: Any) -> bool:

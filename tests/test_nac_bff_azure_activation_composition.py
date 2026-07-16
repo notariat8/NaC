@@ -5,9 +5,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import shutil
 from types import SimpleNamespace
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 from nac_bff.azure_activation import (
@@ -26,7 +28,9 @@ from nac_bff.azure_activation_composition import (
     HttpReadinessAdapter,
     LocalBuildAdapter,
     _bound_provisioner_token_provider,
+    _copy_snapshot,
     _deployment_name,
+    _normalize_zip_archive,
     build_live_activation_execution_port,
     inspect_entra_api_application_prewrite,
 )
@@ -332,10 +336,15 @@ class _FakeAzure:
         self.group_exists_result: dict | None = None
         self.resources: list[dict] = []
         self.deployment: dict | None = None
+        self.bound_artifacts = []
         self.failure: dict | None = None
 
     def check_readiness(self):
         return dict(self.ready)
+
+    def run_bound(self, argv, bound_artifacts):
+        self.bound_artifacts.append(dict(bound_artifacts))
+        return self.run(argv)
 
     def run(self, argv):
         validated, family, validation_code = _validated_command(argv)
@@ -434,10 +443,15 @@ class _FakeM365:
         self.installed_apps: dict = {"value": []}
         self.command_failure: tuple[int, str, str] | None = None
         self.allow_tampered = False
+        self.bound_artifacts = []
         self.invalid_bff_payload = False
 
     def check_readiness(self):
         return self.ready
+
+    def run_bound(self, argv, bound_artifacts):
+        self.bound_artifacts.append(dict(bound_artifacts))
+        return self.run(argv)
 
     def run(self, argv):
         command = tuple(argv)
@@ -869,6 +883,91 @@ class GraphPrewriteCompositionTests(unittest.TestCase):
 
 
 class LocalActivationAdapterTests(unittest.TestCase):
+    def test_snapshot_rejects_symlink_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "target.bin"
+            target.write_bytes(b"trusted")
+            source = root / "source.bin"
+            source.symlink_to(target)
+            with self.assertRaisesRegex(
+                ActivationStepError,
+                r"^PREPARED_ARTIFACT_SNAPSHOT_FAILED\Z",
+            ):
+                _copy_snapshot(
+                    source,
+                    root / "snapshot.bin",
+                    expected_sha256=hashlib.sha256(b"trusted").hexdigest(),
+                )
+
+    def test_spfx_zip_normalization_is_reproducible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = root / "first.sppkg"
+            second = root / "second.sppkg"
+            controlled_names = (
+                "ClientSideAssets.xml",
+                "ClientSideAssets.xml.config.xml",
+                "feature_ea9917ea-2860-45fb-89bd-121120178be3.xml.config.xml",
+            )
+            with zipfile.ZipFile(first, "w") as archive:
+                info = zipfile.ZipInfo("b.txt", date_time=(2026, 7, 15, 10, 0, 0))
+                archive.writestr(info, b"b")
+                archive.writestr("a.txt", b"a")
+                for index, name in enumerate(controlled_names, start=1):
+                    archive.writestr(
+                        name,
+                        f"<Id>00000000-0000-4000-8000-{index:012d}</Id>",
+                    )
+            with zipfile.ZipFile(second, "w") as archive:
+                info = zipfile.ZipInfo("a.txt", date_time=(2025, 1, 2, 3, 4, 6))
+                archive.writestr(info, b"a")
+                archive.writestr("b.txt", b"b")
+                for index, name in enumerate(controlled_names, start=4):
+                    archive.writestr(
+                        name,
+                        f"<Id>11111111-1111-4111-8111-{index:012d}</Id>",
+                    )
+
+            _normalize_zip_archive(first)
+            _normalize_zip_archive(second)
+
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            self.assertEqual(
+                hashlib.sha256(first.read_bytes()).hexdigest(),
+                hashlib.sha256(second.read_bytes()).hexdigest(),
+            )
+
+    def test_zip_normalization_rejects_noncanonical_and_colliding_names(self) -> None:
+        for names in (("a/./b",), ("a//b",), ("a/b", "a/./b")):
+            with self.subTest(names=names), tempfile.TemporaryDirectory() as temporary:
+                package = Path(temporary) / "unsafe.sppkg"
+                with zipfile.ZipFile(package, "w") as archive:
+                    for name in names:
+                        archive.writestr(name, b"unsafe")
+                with self.assertRaisesRegex(
+                    ActivationStepError,
+                    "^SPFX_PACKAGE_ARCHIVE_INVALID$",
+                ):
+                    _normalize_zip_archive(package)
+
+    def test_snapshot_rejects_digest_mismatch_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.bin"
+            source.write_bytes(b"unexpected")
+            destination = root / "snapshot.bin"
+            with self.assertRaisesRegex(
+                ActivationStepError,
+                r"^PREPARED_ARTIFACT_HASH_MISMATCH\Z",
+            ):
+                _copy_snapshot(
+                    source,
+                    destination,
+                    expected_sha256=hashlib.sha256(b"approved").hexdigest(),
+                )
+            self.assertFalse(destination.exists())
+
     def test_local_build_uses_isolated_snapshot_and_never_mutates_repo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -900,29 +999,77 @@ class LocalActivationAdapterTests(unittest.TestCase):
                 environ={"NODE_OPTIONS": "--require=/tmp/foreign.js"},
             )
 
-            def fake_run(_argv, *, cwd, **_kwargs):
-                package = cwd / "sharepoint/solution/nac-bpmn-viewer.sppkg"
-                package.parent.mkdir(parents=True, exist_ok=True)
-                package.write_bytes(b"deterministic-package")
+            build_calls = []
+
+            def fake_run(argv, *, cwd, **_kwargs):
+                build_calls.append(tuple(argv))
+                dependencies = cwd / "node_modules"
+                heft = dependencies / "@rushstack/heft/bin/heft"
+                if not heft.exists():
+                    heft.parent.mkdir(parents=True)
+                    heft.write_bytes(b"trusted-heft-entry")
+                    (heft.parent.parent / "package.json").write_text(
+                        '{"name":"@rushstack/heft"}\n'
+                    )
+                if len(build_calls) == 3:
+                    package = cwd / "sharepoint/solution/nac-bpmn-viewer.sppkg"
+                    package.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(package, "w") as archive:
+                        archive.writestr("package/data.txt", b"deterministic-package")
+                        for index, name in enumerate(
+                            (
+                                "ClientSideAssets.xml",
+                                "ClientSideAssets.xml.config.xml",
+                                "feature_ea9917ea-2860-45fb-89bd-121120178be3.xml.config.xml",
+                            ),
+                            start=1,
+                        ):
+                            archive.writestr(
+                                name,
+                                f"<Id>00000000-0000-4000-8000-{index:012d}</Id>",
+                            )
 
             with patch.object(
                 adapter, "_run", side_effect=fake_run
             ) as run:
                 digest, package = adapter.build_spfx(root, isolated)
 
-            self.assertEqual(
-                digest, hashlib.sha256(b"deterministic-package").hexdigest()
-            )
+            self.assertEqual(digest, hashlib.sha256(package.read_bytes()).hexdigest())
+            with zipfile.ZipFile(package, "r") as archive:
+                self.assertEqual(
+                    archive.read("package/data.txt"), b"deterministic-package"
+                )
+                self.assertEqual(
+                    archive.getinfo("package/data.txt").date_time,
+                    (1980, 1, 1, 0, 0, 0),
+                )
             self.assertTrue(package.is_relative_to(isolated))
-            self.assertFalse((isolated / "node_modules").exists())
+            self.assertTrue((isolated / "node_modules").is_dir())
             self.assertEqual(ignored.read_text(), "preserve")
             self.assertFalse((source / "sharepoint").exists())
-            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_count, 3)
             self.assertEqual(
-                run.call_args_list[0].args[0][:2], [str(node), str(npm_cli)]
+                run.call_args_list[0].args[0],
+                [str(node), str(npm_cli), "ci", "--ignore-scripts", "--force"],
             )
-            self.assertNotIn("path_prefix", run.call_args_list[0].kwargs)
-            self.assertNotIn("path_prefix", run.call_args_list[1].kwargs)
+            heft_entry = isolated / "node_modules/@rushstack/heft/bin/heft"
+            self.assertEqual(
+                run.call_args_list[1].args[0],
+                [str(node), str(heft_entry), "test", "--clean", "--production"],
+            )
+            self.assertEqual(
+                run.call_args_list[2].args[0],
+                [str(node), str(heft_entry), "package-solution", "--production"],
+            )
+            self.assertTrue(
+                run.call_args_list[1].kwargs["force_wasi_native_fallback"]
+            )
+            self.assertTrue(
+                run.call_args_list[2].kwargs["force_wasi_native_fallback"]
+            )
+            self.assertNotIn(".bin", " ".join(" ".join(call) for call in build_calls))
+            combined_commands = " ".join(" ".join(call) for call in build_calls)
+            self.assertNotIn("run build", combined_commands)
 
     def test_function_build_rejects_python_mutation_before_process(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -981,7 +1128,11 @@ class LocalActivationAdapterTests(unittest.TestCase):
                 environ={},
             )
 
-            def first_process_then_mutate(*_args, **_kwargs):
+            def first_process_then_mutate(*_args, **kwargs):
+                dependencies = kwargs["cwd"] / "node_modules"
+                heft = dependencies / "@rushstack/heft/bin/heft"
+                heft.parent.mkdir(parents=True)
+                heft.write_bytes(b"trusted-heft")
                 node.write_bytes(b"mutated-node")
                 return SimpleNamespace(returncode=0)
 
@@ -998,6 +1149,96 @@ class LocalActivationAdapterTests(unittest.TestCase):
                 raised.exception.code, "BUILD_TOOLCHAIN_ATTESTATION_FAILED"
             )
             self.assertEqual(run.call_count, 1)
+
+    def test_spfx_rejects_dependency_tamper_between_direct_heft_steps(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            node = root / "node/bin/node"
+            npm_cli = root / "node/lib/npm-cli.js"
+            node.parent.mkdir(parents=True)
+            npm_cli.parent.mkdir(parents=True)
+            node.write_bytes(b"trusted-node")
+            npm_cli.write_bytes(b"trusted-npm")
+            node.chmod(0o700)
+            source = root / "spfx/nac-bpmn-viewer"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text("{}\n")
+            (source / "package-lock.json").write_text("{}\n")
+            adapter = LocalBuildAdapter(
+                node_binary=node,
+                npm_cli=npm_cli,
+                node_sha256=hashlib.sha256(node.read_bytes()).hexdigest(),
+                npm_cli_sha256=build_node_runtime_manifest(npm_cli.parent.parent).digest,
+                environ={},
+            )
+            calls = []
+
+            def fake_run(argv, *, cwd, **_kwargs):
+                calls.append(tuple(argv))
+                heft = cwd / "node_modules/@rushstack/heft/bin/heft"
+                if len(calls) == 1:
+                    heft.parent.mkdir(parents=True)
+                    heft.write_bytes(b"trusted-heft")
+                elif len(calls) == 2:
+                    heft.write_bytes(b"tampered-heft")
+
+            with (
+                patch.object(adapter, "_run", side_effect=fake_run),
+                self.assertRaises(ActivationStepError) as raised,
+            ):
+                adapter.build_spfx(root, root / "isolated")
+
+            self.assertEqual(
+                raised.exception.code, "SPFX_DEPENDENCY_ATTESTATION_FAILED"
+            )
+            self.assertEqual(len(calls), 2)
+            self.assertNotIn(".bin", " ".join(" ".join(call) for call in calls))
+
+    def test_node_runtime_loader_is_inherited_by_real_child_process(self) -> None:
+        detected = shutil.which("node")
+        node = (
+            BUILD_NODE_EXECUTION_PATH
+            if BUILD_NODE_EXECUTION_PATH.is_file()
+            else Path(detected) if detected else None
+        )
+        if node is None:
+            self.skipTest("Node.js is not installed")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runtime = root / "runtime"
+            runtime.mkdir()
+            dependency = runtime / "dependency.cjs"
+            dependency.write_text(
+                "module.exports = 'sealed-child-ok';\n", encoding="utf-8"
+            )
+            child = runtime / "child.cjs"
+            child.write_text(
+                "console.log(require(" + json.dumps(str(dependency)) + "));\n",
+                encoding="utf-8",
+            )
+            entry = runtime / "entry.cjs"
+            entry.write_text(
+                "const { fork } = require('node:child_process');"
+                "const child = fork("
+                + json.dumps(str(child))
+                + ", [], {silent: true, env: process.env});"
+                "let stdout = '';"
+                "child.stdout.on('data', chunk => { stdout += chunk; });"
+                "child.on('exit', status => {"
+                "if (status !== 0 || stdout.trim() !== 'sealed-child-ok') "
+                "process.exit(41);"
+                "});\n",
+                encoding="utf-8",
+            )
+            node_digest = hashlib.sha256(node.read_bytes()).hexdigest()
+            runtime_digest = build_node_runtime_manifest(runtime).digest
+
+            LocalBuildAdapter._run(
+                [str(node), str(entry)],
+                cwd=root,
+                attestations=((node, True, node_digest),),
+                node_runtime=(runtime, runtime_digest),
+            )
 
     def test_user_owned_toolchain_requires_exact_digests(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1041,10 +1282,12 @@ class LocalActivationAdapterTests(unittest.TestCase):
                         [str(tool)],
                         cwd=cwd,
                         attestations=((tool, True, tool_sha256),),
+                        force_wasi_native_fallback=True,
                     )
             environment = run.call_args.kwargs["env"]
             self.assertNotIn("NODE_OPTIONS", environment)
             self.assertNotIn("NODE_PATH", environment)
+            self.assertEqual(environment["NAPI_RS_FORCE_WASI"], "error")
             self.assertEqual(environment["PATH"], "/usr/bin:/bin")
             self.assertNotEqual(
                 environment["NPM_CONFIG_USERCONFIG"],
@@ -1093,9 +1336,12 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.repo_root = Path(self.temporary.name)
         self.run_dir = self.repo_root / "out"
         self.run_dir.mkdir()
-        bicep = self.repo_root / "deploy/runtime/azure/nac-bff/infra/main.bicep"
+        bicep = (
+            self.repo_root
+            / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+        )
         bicep.parent.mkdir(parents=True)
-        bicep.write_text("targetScope = 'resourceGroup'\n")
+        bicep.write_text('{"$schema":"test","resources":[]}\n')
         config = self.repo_root / "spfx/nac-bpmn-viewer/config/package-solution.json"
         config.parent.mkdir(parents=True)
         config.write_text("{}\n")
@@ -1485,6 +1731,39 @@ class AzureBffCompositionTests(unittest.TestCase):
             self._prewrite()["code"], "SPFX_BFF_PERMISSION_STATE_DUPLICATE"
         )
 
+    def test_approved_tree_requires_two_identical_spfx_builds(self) -> None:
+        class ApprovedTree:
+            def materialize(self, repo_root, _destination, **_kwargs):
+                return SimpleNamespace(root=repo_root, manifest_sha256="a" * 64)
+
+        class DriftingBuild(_FakeBuild):
+            def build_spfx(self, repo_root, isolated_build_root):
+                digest, package = super().build_spfx(repo_root, isolated_build_root)
+                if sum(call[0] == "spfx" for call in self.calls) == 2:
+                    package.write_bytes(b"drifting-spfx-package")
+                    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+                return digest, package
+
+        self.port._approved_tree_source = ApprovedTree()
+        self.port._build = DriftingBuild()
+        with (
+            patch(
+                "nac_bff.azure_activation_composition.build_azure_bff_activation_plan",
+                return_value=_plan(),
+            ),
+            patch(
+                "nac_bff.azure_activation_composition.inspect_entra_api_application_prewrite",
+                return_value=_binding(),
+            ),
+        ):
+            result = self.port.verify_prewrite(self.context, _request())
+
+        self.assertEqual(result["code"], "SPFX_REPRODUCIBILITY_FAILED")
+        self.assertEqual(
+            [call[0] for call in self.port._build.calls],
+            ["function", "spfx", "spfx"],
+        )
+
     def test_prewrite_prepares_snapshots_and_later_deploy_rejects_mutation(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
         self.assertEqual([call[0] for call in self.build.calls], ["function", "spfx"])
@@ -1516,6 +1795,7 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "approved_commit_sha",
                 "approved_tree_sha",
                 "activation_hash",
+                "approved_tree_snapshot_sha256",
                 "bicep_snapshot_sha256",
                 "bicep_parameters_snapshot_sha256",
                 "function_package_sha256",
@@ -1532,6 +1812,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             [("https://func-nac-bff-test-funktion8.azurewebsites.net/healthz", 200)],
         )
 
+        self.port._spfx_package_path.chmod(0o600)
         self.port._spfx_package_path.write_bytes(b"tampered")
         with self.assertRaises(ActivationStepError) as raised:
             self.port.execute_step(STEPS[7], self.context)
@@ -2166,7 +2447,8 @@ class AzureBffCompositionTests(unittest.TestCase):
         ]
         completed: list[str] = []
 
-        def deploy_spfx(_plan, _runner):
+        def deploy_spfx(_plan, _runner, *, bound_artifacts=None):
+            self.assertIsNotNone(bound_artifacts)
             _complete_m365_state(self.m365)
             return {
                 "status": "PASSED",
@@ -2253,7 +2535,8 @@ class AzureBffCompositionTests(unittest.TestCase):
         permission_boundary_sha256 = "6" * 64
         lock_root = self.repo_root / ".test-live-locks"
 
-        def deploy_spfx(_plan, _runner):
+        def deploy_spfx(_plan, _runner, *, bound_artifacts=None):
+            self.assertIsNotNone(bound_artifacts)
             _complete_m365_state(self.m365)
             self.m365.pending = [
                 {

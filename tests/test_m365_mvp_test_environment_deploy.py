@@ -414,7 +414,11 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             {
                 key: value
                 for key, value in environment.items()
-                if key != "NAC_NODE_RUNTIME_MANIFEST"
+                if key not in {
+                    "NAC_NODE_RUNTIME_MANIFEST",
+                    "NAC_NODE_RUNTIME_PRELOADER",
+                    "NAC_NODE_RUNTIME_ESM_LOADER",
+                }
             },
             {
                 "HOME": str(home),
@@ -425,6 +429,12 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 "CLIMICROSOFT365_NOUPDATE": "1",
                 "NODE": process_argv[0],
             },
+        )
+        self.assertEqual(
+            environment["NAC_NODE_RUNTIME_PRELOADER"], process_argv[3]
+        )
+        self.assertEqual(
+            environment["NAC_NODE_RUNTIME_ESM_LOADER"], process_argv[5]
         )
 
     @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
@@ -1030,6 +1040,48 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 else command_runner
             ),
         )
+
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_bound_artifact_uses_sealed_descriptor(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            package = (
+                root / "spfx/nac-bpmn-viewer/sharepoint/solution/nac-bpmn-viewer.sppkg"
+            )
+            package.parent.mkdir(parents=True)
+            package.write_bytes(b"approved-package")
+            package_sha256 = hashlib.sha256(package.read_bytes()).hexdigest()
+            observed: dict[str, object] = {}
+            def inspect_provider_path(argv, **kwargs):
+                provider_path = argv[argv.index("--filePath") + 1]
+                observed["basename"] = Path(provider_path).name
+                observed["payload"] = Path(os.path.realpath(provider_path)).read_bytes()
+                return subprocess.CompletedProcess([], 0, "", "")
+            run.side_effect = inspect_provider_path
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            result = runner.run_bound(
+                (
+                    "m365", "spo", "app", "add", "--filePath", str(package),
+                    "--appCatalogScope", "tenant", "--output", "none",
+                ),
+                {str(package): (package, package_sha256)},
+            )
+
+        self.assertEqual(result.returncode, 0)
+        provider_argv = run.call_args.args[0]
+        self.assertNotIn(str(package), provider_argv)
+        file_path = provider_argv[provider_argv.index("--filePath") + 1]
+        self.assertRegex(file_path, r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer[.]sppkg$")
+        self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 5)
+        self.assertEqual(observed, {"basename": "nac-bpmn-viewer.sppkg", "payload": b"approved-package"})
 
 
 class _Plan:

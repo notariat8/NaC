@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
 import hashlib
 import json
 import os
@@ -8,7 +9,7 @@ import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 
 from nac_mvp_test_environment import evaluate_synthetic_access_policy
 
@@ -30,6 +31,7 @@ from .node_runtime_integrity import (
 )
 from .sealed_toolchain import (
     SealedToolchainError,
+    sealed_artifacts,
     sealed_payloads,
     sealed_toolchain,
 )
@@ -171,57 +173,105 @@ class M365CliCommandRunner:
         self._env = values
 
     def run(self, argv: Sequence[str]) -> SubprocessCommandResult:
+        return self._run(argv, {})
+
+    def run_bound(
+        self,
+        argv: Sequence[str],
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+    ) -> SubprocessCommandResult:
+        return self._run(argv, bound_artifacts)
+
+    def _run(
+        self,
+        argv: Sequence[str],
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+    ) -> SubprocessCommandResult:
         command = tuple(str(part) for part in argv)
         _validate_m365_command(command)
+        bindings = tuple(bound_artifacts.items())
+        if any(command.count(argument) != 1 for argument, _ in bindings):
+            raise M365CliReadinessError("M365_CLI_ARTIFACT_BINDING_INVALID")
         try:
             runtime_payloads = self._runtime_payloads()
-            with sealed_toolchain(
-                ((self._node_binary, True, self._node_sha256),)
-            ) as sealed:
-                with sealed_payloads(
-                    (
-                        (
-                            "node-runtime-manifest.json",
-                            runtime_payloads.manifest,
-                            False,
-                        ),
-                        (
-                            "node-runtime-preloader.cjs",
-                            runtime_payloads.commonjs_preloader,
-                            False,
-                        ),
-                        (
-                            "node-runtime-loader.mjs",
-                            runtime_payloads.esm_loader,
-                            False,
-                        ),
+            with ExitStack() as stack:
+                sealed = stack.enter_context(
+                    sealed_toolchain(
+                        ((self._node_binary, True, self._node_sha256),)
                     )
-                ) as runtime_sealed:
-                    process_argv = [
-                        sealed.paths[0],
-                        "--preserve-symlinks",
-                        "--require",
-                        runtime_sealed.paths[1],
-                        "--experimental-loader",
-                        runtime_sealed.paths[2],
-                        str(self.binary),
-                        *command[1:],
-                    ]
-                    result = subprocess.run(
-                        process_argv,
-                        cwd=self.binary.parent,
-                        shell=False,
-                        text=True,
-                        capture_output=True,
-                        check=False,
-                        env={
-                            **self._env,
-                            "NODE": sealed.paths[0],
-                            MANIFEST_ENV: runtime_sealed.paths[0],
-                        },
-                        timeout=self._timeout_seconds,
-                        pass_fds=sealed.pass_fds + runtime_sealed.pass_fds,
+                )
+                runtime_sealed = stack.enter_context(
+                    sealed_payloads(
+                        (
+                            (
+                                "node-runtime-manifest.json",
+                                runtime_payloads.manifest,
+                                False,
+                            ),
+                            (
+                                "node-runtime-preloader.cjs",
+                                runtime_payloads.commonjs_preloader,
+                                False,
+                            ),
+                            (
+                                "node-runtime-loader.mjs",
+                                runtime_payloads.esm_loader,
+                                False,
+                            ),
+                        )
                     )
+                )
+                artifact_sealed = stack.enter_context(
+                    sealed_artifacts(
+                        tuple(
+                            (path, expected_sha256)
+                            for _, (path, expected_sha256) in bindings
+                        )
+                    )
+                ) if bindings else None
+                replacements = {
+                    argument: artifact_sealed.paths[index]
+                    for index, (argument, _) in enumerate(bindings)
+                } if artifact_sealed is not None else {}
+                bound_command = tuple(
+                    replacements.get(argument, argument) for argument in command
+                )
+                process_argv = [
+                    sealed.paths[0],
+                    "--preserve-symlinks",
+                    "--require",
+                    runtime_sealed.paths[1],
+                    "--experimental-loader",
+                    runtime_sealed.paths[2],
+                    str(self.binary),
+                    *bound_command[1:],
+                ]
+                artifact_fds = (
+                    artifact_sealed.pass_fds
+                    if artifact_sealed is not None
+                    else ()
+                )
+                result = subprocess.run(
+                    process_argv,
+                    cwd=self.binary.parent,
+                    shell=False,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    env={
+                        **self._env,
+                        "NODE": sealed.paths[0],
+                        MANIFEST_ENV: runtime_sealed.paths[0],
+                        "NAC_NODE_RUNTIME_PRELOADER": runtime_sealed.paths[1],
+                        "NAC_NODE_RUNTIME_ESM_LOADER": runtime_sealed.paths[2],
+                    },
+                    timeout=self._timeout_seconds,
+                    pass_fds=(
+                        sealed.pass_fds
+                        + runtime_sealed.pass_fds
+                        + artifact_fds
+                    ),
+                )
         except NodeRuntimeIntegrityError:
             raise M365CliReadinessError(
                 "M365_CLI_RUNTIME_BUNDLE_MISMATCH"

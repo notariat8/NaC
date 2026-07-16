@@ -9,11 +9,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import nac_bff.azure_cli_sealed_runtime as azure_cli_sealed_runtime
 import nac_bff.azure_live_commands as azure_live_commands
 from nac_bff.azure_live_commands import (
     ALLOWED_COMMAND_PREFIXES,
     AZURE_CLI_CANDIDATES,
     AZURE_CLI_SHA256_ENV,
+    EXPECTED_CLOUD_NAME,
     EXPECTED_SUBSCRIPTION_ID,
     EXPECTED_TENANT_ID,
     AzureCliAdapter,
@@ -42,6 +44,23 @@ class AzureLiveCommandTests(unittest.TestCase):
                 ("functionapp", "deployment", "source", "config-zip"),
             ),
         )
+
+    def test_sealed_bootstrap_disables_all_azure_cli_extension_sources(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        for binding in (
+            'AZURE_EXTENSION_DIR',
+            'AZURE_EXTENSION_SYS_DIR',
+            'AZURE_EXTENSION_DEV_SOURCES',
+            'AZURE_EXTENSION_USE_DYNAMIC_INSTALL',
+        ):
+            self.assertIn(binding, source)
+        self.assertIn('.nac-empty-extensions', source)
+        self.assertIn('os.environ["AZURE_EXTENSION_USE_DYNAMIC_INSTALL"] = "no"', source)
+        self.assertIn("copy_private_azure_config", source)
+        self.assertIn("validate_private_azure_profile", source)
+        self.assertIn('"environmentName") != "AzureCloud"', source)
+        self.assertIn('name == "clouds.config"', source)
+        self.assertIn('os.environ["AZURE_CONFIG_DIR"] = str(private_config)', source)
 
     def test_blocked_argv_never_reaches_subprocess(self) -> None:
         blocked = (
@@ -139,7 +158,7 @@ class AzureLiveCommandTests(unittest.TestCase):
                 "--resource-group",
                 "rg-nac-bff-test",
                 "--template-file",
-                "/tmp/prepared/infra/main.bicep",
+                "/tmp/prepared/infra/main.json",
                 "--parameters",
                 "@/tmp/prepared/main.parameters.json",
                 "--mode",
@@ -181,10 +200,19 @@ class AzureLiveCommandTests(unittest.TestCase):
         self.assertEqual(process.call_count, len(valid))
         for call in process.call_args_list:
             argv = call.args[0]
-            self.assertEqual(argv[-3:], ["--output", "json", "--only-show-errors"])
-            if argv[1:3] != ["account", "show"]:
-                subscription_index = argv.index("--subscription")
-                self.assertEqual(argv[subscription_index + 1], EXPECTED_SUBSCRIPTION_ID)
+            self.assertRegex(argv[0], r"\A/proc/self/fd/[0-9]+\Z")
+            self.assertEqual(argv[1:3], ["-I", "-B"])
+            self.assertRegex(argv[3], r"\A/proc/self/fd/[0-9]+\Z")
+            self.assertRegex(argv[4], r"\A/proc/self/fd/[0-9]+\Z")
+            azure_argv = argv[5:]
+            self.assertEqual(azure_argv[-3:], ["--output", "json", "--only-show-errors"])
+            if azure_argv[:2] != ["account", "show"]:
+                subscription_index = azure_argv.index("--subscription")
+                self.assertEqual(
+                    azure_argv[subscription_index + 1],
+                    EXPECTED_SUBSCRIPTION_ID,
+                )
+            self.assertEqual(len(call.kwargs["pass_fds"]), 3)
 
     def test_process_boundary_is_argv_only_shell_false_and_env_filtered(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,9 +226,13 @@ class AzureLiveCommandTests(unittest.TestCase):
             )
             source_env = {
                 "HOME": "/tmp/home",
-                "PATH": "/usr/bin:/bin",
+                "PATH": f"{binary.parent}:/usr/bin:/bin",
                 "LANG": "C.UTF-8",
                 "AZURE_CONFIG_DIR": "/tmp/azure-config",
+                "AZURE_EXTENSION_DIR": "/tmp/hostile-extension",
+                "AZURE_EXTENSION_SYS_DIR": "/tmp/hostile-system-extension",
+                "AZURE_EXTENSION_DEV_SOURCES": "/tmp/hostile-dev-extension",
+                "AZURE_EXTENSION_USE_DYNAMIC_INSTALL": "yes_without_prompt",
                 "AZURE_CLIENT_SECRET": "must-not-reach-child",
                 "ACCESS_TOKEN": "must-not-reach-child",
             }
@@ -219,11 +251,19 @@ class AzureLiveCommandTests(unittest.TestCase):
         self.assertEqual(result["data"], {"name": "rg-nac-bff-test"})
         process_argv = process.call_args.args[0]
         process_kwargs = process.call_args.kwargs
-        self.assertEqual(process_argv[0], str(binary.resolve()))
+        self.assertRegex(process_argv[0], r"\A/proc/self/fd/[0-9]+\Z")
+        self.assertEqual(process_argv[1:3], ["-I", "-B"])
+        self.assertRegex(process_argv[3], r"\A/proc/self/fd/[0-9]+\Z")
+        self.assertRegex(process_argv[4], r"\A/proc/self/fd/[0-9]+\Z")
         self.assertEqual(
-            process_argv[1:5],
+            process_argv[5:9],
             ["group", "show", "--name", "rg-nac-bff-test"],
         )
+        self.assertNotIn(str(binary.resolve()), process_argv)
+        self.assertFalse(
+            any(key.startswith("AZURE_EXTENSION_") for key in process_kwargs["env"])
+        )
+        self.assertEqual(len(process_kwargs["pass_fds"]), 3)
         self.assertIs(process_kwargs["shell"], False)
         self.assertIs(process_kwargs["check"], False)
         self.assertEqual(process_kwargs["stdin"], subprocess.DEVNULL)
@@ -274,6 +314,30 @@ class AzureLiveCommandTests(unittest.TestCase):
         self.assertNotIn(secret_stdout, serialized)
         self.assertNotIn(secret_stderr, serialized)
 
+    def test_sealed_runtime_tamper_exit_maps_to_stable_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=86,
+                stdout="sensitive runtime output",
+                stderr="sensitive tamper detail",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertEqual(result["code"], "AZURE_CLI_RUNTIME_TAMPERED")
+        self.assertEqual(result["returncode"], 86)
+        self.assertNotIn("sensitive", json.dumps(result))
+
     def test_invalid_json_is_redacted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
@@ -296,6 +360,73 @@ class AzureLiveCommandTests(unittest.TestCase):
 
         self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
         self.assertNotIn("not-json", json.dumps(result))
+
+
+    def test_bound_artifact_replaces_provider_path_with_sealed_descriptor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _fake_binary(root)
+            binary_digest = _binary_sha256(binary)
+            artifact = root / "main.json"
+            artifact.write_text("{}")
+            artifact_digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            completed = subprocess.CompletedProcess([], 0, "{}", "")
+            command = [
+                "deployment", "group", "create",
+                "--name", "nac-bff-012345abcdef",
+                "--resource-group", "rg-nac-bff-test",
+                "--template-file", str(artifact),
+                "--parameters", "@/tmp/prepared/main.parameters.json",
+                "--mode", "Incremental",
+            ]
+            observed: dict[str, object] = {}
+            def inspect_provider_path(argv, **kwargs):
+                provider_path = argv[argv.index("--template-file") + 1]
+                observed["basename"] = Path(provider_path).name
+                observed["payload"] = Path(os.path.realpath(provider_path)).read_text()
+                return completed
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                side_effect=inspect_provider_path,
+            ) as process:
+                result = run_azure_cli(
+                    command,
+                    binary=binary,
+                    expected_binary_sha256=binary_digest,
+                    bound_artifacts={str(artifact): (artifact, artifact_digest)},
+                )
+
+        self.assertTrue(result["ok"])
+        provider_argv = process.call_args.args[0]
+        self.assertNotIn(str(artifact), provider_argv)
+        template_path = provider_argv[provider_argv.index("--template-file") + 1]
+        self.assertRegex(template_path, r"^/proc/self/fd/[0-9]+/main[.]json$")
+        self.assertEqual(len(process.call_args.kwargs["pass_fds"]), 4)
+        self.assertEqual(observed, {"basename": "main.json", "payload": "{}"})
+
+    def test_bound_artifact_hash_mismatch_stops_before_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _fake_binary(root)
+            artifact = root / "package.zip"
+            artifact.write_bytes(b"tampered")
+            command = [
+                "functionapp", "deployment", "source", "config-zip",
+                "--resource-group", "rg-nac-bff-test",
+                "--name", "func-nac-bff-test-funktion8",
+                "--src", str(artifact),
+                "--build-remote", "true",
+            ]
+            with patch("nac_bff.azure_live_commands.subprocess.run") as process:
+                result = run_azure_cli(
+                    command,
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                    bound_artifacts={str(artifact): (artifact, "0" * 64)},
+                )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_ARTIFACT_BINDING_FAILED")
+        process.assert_not_called()
 
 
 class AzureLiveReadinessTests(unittest.TestCase):
@@ -489,6 +620,83 @@ class AzureLiveReadinessTests(unittest.TestCase):
         )
         process.assert_not_called()
 
+    def test_unchanged_bound_runtime_snapshot_verifies_without_azure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _fake_binary(root)
+            expected = _binary_sha256(binary)
+            runtime = azure_live_commands._prepare_bound_runtime(
+                binary,
+                expected_sha256=expected,
+            )
+            self.assertIsNotNone(runtime)
+            assert runtime is not None
+            destination = root / "verified-copy"
+            destination.mkdir()
+            with runtime:
+                completed = subprocess.run(
+                    runtime.command(
+                        ["--nac-internal-verify-only", str(destination)]
+                    ),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=30,
+                    env=build_azure_cli_env({"HOME": str(root)}),
+                    pass_fds=runtime.pass_fds,
+                )
+
+            copied_entrypoint = (
+                destination / "azure" / "cli" / "__main__.py"
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(
+                copied_entrypoint.read_bytes(),
+                _package_entrypoint(binary).read_bytes(),
+            )
+
+    def test_mutation_after_runtime_binding_is_blocked_by_sealed_bootstrap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _fake_binary(root)
+            expected = _binary_sha256(binary)
+            runtime = azure_live_commands._prepare_bound_runtime(
+                binary,
+                expected_sha256=expected,
+            )
+            self.assertIsNotNone(runtime)
+            assert runtime is not None
+            _package_entrypoint(binary).write_text(
+                "raise RuntimeError('attestation-to-exec tamper')\n",
+                encoding="utf-8",
+            )
+            destination = root / "verified-copy"
+            destination.mkdir()
+            with runtime:
+                completed = subprocess.run(
+                    runtime.command(
+                        ["--nac-internal-verify-only", str(destination)]
+                    ),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=30,
+                    env=build_azure_cli_env({"HOME": str(root)}),
+                    pass_fds=runtime.pass_fds,
+                )
+
+        self.assertEqual(completed.returncode, 86)
+        self.assertEqual(
+            azure_live_commands.sealed_runtime_failure_code(
+                completed.returncode
+            ),
+            "AZURE_CLI_RUNTIME_TAMPERED",
+        )
+
     def test_package_tree_symlink_is_untrusted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
@@ -567,6 +775,24 @@ class AzureLiveReadinessTests(unittest.TestCase):
                     resolve_azure_cli_binary(environ={"PATH": str(binary.parent)})
                 )
 
+    def test_native_elf_az_candidate_is_rejected_before_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "az"
+            binary.write_bytes(b"\x7fELF" + b"\0" * 60)
+            binary.chmod(0o700)
+            with patch("nac_bff.azure_live_commands.subprocess.run") as process:
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=hashlib.sha256(
+                        binary.read_bytes()
+                    ).hexdigest(),
+                    environ={"HOME": tmp},
+                )
+
+        self.assertEqual(result["code"], "AZURE_CLI_BINARY_UNTRUSTED")
+        process.assert_not_called()
+
     def test_minimal_env_does_not_copy_credential_variables(self) -> None:
         env = build_azure_cli_env(
             {
@@ -576,6 +802,8 @@ class AzureLiveReadinessTests(unittest.TestCase):
                 "AZURE_CLIENT_ID": "client-id",
                 "AZURE_CLIENT_SECRET": "secret",
                 "AZURE_TENANT_ID": "tenant",
+                "REQUESTS_CA_BUNDLE": "/tmp/hostile-ca.pem",
+                "SSL_CERT_FILE": "/tmp/hostile-cert.pem",
             }
         )
 
@@ -584,6 +812,8 @@ class AzureLiveReadinessTests(unittest.TestCase):
         self.assertNotIn("AZURE_CLIENT_ID", env)
         self.assertNotIn("AZURE_CLIENT_SECRET", env)
         self.assertNotIn("AZURE_TENANT_ID", env)
+        self.assertNotIn("REQUESTS_CA_BUNDLE", env)
+        self.assertNotIn("SSL_CERT_FILE", env)
 
     def test_exact_account_is_ready_without_network_or_real_azure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -596,6 +826,7 @@ class AzureLiveReadinessTests(unittest.TestCase):
                     {
                         "id": EXPECTED_SUBSCRIPTION_ID,
                         "tenantId": EXPECTED_TENANT_ID,
+                        "environmentName": EXPECTED_CLOUD_NAME,
                         "state": "Enabled",
                         "user": {"name": "must-not-be-evidence"},
                     }
@@ -617,12 +848,62 @@ class AzureLiveReadinessTests(unittest.TestCase):
         self.assertEqual(
             readiness["bindings"],
             {
+                "cloud_name": EXPECTED_CLOUD_NAME,
                 "tenant_id": EXPECTED_TENANT_ID,
                 "subscription_id": EXPECTED_SUBSCRIPTION_ID,
             },
         )
         self.assertNotIn("user", json.dumps(readiness))
         self.assertEqual(process.call_count, 1)
+
+    def test_custom_cloud_config_is_rejected_before_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "azure-config"
+            config.mkdir(mode=0o700)
+            (config / "clouds.config").write_text(
+                "[cloud]\nname = hostile\n", encoding="utf-8"
+            )
+            binary = _fake_binary(root)
+            with patch("nac_bff.azure_live_commands.subprocess.run") as process:
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                    environ={"AZURE_CONFIG_DIR": str(config), "HOME": str(root)},
+                )
+
+        self.assertEqual(
+            result["code"], "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
+        )
+        process.assert_not_called()
+
+    def test_wrong_cloud_is_not_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps(
+                    {
+                        "id": EXPECTED_SUBSCRIPTION_ID,
+                        "tenantId": EXPECTED_TENANT_ID,
+                        "environmentName": "AzureGermanCloud",
+                    }
+                ),
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                readiness = check_azure_cli_readiness(
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                )
+
+        self.assertEqual(readiness["status"], "NOT_READY")
+        self.assertEqual(readiness["code"], "AZURE_CLI_CLOUD_MISMATCH")
 
     def test_wrong_tenant_is_not_ready(self) -> None:
         readiness = _readiness_for_account(
@@ -742,7 +1023,11 @@ def _readiness_for_account(
             args=[],
             returncode=0,
             stdout=json.dumps(
-                {"id": subscription_id, "tenantId": tenant_id}
+                {
+                    "id": subscription_id,
+                    "tenantId": tenant_id,
+                    "environmentName": EXPECTED_CLOUD_NAME,
+                }
             ),
             stderr="",
         )

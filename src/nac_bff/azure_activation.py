@@ -85,6 +85,7 @@ _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-live-activation.contract.json",
     "src/nac_bff/azure_activation_runner.py",
     "src/nac_bff/azure_activation_composition.py",
+    "src/nac_bff/approved_git_tree.py",
     "src/nac_bff/azure_live_commands.py",
     "src/nac_bff/graph_activation.py",
     "src/nac_bff/live_synthetic_workspace.py",
@@ -256,6 +257,9 @@ def _spfx_source_manifest_binding(
                 "-C",
                 str(root),
                 "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
                 "--",
                 _SPFX_ROOT,
             ],
@@ -276,8 +280,10 @@ def _spfx_source_manifest_binding(
         path = root / relative
         if path.is_symlink():
             return None, f"symlink:{relative}"
+        if not path.exists():
+            continue
         if not path.is_file():
-            return None, f"missing:{relative}"
+            return None, f"invalid:{relative}"
         entries.append(
             {
                 "path": relative,

@@ -9,6 +9,8 @@
 
 ## Goal
 
+Safety binding implemented for the live runner: production build inputs are materialized from the exact approved Git commit/tree and verified against blob IDs; provider artifacts are passed to the attested provider as private, read-only-by-default, filename-preserving snapshots through an inherited directory descriptor, with expected SHA-256 verification before and after provider use. The local lane remains explicitly non-authentic against an attacker controlling the same OS account.
+
 The live runner executes the existing hash-bound
 [offline activation plan](../../../../workflows/contracts/m365-azure-bff-activation-plan.contract.json)
 in exactly twelve steps. The
@@ -27,7 +29,7 @@ plan is not live approval or proof of success.
 - `AC-632-01`: Exact owner login `ofunk` and immutable approval snapshot from Issue #632; Issue #620 remains parent context.
 - `AC-632-02`: Complete read-only duplicate and broader-permission inventory before the first provider write.
 - `AC-632-03`: One host-wide target-global lock blocks concurrent runs from all worktrees and clones on the single execution host regardless of output path, activation hash, or correlation ID; cross-host coordination is not provided.
-- `AC-632-04`: The Function package, site-scoped SPFx package, and Bicep snapshot are built and hash-bound before the final Git/plan gate; the parameter snapshot resolved against the created or reused Entra app ID and the full manifest are atomically bound after exact step-3 readback and before the Bicep write.
+- `AC-632-04`: The Function package, site-scoped SPFx package, and ARM JSON reproducibly compiled from Bicep are built and hash-bound before the final Git/plan gate; the parameter snapshot resolved against the created or reused Entra app ID and the full manifest are atomically bound after exact step-3 readback and before the ARM deployment. Bicep compilation during the live run is forbidden.
 - `AC-632-05`: Entra, UAMI, `Sites.Selected`, site `read`, site-scoped SPFx, and `Matter.Read` are created or exactly reused and read back.
 - `AC-632-06`: `healthz` runs before auth and `readyz` only after an authenticated read; denied/manipulated cases fail closed and PASSED requires verified restoration of the synthetic baseline. A process termination before that proof remains non-success and requires read-only reconciliation plus manual recovery; SIGKILL restoration is not claimed.
 - `AC-632-07`: Ledger and evidence are hash-chained, redacted, and constrained by exact field allowlists.
@@ -103,7 +105,55 @@ entry scripts; only npm-generated `node_modules/.bin` command shims are
 excluded, and they cannot be loaded as modules. Sealed CommonJS/ESM loaders
 reject unknown, changed, symlinked, or native modules and compile or evaluate
 only the exact bytes reverified with `O_NOFOLLOW`, `fstat`, and SHA-256 for
-every module load.
+every module load. Manifest-bound WASM and other non-module assets are
+reverified the same way on every read. The SPFx build invokes direct
+manifest-listed Heft entrypoints and uses neither `node_modules/.bin` nor npm
+lifecycle shims. The complete input tree created by `npm ci --ignore-scripts
+--force`, including project configuration, is verified before, between, and
+after the build steps. The exactly pinned `unrs` resolver is forced through
+`NAPI_RS_FORCE_WASI=error` to use its WASI backend rather than a native addon;
+Workers receive explicit sealed loader arguments pinned to the live parent.
+Only declared output directories absent from the isolated source copy may be
+read with stable `O_NOFOLLOW`/`fstat` reads, and the final `.sppkg` is
+SHA-256-bound. Synchronous, callback, promise, stream, and `openAsBlob` reads inside the
+manifested tree use the same `O_NOFOLLOW`/`fstat`/SHA-256 verification.
+Hash, Buffer, Object, Reflect, JSON, Map, and Set operations used by the guard
+are captured as preload primitives; external symlink or hard-link aliases are
+classified by realpath plus device/inode before reads. Copies of verified
+runtime assets into declared generated-output directories reject symlink
+destinations and use a same-directory temporary file plus atomic rename.
+Only `fork` may start a Node child; its executable, manifest, loader paths and
+`NODE_OPTIONS` are captured once before application code and cannot be replaced
+through `process.env`. Callback and stream delivery use captured `nextTick`, `Readable.from`,
+`setEncoding`, `push`, and `emit` primitives. Package-metadata candidates use
+captured Set insertion and iteration; stream listener registration, `push`, and
+`emit` are immutable own methods. CommonJS `_load`, `_cache`, the extension container, resolver, prototype
+container, prototype `load`, `require`, and `_compile` are pinned. Before module code runs, each concrete module instance receives an immutable
+own `require` and is bound to its cache identity. The shared cache container must retain
+its null prototype before and after every delegated load. Cache entries are accepted only
+after pending-to-active-to-completed identity handoff by that verified loader path. Bare
+builtin names are normalized to canonical `node:` IDs before delegation. The `.cjs`, `.json`, and
+`.node` terminals cannot be replaced; only the manifest-verified pinned Pirates
+registrar may install the Jest `.js` transformer, which receives only bytes that
+were verified immediately before dispatch. Direct Node execution through
+`spawn` or `execFile` is blocked.
+Native addon files remain in the hash manifest, while `process.dlopen` and
+all other loading remain forbidden.
+
+Azure CLI never executes the original mutable wrapper. Its interpreter,
+bootstrap, and manifest are sealed in `memfd` files; the complete owner-bound
+`site-packages` tree is reverified per file, copied into a private user/mount
+namespace, and remounted read-only. Host Azure configuration is copied through
+stable symlink-free reads into a second private `tmpfs`; `clouds.config` is
+forbidden. Every Azure CLI process validates exactly one default profile bound
+to the approved tenant, approved subscription and `environmentName == AzureCloud`.
+All extension
+sources are rebound to one empty read-only directory and dynamic extension
+installation is disabled. A host without this isolation stops before any
+provider request with
+`AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE`.
+Application-visible descriptor APIs for protected runtime files fail closed after verification. Only the separately initialized internal ESM loader thread may use its primitive descriptor for the same no-follow, stable-stat and SHA-256 verification. CommonJS, ESM, `ChildProcess.prototype.spawn`, and low-level `process.binding` variants share the same process boundary. Downloaded Teams packages are read once through a stable descriptor, allow only canonical root entries, an exact capability-free manifest allowlist and validated PNG icons, and bind the SHA-256 of those same validated bytes before publish or update.
+
 The activation hash is generated only after the final commit exists because
 the offline plan binds the commit and live runner artifacts themselves; a
 result hash hard-coded in that same commit would be circular and is forbidden.
@@ -116,7 +166,8 @@ Before the first write, checks run in this order:
 2. Run a complete read-only inventory of Entra application/service-principal, UAMI role, site-grant, App Catalog, SPFx permission/install, page/webpart, and synthetic-key matches; exclude duplicates and broader permissions before any possible write.
 3. Acquire the target-global nonblocking lock for tenant, subscription, and workspace regardless of output path, activation hash, or correlation ID.
 4. Initialize only a new ledger; existing or partial runs cannot continue in the MVP.
-5. Prebuild the Function OneDeploy package, site-scoped `.sppkg`, immutable Bicep snapshot, and resolved Bicep parameter snapshot, then hash-bind them to the commit, tree, and activation hash.
+5. Prebuild the Function OneDeploy package, site-scoped `.sppkg`, reproducibly compiled ARM JSON, and resolved parameter snapshot, then hash-bind them to the commit, tree, and activation hash.
+   Sources are materialized descriptor-first with `O_NOFOLLOW`, stable before/after `fstat`, expected SHA-256, and an exclusive new destination.
 6. Require empty output from `git status --porcelain=v1 --untracked-files=all`.
 7. Compare `HEAD` and `HEAD^{tree}` with the approved commit and tree.
 8. Rebuild the offline plan and verify `READY` plus the expected activation hash.
@@ -134,7 +185,7 @@ The twelve steps remain in the offline plan order:
 1. register three Azure providers,
 2. create or reuse the exact resource group,
 3. create or reuse exactly one single-tenant Entra API with `Matter.Read` and token version 2,
-4. deploy the hash-bound Bicep baseline with the readback-verified API `appId`,
+4. deploy the hash-bound precompiled ARM baseline with the readback-verified API `appId`, without compiling Bicep during the live run,
 5. assign only `Sites.Selected` to the UAMI,
 6. grant only `read` on the exact site,
 7. deploy the prebuilt hash-bound Function package bytes through Flex OneDeploy with `--build-remote true`,
@@ -202,7 +253,7 @@ automatic rollbacks and deletions.
 1. Implement CLI arguments, exact owner login `ofunk`, approval snapshot validation, and the commit/tree/hash gate.
 2. Implement the target-global lock and atomic hash-chained ledger.
 3. Strictly allowlist and redact Azure, Entra, Graph REST v1.0, and M365 CLI adapters.
-4. Implement the complete prewrite inventory, prebuilt hash-bound packages/Bicep snapshots, and twelve steps with unique read-before-write classification and readback.
+4. Implement the complete prewrite inventory, prebuilt hash-bound packages/ARM JSON snapshots, and twelve steps with unique read-before-write classification and readback.
 5. Implement healthz-before-auth, authenticated read, readyz-after-read, and deterministic synthetic-state restoration; keep MVP resume fail-closed and disabled.
 6. Implement the evidence allowlist and every negative test.
 7. Run focused tests, contract verification, spec traceability, language parity, link validation, the strict gate, and Protected PR checks.

@@ -9,6 +9,8 @@
 
 ## Ziel
 
+Safety-Bindung des Live-Runners: Produktive Build-Eingaben werden aus dem exakten freigegebenen Git-Commit/-Tree materialisiert und gegen Blob-IDs geprüft; Provider-Artefakte werden der attestierten Provider-Runtime als private, standardmäßig nur lesbare Snapshots mit erhaltenem Dateinamen über einen vererbten Verzeichnisdeskriptor übergeben; Modus und erwarteter SHA-256 werden vor und nach der Provider-Nutzung geprüft. Die lokale Lane bleibt ausdrücklich nicht authentisch gegen einen Angreifer mit Kontrolle über denselben OS-Account.
+
 Der Live-Runner setzt den bestehenden hashgebundenen
 [Offline-Aktivierungsplan](../../../../workflows/contracts/m365-azure-bff-activation-plan.contract.json)
 in genau zwölf Schritten um. Der
@@ -28,7 +30,7 @@ Erfolgsnachweis.
 - `AC-632-01`: Exakter Owner-Login `ofunk` und unveränderlicher Approval-Snapshot aus Issue #632; Issue #620 bleibt Parent-Kontext.
 - `AC-632-02`: Vollständige read-only Duplikat- und Rechteinventur vor dem ersten Provider-Write.
 - `AC-632-03`: Ein hostweiter zielglobaler Lock blockiert konkurrierende Läufe aus allen Worktrees und Klonen auf dem einzelnen Ausführungshost unabhängig von Output-Pfad, Aktivierungs-Hash oder Correlation-ID; eine hostübergreifende Koordination ist nicht enthalten.
-- `AC-632-04`: Function-Paket, site-scoped SPFx-Paket und Bicep-Snapshot sind vor dem finalen Git-/Plan-Gate gebaut und hashgebunden; der auf die erzeugte oder wiederverwendete Entra-App-ID aufgelöste Parameter-Snapshot und das vollständige Manifest werden nach dem exakten Step-3-Readback und vor dem Bicep-Write atomar gebunden.
+- `AC-632-04`: Function-Paket, site-scoped SPFx-Paket und das reproduzierbar aus Bicep kompilierte ARM-JSON sind vor dem finalen Git-/Plan-Gate gebaut und hashgebunden; der auf die erzeugte oder wiederverwendete Entra-App-ID aufgelöste Parameter-Snapshot und das vollständige Manifest werden nach dem exakten Step-3-Readback und vor dem ARM-Deployment atomar gebunden. Eine Bicep-Kompilierung im Live-Lauf ist verboten.
 - `AC-632-05`: Entra, UAMI, `Sites.Selected`, Site-`read`, site-scoped SPFx und `Matter.Read` werden exakt angelegt oder wiederverwendet und zurückgelesen.
 - `AC-632-06`: `healthz` läuft vor Auth, `readyz` erst nach authentifiziertem Read; Deny-/Manipulationsfälle schließen fail-closed und PASSED erfordert die verifizierte Wiederherstellung des synthetischen Ausgangszustands. Bei Prozessabbruch vor diesem Nachweis bleibt der Lauf ohne Erfolg und benötigt read-only Reconciliation plus manuelle Wiederherstellung; eine SIGKILL-Wiederherstellung wird nicht behauptet.
 - `AC-632-07`: Ledger und Evidence sind hashverkettet, redigiert und durch exakte Feld-Allowlists begrenzt.
@@ -108,7 +110,63 @@ sind ausschließlich npm-generierte `node_modules/.bin`-Kommandoshims, die
 nicht als Module geladen werden dürfen. Versiegelte CommonJS-/ESM-Loader
 verwerfen unbekannte, veränderte, verlinkte oder native Module und kompilieren
 beziehungsweise evaluieren nur die bei jedem Ladevorgang erneut mit
-`O_NOFOLLOW`, `fstat` und SHA-256 geprüften exakten Bytes.
+`O_NOFOLLOW`, `fstat` und SHA-256 geprüften exakten Bytes. Auch manifestierte
+WASM- und sonstige Nichtmodul-Assets werden bei jedem Lesezugriff erneut so
+geprüft. Der SPFx-Build ruft direkte, manifestierte Heft-Einstiege auf und
+verwendet weder `node_modules/.bin` noch npm-Lifecycle-Shims. Der nach `npm ci
+--ignore-scripts --force` erzeugte vollständige Input-Baum einschließlich
+Projektkonfiguration wird vor, zwischen und nach den Build-Schritten geprüft.
+Das exakt gepinnte `unrs`-Resolverpaket wird über `NAPI_RS_FORCE_WASI=error`
+zwingend mit seinem WASI- statt Native-Backend betrieben; Worker erhalten
+explizite, auf den lebenden Elternprozess gepinnte versiegelte Loader-
+Argumente. Nur deklarierte Output-Verzeichnisse, die nicht aus dem Repository
+in den isolierten Build kopiert werden, dürfen über stabile
+`O_NOFOLLOW`-/`fstat`-Reads gelesen werden; das finale `.sppkg` wird
+SHA-256-gebunden. Synchrone, Callback-, Promise-, Stream- und `openAsBlob`-
+Lesewege innerhalb des manifestierten Baums verwenden dieselbe
+`O_NOFOLLOW`-/`fstat`-/SHA-256-Prüfung. Die vom Guard verwendeten Hash-, Buffer-,
+Object-, Reflect-, JSON-, Map- und Set-Operationen werden beim Preload als
+Primitive gebunden; externe Symlink- oder Hardlink-Aliase werden vor Reads
+über Realpath sowie Geräte-/Inode-Identität klassifiziert. Kopien verifizierter
+Runtime-Assets in deklarierte generierte Output-Verzeichnisse weisen Symlink-
+Ziele zurück und verwenden eine temporäre Datei im selben Verzeichnis mit
+atomarem Rename. Anwendungssichtbare Deskriptor-APIs für geschützte Runtime-Dateien schließen nach der
+Prüfung fail-closed. Nur der separat initialisierte interne ESM-Loader-Thread darf seinen primitiven Deskriptor für dieselbe No-Follow-, Stable-Stat- und SHA-256-Prüfung verwenden.
+Nur `fork` darf einen Node-Kindprozess starten; Executable, Manifest, Loader-
+Pfade und `NODE_OPTIONS` werden einmal vor Anwendungscode gebunden und können
+nicht über `process.env` ersetzt werden. Callback- und Stream-Auslieferung
+verwendet gebundene `nextTick`-, `Readable.from`-, `setEncoding`-, `push`-
+und `emit`-Primitive. Kandidaten für Paketmetadaten verwenden gebundene Set-
+Insertion und -Iteration; Stream-Listenerregistrierung, `push` und `emit` sind
+unveränderliche eigene Methoden. CommonJS-`_load`, `_cache`, Extension-Container, Resolver, Prototype-
+Container sowie Prototype-`load`, `require` und `_compile` sind gepinnt. Vor Ausführung von Modulcode erhält jede konkrete Modulinstanz ein unveränderliches
+eigenes `require` und wird an ihre Cache-Identität gebunden. Der gemeinsame Cache-Container
+muss vor und nach jedem delegierten Ladevorgang seinen Null-Prototyp behalten. Cache-Einträge gelten
+erst nach identitätsgleicher Pending-to-Active-to-Completed-Übergabe durch diesen verifizierten
+Loaderpfad als vertrauenswürdig. Nackte Builtin-Namen werden vor Delegation auf
+kanonische `node:`-IDs normalisiert. Die `.cjs`-, `.json`-
+und `.node`-Terminals sind nicht ersetzbar; nur der manifest-verifizierte
+gepinnte Pirates-Registrar darf den Jest-`.js`-Transformer registrieren, der
+ausschließlich unmittelbar zuvor verifizierte Bytes erhält. Direkte Node-Aufrufe über `spawn` oder `execFile` werden
+blockiert. Native Addon-Dateien sind Bestandteil des Hashmanifests,
+`process.dlopen` und sonstiges Laden bleiben jedoch verboten.
+
+Die Azure CLI führt niemals den ursprünglichen veränderlichen Wrapper aus.
+Interpreter, Bootstrap und Manifest liegen in versiegelten `memfd`-Dateien;
+der vollständig owner-gebundene `site-packages`-Baum wird pro Datei erneut
+geprüft in einen privaten User-/Mount-Namespace kopiert und dort read-only
+remounted. Die Host-Azure-Konfiguration wird über stabile, symlinkfreie Reads
+in ein zweites privates `tmpfs` kopiert; `clouds.config` ist verboten. Jeder
+Azure-CLI-Prozess prüft dort genau ein Default-Profil mit dem freigegebenen
+Tenant, der freigegebenen Subscription und `environmentName == AzureCloud`.
+Alle Extension-Quellen
+werden auf ein leeres, read-only Verzeichnis umgebunden und die dynamische
+Extension-Installation wird deaktiviert. Unterstützt der Host diese Isolation
+nicht, stoppt die Aktivierung
+vor jeder Provider-Anfrage mit
+`AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE`.
+Descriptor-Reads geben ausschließlich einen anonymen, nur lesbaren Snapshot der exakt verifizierten Bytes zurück. CommonJS-, ESM-, `ChildProcess.prototype.spawn`- und Low-Level-`process.binding`-Varianten unterliegen denselben Prozessgrenzen. Heruntergeladene Teams-Pakete werden einmal stabil gelesen, erlauben nur kanonische Root-Einträge, eine exakte capability-freie Manifest-Allowlist und geprüfte PNG-Icons und binden vor Publish/Update den SHA-256 derselben validierten Bytes.
+
 Der Aktivierungs-Hash wird erst nach Vorliegen des finalen Commits erzeugt,
 weil der Offline-Plan Commit und Live-Runner-Artefakte selbst bindet; ein im
 selben Commit fest codierter Ergebnis-Hash wäre zirkulär und ist unzulässig.
@@ -121,7 +179,8 @@ Vor der ersten Schreibaktion wird in dieser Reihenfolge geprüft:
 2. Eine vollständige read-only Inventur aller Entra-App-/Service-Principal-, UAMI-Rollen-, Site-Grant-, App-Catalog-, SPFx-Permission-/Install-, Seiten-/Webpart- und synthetischen Schlüssel-Treffer ausführen; Duplikate und breitere Rechte vor jedem möglichen Write ausschließen.
 3. Den zielglobalen, nicht blockierenden Lock für Tenant, Subscription und Workspace unabhängig von Output-Pfad, Aktivierungs-Hash und Correlation-ID erwerben.
 4. Ausschließlich ein neues Ledger initialisieren; bestehende oder partielle Läufe sind im MVP nicht fortsetzbar.
-5. Function-OneDeploy-Paket, site-scoped `.sppkg`, unveränderlichen Bicep-Snapshot und aufgelösten Bicep-Parameter-Snapshot vorbauen, hashen und an Commit, Tree sowie Aktivierungs-Hash binden.
+5. Function-OneDeploy-Paket, site-scoped `.sppkg`, reproduzierbar kompiliertes ARM-JSON und aufgelösten Parameter-Snapshot vorbauen, hashen und an Commit, Tree sowie Aktivierungs-Hash binden.
+   Quellen werden dabei descriptor-basiert mit `O_NOFOLLOW`, stabilen Vor-/Nach-`fstat`-Werten, erwartetem SHA-256 und exklusiv neuem Ziel materialisiert.
 6. Leeren Output von `git status --porcelain=v1 --untracked-files=all` verlangen.
 7. `HEAD` und `HEAD^{tree}` mit freigegebenem Commit und Tree vergleichen.
 8. Offline-Plan erneut erzeugen und `READY` plus erwarteten Aktivierungs-Hash prüfen.
@@ -139,7 +198,7 @@ Die zwölf Schritte bleiben in der Reihenfolge des Offline-Plans:
 1. drei Azure-Provider registrieren,
 2. die exakte Resource Group anlegen oder wiederverwenden,
 3. genau eine Single-Tenant-Entra-API mit `Matter.Read` und Token-Version 2 anlegen oder wiederverwenden,
-4. die hashgebundene Bicep-Baseline mit der read-back-geprüften API-`appId` bereitstellen,
+4. die hashgebundene, vorab kompilierte ARM-Baseline mit der read-back-geprüften API-`appId` bereitstellen, ohne Bicep im Live-Lauf zu kompilieren,
 5. der UAMI ausschließlich `Sites.Selected` zuweisen,
 6. ausschließlich `read` auf der exakten Site erteilen,
 7. die vorgebauten und hashgebundenen Function-Paketbytes per Flex OneDeploy mit `--build-remote true` bereitstellen,
@@ -211,7 +270,7 @@ error sowie null automatische Rollbacks und Löschungen.
 1. CLI-Argumente, exakten Owner-Login `ofunk`, Approval-Snapshot-Prüfung und Commit-/Tree-/Hash-Gate implementieren.
 2. Zielglobalen Lock und atomaren, hashverketteten Ledger implementieren.
 3. Azure-, Entra-, Graph-REST-v1.0- und M365-CLI-Adapter strikt allowlisten und redigieren.
-4. Vollständige Pre-Write-Inventur, vorgebaute hashgebundene Pakete/Bicep-Snapshots und zwölf Schritte mit eindeutiger Read-before-write-Klassifikation und Readback implementieren.
+4. Vollständige Pre-Write-Inventur, vorgebaute hashgebundene Pakete/ARM-JSON-Snapshots und zwölf Schritte mit eindeutiger Read-before-write-Klassifikation und Readback implementieren.
 5. `healthz`-vor-Auth, authentifizierten Read, `readyz`-danach und deterministische synthetische Zustandswiederherstellung implementieren; MVP-Resume fail-closed deaktivieren.
 6. Evidence-Allowlist und alle Negativtests implementieren.
 7. Fokussierte Tests, Contract-Verifikation, Spec-Traceability, Sprachparität, Linkprüfung, Strict-Gate und Protected-PR-Checks ausführen.

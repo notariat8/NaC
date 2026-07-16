@@ -138,7 +138,29 @@
       "runtime_unmanifested_or_changed_module_execution_allowed": false,
       "runtime_native_node_addons_allowed": false,
       "runtime_module_symlinks_allowed": false,
-      "runtime_path_swap_behavior": "resolved module must remain manifest-allowlisted and exact bytes are O_NOFOLLOW/fstat/SHA-256 verified before compile or evaluation"
+      "runtime_path_swap_behavior": "resolved module must remain manifest-allowlisted and exact bytes are O_NOFOLLOW/fstat/SHA-256 verified before compile or evaluation",
+      "azure_cli_runtime_bundle_digest_field": "azure_cli_toolchain_sha256",
+      "azure_cli_runtime_bytes_mode": "sealed_interpreter_bootstrap_manifest_plus_verified_private_readonly_mount_namespace_copy",
+      "azure_cli_original_wrapper_execution_allowed": false,
+      "azure_cli_private_user_and_mount_namespace_required": true,
+      "azure_cli_namespace_unavailable_behavior": "fail_closed_before_provider_request",
+      "node_child_process_loader_mode": "fork_only_immutable_preload_bound_node_manifest_node_options_parent_pid_pinned_sealed_memfd_paths_with_execpath_and_clean_execargv_all_public_and_low_level_spawn_exec_execfile_commonjs_esm_prototype_and_process_binding_variants_rejected",
+      "spfx_build_dependency_digest_mode": "post_npm_ci_full_input_tree_manifest_excluding_declared_fresh_generated_outputs_verified_before_between_and_after_direct_heft_steps",
+      "runtime_manifest_asset_read_mode": "manifest_bound_sync_callback_promise_read_stream_and_open_as_blob_assets_per_read_nofollow_fstat_captured_primordials_and_callback_stream_delivery_sha256_external_alias_realpath_inode_classification_descriptor_apis_fail_closed_and_esm_loader_uses_verified_byte_read",
+      "node_worker_loader_mode": "manifest_allowlisted_worker_entry_with_explicit_parent_pid_pinned_sealed_loader_execargv",
+      "spfx_native_resolver_mode": "exact_pinned_wasm32_wasi_with_force_wasi_and_manifest_verified_wasm_bytes",
+      "spfx_generated_output_read_mode": "fresh_isolated_clean_declared_outputs_stable_nofollow_reads_symlink_safe_atomic_verified_runtime_asset_copy_native_addons_blocked_and_final_package_sha256",
+      "azure_cli_extension_loading_allowed": false,
+      "azure_cli_extensions_mode": "empty_readonly_private_roots_and_dynamic_install_disabled",
+      "azure_deployment_template_mode": "repo_compiled_reproducible_hash_bound_arm_json",
+      "azure_bicep_runtime_compilation_allowed": false,
+      "azure_cli_cloud_name_exact": "AzureCloud",
+      "azure_cli_custom_cloud_config_allowed": false,
+      "azure_cli_config_mode": "stable_nofollow_copy_to_private_mount_namespace_tmpfs_plus_per_process_exact_profile_binding",
+      "provider_artifact_binding_mode": "expected_sha256_pre_and_post_verified_private_readonly_by_default_filename_preserving_snapshot_via_inherited_directory_fd_attested_provider_same_account_attacker_excluded",
+      "spfx_package_reproducibility_mode": "two_independent_builds_sorted_zip_fixed_metadata_and_solution_uuid5_normalized_generated_xml_ids",
+      "teams_package_binding_mode": "stable_single_descriptor_bytes_canonical_root_only_zip_exact_capability_free_manifest_allowlist_png_validation_and_post_download_sha256_provider_binding",
+      "node_runtime_extension_mode": "pinned_commonjs_load_cache_extensions_resolver_prototype_container_load_require_compile_with_preexecution_module_instance_require_null_prototype_cache_container_pending_active_completed_cache_identity_provenance_canonical_node_builtin_ids_manifest_verified_pirates_only_js_transform_nonreplaceable_cjs_json_native_terminals_and_captured_set_candidate_iteration_stream_listener_push_emit"
     }
   },
   "git_execution_gate": {
@@ -385,6 +407,7 @@
       "approved_commit_sha",
       "approved_tree_sha",
       "activation_hash",
+      "approved_tree_snapshot_sha256",
       "bicep_snapshot_sha256",
       "bicep_parameters_snapshot_sha256",
       "function_package_sha256",
@@ -400,7 +423,10 @@
     "all_bytes_hash_bound_to_approved_commit_tree_and_activation_hash": true,
     "provider_write_may_build_rebuild_or_mutate_inputs": false,
     "static_hash_or_byte_drift_behavior": "stop_before_first_write",
-    "resolved_parameter_or_manifest_drift_behavior": "stop_before_bicep_write_with_FAILED_PARTIAL_after_prior_Entra_write"
+    "resolved_parameter_or_manifest_drift_behavior": "stop_before_bicep_write_with_FAILED_PARTIAL_after_prior_Entra_write",
+    "snapshot_copy_mode": "exclusive_destination_plus_source_nofollow_stable_fstat_and_expected_sha256",
+    "source_materialization_mode": "trusted_git_archive_from_exact_approved_commit_tree_with_ls_tree_blob_mode_blob_id_and_per_file_sha256_verification_symlink_gitlink_and_traversal_rejected",
+    "provider_artifact_handoff_mode": "private_readonly_by_default_filename_preserving_expected_sha256_pre_and_post_verified_snapshot_no_mutable_source_path_attested_provider_same_account_attacker_excluded"
   },
   "final_pre_write_binding": {
     "occurs_after": [
