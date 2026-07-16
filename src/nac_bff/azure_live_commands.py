@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import configparser
 from contextlib import ExitStack
 import hashlib
 import json
@@ -76,6 +77,7 @@ _ACCOUNT_SHOW = ("account", "show")
 _MAX_ARG_LENGTH = 16_384
 _ATTESTATION_SCHEMA = "nac-azure-cli-toolchain-attestation-v1"
 _PYTHON_NAME_RE = re.compile(r"python(?:\d+(?:\.\d+)*)?\Z")
+_MAX_CLOUD_SELECTION_BYTES = 4096
 _MAX_INTERPRETER_LINKS = 8
 _FILE_CHUNK_SIZE = 1024 * 1024
 
@@ -205,7 +207,9 @@ def run_azure_cli(
             command=family,
         )
 
-    cloud_config_code = _azure_cloud_config_boundary(environ)
+    cloud_config_code, cloud_selection_sha256 = _azure_cloud_config_boundary(
+        environ
+    )
     if cloud_config_code is not None:
         return _command_result(
             ok=False,
@@ -264,6 +268,7 @@ def run_azure_cli(
     runtime = _prepare_bound_runtime(
         resolved_binary,
         expected_sha256=expected_attestation,
+        cloud_selection_sha256=cloud_selection_sha256,
     )
     if runtime is None:
         return _command_result(
@@ -429,7 +434,7 @@ def check_azure_cli_readiness(
 
 def _azure_cloud_config_boundary(
     environ: Mapping[str, str] | None,
-) -> str | None:
+) -> tuple[str | None, str | None]:
     source = os.environ if environ is None else environ
     configured = source.get("AZURE_CONFIG_DIR")
     if configured:
@@ -437,25 +442,71 @@ def _azure_cloud_config_boundary(
     else:
         home = source.get("HOME")
         if not home:
-            return "AZURE_CLI_CONFIG_HOME_MISSING"
+            return "AZURE_CLI_CONFIG_HOME_MISSING", None
         config_root = Path(home).expanduser() / ".azure"
     if not config_root.is_absolute():
-        return "AZURE_CLI_CONFIG_PATH_INVALID"
+        return "AZURE_CLI_CONFIG_PATH_INVALID", None
     try:
-        metadata = config_root.lstat()
+        config_root.lstat()
     except FileNotFoundError:
-        return None
+        return None, None
     except OSError:
-        return "AZURE_CLI_CONFIG_UNTRUSTED"
-    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
-        return "AZURE_CLI_CONFIG_UNTRUSTED"
+        return "AZURE_CLI_CONFIG_UNTRUSTED", None
+    if not _strict_directory(config_root, allowed_uids={0, os.geteuid()}):
+        return "AZURE_CLI_CONFIG_UNTRUSTED", None
+    cloud_selection = config_root / "clouds.config"
     try:
-        (config_root / "clouds.config").lstat()
+        cloud_selection.lstat()
     except FileNotFoundError:
-        return None
+        return None, None
     except OSError:
-        return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
-    return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
+        return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED", None
+    digest = _exact_default_cloud_selection_digest(cloud_selection)
+    if digest is None:
+        return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED", None
+    return None, digest
+
+
+def _exact_default_cloud_selection_digest(path: Path) -> str | None:
+    try:
+        metadata = path.lstat()
+    except OSError:
+        return None
+    if metadata.st_size > _MAX_CLOUD_SELECTION_BYTES:
+        return None
+    measurement = _stable_file_measurement(
+        path,
+        allowed_uids={0, os.geteuid()},
+        prefix_length=_MAX_CLOUD_SELECTION_BYTES,
+        expected_metadata=metadata,
+        extra_flags=getattr(os, "O_NONBLOCK", 0),
+    )
+    if measurement is None:
+        return None
+    digest, raw = measurement
+    if len(raw) != metadata.st_size:
+        return None
+    try:
+        text = raw.decode("utf-8")
+        parser = configparser.ConfigParser(
+            interpolation=None,
+            strict=True,
+            empty_lines_in_values=False,
+        )
+        parser.optionxform = str
+        parser.read_string(text)
+    except (UnicodeDecodeError, configparser.Error):
+        return None
+    if parser.defaults() or parser.sections() != [EXPECTED_CLOUD_NAME]:
+        return None
+    selection = parser[EXPECTED_CLOUD_NAME]
+    if (
+        set(selection) != {"subscription"}
+        or selection.get("subscription", "").strip()
+        != EXPECTED_SUBSCRIPTION_ID
+    ):
+        return None
+    return digest
 
 
 @dataclass(frozen=True, slots=True)
@@ -757,6 +808,7 @@ def _prepare_bound_runtime(
     path: Path,
     *,
     expected_sha256: str | None,
+    cloud_selection_sha256: str | None,
 ) -> SealedAzureCliRuntime | None:
     if expected_sha256 is None or not isinstance(expected_sha256, str):
         return None
@@ -784,6 +836,7 @@ def _prepare_bound_runtime(
         interpreter_path=attestation.interpreter_path,
         interpreter_digest=attestation.interpreter_digest,
         allowed_uids=set(attestation.runtime_uids),
+        cloud_selection_sha256=cloud_selection_sha256,
     )
 
 
@@ -1048,11 +1101,13 @@ def _stable_file_measurement(
     executable: bool = False,
     prefix_length: int = 0,
     expected_metadata: os.stat_result | None = None,
+    extra_flags: int = 0,
 ) -> tuple[str, bytes] | None:
     flags = (
         os.O_RDONLY
         | getattr(os, "O_CLOEXEC", 0)
         | getattr(os, "O_NOFOLLOW", 0)
+        | extra_flags
     )
     try:
         before_path = path.lstat()

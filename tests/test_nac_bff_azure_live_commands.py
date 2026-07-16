@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -76,8 +77,120 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertIn("copy_private_azure_config", source)
         self.assertIn("validate_private_azure_profile", source)
         self.assertIn('"environmentName") != "AzureCloud"', source)
-        self.assertIn('name == "clouds.config"', source)
+        self.assertEqual(source.count('name == "clouds.config"'), 2)
+        self.assertIn("expected_cloud_selection_sha256", source)
+        self.assertIn("MAX_CLOUD_SELECTION_BYTES = 4096", source)
+        self.assertIn("cloud_selection_seen = True", source)
+        self.assertIn(
+            'if (destination / "clouds.config").exists():',
+            source,
+        )
         self.assertIn('os.environ["AZURE_CONFIG_DIR"] = str(private_config)', source)
+
+    def test_sealed_bootstrap_omits_default_cloud_selection(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        copy_private_azure_config = namespace["copy_private_azure_config"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_config = root / "source"
+            destination = root / "destination"
+            source_config.mkdir(mode=0o700)
+            (source_config / "azureProfile.json").write_text(
+                '{"subscriptions": []}',
+                encoding="utf-8",
+            )
+            (source_config / "clouds.config").write_text(
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
+                encoding="utf-8",
+            )
+
+            expected_digest = hashlib.sha256(
+                (source_config / "clouds.config").read_bytes()
+            ).hexdigest()
+            copy_private_azure_config(
+                source_config,
+                destination,
+                expected_digest,
+            )
+
+            self.assertTrue((destination / "azureProfile.json").is_file())
+            self.assertFalse((destination / "clouds.config").exists())
+
+    def test_sealed_bootstrap_rejects_cloud_selection_directory(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        copy_private_azure_config = namespace["copy_private_azure_config"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_config = root / "source"
+            destination = root / "destination"
+            source_config.mkdir(mode=0o700)
+            (source_config / "clouds.config").mkdir()
+
+            with self.assertRaisesRegex(SystemExit, "86"):
+                copy_private_azure_config(source_config, destination, None)
+
+    def test_sealed_bootstrap_rejects_cloud_selection_digest_drift(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        copy_private_azure_config = namespace["copy_private_azure_config"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_config = root / "source"
+            destination = root / "destination"
+            source_config.mkdir(mode=0o700)
+            selection = source_config / "clouds.config"
+            selection.write_text(
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
+                encoding="utf-8",
+            )
+            expected_digest = hashlib.sha256(selection.read_bytes()).hexdigest()
+            selection.write_text(
+                "[CustomCloud]\nsubscription = attacker\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(SystemExit, "86"):
+                copy_private_azure_config(
+                    source_config,
+                    destination,
+                    expected_digest,
+                )
+
+    def test_sealed_bootstrap_rejects_oversized_selection_drift(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        copy_private_azure_config = namespace["copy_private_azure_config"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_config = root / "source"
+            destination = root / "destination"
+            source_config.mkdir(mode=0o700)
+            selection = source_config / "clouds.config"
+            expected = (
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n"
+            ).encode("utf-8")
+            expected_digest = hashlib.sha256(expected).hexdigest()
+            selection.write_bytes(b"x" * 4097)
+
+            with self.assertRaisesRegex(SystemExit, "86"):
+                copy_private_azure_config(
+                    source_config,
+                    destination,
+                    expected_digest,
+                )
 
     def test_blocked_argv_never_reaches_subprocess(self) -> None:
         blocked = (
@@ -645,6 +758,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             runtime = azure_live_commands._prepare_bound_runtime(
                 binary,
                 expected_sha256=expected,
+                cloud_selection_sha256=None,
             )
             self.assertIsNotNone(runtime)
             assert runtime is not None
@@ -682,6 +796,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             runtime = azure_live_commands._prepare_bound_runtime(
                 binary,
                 expected_sha256=expected,
+                cloud_selection_sha256=None,
             )
             self.assertIsNotNone(runtime)
             assert runtime is not None
@@ -893,6 +1008,233 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(
             result["code"], "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED"
         )
+        process.assert_not_called()
+
+    def test_exact_default_cloud_selection_is_accepted_before_subprocess(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "azure-config"
+            config.mkdir(mode=0o700)
+            (config / "clouds.config").write_text(
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
+                encoding="utf-8",
+            )
+            binary = _fake_binary(root)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="{}",
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ) as process:
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                    environ={"AZURE_CONFIG_DIR": str(config), "HOME": str(root)},
+                )
+
+        self.assertTrue(result["ok"])
+        process.assert_called_once()
+
+    def test_cloud_selection_size_boundary_is_exactly_4096(self) -> None:
+        exact = (
+            f"[{EXPECTED_CLOUD_NAME}]\n"
+            f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n"
+        ).encode("utf-8")
+        for size, expected_ok in ((4096, True), (4097, False)):
+            with self.subTest(size=size), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config = root / "azure-config"
+                config.mkdir(mode=0o700)
+                payload = exact + b"#" * (size - len(exact))
+                (config / "clouds.config").write_bytes(payload)
+                binary = _fake_binary(root)
+                completed = subprocess.CompletedProcess(
+                    args=[],
+                    returncode=0,
+                    stdout="{}",
+                    stderr="",
+                )
+                with patch(
+                    "nac_bff.azure_live_commands.subprocess.run",
+                    return_value=completed,
+                ) as process:
+                    result = run_azure_cli(
+                        ["account", "show"],
+                        binary=binary,
+                        expected_binary_sha256=_binary_sha256(binary),
+                        environ={
+                            "AZURE_CONFIG_DIR": str(config),
+                            "HOME": str(root),
+                        },
+                    )
+                self.assertEqual(result["ok"], expected_ok)
+                if expected_ok:
+                    process.assert_called_once()
+                else:
+                    self.assertEqual(
+                        result["code"],
+                        "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
+                    )
+                    process.assert_not_called()
+
+    def test_non_exact_default_cloud_selections_are_rejected(self) -> None:
+        exact = (
+            f"[{EXPECTED_CLOUD_NAME}]\n"
+            f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n"
+        ).encode("utf-8")
+        cases = {
+            "wrong_subscription": (
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                "subscription = 00000000-0000-0000-0000-000000000000\n"
+            ).encode("utf-8"),
+            "uppercase_subscription": (
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID.upper()}\n"
+            ).encode("utf-8"),
+            "wrong_key_case": (
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"Subscription = {EXPECTED_SUBSCRIPTION_ID}\n"
+            ).encode("utf-8"),
+            "extra_key": exact + b"region = germanywestcentral\n",
+            "extra_section": exact + b"[Other]\nvalue = rejected\n",
+            "default_section": (
+                b"[DEFAULT]\nvalue = rejected\n" + exact
+            ),
+            "duplicate_section": exact + exact,
+            "malformed": b"[AzureCloud\nsubscription = rejected\n",
+            "non_utf8": b"[AzureCloud]\nsubscription = \xff\n",
+            "oversized": exact + b"#" * 4096,
+        }
+        for name, payload in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config = root / "azure-config"
+                config.mkdir(mode=0o700)
+                (config / "clouds.config").write_bytes(payload)
+                binary = _fake_binary(root)
+                with patch(
+                    "nac_bff.azure_live_commands.subprocess.run"
+                ) as process:
+                    result = run_azure_cli(
+                        ["account", "show"],
+                        binary=binary,
+                        expected_binary_sha256=_binary_sha256(binary),
+                        environ={
+                            "AZURE_CONFIG_DIR": str(config),
+                            "HOME": str(root),
+                        },
+                    )
+                self.assertEqual(
+                    result["code"],
+                    "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
+                )
+                process.assert_not_called()
+
+    def test_untrusted_default_cloud_selection_shapes_are_rejected(self) -> None:
+        exact = (
+            f"[{EXPECTED_CLOUD_NAME}]\n"
+            f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n"
+        )
+        for name in (
+            "symlink",
+            "group_writable_file",
+            "world_writable_file",
+            "directory",
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config = root / "azure-config"
+                config.mkdir(mode=0o700)
+                selection = config / "clouds.config"
+                if name == "symlink":
+                    target = root / "selection.ini"
+                    target.write_text(exact, encoding="utf-8")
+                    selection.symlink_to(target)
+                elif name in {
+                    "group_writable_file",
+                    "world_writable_file",
+                }:
+                    selection.write_text(exact, encoding="utf-8")
+                    selection.chmod(
+                        0o660 if name == "group_writable_file" else 0o666
+                    )
+                else:
+                    selection.mkdir()
+                binary = _fake_binary(root)
+                with patch(
+                    "nac_bff.azure_live_commands.subprocess.run"
+                ) as process:
+                    result = run_azure_cli(
+                        ["account", "show"],
+                        binary=binary,
+                        expected_binary_sha256=_binary_sha256(binary),
+                        environ={
+                            "AZURE_CONFIG_DIR": str(config),
+                            "HOME": str(root),
+                        },
+                    )
+                self.assertEqual(
+                    result["code"],
+                    "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
+                )
+                process.assert_not_called()
+
+    def test_foreign_owned_cloud_selection_measurement_is_rejected(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selection = Path(tmp) / "clouds.config"
+            selection.write_text(
+                f"[{EXPECTED_CLOUD_NAME}]\n"
+                f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
+                encoding="utf-8",
+            )
+            metadata = selection.lstat()
+            foreign = SimpleNamespace(
+                st_mode=metadata.st_mode,
+                st_uid=os.geteuid() + 1,
+                st_gid=metadata.st_gid,
+                st_dev=metadata.st_dev,
+                st_ino=metadata.st_ino,
+                st_size=metadata.st_size,
+                st_mtime_ns=metadata.st_mtime_ns,
+                st_ctime_ns=metadata.st_ctime_ns,
+            )
+            with patch(
+                "nac_bff.azure_live_commands.os.fstat",
+                return_value=foreign,
+            ):
+                digest = (
+                    azure_live_commands
+                    ._exact_default_cloud_selection_digest(selection)
+                )
+
+        self.assertIsNone(digest)
+
+    def test_group_writable_azure_config_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "azure-config"
+            config.mkdir(mode=0o700)
+            config.chmod(0o770)
+            binary = _fake_binary(root)
+            with patch("nac_bff.azure_live_commands.subprocess.run") as process:
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                    environ={"AZURE_CONFIG_DIR": str(config), "HOME": str(root)},
+                )
+
+        self.assertEqual(result["code"], "AZURE_CLI_CONFIG_UNTRUSTED")
         process.assert_not_called()
 
     def test_wrong_cloud_is_not_ready(self) -> None:
