@@ -2919,13 +2919,21 @@ def _validate_spfx_grants(
     allow_absent: bool,
 ) -> int:
     rows = _rows(value)
-    if not rows:
+    if resource_id is None:
+        return 0
+    matching_rows = [
+        row
+        for row in rows
+        if isinstance(_field(row, "resourceId", "ResourceId"), str)
+        and _field(row, "resourceId", "ResourceId").lower() == resource_id.lower()
+    ]
+    if not matching_rows:
         if allow_absent:
             return 0
         raise ActivationStepError("SPFX_BFF_GRANT_READBACK_FAILED")
-    if resource_id is None or len(rows) != 1:
+    if len(matching_rows) != 1:
         raise ActivationStepError("SPFX_BFF_GRANT_BROADER_OR_DUPLICATE")
-    row = rows[0]
+    row = matching_rows[0]
     candidate = _field(row, "resourceId", "ResourceId")
     scope = _field(row, "scope", "Scope")
     if (

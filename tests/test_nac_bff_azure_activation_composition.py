@@ -1716,7 +1716,7 @@ class AzureBffCompositionTests(unittest.TestCase):
         cases = (
             (
                 "SPFX_BFF_GRANT_BROADER_OR_DUPLICATE",
-                [{"resourceId": UAMI_APP_ID, "scope": DELEGATED_SCOPE}],
+                [{"resourceId": API_SERVICE_PRINCIPAL_ID, "scope": "Matter.Write"}],
                 [],
                 {"status": "PASSED"},
             ),
@@ -1762,6 +1762,22 @@ class AzureBffCompositionTests(unittest.TestCase):
         ]
         self.assertEqual(
             self._prewrite()["code"], "SPFX_BFF_PERMISSION_STATE_DUPLICATE"
+        )
+
+    def test_prewrite_ignores_unrelated_spfx_grants_but_rejects_bound_duplicates(
+        self,
+    ) -> None:
+        unrelated = {"resourceId": UAMI_APP_ID, "scope": "Files.Read.All"}
+        exact = {
+            "resourceId": API_SERVICE_PRINCIPAL_ID,
+            "scope": DELEGATED_SCOPE,
+        }
+        self.m365.grant_snapshots = [[unrelated, exact]]
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+
+        self.m365.grant_snapshots = [[unrelated, exact, dict(exact)]]
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_BFF_GRANT_BROADER_OR_DUPLICATE"
         )
 
     def test_approved_tree_requires_two_identical_spfx_builds(self) -> None:
@@ -2013,7 +2029,6 @@ class AzureBffCompositionTests(unittest.TestCase):
         for grants in (
             [{"resourceId": API_SERVICE_PRINCIPAL_ID, "scope": "Matter.ReadWrite"}],
             [exact, exact],
-            [{"resourceId": UAMI_APP_ID, "scope": DELEGATED_SCOPE}],
         ):
             with self.subTest(grants=grants):
                 self.m365.grant_snapshots = [grants]
