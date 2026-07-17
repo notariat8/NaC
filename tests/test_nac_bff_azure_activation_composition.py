@@ -1950,7 +1950,10 @@ class AzureBffCompositionTests(unittest.TestCase):
                     self.m365,
                     "page_detail",
                     {
-                        "CanvasContent1": json.dumps(
+                        "ListItemAllFields": {
+                            "CanvasContent1": "<div>legacy</div>"
+                        },
+                        "canvasContentJson": json.dumps(
                             [
                                 {"webPartId": WEB_PART_ID},
                                 {"webPartId": WEB_PART_ID},
@@ -2007,6 +2010,26 @@ class AzureBffCompositionTests(unittest.TestCase):
                         for command in self.azure.commands
                     )
                 )
+
+    def test_prewrite_prefers_structured_canvas_json_over_legacy_html(self) -> None:
+        _complete_m365_state(self.m365)
+        self.m365.page_detail = {
+            "ListItemAllFields": {
+                "CanvasContent1": "<div data-sp-canvascontrol></div>"
+            },
+            "canvasContentJson": json.dumps([{"webPartId": WEB_PART_ID}]),
+        }
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+
+    def test_prewrite_rejects_malformed_structured_canvas_json(self) -> None:
+        _complete_m365_state(self.m365)
+        self.m365.page_detail = {
+            "CanvasContent1": json.dumps([{"webPartId": WEB_PART_ID}]),
+            "canvasContentJson": "<div>not-json</div>",
+        }
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_PAGE_WEBPART_STATE_INVALID"
+        )
 
     def test_provider_registration_is_idempotent(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")

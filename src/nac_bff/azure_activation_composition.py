@@ -2734,6 +2734,13 @@ def _count_structured_webpart_instances(value: object, webpart_id: str) -> int:
                 nested += count(item)
         return current + nested
 
+    if isinstance(value, dict) and any(
+        str(key).lower() == "canvascontentjson" for key in value
+    ):
+        structured = _field(value, "canvasContentJson")
+        if not isinstance(structured, (str, dict, list)):
+            raise ActivationStepError("SPFX_PAGE_WEBPART_STATE_INVALID")
+        return count(parse_canvas(structured))
     return count(value)
 
 
