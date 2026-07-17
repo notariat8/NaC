@@ -41,6 +41,7 @@ from nac_m365_graph.sealed_toolchain import (
     sealed_toolchain,
 )
 from nac_m365_graph.spfx_site_deployment import (
+    APPROVED_WEB_API_PERMISSION_REQUESTS,
     APP_CATALOG_SCOPE,
     PACKAGE_CONFIG_RELATIVE_PATH,
     PACKAGE_NAME,
@@ -1136,7 +1137,7 @@ class AzureBffLiveExecutionPort:
                 )
             )
             try:
-                _validate_catalog_app_record(detail)
+                _validate_spfx_catalog_prewrite_record(detail)
             except DeploymentPlanError as exc:
                 raise ActivationStepError("SPFX_APP_CATALOG_BOUNDARY_FAILED") from exc
 
@@ -2980,6 +2981,29 @@ def _validate_spfx_permission_requests(
     ):
         raise ActivationStepError("SPFX_BFF_PERMISSION_REQUEST_UNEXPECTED")
     return matching_rows
+
+
+def _validate_spfx_catalog_prewrite_record(record: object) -> None:
+    try:
+        _validate_catalog_app_record(record)
+        return
+    except DeploymentPlanError:
+        pass
+    if (
+        not isinstance(record, dict)
+        or not any(str(key).lower() == "aadpermissions" for key in record)
+        or _field(record, "AadPermissions") is not None
+    ):
+        raise DeploymentPlanError(
+            "legacy app catalog record must explicitly have no AadPermissions"
+        )
+    normalized = {
+        key: value
+        for key, value in record.items()
+        if str(key).lower() != "aadpermissions"
+    }
+    normalized["AadPermissions"] = list(APPROVED_WEB_API_PERMISSION_REQUESTS)
+    _validate_catalog_app_record(normalized)
 
 
 def _validate_site_app_instances(value: object) -> None:
