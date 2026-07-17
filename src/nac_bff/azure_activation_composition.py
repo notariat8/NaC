@@ -2952,13 +2952,22 @@ def _validate_spfx_permission_requests(
     allow_absent: bool,
 ) -> list[dict[str, Any]]:
     rows = _rows(value)
-    if not rows:
+    if resource_id is None:
+        return []
+    matching_rows = [
+        row
+        for row in rows
+        if isinstance(_field(row, "ResourceId", "resourceId"), str)
+        and _field(row, "ResourceId", "resourceId").lower()
+        == resource_id.lower()
+    ]
+    if not matching_rows:
         if allow_absent:
             return []
         raise ActivationStepError("SPFX_BFF_PERMISSION_REQUEST_MISSING")
-    if resource_id is None or len(rows) != 1:
+    if len(matching_rows) != 1:
         raise ActivationStepError("SPFX_BFF_PERMISSION_REQUEST_UNEXPECTED")
-    row = rows[0]
+    row = matching_rows[0]
     request_id = _field(row, "Id", "id")
     candidate = _field(row, "ResourceId", "resourceId")
     if (
@@ -2970,7 +2979,7 @@ def _validate_spfx_permission_requests(
         or _field(row, "Scope", "scope") != DELEGATED_SCOPE
     ):
         raise ActivationStepError("SPFX_BFF_PERMISSION_REQUEST_UNEXPECTED")
-    return rows
+    return matching_rows
 
 
 def _validate_site_app_instances(value: object) -> None:
