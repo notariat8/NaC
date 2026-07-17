@@ -378,6 +378,15 @@ Provider-Rohantworten bleiben ausgeschlossen.
 
 `bff-azure-activation-attestations` misst lokal die acht nicht-geheimen Ausführungs-Digests und gibt den kombinierten Owner-Hash samt vollständiger Live-CLI-Argumentmap aus. Der Befehl liest keinen Private Key und führt keine Provider-Anfrage aus. Optionale `--bff-attestation-*`-Pfade dürfen ausschließlich die dokumentierten, fest gepinnten Ausführungspfade explizit bestätigen; jede Abweichung führt zu `NOT_READY`.
 
+Auf Ubuntu mit aktivem
+`kernel.apparmor_restrict_unprivileged_userns=1` ist vor
+`bff-azure-activate-live` das gebundene Profil aus
+`deploy/runtime/azure/nac-bff/apparmor/nac-azure-cli-sealed-runtime` als
+`/etc/apparmor.d/nac-azure-cli-sealed-runtime` zu installieren und zu laden.
+Der Live-Befehl wird dann mit
+`aa-exec -p nac-azure-cli-sealed-runtime --` gestartet. Ein globales
+Deaktivieren der Ubuntu-Userns-Restriktion ist nicht zulässig.
+
 `bff-azure-activation-recovery` ist die einzige Recovery-Kante für einen nach einem Finalisierungsfehler bewusst gehaltenen Lock. Ohne `--confirm-unlock` prüft sie ausschließlich die gebundenen lokalen State-, Ledger-, Evidence- und Marker-Artefakte. Das Entsperren verlangt zusätzlich `--confirm-unlock`, schreibt einen redigierten Reconcile-Marker und führt weder Providerzugriffe noch Resume, Rollback oder automatische Löschungen aus.
 
 `bff-azure-activation-plan` erzeugt den hashgebundenen Offline-Plan für

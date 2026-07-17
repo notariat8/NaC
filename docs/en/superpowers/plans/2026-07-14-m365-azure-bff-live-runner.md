@@ -99,6 +99,21 @@ newline is included. Any changed input or combined hash requires a new consolida
 approval. Final evidence and the host-wide success receipt must contain the
 same combined hash or `PASSED` is blocked.
 
+On Ubuntu hosts with
+`kernel.apparmor_restrict_unprivileged_userns=1`, the live process must be
+started explicitly through the repository-bound
+`deploy/runtime/azure/nac-bff/apparmor/nac-azure-cli-sealed-runtime`
+profile:
+`aa-exec -p nac-azure-cli-sealed-runtime -- <live-command>`. The bootstrap
+fails closed unless that exact profile is active. It uses synchronized
+parent/child UID/GID mapping and passes the already attested Azure CLI as a
+compressed, sealed package `memfd`. The isolated process accepts only the
+exact manifested file list and rechecks path, digest, and size while copying
+it into the private read-only tmpfs. This leaves no replaceable staging path
+and no post-provider filesystem cleanup with an ambiguous execution outcome.
+Disabling the global sysctl and using Codex-specific profiles are not
+permitted product boundaries.
+
 Immediately before every local Python or Node process, executable bytes are
 copied from one `O_NOFOLLOW`/`fstat`/SHA-256-verified read into sealed Linux
 `memfd` files. `m365_cli_sha256` and `build_npm_cli_sha256` bind
