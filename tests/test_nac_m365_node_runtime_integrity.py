@@ -1689,6 +1689,46 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
         self.assertNotIn("BYPASS", completed.stdout)
 
     @unittest.skipUnless(_NODE_BINARY, "Node.js is not installed")
+    def test_module_require_instrumentation_assignment_is_safely_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            root = workspace / "runtime"
+            root.mkdir(mode=0o700)
+            entry = self._write(
+                root,
+                "entry.cjs",
+                (
+                    "'use strict';"
+                    "const Module = require('node:module');"
+                    "const original = Module.prototype.require;"
+                    "Module.prototype.require = function patched(request) {"
+                    "return original.call(this, request); };"
+                    "if (Module.prototype.require !== original) process.exit(96);"
+                    "if (require('./dependency.cjs') !== 'trusted') "
+                    "process.exit(98);\n"
+                ).encode("utf-8"),
+            )
+            self._write(
+                root,
+                "dependency.cjs",
+                b"module.exports = 'trusted';\n",
+            )
+            payloads = self._payload_files(root, workspace)
+            completed = self._run_node(
+                [
+                    "--preserve-symlinks",
+                    "--require",
+                    str(payloads[1]),
+                    "--experimental-loader",
+                    str(payloads[2]),
+                    str(entry),
+                ],
+                manifest=payloads[0],
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("BYPASS", completed.stdout)
+
+    @unittest.skipUnless(_NODE_BINARY, "Node.js is not installed")
     def test_nonconfigurable_injected_cache_entry_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)

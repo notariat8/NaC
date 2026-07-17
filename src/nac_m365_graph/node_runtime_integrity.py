@@ -1718,8 +1718,11 @@ primitiveObjectDefineProperty(Module.prototype, '_compile', {
   configurable: false,
 });
 primitiveObjectDefineProperty(Module.prototype, 'require', {
-  value: originalModulePrototypeRequire,
-  writable: false,
+  get() { return originalModulePrototypeRequire; },
+  set(_value) {
+    // Compatibility instrumentation may assign a wrapper here. Keep the
+    // verified loader authoritative without making strict-mode callers fail.
+  },
   enumerable: false,
   configurable: false,
 });
