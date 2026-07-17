@@ -1808,6 +1808,33 @@ class AzureBffCompositionTests(unittest.TestCase):
             self._prewrite()["code"], "SPFX_BFF_GRANT_BROADER_OR_DUPLICATE"
         )
 
+    def test_prewrite_accepts_safe_legacy_spfx_package_for_upgrade(self) -> None:
+        _complete_m365_state(self.m365)
+        self.m365.catalog_detail["AadPermissions"] = None
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+
+    def test_prewrite_rejects_unsafe_legacy_spfx_package(self) -> None:
+        _complete_m365_state(self.m365)
+        self.m365.catalog_detail["AadPermissions"] = [
+            {"Resource": "Microsoft Graph", "Scope": "Sites.ReadWrite.All"}
+        ]
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_APP_CATALOG_BOUNDARY_FAILED"
+        )
+
+        _complete_m365_state(self.m365)
+        del self.m365.catalog_detail["AadPermissions"]
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_APP_CATALOG_BOUNDARY_FAILED"
+        )
+
+        _complete_m365_state(self.m365)
+        self.m365.catalog_detail["AadPermissions"] = None
+        self.m365.catalog_detail["ContainsTenantWideExtension"] = True
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_APP_CATALOG_BOUNDARY_FAILED"
+        )
+
     def test_approved_tree_requires_two_identical_spfx_builds(self) -> None:
         class ApprovedTree:
             def materialize(self, repo_root, _destination, **_kwargs):
