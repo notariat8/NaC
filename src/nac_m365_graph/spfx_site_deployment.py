@@ -1076,14 +1076,19 @@ def _validate_sppkg(path: Path) -> None:
                 for element in xml_root.iter():
                     local_name = _local_name(element.tag).lower()
                     if local_name == "webapipermissionrequest":
-                        attributes = {
-                            _local_name(key).lower(): value
-                            for key, value in element.attrib.items()
-                        }
+                        attributes = element.attrib
+                        if set(attributes) == {"Resource", "Scope"}:
+                            resource = attributes["Resource"]
+                        elif set(attributes) == {"ResourceId", "Scope"}:
+                            resource = attributes["ResourceId"]
+                        else:
+                            raise DeploymentPlanError(
+                                "SPFx package contains an ambiguous web API permission"
+                            )
                         embedded_permissions.append(
                             {
-                                "resource": attributes.get("resource", ""),
-                                "scope": attributes.get("scope", ""),
+                                "resource": resource,
+                                "scope": attributes["Scope"],
                             }
                         )
                     elif local_name == "aadpermission":
