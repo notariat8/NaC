@@ -216,6 +216,13 @@
       "team_display_name": "NaC-Notar-01",
       "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a"
     },
+    "graph_provisioner_readiness": {
+      "method_exact": "GET",
+      "path_exact": "/sites/funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38?$select=id",
+      "response_id_must_equal_workspace_site_id": true,
+      "organization_read_permission_required": false,
+      "failure_before_first_write": true
+    },
     "lists": {
       "Akten": "588d4a41-f538-4f37-acfb-63ff283e0910",
       "AufgabenFristen": "720ef1d4-8496-4ecb-aa1f-5fa4568343f2",

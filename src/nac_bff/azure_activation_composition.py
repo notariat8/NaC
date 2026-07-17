@@ -909,17 +909,14 @@ class AzureBffLiveExecutionPort:
         try:
             if self._m365.check_readiness() is not True:
                 return {"status": "FAILED", "code": "M365_CLI_NOT_READY"}
-            organization = self._graph.get("/organization?$select=id")
+            target_site = self._graph.get(f"/sites/{SITE_ID}?$select=id")
         except Exception:
             return {"status": "FAILED", "code": "GRAPH_PROVISIONER_NOT_READY"}
-        rows = organization.get("value") if isinstance(organization, dict) else None
         if (
-            not isinstance(rows, list)
-            or len(rows) != 1
-            or not isinstance(rows[0], dict)
-            or str(rows[0].get("id", "")).lower() != TENANT_ID
+            not isinstance(target_site, dict)
+            or str(target_site.get("id", "")).lower() != SITE_ID.lower()
         ):
-            return {"status": "FAILED", "code": "GRAPH_TENANT_MISMATCH"}
+            return {"status": "FAILED", "code": "GRAPH_TARGET_SITE_MISMATCH"}
         try:
             self._inspect_azure_prewrite(context)
             self._api = inspect_entra_api_application_prewrite(self._graph)

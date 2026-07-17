@@ -627,7 +627,7 @@ class _FakeSynthetic:
 
 class _FakeGraph:
     def __init__(self) -> None:
-        self.organization = {"value": [{"id": TENANT_ID}]}
+        self.target_site = {"id": SITE_ID}
         self.error: Exception | None = None
         self.calls: list[str] = []
 
@@ -635,7 +635,7 @@ class _FakeGraph:
         self.calls.append(path)
         if self.error is not None:
             raise self.error
-        return self.organization
+        return self.target_site
 
 
 class GitHubApprovalVerifierTests(unittest.TestCase):
@@ -1433,10 +1433,12 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.graph.error = RuntimeError("secret bearer token")
         self.assertEqual(self._prewrite()["code"], "GRAPH_PROVISIONER_NOT_READY")
         self.graph.error = None
-        self.graph.organization = {"value": [{"id": "99999999-9999-4999-8999-999999999999"}]}
-        self.assertEqual(self._prewrite()["code"], "GRAPH_TENANT_MISMATCH")
+        self.graph.target_site = {
+            "id": "funktion8.sharepoint.com,99999999-9999-4999-8999-999999999999"
+        }
+        self.assertEqual(self._prewrite()["code"], "GRAPH_TARGET_SITE_MISMATCH")
 
-    def test_prewrite_passes_only_for_exact_tenant(self) -> None:
+    def test_prewrite_passes_only_for_exact_target_site(self) -> None:
         self.assertEqual(
             self._prewrite(),
             {
@@ -1445,7 +1447,11 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "prebuilt_inputs_verified": True,
             },
         )
-        self.assertEqual(self.graph.calls, ["/organization?$select=id"])
+        self.assertEqual(self.graph.calls, [f"/sites/{SITE_ID}?$select=id"])
+
+    def test_prewrite_rejects_malformed_target_site_response(self) -> None:
+        self.graph.target_site = {"value": [{"id": SITE_ID}]}
+        self.assertEqual(self._prewrite()["code"], "GRAPH_TARGET_SITE_MISMATCH")
 
     def test_missing_api_app_is_created_after_static_snapshot_without_rebuild(
         self,
