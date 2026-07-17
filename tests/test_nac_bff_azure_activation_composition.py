@@ -1754,6 +1754,12 @@ class AzureBffCompositionTests(unittest.TestCase):
         ]
         self.m365.pending = [
             {
+                "Id": "33333333-3333-4333-8333-333333333333",
+                "ResourceId": UAMI_APP_ID,
+                "Resource": "External Connection",
+                "Scope": "ExternalConnection.ReadWrite.All",
+            },
+            {
                 "Id": PERMISSION_REQUEST_ID,
                 "ResourceId": API_SERVICE_PRINCIPAL_ID,
                 "Resource": "NaC M365 BFF",
@@ -1762,6 +1768,28 @@ class AzureBffCompositionTests(unittest.TestCase):
         ]
         self.assertEqual(
             self._prewrite()["code"], "SPFX_BFF_PERMISSION_STATE_DUPLICATE"
+        )
+
+    def test_prewrite_ignores_unrelated_spfx_permission_requests(self) -> None:
+        unrelated = {
+            "Id": "33333333-3333-4333-8333-333333333333",
+            "ResourceId": UAMI_APP_ID,
+            "Resource": "External Connection",
+            "Scope": "ExternalConnection.ReadWrite.All",
+        }
+        self.m365.pending = [unrelated]
+        self.assertEqual(self._prewrite(api_binding=None)["status"], "PASSED")
+
+    def test_prewrite_rejects_duplicate_bound_spfx_permission_requests(self) -> None:
+        exact = {
+            "Id": PERMISSION_REQUEST_ID,
+            "ResourceId": API_SERVICE_PRINCIPAL_ID,
+            "Resource": "NaC M365 BFF",
+            "Scope": DELEGATED_SCOPE,
+        }
+        self.m365.pending = [exact, dict(exact)]
+        self.assertEqual(
+            self._prewrite()["code"], "SPFX_BFF_PERMISSION_REQUEST_UNEXPECTED"
         )
 
     def test_prewrite_ignores_unrelated_spfx_grants_but_rejects_bound_duplicates(
@@ -2041,8 +2069,8 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.m365.pending = [
             {
                 "Id": PERMISSION_REQUEST_ID,
-                "ResourceId": UAMI_APP_ID,
-                "Resource": "NaC M365 BFF",
+                "ResourceId": API_SERVICE_PRINCIPAL_ID,
+                "Resource": "Unexpected API",
                 "Scope": DELEGATED_SCOPE,
             }
         ]
