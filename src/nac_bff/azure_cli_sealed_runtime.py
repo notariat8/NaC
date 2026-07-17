@@ -5,8 +5,9 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import stat
+import zipfile
 
 
 _CHUNK_SIZE = 1024 * 1024
@@ -19,10 +20,17 @@ class SealedAzureCliRuntime:
     interpreter_fd: int
     bootstrap_fd: int
     manifest_fd: int
+    package_fd: int
+    _closed: bool = False
 
     @property
-    def pass_fds(self) -> tuple[int, int, int]:
-        return (self.interpreter_fd, self.bootstrap_fd, self.manifest_fd)
+    def pass_fds(self) -> tuple[int, int, int, int]:
+        return (
+            self.interpreter_fd,
+            self.bootstrap_fd,
+            self.manifest_fd,
+            self.package_fd,
+        )
 
     def command(self, azure_argv: list[str]) -> list[str]:
         return [
@@ -31,15 +39,26 @@ class SealedAzureCliRuntime:
             "-B",
             f"/proc/self/fd/{self.bootstrap_fd}",
             f"/proc/self/fd/{self.manifest_fd}",
+            f"/proc/self/fd/{self.package_fd}",
             *azure_argv,
         ]
 
     def close(self) -> None:
-        for descriptor in self.pass_fds:
+        if self._closed:
+            return
+        for attribute in (
+            "interpreter_fd",
+            "bootstrap_fd",
+            "manifest_fd",
+            "package_fd",
+        ):
+            descriptor = getattr(self, attribute)
             try:
                 os.close(descriptor)
             except OSError:
                 pass
+            setattr(self, attribute, -1)
+        self._closed = True
 
     def __enter__(self) -> SealedAzureCliRuntime:
         return self
@@ -86,7 +105,17 @@ def prepare_sealed_azure_cli_runtime(
     ):
         return None
 
-    descriptors: list[int] = []
+    package_fd = _sealed_package_memfd(
+        package_root,
+        payload,
+        tree_digest=tree_digest,
+        allowed_uids=allowed_uids,
+    )
+    if package_fd is None:
+        return None
+    payload.pop("source_root", None)
+
+    descriptors: list[int] = [package_fd]
     try:
         interpreter_fd = _sealed_memfd(
             "nac-azure-cli-python",
@@ -118,6 +147,7 @@ def prepare_sealed_azure_cli_runtime(
         interpreter_fd=interpreter_fd,
         bootstrap_fd=bootstrap_fd,
         manifest_fd=manifest_fd,
+        package_fd=package_fd,
     )
 
 
@@ -274,6 +304,85 @@ def _trusted_directory(path: Path, *, allowed_uids: set[int]) -> bool:
     )
 
 
+def _sealed_package_memfd(
+    source_root: Path,
+    manifest: dict[str, object],
+    *,
+    tree_digest: str,
+    allowed_uids: set[int],
+) -> int | None:
+    if not hasattr(os, "memfd_create"):
+        return None
+    descriptor = os.memfd_create(
+        "nac-azure-cli-package",
+        getattr(os, "MFD_CLOEXEC", 0) | getattr(os, "MFD_ALLOW_SEALING", 0),
+    )
+    try:
+        files = manifest["files"]
+        if not isinstance(files, list):
+            raise ValueError("invalid package manifest")
+        with os.fdopen(os.dup(descriptor), "w+b") as stream:
+            with zipfile.ZipFile(
+                stream,
+                mode="w",
+                compression=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            ) as archive:
+                seen: set[str] = set()
+                for record in files:
+                    if not isinstance(record, dict):
+                        raise ValueError("invalid file record")
+                    relative = str(record["path"])
+                    relative_path = PurePosixPath(relative)
+                    if (
+                        relative_path.is_absolute()
+                        or not relative_path.parts
+                        or any(part in {"", ".", ".."} for part in relative_path.parts)
+                        or relative in seen
+                    ):
+                        raise ValueError("unsafe package path")
+                    seen.add(relative)
+                    source = source_root / relative
+                    content = _read_regular_file(
+                        source,
+                        allowed_uids=allowed_uids,
+                    )
+                    metadata = source.lstat()
+                    expected_mode = int(record["mode"])
+                    expected_uid = int(record["uid"])
+                    expected_size = int(record["size"])
+                    expected_sha256 = str(record["sha256"])
+                    if (
+                        content is None
+                        or metadata.st_uid != expected_uid
+                        or stat.S_IMODE(metadata.st_mode) != expected_mode
+                        or len(content) != expected_size
+                        or hashlib.sha256(content).hexdigest() != expected_sha256
+                    ):
+                        raise OSError("package changed while sealing")
+                    archive_info = zipfile.ZipInfo(relative)
+                    archive_info.compress_type = zipfile.ZIP_DEFLATED
+                    archive_info.external_attr = (expected_mode & ~0o222) << 16
+                    archive.writestr(archive_info, content)
+        refreshed = _package_manifest(source_root, allowed_uids=allowed_uids)
+        if refreshed is None or refreshed[0] != tree_digest:
+            raise OSError("package changed after sealing")
+        os.fchmod(descriptor, 0o400)
+        fcntl.fcntl(
+            descriptor,
+            fcntl.F_ADD_SEALS,
+            fcntl.F_SEAL_WRITE
+            | fcntl.F_SEAL_GROW
+            | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_SEAL,
+        )
+        os.lseek(descriptor, 0, os.SEEK_SET)
+    except (KeyError, OSError, RuntimeError, TypeError, ValueError):
+        os.close(descriptor)
+        return None
+    return descriptor
+
+
 def _sealed_memfd(name: str, payload: bytes, *, executable: bool) -> int:
     if not hasattr(os, "memfd_create"):
         raise OSError("memfd unavailable")
@@ -329,13 +438,13 @@ import ctypes
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import runpy
-import shutil
 import signal
 import stat
 import sys
 import tempfile
+import zipfile
 
 TAMPER_EXIT = 86
 ISOLATION_EXIT = 87
@@ -349,36 +458,58 @@ def fail(code):
 def signature(value):
     return (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
-def copy_verified(source, destination, record):
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+def safe_archive_path(value):
     try:
-        path_before = source.lstat()
-        descriptor = os.open(source, flags)
-    except OSError:
+        candidate = PurePosixPath(value)
+    except (TypeError, ValueError):
+        return False
+    return (
+        not candidate.is_absolute()
+        and bool(candidate.parts)
+        and all(part not in {"", ".", ".."} for part in candidate.parts)
+    )
+
+def archive_target(root, value):
+    if not safe_archive_path(value):
         fail(TAMPER_EXIT)
+    return root.joinpath(*PurePosixPath(value).parts)
+
+def validate_package_archive(archive, records):
+    try:
+        expected = [record["path"] for record in records]
+        infos = archive.infolist()
+    except (KeyError, TypeError, ValueError):
+        fail(TAMPER_EXIT)
+    if (
+        len(expected) != len(set(expected))
+        or any(not safe_archive_path(value) for value in expected)
+        or [info.filename for info in infos] != expected
+        or any(
+            info.is_dir()
+            or info.flag_bits & 0x1
+            or info.file_size != record["size"]
+            for info, record in zip(infos, records)
+        )
+    ):
+        fail(TAMPER_EXIT)
+
+def copy_archived_verified(archive, destination, record):
     digest = hashlib.sha256()
     size = 0
     try:
-        before = os.fstat(descriptor)
-        if (stat.S_ISLNK(path_before.st_mode) or not stat.S_ISREG(before.st_mode) or before.st_uid != record["uid"] or stat.S_IMODE(before.st_mode) != record["mode"] or before.st_mode & (stat.S_IWGRP | stat.S_IWOTH) or (before.st_dev, before.st_ino) != (path_before.st_dev, path_before.st_ino)):
-            fail(TAMPER_EXIT)
+        source = archive.open(record["path"], mode="r")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with destination.open("xb") as output:
+        with source, destination.open("xb") as output:
             while True:
-                chunk = os.read(descriptor, CHUNK_SIZE)
+                chunk = source.read(CHUNK_SIZE)
                 if not chunk:
                     break
                 digest.update(chunk)
                 size += len(chunk)
                 output.write(chunk)
-        after = os.fstat(descriptor)
-    finally:
-        os.close(descriptor)
-    try:
-        path_after = source.lstat()
-    except OSError:
+    except (KeyError, OSError, RuntimeError, ValueError, zipfile.BadZipFile):
         fail(TAMPER_EXIT)
-    if signature(before) != signature(after) or signature(after) != signature(path_after) or size != record["size"] or digest.hexdigest() != record["sha256"]:
+    if size != record["size"] or digest.hexdigest() != record["sha256"]:
         fail(TAMPER_EXIT)
     os.chmod(destination, record["mode"] & ~0o222)
 
@@ -567,53 +698,7 @@ def write_id_maps(pid, uid, gid, proc_root=Path("/proc")):
         return False
     return True
 
-def cleanup_staging(path):
-    try:
-        for current_text, directories, _files in os.walk(
-            path,
-            topdown=True,
-            followlinks=False,
-        ):
-            current = Path(current_text)
-            os.chmod(current, 0o700)
-            for name in directories:
-                child = current / name
-                metadata = child.lstat()
-                if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(
-                    metadata.st_mode
-                ):
-                    os.chmod(child, 0o700)
-        shutil.rmtree(path)
-    except OSError:
-        return False
-    return not path.exists()
-
-def stage_verified_package(source_root, manifest):
-    staging = Path(tempfile.mkdtemp(prefix="nac-azure-cli-source-"))
-    try:
-        os.chmod(staging, 0o700)
-        for record in manifest["directories"]:
-            (staging / record["path"]).mkdir(parents=True, exist_ok=True)
-        for record in manifest["files"]:
-            copy_verified(
-                source_root / record["path"],
-                staging / record["path"],
-                record,
-            )
-        for record in reversed(manifest["directories"]):
-            os.chmod(staging / record["path"], record["mode"] & ~0o222)
-    except (KeyError, OSError, TypeError, ValueError):
-        cleanup_staging(staging)
-        fail(TAMPER_EXIT)
-    return staging
-
-def copy_staged_verified(source, destination, record):
-    staged_record = dict(record)
-    staged_record["uid"] = os.getuid()
-    staged_record["mode"] = record["mode"] & ~0o222
-    copy_verified(source, destination, staged_record)
-
-def terminate_child(pid, cleanup_root):
+def terminate_child(pid):
     try:
         os.kill(pid, signal.SIGKILL)
     except ProcessLookupError:
@@ -622,7 +707,6 @@ def terminate_child(pid, cleanup_root):
         os.waitpid(pid, 0)
     except ChildProcessError:
         pass
-    cleanup_staging(cleanup_root)
 
 def arm_parent_death_signal(libc, parent_pid):
     pr_set_pdeathsig = 1
@@ -630,7 +714,7 @@ def arm_parent_death_signal(libc, parent_pid):
         return False
     return os.getppid() == parent_pid
 
-def exit_with_child_status(pid, cleanup_root):
+def exit_with_child_status(pid):
     def forward(signum, _frame):
         try:
             os.kill(pid, signum)
@@ -642,11 +726,8 @@ def exit_with_child_status(pid, cleanup_root):
     try:
         _, status = os.waitpid(pid, 0)
     except (ChildProcessError, OSError):
-        terminate_child(pid, cleanup_root)
+        terminate_child(pid)
         fail(ISOLATION_EXIT)
-    cleanup_ready = cleanup_staging(cleanup_root)
-    if not cleanup_ready:
-        os._exit(ISOLATION_EXIT)
     if os.WIFEXITED(status):
         os._exit(os.WEXITSTATUS(status))
     if os.WIFSIGNALED(status):
@@ -656,20 +737,18 @@ def exit_with_child_status(pid, cleanup_root):
         os._exit(128 + signum)
     os._exit(ISOLATION_EXIT)
 
-def enter_mapped_user_namespace(libc, clone_newuser, uid, gid, cleanup_root):
+def enter_mapped_user_namespace(libc, clone_newuser, uid, gid):
     parent_pid = os.getpid()
     try:
         ready_read, ready_write = os.pipe()
         continue_read, continue_write = os.pipe()
     except OSError:
-        cleanup_staging(cleanup_root)
         fail(ISOLATION_EXIT)
     try:
         pid = os.fork()
     except OSError:
         for descriptor in (ready_read, ready_write, continue_read, continue_write):
             close_fd(descriptor)
-        cleanup_staging(cleanup_root)
         fail(ISOLATION_EXIT)
     if pid == 0:
         if not arm_parent_death_signal(libc, parent_pid):
@@ -704,26 +783,26 @@ def enter_mapped_user_namespace(libc, clone_newuser, uid, gid, cleanup_root):
     try:
         child_ready = os.read(ready_read, 1) == b"R"
         if not child_ready or not write_id_maps(pid, uid, gid):
-            terminate_child(pid, cleanup_root)
+            terminate_child(pid)
             fail(ISOLATION_EXIT)
         if os.write(continue_write, b"G") != 1:
-            terminate_child(pid, cleanup_root)
+            terminate_child(pid)
             fail(ISOLATION_EXIT)
     except OSError:
-        terminate_child(pid, cleanup_root)
+        terminate_child(pid)
         fail(ISOLATION_EXIT)
     finally:
         close_fd(ready_read)
         close_fd(continue_write)
-    exit_with_child_status(pid, cleanup_root)
+    exit_with_child_status(pid)
 
-def isolate(cleanup_root):
+def isolate():
     libc = ctypes.CDLL(None, use_errno=True)
     clone_newns = 0x00020000
     clone_newuser = 0x10000000
     uid = os.getuid()
     gid = os.getgid()
-    enter_mapped_user_namespace(libc, clone_newuser, uid, gid, cleanup_root)
+    enter_mapped_user_namespace(libc, clone_newuser, uid, gid)
     if libc.unshare(clone_newns) != 0:
         fail(ISOLATION_EXIT)
     ms_rec = 16384
@@ -739,7 +818,7 @@ def isolate(cleanup_root):
     return mountpoint, config_mountpoint, libc
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         fail(TAMPER_EXIT)
     try:
         manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -747,14 +826,13 @@ def main():
         fail(TAMPER_EXIT)
     if manifest.get("schema") != "nac-azure-cli-sealed-runtime-v1":
         fail(TAMPER_EXIT)
-    source_root = Path(manifest["source_root"])
-    verify_only = len(sys.argv) >= 4 and sys.argv[2] == "--nac-internal-verify-only"
+    package_archive_path = Path(sys.argv[2])
+    verify_only = len(sys.argv) >= 5 and sys.argv[3] == "--nac-internal-verify-only"
     if verify_only:
-        destination = Path(sys.argv[3])
+        destination = Path(sys.argv[4])
         azure_argv = []
         libc = None
         private_config = None
-        package_source = source_root
     else:
         try:
             source_config = Path(os.environ.get("AZURE_CONFIG_DIR") or (Path(os.environ["HOME"]) / ".azure"))
@@ -773,37 +851,36 @@ def main():
         ):
             fail(TAMPER_EXIT)
         validate_host_userns_profile()
-        package_source = stage_verified_package(source_root, manifest)
-        destination, private_config, libc = isolate(package_source)
+        destination, private_config, libc = isolate()
         copy_private_azure_config(
             source_config,
             private_config,
             expected_cloud_selection_sha256,
         )
         validate_private_azure_profile(private_config)
-        azure_argv = sys.argv[2:]
+        azure_argv = sys.argv[3:]
     try:
-        for record in manifest["directories"]:
-            target = destination / record["path"]
-            target.mkdir(parents=True, exist_ok=True)
-        for record in manifest["files"]:
-            if verify_only:
-                copy_verified(
-                    package_source / record["path"],
-                    destination / record["path"],
-                    record,
+        with zipfile.ZipFile(package_archive_path, mode="r") as package_archive:
+            validate_package_archive(package_archive, manifest["files"])
+            for record in manifest["directories"]:
+                archive_target(destination, record["path"]).mkdir(
+                    parents=True,
+                    exist_ok=True,
                 )
-            else:
-                copy_staged_verified(
-                    package_source / record["path"],
-                    destination / record["path"],
+            for record in manifest["files"]:
+                copy_archived_verified(
+                    package_archive,
+                    archive_target(destination, record["path"]),
                     record,
                 )
         extension_root = destination / ".nac-empty-extensions"
         extension_root.mkdir(mode=0o500)
         for record in reversed(manifest["directories"]):
-            os.chmod(destination / record["path"], record["mode"] & ~0o222)
-    except (KeyError, OSError, TypeError, ValueError):
+            os.chmod(
+                archive_target(destination, record["path"]),
+                record["mode"] & ~0o222,
+            )
+    except (KeyError, OSError, RuntimeError, TypeError, ValueError, zipfile.BadZipFile):
         fail(TAMPER_EXIT)
     if verify_only:
         return

@@ -106,10 +106,12 @@ started explicitly through the repository-bound
 profile:
 `aa-exec -p nac-azure-cli-sealed-runtime -- <live-command>`. The bootstrap
 fails closed unless that exact profile is active. It uses synchronized
-parent/child UID/GID mapping, stages the already attested Azure CLI in a
-private non-secret directory before entering the namespace, and rechecks
-digest, size, and read-only mode while copying it into the private read-only
-tmpfs. Disabling the global sysctl and using Codex-specific profiles are not
+parent/child UID/GID mapping and passes the already attested Azure CLI as a
+compressed, sealed package `memfd`. The isolated process accepts only the
+exact manifested file list and rechecks path, digest, and size while copying
+it into the private read-only tmpfs. This leaves no replaceable staging path
+and no post-provider filesystem cleanup with an ambiguous execution outcome.
+Disabling the global sysctl and using Codex-specific profiles are not
 permitted product boundaries.
 
 Immediately before every local Python or Node process, executable bytes are

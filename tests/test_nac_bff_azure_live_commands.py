@@ -9,6 +9,7 @@ import tempfile
 import time
 from types import SimpleNamespace
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -94,8 +95,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
 
         self.assertIn("pid = os.fork()", source)
         self.assertIn("write_id_maps(pid, uid, gid)", source)
-        self.assertIn("package_source = stage_verified_package(source_root, manifest)", source)
-        self.assertIn("destination, private_config, libc = isolate(package_source)", source)
+        self.assertIn("zipfile.ZipFile(package_archive_path", source)
+        self.assertNotIn("stage_verified_package", source)
+        self.assertIn("destination, private_config, libc = isolate()", source)
         self.assertIn('os.read(ready_read, 1) == b"R"', source)
         self.assertIn('os.read(continue_read, 1) != b"G"', source)
         self.assertNotIn("/proc/self/uid_map", source)
@@ -132,64 +134,63 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
 
             self.assertFalse(write_id_maps(123, 1000, 1001, Path(tmp)))
 
-    def test_sealed_bootstrap_stages_verified_package_before_isolation(self) -> None:
+    def test_sealed_runtime_binds_package_archive_before_isolation(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
-        stage_verified_package = namespace["stage_verified_package"]
-        copy_staged_verified = namespace["copy_staged_verified"]
-        cleanup_staging = namespace["cleanup_staging"]
+        validate_package_archive = namespace["validate_package_archive"]
+        copy_archived_verified = namespace["copy_archived_verified"]
 
         with tempfile.TemporaryDirectory() as tmp:
             source_root = Path(tmp) / "source"
             source_root.mkdir()
             nested = source_root / "azure" / "module"
             nested.mkdir(parents=True)
-            payload = nested / "module.py"
-            payload.write_text("VALUE = 1\n", encoding="utf-8")
-            metadata = payload.stat()
-            directory_records = []
-            for directory in (source_root / "azure", nested):
-                directory_metadata = directory.stat()
-                directory_records.append(
-                    {
-                        "path": directory.relative_to(source_root).as_posix(),
-                        "mode": directory_metadata.st_mode & 0o7777,
-                    }
+            source_file = nested / "module.py"
+            source_file.write_text("VALUE = 1\n", encoding="utf-8")
+            metadata = source_file.stat()
+            manifest = azure_cli_sealed_runtime._package_manifest(
+                source_root,
+                allowed_uids={os.getuid()},
+            )
+            self.assertIsNotNone(manifest)
+            assert manifest is not None
+            tree_digest, manifest_payload = manifest
+
+            package_fd = azure_cli_sealed_runtime._sealed_package_memfd(
+                source_root,
+                manifest_payload,
+                tree_digest=tree_digest,
+                allowed_uids={os.getuid()},
+            )
+            self.assertIsNotNone(package_fd)
+            assert package_fd is not None
+            try:
+                with os.fdopen(os.dup(package_fd), "rb") as stream:
+                    with zipfile.ZipFile(stream, mode="r") as archive:
+                        validate_package_archive(
+                            archive,
+                            manifest_payload["files"],
+                        )
+                        destination = Path(tmp) / "destination.py"
+                        copy_archived_verified(
+                            archive,
+                            destination,
+                            manifest_payload["files"][0],
+                        )
+                self.assertEqual(
+                    destination.read_bytes(),
+                    source_file.read_bytes(),
                 )
-            manifest = {
-                "directories": directory_records,
-                "files": [
-                    {
-                        "path": "azure/module/module.py",
-                        "uid": metadata.st_uid,
-                        "mode": metadata.st_mode & 0o7777,
-                        "size": metadata.st_size,
-                        "sha256": hashlib.sha256(payload.read_bytes()).hexdigest(),
-                    }
-                ],
-            }
-
-            staging = stage_verified_package(source_root, manifest)
-
-            self.assertEqual(
-                (staging / "azure" / "module" / "module.py").read_bytes(),
-                payload.read_bytes(),
-            )
-            self.assertEqual(staging.stat().st_mode & 0o777, 0o700)
-            destination = Path(tmp) / "destination.py"
-            copy_staged_verified(
-                staging / "azure" / "module" / "module.py",
-                destination,
-                manifest["files"][0],
-            )
-            self.assertEqual(destination.read_bytes(), payload.read_bytes())
-            self.assertEqual(
-                destination.stat().st_mode & 0o777,
-                (metadata.st_mode & 0o777) & ~0o222,
-            )
-            self.assertTrue(cleanup_staging(staging))
-            self.assertFalse(staging.exists())
+                self.assertEqual(
+                    destination.stat().st_mode & 0o777,
+                    (metadata.st_mode & 0o777) & ~0o222,
+                )
+                os.lseek(package_fd, 0, os.SEEK_END)
+                with self.assertRaises(OSError):
+                    os.write(package_fd, b"tamper")
+            finally:
+                os.close(package_fd)
 
     def test_sealed_bootstrap_child_dies_when_supervisor_is_killed(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
@@ -553,7 +554,8 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             self.assertEqual(argv[1:3], ["-I", "-B"])
             self.assertRegex(argv[3], r"\A/proc/self/fd/[0-9]+\Z")
             self.assertRegex(argv[4], r"\A/proc/self/fd/[0-9]+\Z")
-            azure_argv = argv[5:]
+            self.assertRegex(argv[5], r"\A/proc/self/fd/[0-9]+\Z")
+            azure_argv = argv[6:]
             self.assertEqual(azure_argv[-3:], ["--output", "json", "--only-show-errors"])
             if azure_argv[:2] != ["account", "show"]:
                 subscription_index = azure_argv.index("--subscription")
@@ -561,7 +563,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     azure_argv[subscription_index + 1],
                     EXPECTED_SUBSCRIPTION_ID,
                 )
-            self.assertEqual(len(call.kwargs["pass_fds"]), 3)
+            self.assertEqual(len(call.kwargs["pass_fds"]), 4)
 
     def test_process_boundary_is_argv_only_shell_false_and_env_filtered(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -604,15 +606,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(process_argv[1:3], ["-I", "-B"])
         self.assertRegex(process_argv[3], r"\A/proc/self/fd/[0-9]+\Z")
         self.assertRegex(process_argv[4], r"\A/proc/self/fd/[0-9]+\Z")
+        self.assertRegex(process_argv[5], r"\A/proc/self/fd/[0-9]+\Z")
         self.assertEqual(
-            process_argv[5:9],
+            process_argv[6:10],
             ["group", "show", "--name", "rg-nac-bff-test"],
         )
         self.assertNotIn(str(binary.resolve()), process_argv)
         self.assertFalse(
             any(key.startswith("AZURE_EXTENSION_") for key in process_kwargs["env"])
         )
-        self.assertEqual(len(process_kwargs["pass_fds"]), 3)
+        self.assertEqual(len(process_kwargs["pass_fds"]), 4)
         self.assertIs(process_kwargs["shell"], False)
         self.assertIs(process_kwargs["check"], False)
         self.assertEqual(process_kwargs["stdin"], subprocess.DEVNULL)
@@ -750,7 +753,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertNotIn(str(artifact), provider_argv)
         template_path = provider_argv[provider_argv.index("--template-file") + 1]
         self.assertRegex(template_path, r"^/proc/self/fd/[0-9]+/main[.]json$")
-        self.assertEqual(len(process.call_args.kwargs["pass_fds"]), 4)
+        self.assertEqual(len(process.call_args.kwargs["pass_fds"]), 5)
         self.assertEqual(observed, {"basename": "main.json", "payload": "{}"})
 
     def test_bound_artifact_hash_mismatch_stops_before_provider(self) -> None:
@@ -1007,11 +1010,12 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 _package_entrypoint(binary).read_bytes(),
             )
 
-    def test_mutation_after_runtime_binding_is_blocked_by_sealed_bootstrap(self) -> None:
+    def test_runtime_uses_bound_snapshot_after_original_package_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             binary = _fake_binary(root)
             expected = _binary_sha256(binary)
+            original = _package_entrypoint(binary).read_bytes()
             runtime = azure_live_commands._prepare_bound_runtime(
                 binary,
                 expected_sha256=expected,
@@ -1040,13 +1044,82 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                     pass_fds=runtime.pass_fds,
                 )
 
-        self.assertEqual(completed.returncode, 86)
-        self.assertEqual(
-            azure_live_commands.sealed_runtime_failure_code(
-                completed.returncode
-            ),
-            "AZURE_CLI_RUNTIME_TAMPERED",
-        )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(
+                (destination / "azure" / "cli" / "__main__.py").read_bytes(),
+                original,
+            )
+
+    def test_bound_package_memfd_is_immutable_and_still_verifies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = _fake_binary(root)
+            expected = _binary_sha256(binary)
+            runtime = azure_live_commands._prepare_bound_runtime(
+                binary,
+                expected_sha256=expected,
+                cloud_selection_sha256=None,
+            )
+            self.assertIsNotNone(runtime)
+            assert runtime is not None
+            os.lseek(runtime.package_fd, 0, os.SEEK_END)
+            with self.assertRaises(OSError):
+                os.write(runtime.package_fd, b"bound package tamper")
+            destination = root / "verified-copy"
+            destination.mkdir()
+            with runtime:
+                completed = subprocess.run(
+                    runtime.command(
+                        ["--nac-internal-verify-only", str(destination)]
+                    ),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=30,
+                    env=build_azure_cli_env({"HOME": str(root)}),
+                    pass_fds=runtime.pass_fds,
+                )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_run_azure_cli_timeout_closes_all_bound_memfds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            expected = _binary_sha256(binary)
+            original_prepare = azure_live_commands._prepare_bound_runtime
+            captured: list[azure_cli_sealed_runtime.SealedAzureCliRuntime] = []
+
+            def capture_runtime(*args: object, **kwargs: object):
+                runtime = original_prepare(*args, **kwargs)
+                if runtime is not None:
+                    captured.append(runtime)
+                return runtime
+
+            with (
+                patch(
+                    "nac_bff.azure_live_commands._prepare_bound_runtime",
+                    side_effect=capture_runtime,
+                ),
+                patch(
+                    "nac_bff.azure_live_commands.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired(
+                        cmd=["az"],
+                        timeout=0.01,
+                    ),
+                ),
+            ):
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=expected,
+                    timeout_seconds=0.01,
+                )
+
+        self.assertEqual(result["code"], "AZURE_CLI_TIMEOUT")
+        self.assertEqual(len(captured), 1)
+        self.assertEqual(captured[0].pass_fds, (-1, -1, -1, -1))
 
     def test_package_tree_symlink_is_untrusted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

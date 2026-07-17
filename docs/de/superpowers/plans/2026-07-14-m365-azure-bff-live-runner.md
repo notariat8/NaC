@@ -110,11 +110,13 @@ explizit über das repo-gebundene Profil
 gestartet werden:
 `aa-exec -p nac-azure-cli-sealed-runtime -- <live-command>`. Der Bootstrap
 prüft den aktiven Profilnamen fail-closed. Er verwendet eine synchronisierte
-Parent/Child-UID-/GID-Abbildung, übernimmt die bereits attestierte Azure-CLI
-vor dem Namespace-Wechsel in ein privates, nicht geheimes Staging und prüft
-Digest, Größe und schreibgeschützten Modus beim Kopieren in das private
-read-only-tmpfs erneut. Globale Sysctl-Abschaltungen und Codex-spezifische
-Profile sind keine zulässige Produktkante.
+Parent/Child-UID-/GID-Abbildung und übergibt die bereits attestierte Azure-CLI
+als komprimiertes, versiegeltes Paket-`memfd`. Der isolierte Prozess akzeptiert
+nur die exakte manifestierte Dateiliste und prüft Pfad, Digest und Größe beim
+Kopieren in das private read-only-tmpfs erneut. Es gibt damit keinen
+austauschbaren Staging-Pfad und keinen nachgelagerten Dateisystem-Cleanup mit
+mehrdeutigem Provider-Ergebnis. Globale Sysctl-Abschaltungen und
+Codex-spezifische Profile sind keine zulässige Produktkante.
 
 Unmittelbar vor jedem lokalen Python- oder Node-Prozess werden ausführbare
 Bytes über genau einen `O_NOFOLLOW`-/`fstat`-/SHA-256-geprüften Lesezugriff
