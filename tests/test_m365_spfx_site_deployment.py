@@ -186,6 +186,94 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             with self.assertRaisesRegex(DeploymentPlanError, "permission request"):
                 build_spfx_site_deployment_plan(repo_root=root)
 
+    def test_plan_accepts_resource_id_permission_from_current_spfx_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(
+                root,
+                embedded_permission_xml=(
+                    '<WebApiPermissionRequests>'
+                    '<WebApiPermissionRequest ResourceId="NaC M365 BFF" '
+                    'Scope="Matter.Read" />'
+                    '</WebApiPermissionRequests>'
+                ),
+            )
+
+            plan = build_spfx_site_deployment_plan(repo_root=root)
+
+            self.assertEqual(plan.workspace_id, WORKSPACE_ID)
+
+    def test_plan_rejects_ambiguous_permission_resource_aliases(self) -> None:
+        permission_elements = (
+            (
+                '<WebApiPermissionRequest Resource="NaC M365 BFF" '
+                'ResourceId="NaC M365 BFF" Scope="Matter.Read" />'
+            ),
+            (
+                '<WebApiPermissionRequest Resource="Microsoft Graph" '
+                'resource="NaC M365 BFF" Scope="Sites.Read.All" '
+                'scope="Matter.Read" />'
+            ),
+            (
+                '<WebApiPermissionRequest xmlns:x="urn:nac:test" '
+                'Resource="Microsoft Graph" x:Resource="NaC M365 BFF" '
+                'Scope="Matter.Read" />'
+            ),
+            (
+                '<WebApiPermissionRequest ResourceId="NaC M365 BFF" '
+                'Scope="Matter.Read" Extra="unexpected" />'
+            ),
+        )
+        for permission_element in permission_elements:
+            with self.subTest(permission_element=permission_element):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    self._write_package_fixture(
+                        root,
+                        embedded_permission_xml=(
+                            '<WebApiPermissionRequests>'
+                            f'{permission_element}'
+                            '</WebApiPermissionRequests>'
+                        ),
+                    )
+
+                    with self.assertRaisesRegex(DeploymentPlanError, "ambiguous"):
+                        build_spfx_site_deployment_plan(repo_root=root)
+
+    def test_plan_rejects_unapproved_embedded_permission_shapes(self) -> None:
+        permission_documents = (
+            (
+                '<WebApiPermissionRequests>'
+                '<WebApiPermissionRequest ResourceId="NaC M365 BFF" '
+                'Scope="Matter.Read" />'
+                '<WebApiPermissionRequest ResourceId="NaC M365 BFF" '
+                'Scope="Matter.Read" />'
+                '</WebApiPermissionRequests>'
+            ),
+            (
+                '<WebApiPermissionRequests>'
+                '<AADPermission Resource="NaC M365 BFF" Scope="Matter.Read" />'
+                '</WebApiPermissionRequests>'
+            ),
+            (
+                '<WebApiPermissionRequests>'
+                '<WebApiPermissionRequest ResourceId="Microsoft Graph" '
+                'Scope="Sites.Read.All" />'
+                '</WebApiPermissionRequests>'
+            ),
+        )
+        for permission_document in permission_documents:
+            with self.subTest(permission_document=permission_document):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    self._write_package_fixture(
+                        root,
+                        embedded_permission_xml=permission_document,
+                    )
+
+                    with self.assertRaises(DeploymentPlanError):
+                        build_spfx_site_deployment_plan(repo_root=root)
+
     def test_create_run_orders_commands_and_scopes_every_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1853,6 +1941,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
         skip_feature_deployment: bool = False,
         web_api_permission_requests: object = None,
         embedded_permission: bool = False,
+        embedded_permission_xml: str | None = None,
     ) -> None:
         config_path = root / PACKAGE_CONFIG_RELATIVE_PATH
         package_path = root / PACKAGE_RELATIVE_PATH
@@ -1876,7 +1965,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        permission_xml = (
+        permission_xml = embedded_permission_xml or (
             '<WebApiPermissionRequests>'
             '<WebApiPermissionRequest Resource="Microsoft Graph" Scope="Sites.Read.All" />'
             '</WebApiPermissionRequests>'
