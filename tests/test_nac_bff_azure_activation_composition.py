@@ -2031,6 +2031,19 @@ class AzureBffCompositionTests(unittest.TestCase):
             self._prewrite()["code"], "SPFX_PAGE_WEBPART_STATE_INVALID"
         )
 
+    def test_prewrite_rejects_non_list_structured_canvas_json(self) -> None:
+        for canvas in (json.dumps({}), {}, {"webPartId": WEB_PART_ID}):
+            with self.subTest(canvas=canvas):
+                _complete_m365_state(self.m365)
+                self.m365.page_detail = {
+                    "CanvasContent1": json.dumps([{"webPartId": WEB_PART_ID}]),
+                    "canvasContentJson": canvas,
+                }
+                self.assertEqual(
+                    self._prewrite()["code"],
+                    "SPFX_PAGE_WEBPART_STATE_INVALID",
+                )
+
     def test_provider_registration_is_idempotent(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
         reused = self.port.execute_step(STEPS[0], self.context)
