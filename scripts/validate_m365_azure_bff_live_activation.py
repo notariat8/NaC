@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import json
 import os
@@ -39,6 +40,61 @@ QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
 LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
 SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/658"
+AZURE_INVENTORY_SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/662"
+AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
+    "safety_rework_issue": AZURE_INVENTORY_SAFETY_REWORK_ISSUE,
+    "type_case_insensitive": "Microsoft.Insights/ActionGroups",
+    "name_exact": "Application Insights Smart Detection",
+    "location_case_insensitive": "Global",
+    "group_short_name_exact": "SmartDetect",
+    "enabled_exact": True,
+    "arm_role_receivers_count_exact": 2,
+    "arm_role_receivers_exact": [
+        {
+            "name": "Monitoring Contributor",
+            "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+            "useCommonAlertSchema": True,
+        },
+        {
+            "name": "Monitoring Reader",
+            "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+            "useCommonAlertSchema": True,
+        },
+    ],
+    "all_other_receiver_counts_exact": 0,
+    "detail_read_mode": "exact_argument_bound_azure_resource_show",
+    "detail_read_api_version_exact": "2021-09-01",
+    "subscription_id_exact": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+    "resource_group_exact": "rg-nac-bff-test",
+    "arm_resource_id_exact": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Insights/"
+        "actionGroups/Application Insights Smart Detection"
+    ),
+    "identity_list_reads_when_present_exact": 2,
+    "detail_reads_when_present_exact": 1,
+    "identity_stability_required": True,
+    "inventory_change_error_exact": (
+        "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK"
+    ),
+    "adapter_failure_error_exact": "AZURE_SMART_DETECTION_READBACK_FAILED",
+    "arbitrary_action_groups_allowed": False,
+    "property_drift_behavior": "stop_before_first_write",
+}
+SMART_DETECTION_PREWRITE_AST_SHA256 = (
+    "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
+)
+AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
+    "24ac4fc68d396ba39858e4494d281aa2c9b5e2c89ec95408300f2b9553032d17"
+)
+SMART_DETECTION_FUNCTION_AST_SHA256 = {
+    "_validate_smart_detection_action_group_identity": (
+        "437a9a23c85e2a451d6e86f7fe52518eb2ec421cfb7b864276a12ce0fe8b5c32"
+    ),
+    "_validate_smart_detection_action_group": (
+        "adcbc7718151e08fdce6f05f862f377e01614999d107687f3b4b55423ae3960b"
+    ),
+}
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
 AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256 = (
     "3464a0bc43e02eb9b6734b5088002df593f9145229e9fa7aeff2972435c81c6f"
@@ -178,7 +234,8 @@ STEP_IDS = [
 NEGATIVE_TEST_IDS = [
     "wrong_hash", "wrong_owner_login", "wrong_owner_association",
     "toolchain_attestation_tamper",
-    "dirty_tree", "wrong_target", "duplicates", "broader_permissions",
+    "dirty_tree", "wrong_target", "duplicates",
+    "azure_smart_detection_companion_drift", "broader_permissions",
     "race", "secret_sentinel", "prepared_input_drift",
     "health_auth_ready_order", "synthetic_restoration_failure",
     "first_error_after_write", "arm_deployment_timeout_reconciliation",
@@ -242,6 +299,14 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
             "SPFX_TARGET_PAGE_DUPLICATE",
             "SPFX_PAGE_WEBPART_DUPLICATE",
             "SYNTHETIC_DUPLICATE_BLOCKED",
+        ]
+    },
+    "azure_smart_detection_companion_drift": {
+        "stable_error_codes": [
+            "AZURE_RESOURCE_INVENTORY_UNEXPECTED",
+            "AZURE_RESOURCE_PROPERTY_DRIFT",
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+            "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK",
         ]
     },
     "broader_permissions": {
@@ -338,6 +403,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "AZURE_BASELINE_DEPLOYMENT_FAILED",
         "AZURE_BASELINE_DEPLOYMENT_CANCELED",
         "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+        "_SMART_DETECTION_ACTION_GROUP_NAME",
+        "_SMART_DETECTION_ARM_ROLE_RECEIVERS",
+        "AZURE_SMART_DETECTION_READBACK_FAILED",
     ),
     ATTESTATION_PATH: (
         "build_activation_attestation_plan",
@@ -393,6 +461,8 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     ),
     AZURE_LIVE_COMMANDS_PATH: (
         "_exact_default_cloud_selection_digest", "_MAX_CLOUD_SELECTION_BYTES",
+        "_SMART_DETECTION_ACTION_GROUP_NAME",
+        '("resource", "show")',
         "ConfigParser", "O_NONBLOCK", "run_with_timeout",
         "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
         "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
@@ -413,6 +483,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_unauthenticated_cli_state_fails_closed_without_output",
         "test_sealed_bootstrap_account_assertion_fails_closed",
         "test_sealed_bootstrap_account_child_closes_fds_and_times_out",
+        "test_blocked_argv_never_reaches_subprocess",
     ),
     Path("tests/test_nac_bff_azure_activation_composition.py"): (
         "test_provider_registration_requires_registered_readback",
@@ -435,6 +506,13 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_provider_registration_poll_propagates_cli_failure",
         "test_provider_registration_maps_cli_timeout_to_readback_timeout",
         "test_provider_registration_rejects_readback_after_deadline",
+        "test_prewrite_rejects_foreign_smart_detection_summary_before_detail_read",
+        "test_prewrite_rejects_foreign_smart_detection_detail_identity",
+        "test_prewrite_rejects_inventory_change_during_companion_readback",
+        "test_prewrite_maps_smart_detection_adapter_exception",
+        "test_prewrite_maps_second_inventory_adapter_exception",
+        "test_prewrite_maps_second_inventory_failure_result",
+        "test_prewrite_maps_malformed_second_inventory_result",
     ),
     Path("tests/test_nac_bff_azure_activation_runner.py"): (
         "test_legacy_binding_lock_blocks_new_hash_namespace",
@@ -612,6 +690,29 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         "failed_baseline_acceptance"
     ) != FAILED_BASELINE_ACCEPTANCE_POLICY:
         errors.append("domain ARM failed-baseline acceptance policy differs")
+
+    inventory = domain.get("prewrite_inventory")
+    if not isinstance(inventory, dict):
+        errors.append("domain prewrite_inventory must be an object")
+    else:
+        if inventory.get(
+            "azure_application_insights_companion_exact"
+        ) != AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY:
+            errors.append(
+                "domain Azure Application Insights companion policy differs"
+            )
+        if inventory.get(
+            "azure_application_insights_companion_count_allowed"
+        ) != [0, 1]:
+            errors.append(
+                "domain Azure Application Insights companion cardinality differs"
+            )
+        if inventory.get(
+            "single_logical_read_only_snapshot_required"
+        ) is not True:
+            errors.append(
+                "domain Azure inventory logical snapshot requirement differs"
+            )
 
     exclusive_lock = domain.get("exclusive_lock")
     if not isinstance(exclusive_lock, dict) or any(
@@ -929,6 +1030,9 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "leading_issue": LEADING_ISSUE,
             "parent_issue": PARENT_ISSUE,
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
+            "azure_inventory_safety_rework_issue": (
+                AZURE_INVENTORY_SAFETY_REWORK_ISSUE
+            ),
             "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "acceptance_ids": ACCEPTANCE_IDS,
         },
@@ -969,6 +1073,31 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
                       "verification evidence step allowlist", errors)
         _require_list(policy, "summary_field_allowlist_exact", SUMMARY_FIELDS,
                       "verification evidence summary allowlist", errors)
+    required_evidence = verification.get("required_evidence")
+    if (
+        not isinstance(required_evidence, list)
+        or not any(
+            isinstance(item, str)
+            and "azure_smart_detection_companion_drift" in item
+            for item in required_evidence
+        )
+    ):
+        errors.append(
+            "verification required evidence must include Smart Detection drift"
+        )
+    invariants = verification.get("invariants")
+    if (
+        not isinstance(invariants, list)
+        or not any(
+            isinstance(item, str)
+            and "canonical ARM ID" in item
+            and "two identity-list reads" in item
+            for item in invariants
+        )
+    ):
+        errors.append(
+            "verification Smart Detection identity invariant differs"
+        )
     if verification.get("failure_behavior", {}).get("resume_request") != (
         "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP"
     ):
@@ -1073,6 +1202,9 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
             composition_tree, "_APPROVED_OWNER_ASSOCIATIONS"
         ) != tuple(OWNER_ASSOCIATIONS):
             errors.append("composition owner association allowlist differs")
+        _validate_smart_detection_composition_structure(
+            composition_tree, errors
+        )
         for name, expected in (
             (
                 "_DEPLOYMENT_RECONCILIATION_ATTEMPTS",
@@ -1123,6 +1255,7 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
     except (OSError, SyntaxError):
         errors.append("Azure CLI cloud selection size binding is unavailable")
     else:
+        _validate_smart_detection_command_schema(azure_live_tree, errors)
         if _literal_assignment(
             azure_live_tree, "_MAX_CLOUD_SELECTION_BYTES"
         ) != 4096:
@@ -1152,6 +1285,399 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
     for relative in TEST_PATHS:
         if not (repo_root / relative).is_file():
             errors.append(f"missing activation test source: {relative.as_posix()}")
+
+
+def _portable_ast_dump(node: ast.AST) -> str:
+    normalized = copy.deepcopy(node)
+    for item in ast.walk(normalized):
+        if hasattr(item, "type_params"):
+            delattr(item, "type_params")
+    return ast.dump(normalized, include_attributes=False)
+
+
+def _assignment_value(tree: ast.AST, name: str) -> ast.AST | None:
+    matches: list[ast.AST] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            matches.append(node.value)
+    return matches[0] if len(matches) == 1 else None
+
+
+def _ast_expression_matches(value: ast.AST | None, source: str) -> bool:
+    if value is None:
+        return False
+    expected = ast.parse(source, mode="eval").body
+    return ast.dump(value, include_attributes=False) == ast.dump(
+        expected, include_attributes=False
+    )
+
+
+def _nested_function_definition(
+    tree: ast.AST, name: str
+) -> ast.FunctionDef | None:
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _validate_smart_detection_composition_structure(
+    tree: ast.Module, errors: list[str]
+) -> None:
+    literal_bindings = {
+        "_SMART_DETECTION_ACTION_GROUP_NAME": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY["name_exact"]
+        ),
+        "_SMART_DETECTION_ACTION_GROUP_TYPE": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "type_case_insensitive"
+            ].casefold()
+        ),
+        "_SMART_DETECTION_ACTION_GROUP_SHORT_NAME": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "group_short_name_exact"
+            ]
+        ),
+        "_SMART_DETECTION_ACTION_GROUP_API_VERSION": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "detail_read_api_version_exact"
+            ]
+        ),
+        "_SMART_DETECTION_ARM_ROLE_RECEIVERS": tuple(
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "arm_role_receivers_exact"
+            ]
+        ),
+    }
+    for name, expected in literal_bindings.items():
+        if (
+            _top_level_literal_assignments(tree, name) != [expected]
+            or _module_scope_binding_count(tree, name) != 1
+            or _pattern_binding_count(tree, name) != 0
+        ):
+            errors.append(f"composition {name} differs from companion contract")
+
+    expected_id_expression = (
+        'f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}" '
+        '"/providers/Microsoft.Insights/actionGroups/" '
+        'f"{_SMART_DETECTION_ACTION_GROUP_NAME}"'
+    )
+    if (
+        _module_scope_binding_count(
+            tree, "_SMART_DETECTION_ACTION_GROUP_ID"
+        ) != 1
+        or _pattern_binding_count(
+            tree, "_SMART_DETECTION_ACTION_GROUP_ID"
+        ) != 0
+        or not _ast_expression_matches(
+            _assignment_value(tree, "_SMART_DETECTION_ACTION_GROUP_ID"),
+            expected_id_expression,
+        )
+    ):
+        errors.append("composition Smart Detection ARM ID binding differs")
+
+    expected_counts_expression = """{
+        "armRoleReceivers": len(_SMART_DETECTION_ARM_ROLE_RECEIVERS),
+        "emailReceivers": 0,
+        "smsReceivers": 0,
+        "webhookReceivers": 0,
+        "eventHubReceivers": 0,
+        "itsmReceivers": 0,
+        "azureAppPushReceivers": 0,
+        "automationRunbookReceivers": 0,
+        "voiceReceivers": 0,
+        "logicAppReceivers": 0,
+        "azureFunctionReceivers": 0,
+    }"""
+    if (
+        _module_scope_binding_count(
+            tree, "_SMART_DETECTION_RECEIVER_COUNTS"
+        ) != 1
+        or _pattern_binding_count(
+            tree, "_SMART_DETECTION_RECEIVER_COUNTS"
+        ) != 0
+        or not _ast_expression_matches(
+            _assignment_value(tree, "_SMART_DETECTION_RECEIVER_COUNTS"),
+            expected_counts_expression,
+        )
+    ):
+        errors.append("composition Smart Detection receiver counts differ")
+
+    identity_validator = _function_definition(
+        tree, "_validate_smart_detection_action_group_identity"
+    )
+    property_validator = _function_definition(
+        tree, "_validate_smart_detection_action_group"
+    )
+    if identity_validator is None or property_validator is None:
+        errors.append("composition Smart Detection validators are unavailable")
+    else:
+        for function in (identity_validator, property_validator):
+            actual_sha256 = hashlib.sha256(
+                _portable_ast_dump(function).encode("utf-8")
+            ).hexdigest()
+            if (
+                actual_sha256
+                != SMART_DETECTION_FUNCTION_AST_SHA256[function.name]
+            ):
+                errors.append(
+                    "composition Smart Detection "
+                    f"{function.name} shape differs"
+                )
+        identity_names = {
+            node.id for node in ast.walk(identity_validator) if isinstance(node, ast.Name)
+        }
+        if not {
+            "_SMART_DETECTION_ACTION_GROUP_NAME",
+            "_SMART_DETECTION_ACTION_GROUP_TYPE",
+            "_SMART_DETECTION_ACTION_GROUP_ID",
+            "RESOURCE_GROUP",
+        }.issubset(identity_names) or (
+            "AZURE_RESOURCE_INVENTORY_UNEXPECTED"
+            not in _string_literals(identity_validator)
+        ):
+            errors.append("composition Smart Detection identity validator differs")
+        property_names = {
+            node.id for node in ast.walk(property_validator) if isinstance(node, ast.Name)
+        }
+        property_calls = {
+            _call_name(node.func)
+            for node in ast.walk(property_validator)
+            if isinstance(node, ast.Call)
+        }
+        if (
+            "_validate_smart_detection_action_group_identity" not in property_calls
+            or not {
+                "_SMART_DETECTION_ACTION_GROUP_SHORT_NAME",
+                "_SMART_DETECTION_RECEIVER_COUNTS",
+                "_SMART_DETECTION_ARM_ROLE_RECEIVERS",
+            }.issubset(property_names)
+            or "AZURE_RESOURCE_PROPERTY_DRIFT"
+            not in _string_literals(property_validator)
+        ):
+            errors.append("composition Smart Detection property validator differs")
+
+    inspect_method = _nested_function_definition(tree, "_inspect_azure_prewrite")
+    if inspect_method is None:
+        errors.append("composition Azure prewrite inventory method is unavailable")
+        return
+    inspect_sha256 = hashlib.sha256(
+        _portable_ast_dump(inspect_method).encode("utf-8")
+    ).hexdigest()
+    if inspect_sha256 != SMART_DETECTION_PREWRITE_AST_SHA256:
+        errors.append("composition Azure prewrite AST shape differs")
+    if (
+        sum(
+            isinstance(node, ast.Return)
+            for node in ast.walk(inspect_method)
+        )
+        != 4
+        or _has_constant_false_control(inspect_method)
+    ):
+        errors.append(
+            "composition Azure prewrite control-flow shape differs"
+        )
+    calls = [
+        (node.lineno, _call_name(node.func))
+        for node in ast.walk(inspect_method)
+        if isinstance(node, ast.Call)
+    ]
+    snapshot_lines = sorted(
+        line
+        for line, name in calls
+        if name == "_azure_inventory_identity_snapshot"
+    )
+    identity_lines = sorted(
+        line
+        for line, name in calls
+        if name == "_validate_smart_detection_action_group_identity"
+    )
+    detail_assignments = [
+        node
+        for node in ast.walk(inspect_method)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "companion_detail"
+            for target in node.targets
+        )
+    ]
+    repeated_assignments = [
+        node
+        for node in ast.walk(inspect_method)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "repeated_resources"
+            for target in node.targets
+        )
+    ]
+    expected_detail = """self._azure_json([
+        "resource",
+        "show",
+        "--resource-group",
+        RESOURCE_GROUP,
+        "--resource-type",
+        "Microsoft.Insights/ActionGroups",
+        "--name",
+        _SMART_DETECTION_ACTION_GROUP_NAME,
+        "--api-version",
+        _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+    ])"""
+    expected_repeated = (
+        'self._azure.run(["resource", "list", "--resource-group", RESOURCE_GROUP])'
+    )
+    resource_list_call_count = sum(
+        _ast_expression_matches(node, expected_repeated)
+        for node in ast.walk(inspect_method)
+        if isinstance(node, ast.Call)
+    )
+    detail_read_call_count = sum(
+        _ast_expression_matches(node, expected_detail)
+        for node in ast.walk(inspect_method)
+        if isinstance(node, ast.Call)
+    )
+    ordered = (
+        len(snapshot_lines) == 2
+        and len(identity_lines) == 3
+        and resource_list_call_count == 2
+        and detail_read_call_count == 1
+        and len(detail_assignments) == 1
+        and len(repeated_assignments) == 1
+        and snapshot_lines[0]
+        < identity_lines[0]
+        < detail_assignments[0].lineno
+        < identity_lines[1]
+        < repeated_assignments[0].lineno
+        < snapshot_lines[1]
+        < identity_lines[2]
+    )
+    if (
+        not ordered
+        or not _ast_expression_matches(detail_assignments[0].value, expected_detail)
+        or not _ast_expression_matches(
+            repeated_assignments[0].value, expected_repeated
+        )
+        or "AZURE_SMART_DETECTION_READBACK_FAILED"
+        not in _string_literals(inspect_method)
+        or "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK"
+        not in _string_literals(inspect_method)
+    ):
+        errors.append("composition Smart Detection readback sequence differs")
+
+
+def _validate_smart_detection_command_schema(
+    tree: ast.Module, errors: list[str]
+) -> None:
+    for name, expected in {
+        "_SMART_DETECTION_ACTION_GROUP_NAME": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY["name_exact"]
+        ),
+        "_SMART_DETECTION_ACTION_GROUP_TYPE": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "type_case_insensitive"
+            ]
+        ),
+        "_SMART_DETECTION_ACTION_GROUP_API_VERSION": (
+            AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY[
+                "detail_read_api_version_exact"
+            ]
+        ),
+    }.items():
+        if (
+            _top_level_literal_assignments(tree, name) != [expected]
+            or _module_scope_binding_count(tree, name) != 1
+            or _pattern_binding_count(tree, name) != 0
+        ):
+            errors.append(f"Azure command {name} differs from companion contract")
+
+    schemas = _assignment_value(tree, "_COMMAND_SCHEMAS")
+    schemas_sha256 = (
+        hashlib.sha256(
+            ast.dump(schemas, include_attributes=False).encode("utf-8")
+        ).hexdigest()
+        if schemas is not None
+        else None
+    )
+    if schemas_sha256 != AZURE_COMMAND_SCHEMAS_AST_SHA256:
+        errors.append("Azure command schemas AST shape differs")
+    resource_show_entries: list[ast.AST] = []
+    if isinstance(schemas, ast.Dict):
+        for key, value in zip(schemas.keys, schemas.values):
+            try:
+                key_value = ast.literal_eval(key)
+            except (TypeError, ValueError):
+                continue
+            if key_value == ("resource", "show"):
+                resource_show_entries.append(value)
+    resource_show = (
+        resource_show_entries[0]
+        if len(resource_show_entries) == 1
+        else None
+    )
+    schema_mutations = 0
+    mutation_methods = {
+        "__delitem__",
+        "__setitem__",
+        "clear",
+        "pop",
+        "popitem",
+        "setdefault",
+        "update",
+    }
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Subscript) and isinstance(
+            node.ctx, (ast.Store, ast.Del)
+        ):
+            current = node.value
+            while isinstance(current, (ast.Attribute, ast.Subscript)):
+                current = current.value
+            if isinstance(current, ast.Name) and current.id == "_COMMAND_SCHEMAS":
+                schema_mutations += 1
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in mutation_methods
+        ):
+            current = node.func.value
+            while isinstance(current, (ast.Attribute, ast.Subscript)):
+                current = current.value
+            if isinstance(current, ast.Name) and current.id == "_COMMAND_SCHEMAS":
+                schema_mutations += 1
+    if (
+        len(resource_show_entries) != 1
+        or _module_scope_binding_count(tree, "_COMMAND_SCHEMAS") != 1
+        or _pattern_binding_count(tree, "_COMMAND_SCHEMAS") != 0
+        or schema_mutations != 0
+    ):
+        errors.append(
+            "Azure command resource show schema cardinality differs"
+        )
+    expected_schema = """_CommandSchema(
+        ("resource", "show"),
+        required=frozenset(
+            {"--resource-group", "--resource-type", "--name", "--api-version"}
+        ),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            "--resource-type": _single_exact(
+                _SMART_DETECTION_ACTION_GROUP_TYPE
+            ),
+            "--name": _single_exact(_SMART_DETECTION_ACTION_GROUP_NAME),
+            "--api-version": _single_exact(
+                _SMART_DETECTION_ACTION_GROUP_API_VERSION
+            ),
+            **_COMMON_VALIDATORS,
+        },
+    )"""
+    if not _ast_expression_matches(resource_show, expected_schema):
+        errors.append("Azure command resource show schema differs from contract")
+
+
 def _call_name(node: ast.AST) -> str | None:
     parts: list[str] = []
     current = node

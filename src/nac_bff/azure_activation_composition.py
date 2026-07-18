@@ -66,6 +66,7 @@ from .azure_activation import (
     PROVISIONER_CLIENT_ID,
     RESOURCE_GROUP,
     SITE_ID,
+    SUBSCRIPTION_ID,
     TENANT_ID,
     WORKSPACE_ID,
     build_azure_bff_activation_plan,
@@ -160,6 +161,40 @@ _PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 1
 _PROVIDER_READBACK_ATTEMPTS = 5
 _PROVIDER_READBACK_DELAY_SECONDS = 12.0
 _PROVIDER_READBACK_MAX_SECONDS = 60.0
+_SMART_DETECTION_ACTION_GROUP_NAME = "Application Insights Smart Detection"
+_SMART_DETECTION_ACTION_GROUP_TYPE = "microsoft.insights/actiongroups"
+_SMART_DETECTION_ACTION_GROUP_SHORT_NAME = "SmartDetect"
+_SMART_DETECTION_ACTION_GROUP_API_VERSION = "2021-09-01"
+_SMART_DETECTION_ACTION_GROUP_ID = (
+    f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}"
+    "/providers/Microsoft.Insights/actionGroups/"
+    f"{_SMART_DETECTION_ACTION_GROUP_NAME}"
+)
+_SMART_DETECTION_ARM_ROLE_RECEIVERS = (
+    {
+        "name": "Monitoring Contributor",
+        "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+        "useCommonAlertSchema": True,
+    },
+    {
+        "name": "Monitoring Reader",
+        "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+        "useCommonAlertSchema": True,
+    },
+)
+_SMART_DETECTION_RECEIVER_COUNTS = {
+    "armRoleReceivers": len(_SMART_DETECTION_ARM_ROLE_RECEIVERS),
+    "emailReceivers": 0,
+    "smsReceivers": 0,
+    "webhookReceivers": 0,
+    "eventHubReceivers": 0,
+    "itsmReceivers": 0,
+    "azureAppPushReceivers": 0,
+    "automationRunbookReceivers": 0,
+    "voiceReceivers": 0,
+    "logicAppReceivers": 0,
+    "azureFunctionReceivers": 0,
+}
 _NODE_NPM_CANDIDATES = (
     (
         Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
@@ -1011,7 +1046,75 @@ class AzureBffLiveExecutionPort:
         )
         if resources.get("ok") is not True or not isinstance(resources.get("data"), list):
             raise ActivationStepError("AZURE_RESOURCE_INVENTORY_FAILED")
-        _validate_azure_resource_inventory(resources["data"])
+        inventory = list(resources["data"])
+        initial_inventory_identity = _azure_inventory_identity_snapshot(inventory)
+        companion_indexes = [
+            index
+            for index, item in enumerate(inventory)
+            if _is_smart_detection_action_group_summary(item)
+        ]
+        if len(companion_indexes) > 1:
+            _validate_azure_resource_inventory(inventory)
+        if companion_indexes:
+            _validate_smart_detection_action_group_identity(
+                inventory[companion_indexes[0]]
+            )
+            try:
+                companion_detail = self._azure_json(
+                    [
+                        "resource",
+                        "show",
+                        "--resource-group",
+                        RESOURCE_GROUP,
+                        "--resource-type",
+                        "Microsoft.Insights/ActionGroups",
+                        "--name",
+                        _SMART_DETECTION_ACTION_GROUP_NAME,
+                        "--api-version",
+                        _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+                    ]
+                )
+            except Exception:
+                raise ActivationStepError(
+                    "AZURE_SMART_DETECTION_READBACK_FAILED"
+                ) from None
+            _validate_smart_detection_action_group_identity(companion_detail)
+            try:
+                repeated_resources = self._azure.run(
+                    ["resource", "list", "--resource-group", RESOURCE_GROUP]
+                )
+                if repeated_resources.get("ok") is not True or not isinstance(
+                    repeated_resources.get("data"), list
+                ):
+                    raise ActivationStepError(
+                        "AZURE_SMART_DETECTION_READBACK_FAILED"
+                    )
+                inventory = list(repeated_resources["data"])
+                repeated_inventory_identity = (
+                    _azure_inventory_identity_snapshot(inventory)
+                )
+            except Exception:
+                raise ActivationStepError(
+                    "AZURE_SMART_DETECTION_READBACK_FAILED"
+                ) from None
+            if repeated_inventory_identity != initial_inventory_identity:
+                raise ActivationStepError(
+                    "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK"
+                )
+            repeated_companion_indexes = [
+                index
+                for index, item in enumerate(inventory)
+                if _is_smart_detection_action_group_summary(item)
+            ]
+            if len(repeated_companion_indexes) != 1:
+                raise ActivationStepError(
+                    "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK"
+                )
+            _validate_smart_detection_action_group_identity(
+                inventory[repeated_companion_indexes[0]]
+            )
+            inventory[repeated_companion_indexes[0]] = companion_detail
+        _validate_azure_resource_inventory(inventory)
 
         deployment = self._azure.run(
             [
@@ -2874,10 +2977,93 @@ def _validate_azure_resource_inventory(value: list[object]) -> None:
             ):
                 raise ActivationStepError("AZURE_RESOURCE_PROPERTY_DRIFT")
             counts[resource_type] += 1
+        elif (
+            resource_type == _SMART_DETECTION_ACTION_GROUP_TYPE
+            and name == _SMART_DETECTION_ACTION_GROUP_NAME
+        ):
+            _validate_smart_detection_action_group(item)
         elif resource_type not in optional_types:
             raise ActivationStepError("AZURE_RESOURCE_INVENTORY_UNEXPECTED")
     if value and any(counts[kind] != 1 for kind in required):
         raise ActivationStepError("AZURE_RESOURCE_INVENTORY_INCOMPLETE")
+
+
+def _is_smart_detection_action_group_summary(value: object) -> bool:
+    return (
+        isinstance(value, dict)
+        and str(value.get("type", "")).lower()
+        == _SMART_DETECTION_ACTION_GROUP_TYPE
+        and value.get("name") == _SMART_DETECTION_ACTION_GROUP_NAME
+    )
+
+
+def _azure_inventory_identity_snapshot(
+    value: list[object],
+) -> tuple[tuple[str, str, str, str, str], ...]:
+    identities: list[tuple[str, str, str, str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ActivationStepError("AZURE_RESOURCE_INVENTORY_INVALID")
+        identities.append(
+            (
+                str(item.get("type", "")).casefold(),
+                str(item.get("name", "")),
+                str(item.get("resourceGroup", "")),
+                str(item.get("id", "")).casefold(),
+                str(item.get("location", "")).casefold(),
+            )
+        )
+    return tuple(sorted(identities))
+
+
+def _validate_smart_detection_action_group_identity(value: object) -> None:
+    if (
+        not isinstance(value, dict)
+        or value.get("name") != _SMART_DETECTION_ACTION_GROUP_NAME
+        or str(value.get("type", "")).casefold()
+        != _SMART_DETECTION_ACTION_GROUP_TYPE
+        or value.get("resourceGroup") != RESOURCE_GROUP
+        or str(value.get("id", "")).casefold()
+        != _SMART_DETECTION_ACTION_GROUP_ID.casefold()
+    ):
+        raise ActivationStepError("AZURE_RESOURCE_INVENTORY_UNEXPECTED")
+
+
+def _validate_smart_detection_action_group(value: dict[str, Any]) -> None:
+    _validate_smart_detection_action_group_identity(value)
+    properties = value.get("properties")
+    if (
+        value.get("name") != _SMART_DETECTION_ACTION_GROUP_NAME
+        or str(value.get("location", "")).lower() != "global"
+        or value.get("tags") is not None
+        or value.get("kind") is not None
+        or value.get("sku") is not None
+        or value.get("managedBy") is not None
+        or not isinstance(properties, dict)
+        or set(properties) != {
+            "groupShortName",
+            "enabled",
+            *_SMART_DETECTION_RECEIVER_COUNTS,
+        }
+        or properties.get("groupShortName")
+        != _SMART_DETECTION_ACTION_GROUP_SHORT_NAME
+        or properties.get("enabled") is not True
+    ):
+        raise ActivationStepError("AZURE_RESOURCE_PROPERTY_DRIFT")
+    for receiver_name, expected_count in _SMART_DETECTION_RECEIVER_COUNTS.items():
+        receivers = properties.get(receiver_name)
+        if not isinstance(receivers, list) or len(receivers) != expected_count:
+            raise ActivationStepError("AZURE_RESOURCE_PROPERTY_DRIFT")
+    arm_role_receivers = properties["armRoleReceivers"]
+    if (
+        any(not isinstance(receiver, dict) for receiver in arm_role_receivers)
+        or sorted(arm_role_receivers, key=lambda receiver: str(receiver.get("name")))
+        != sorted(
+            _SMART_DETECTION_ARM_ROLE_RECEIVERS,
+            key=lambda receiver: receiver["name"],
+        )
+    ):
+        raise ActivationStepError("AZURE_RESOURCE_PROPERTY_DRIFT")
 
 
 def _count_field_value(value: object, field: str, expected: str) -> int:

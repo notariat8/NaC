@@ -361,7 +361,40 @@
   },
   "prewrite_inventory": {
     "must_complete_before_any_provider_write": true,
-    "single_read_only_snapshot_required": true,
+    "azure_application_insights_companion_exact": {
+      "safety_rework_issue": "https://github.com/notariat8/NaC/issues/662",
+      "type_case_insensitive": "Microsoft.Insights/ActionGroups",
+      "name_exact": "Application Insights Smart Detection",
+      "location_case_insensitive": "Global",
+      "group_short_name_exact": "SmartDetect",
+      "enabled_exact": true,
+      "arm_role_receivers_count_exact": 2,
+      "arm_role_receivers_exact": [
+        {
+          "name": "Monitoring Contributor",
+          "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+          "useCommonAlertSchema": true
+        },
+        {
+          "name": "Monitoring Reader",
+          "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+          "useCommonAlertSchema": true
+        }
+      ],
+      "all_other_receiver_counts_exact": 0,
+      "detail_read_mode": "exact_argument_bound_azure_resource_show",
+      "detail_read_api_version_exact": "2021-09-01",
+      "arbitrary_action_groups_allowed": false,
+      "property_drift_behavior": "stop_before_first_write",
+      "subscription_id_exact": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+      "resource_group_exact": "rg-nac-bff-test",
+      "arm_resource_id_exact": "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Insights/actionGroups/Application Insights Smart Detection",
+      "identity_list_reads_when_present_exact": 2,
+      "detail_reads_when_present_exact": 1,
+      "identity_stability_required": true,
+      "inventory_change_error_exact": "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK",
+      "adapter_failure_error_exact": "AZURE_SMART_DETECTION_READBACK_FAILED"
+    },
     "duplicate_checks_exact": [
       "Entra applications by exact appId URI",
       "Entra API service principals for the resolved application",
@@ -383,7 +416,12 @@
       "no client secret or certificate creation is requested"
     ],
     "zero_or_one_exact_match_required": true,
-    "duplicate_or_broader_result_behavior": "stop_before_first_write"
+    "azure_application_insights_companion_count_allowed": [
+      0,
+      1
+    ],
+    "duplicate_or_broader_result_behavior": "stop_before_first_write",
+    "single_logical_read_only_snapshot_required": true
   },
   "state_machine": {
     "states_exact": [

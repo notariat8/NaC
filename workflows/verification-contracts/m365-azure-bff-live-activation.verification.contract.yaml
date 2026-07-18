@@ -6,6 +6,7 @@ status: OFFLINE_READY
 leading_issue: https://github.com/notariat8/NaC/issues/632
 parent_issue: https://github.com/notariat8/NaC/issues/620
 safety_rework_issue: https://github.com/notariat8/NaC/issues/658
+azure_inventory_safety_rework_issue: https://github.com/notariat8/NaC/issues/662
 safety_rework_acceptance_ids:
   - AC-001
   - AC-002
@@ -159,6 +160,7 @@ invariants:
   - SPFx has no Microsoft Graph permission and requests only NaC M365 BFF/Matter.Read; tenant-wide SPFx activation is forbidden.
   - Tenant, subscription, workspace, site URL and ID, team, all four BFF list IDs, App Catalog solution ProductId, SPFx solution, page, webpart and synthetic matter match exact_bindings.
   - All Entra application/service-principal, managed-identity role, site-grant, App Catalog, SPFx permission/install, page/webpart and synthetic-key duplicate checks plus all broader-permission checks complete read-only before the first provider write.
+  - The Azure resource inventory may include only the exact Application Insights Smart Detection companion action group bound to the approved subscription, resource group and canonical ARM ID; one exact argument-bound detail read is bracketed by two identity-list reads that must remain stable. Its Global location, SmartDetect short name, enabled state, two ARM role receivers and zero receivers of every other declared kind are mandatory, while arbitrary action groups, identity changes, adapter failures or property drift stop before the first write.
   - Zero or one exact pre-existing object is handled idempotently where the domain contract permits it; duplicate Entra apps, grants, catalog ProductIds, page webparts or synthetic canonical keys stop the run.
   - Step 11 proves healthz before authentication, successful authenticated reads, fail-closed denied and manipulated requests, verified restoration of the captured assigned synthetic state during normal execution, another authenticated read after restoration and readyz only after that authenticated read; synchronous aborts attempt restoration in finally, but SIGKILL restoration is not claimed and any process termination before verified restoration cannot pass.
   - Unauthorized and manipulated authenticated BFF requests return the same generic 403 ACCESS_DENIED DTO. The M365 process boundary normalizes only the exact allowlisted BFF GET plus the exact CLI 403 status message; raw nonzero stdout, stderr and response bodies are never forwarded.
@@ -243,6 +245,16 @@ negative_tests:
         - SPFX_PAGE_WEBPART_DUPLICATE
         - SYNTHETIC_DUPLICATE_BLOCKED
       automatic_deletions_exact: 0
+  - id: azure_smart_detection_companion_drift
+    arrange: Return an arbitrary Action Group, a foreign or malformed ARM identity, an adapter exception, a failed or malformed exact read result, inventory identity drift between the two list reads, or a changed Global/SmartDetect/enabled/receiver fingerprint of the Application Insights Smart Detection companion.
+    assert:
+      writes_exact: 0
+      later_steps_run: false
+      stable_error_codes:
+        - AZURE_RESOURCE_INVENTORY_UNEXPECTED
+        - AZURE_RESOURCE_PROPERTY_DRIFT
+        - AZURE_SMART_DETECTION_READBACK_FAILED
+        - AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK
   - id: broader_permissions
     arrange: Return a managed-identity Graph role in addition to Sites.Selected, a target-site role other than read, an SPFx Graph permission or an extra delegated scope.
     assert:
@@ -348,7 +360,7 @@ required_evidence:
   - Redacted readback proving exactly Sites.Selected, exact target-site read, exact BFF Matter.Read and zero broader permissions.
   - Redacted read-only convergence summary proving causal deployment-input binding, zero duplicate readback and no automatic rollback or deletion; replaying provider writes is not claimed.
   - Redacted ordered probe and restoration summary proving healthz before auth, authenticated read before readyz and verified restoration to assigned synthetic state; incomplete/crashed runs remain non-success and require read-only reconciliation plus manual recovery.
-  - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure and disabled resume.
+  - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, azure_smart_detection_companion_drift, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure and disabled resume.
 
 host_success_receipt:
   required_for_passed: true
