@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -37,6 +38,14 @@ QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
 
 LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
+SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/658"
+SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
+AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256 = (
+    "3464a0bc43e02eb9b6734b5088002df593f9145229e9fa7aeff2972435c81c6f"
+)
+AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256 = (
+    "0e110be3006a9328853c1519cad47eaffb524d8ecf8075b131065e720a6d8bbf"
+)
 ACCEPTANCE_IDS = [f"AC-632-{index:02d}" for index in range(1, 9)]
 TOP_LEVEL_FIELDS = [
     "schema_version", "status", "started_at_utc", "finished_at_utc",
@@ -277,17 +286,25 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     AZURE_CLI_SEALED_RUNTIME_PATH: (
         "nac-azure-cli-sealed-runtime-v1", "F_ADD_SEALS", "F_SEAL_WRITE",
         "clone_newuser", "clone_newns", "ms_remount", "ms_rdonly",
-        "copy_private_azure_config", "validate_private_azure_profile",
+        "copy_private_azure_config", "install_private_azure_cloud_config",
+        "verify_write_account_binding", "WRITE_COMMAND_PREFIXES",
+        "ACCOUNT_ASSERTION_FIELDS", "MAX_ACCOUNT_ASSERTION_BYTES = 16384",
+        "ACCOUNT_ASSERTION_TIMEOUT_SECONDS = 30.0",
+        "close_inherited_descriptors", "wait_child_exit_without_reap",
+        "select.select",
+        "os.pipe2(os.O_CLOEXEC)", "os.setsid()",
+        "kill_account_process_group", "terminate_account_child",
         "config_file_digest", "cloud_selection_sha256",
         "MAX_CLOUD_SELECTION_BYTES = 4096",
         'if (destination / "clouds.config").exists()',
-        "azureProfile.json", "clouds.config", "AZURE_CONFIG_DIR",
+        "clouds.config", "AZURE_CONFIG_DIR",
         "AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE",
     ),
     AZURE_LIVE_COMMANDS_PATH: (
         "_exact_default_cloud_selection_digest", "_MAX_CLOUD_SELECTION_BYTES",
         "ConfigParser", "O_NONBLOCK", "run_with_timeout",
         "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
+        "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
         '"status": status_code', '"error": {"code": code}',
@@ -299,6 +316,12 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     README_PATH: (
         "m365-azure-bff-live-activation.contract.json",
         "validate_m365_azure_bff_live_activation.py",
+    ),
+    Path("tests/test_nac_bff_azure_live_commands.py"): (
+        "test_sealed_bootstrap_asserts_account_once_before_each_write",
+        "test_unauthenticated_cli_state_fails_closed_without_output",
+        "test_sealed_bootstrap_account_assertion_fails_closed",
+        "test_sealed_bootstrap_account_child_closes_fds_and_times_out",
     ),
     Path("tests/test_nac_bff_azure_activation_composition.py"): (
         "test_provider_registration_requires_registered_readback",
@@ -448,6 +471,8 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "contract_id": "m365.azure_bff_live_activation",
             "leading_issue": LEADING_ISSUE,
             "parent_issue": PARENT_ISSUE,
+            "safety_rework_issue": SAFETY_REWORK_ISSUE,
+            "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "acceptance_ids": ACCEPTANCE_IDS,
             "verification_contract": VERIFICATION_PATH.as_posix(),
         },
@@ -547,10 +572,49 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 ),
                 "azure_cli_default_cloud_selection_max_bytes": 4096,
                 "azure_cli_config_mode": (
-                    "stable_nofollow_exact_default_selection_preflight_then_"
-                    "omitted_from_private_mount_namespace_tmpfs_plus_per_"
-                    "process_exact_profile_binding"
+                    "stable_nofollow_opaque_cli_state_private_mount_namespace_"
+                    "tmpfs_plus_generated_exact_AzureCloud_config_and_same_"
+                    "snapshot_per_write_account_assertion"
                 ),
+                "azure_cli_profile_schema_dependency_allowed": False,
+                "azure_cli_profile_state_opaque_to_nac": True,
+                "azure_cli_authenticated_account_state_required": True,
+                "azure_cli_installation_id_only_profile_behavior": (
+                    "fail_closed_as_unauthenticated_before_write"
+                ),
+                "azure_cli_private_cloud_config_mode": (
+                    "generated_exact_AzureCloud_in_private_snapshot"
+                ),
+                "azure_cli_account_assertions_per_write_exact": 1,
+                "azure_cli_account_assertion_fields_exact": [
+                    "id",
+                    "tenantId",
+                    "environmentName",
+                    "state",
+                ],
+                "azure_cli_account_assertion_state_exact": "Enabled",
+                "azure_cli_account_assertion_max_bytes": 16384,
+                "azure_cli_account_assertion_timeout_seconds": 30.0,
+                "azure_cli_account_assertion_duplicate_keys_allowed": False,
+                "azure_cli_account_assertion_stdout_evidence_allowed": False,
+                "azure_cli_account_assertion_stderr_mode": "discard_to_devnull",
+                "azure_cli_account_assertion_parent_death_signal_required": True,
+                "azure_cli_account_assertion_inherited_fd_mode": (
+                    "cloexec_pipe_close_all_non_stdio_before_azure_cli_import"
+                ),
+                "azure_cli_account_assertion_process_group_mode": (
+                    "dedicated_session_kill_group_and_reap_on_failure_or_completion"
+                ),
+                "azure_cli_account_assertion_failure_behavior": (
+                    "terminate_and_reap_child_then_fail_closed_before_target_write"
+                ),
+                "azure_cli_account_assertion_same_private_config_snapshot_required": True,
+                "azure_cli_write_prefixes_exact": [
+                    ["provider", "register"],
+                    ["group", "create"],
+                    ["deployment", "group", "create"],
+                    ["functionapp", "deployment", "source", "config-zip"],
+                ],
                 "azure_deployment_template_mode": (
                     "repo_compiled_reproducible_hash_bound_arm_json"
                 ),
@@ -737,6 +801,8 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "domain_contract_id": "m365.azure_bff_live_activation",
             "leading_issue": LEADING_ISSUE,
             "parent_issue": PARENT_ISSUE,
+            "safety_rework_issue": SAFETY_REWORK_ISSUE,
+            "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "acceptance_ids": ACCEPTANCE_IDS,
         },
         "verification",
@@ -902,9 +968,581 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
             errors.append(
                 "Azure CLI cloud selection size must equal contract value 4096"
             )
+    try:
+        sealed_runtime_source = (
+            repo_root / AZURE_CLI_SEALED_RUNTIME_PATH
+        ).read_text(encoding="utf-8")
+    except OSError:
+        errors.append("Azure CLI sealed runtime source is unavailable")
+    else:
+        sealed_runtime_sha256 = hashlib.sha256(
+            sealed_runtime_source.encode("utf-8")
+        ).hexdigest()
+        if sealed_runtime_sha256 != AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256:
+            errors.append("Azure CLI sealed runtime source digest differs")
+        if "validate_private_azure_profile" in sealed_runtime_source:
+            errors.append(
+                "Azure CLI private profile schema must not be a trust anchor"
+            )
+        _validate_sealed_runtime_account_binding(
+            sealed_runtime_source,
+            errors,
+        )
     for relative in TEST_PATHS:
         if not (repo_root / relative).is_file():
             errors.append(f"missing activation test source: {relative.as_posix()}")
+def _call_name(node: ast.AST) -> str | None:
+    parts: list[str] = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    return ".".join(reversed(parts))
+
+
+def _function_definition(tree: ast.Module, name: str) -> ast.FunctionDef | None:
+    matches = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+    if (
+        len(matches) != 1
+        or _module_scope_binding_count(tree, name) != 1
+        or _name_store_or_delete_count(tree, name) != 0
+        or _pattern_binding_count(tree, name) != 0
+    ):
+        return None
+    return matches[0]
+
+
+def _name_store_or_delete_count(tree: ast.AST, name: str) -> int:
+    return sum(
+        1
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name)
+        and node.id == name
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+    )
+
+
+def _module_scope_binding_count(tree: ast.Module, name: str) -> int:
+    class BindingVisitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.count = 0
+
+        def visit_Name(self, node: ast.Name) -> None:
+            if node.id == name and isinstance(node.ctx, (ast.Store, ast.Del)):
+                self.count += 1
+
+        def _visit_definition(
+            self,
+            node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        ) -> None:
+            if node.name == name:
+                self.count += 1
+            for decorator in node.decorator_list:
+                self.visit(decorator)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                for default in (*node.args.defaults, *node.args.kw_defaults):
+                    if default is not None:
+                        self.visit(default)
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._visit_definition(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._visit_definition(node)
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            self._visit_definition(node)
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            return
+
+        def visit_Import(self, node: ast.Import) -> None:
+            for alias in node.names:
+                bound = alias.asname or alias.name.split(".", 1)[0]
+                if bound == name:
+                    self.count += 1
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if bound == name:
+                    self.count += 1
+
+        def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+            if node.name == name:
+                self.count += 1
+            for statement in node.body:
+                self.visit(statement)
+
+    visitor = BindingVisitor()
+    visitor.visit(tree)
+    return visitor.count
+
+
+def _direct_call_statement_lines(
+    function: ast.FunctionDef,
+    name: str,
+) -> list[int]:
+    return [
+        statement.lineno
+        for statement in function.body
+        if isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Call)
+        and _call_name(statement.value.func) == name
+    ]
+
+
+def _pattern_binding_count(tree: ast.AST, name: str) -> int:
+    count = 0
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name == name:
+            count += 1
+        elif isinstance(node, ast.MatchMapping) and node.rest == name:
+            count += 1
+    return count
+
+
+def _has_constant_false_control(tree: ast.AST) -> bool:
+    return any(
+        isinstance(node, (ast.If, ast.While))
+        and isinstance(node.test, ast.Constant)
+        and node.test.value is False
+        for node in ast.walk(tree)
+    )
+
+
+def _outer_module_shape(tree: ast.Module) -> list[str]:
+    shape: list[str] = []
+    for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            shape.append(ast.unparse(node))
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            shape.append(
+                f"assign:{target.id}"
+                if isinstance(target, ast.Name)
+                else "invalid-assignment"
+            )
+        elif isinstance(node, ast.ClassDef):
+            shape.append(f"class:{node.name}")
+        elif isinstance(node, ast.FunctionDef):
+            shape.append(f"function:{node.name}")
+        else:
+            shape.append(f"invalid:{type(node).__name__}")
+    return shape
+
+
+def _bootstrap_top_level_shape(tree: ast.Module) -> list[str]:
+    shape: list[str] = []
+    for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            shape.append(ast.unparse(node))
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            shape.append(
+                f"assign:{target.id}"
+                if isinstance(target, ast.Name)
+                else "invalid-assignment"
+            )
+        elif isinstance(node, ast.FunctionDef):
+            shape.append(f"function:{node.name}")
+        elif (
+            isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and _call_name(node.value.func) == "main"
+            and not node.value.args
+            and not node.value.keywords
+        ):
+            shape.append("call:main")
+        else:
+            shape.append(f"invalid:{type(node).__name__}")
+    return shape
+
+
+def _environment_assignment_lines(
+    function: ast.FunctionDef,
+    key: str,
+) -> list[int]:
+    lines: list[int] = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if not isinstance(target, ast.Subscript):
+                continue
+            if not (
+                isinstance(target.value, ast.Attribute)
+                and isinstance(target.value.value, ast.Name)
+                and target.value.value.id == "os"
+                and target.value.attr == "environ"
+            ):
+                continue
+            try:
+                value = ast.literal_eval(target.slice)
+            except (TypeError, ValueError):
+                continue
+            if value == key:
+                lines.append(node.lineno)
+    return lines
+
+
+def _frozenset_literal_assignments(
+    tree: ast.Module,
+    name: str,
+) -> list[Any]:
+    values: list[Any] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == name
+            for target in node.targets
+        ):
+            continue
+        value = node.value
+        if not (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id == "frozenset"
+            and len(value.args) == 1
+            and not value.keywords
+        ):
+            values.append(None)
+            continue
+        try:
+            values.append(frozenset(ast.literal_eval(value.args[0])))
+        except (TypeError, ValueError):
+            values.append(None)
+    return values
+
+
+def _validate_sealed_runtime_account_binding(
+    source: str,
+    errors: list[str],
+) -> None:
+    try:
+        outer_tree = ast.parse(source)
+        bootstrap_assignments = _top_level_literal_assignments(
+            outer_tree,
+            "_BOOTSTRAP_SOURCE",
+        )
+        if (
+            len(bootstrap_assignments) != 1
+            or not isinstance(bootstrap_assignments[0], str)
+            or _module_scope_binding_count(outer_tree, "_BOOTSTRAP_SOURCE") != 1
+            or _name_store_or_delete_count(outer_tree, "_BOOTSTRAP_SOURCE") != 1
+        ):
+            raise ValueError("bootstrap source is not uniquely bound")
+        bootstrap_source = bootstrap_assignments[0]
+        expected_outer_shape = ['from __future__ import annotations', 'import fcntl', 'import hashlib', 'import json', 'import os', 'from dataclasses import dataclass', 'from pathlib import Path, PurePosixPath', 'import stat', 'import zipfile', 'assign:_CHUNK_SIZE', 'assign:_TAMPER_EXIT', 'assign:_ISOLATION_EXIT', 'class:SealedAzureCliRuntime', 'function:prepare_sealed_azure_cli_runtime', 'function:sealed_runtime_failure_code', 'function:_package_manifest', 'function:_read_regular_file', 'function:_trusted_directory', 'function:_sealed_package_memfd', 'function:_sealed_memfd', 'function:_stat_signature', 'function:_digest_update', 'assign:_BOOTSTRAP_SOURCE']
+        if _outer_module_shape(outer_tree) != expected_outer_shape:
+            raise ValueError("outer module shape differs")
+        final_outer_statement = outer_tree.body[-1] if outer_tree.body else None
+        if not (
+            isinstance(final_outer_statement, ast.Assign)
+            and len(final_outer_statement.targets) == 1
+            and isinstance(final_outer_statement.targets[0], ast.Name)
+            and final_outer_statement.targets[0].id == "_BOOTSTRAP_SOURCE"
+        ):
+            raise ValueError("bootstrap source is not the final outer binding")
+        expected_outer_assignments = {
+            "_CHUNK_SIZE": "1024 * 1024",
+            "_TAMPER_EXIT": "86",
+            "_ISOLATION_EXIT": "87",
+            "_BOOTSTRAP_SOURCE": repr(bootstrap_source),
+        }
+        seen_outer_assignments: dict[str, str] = {}
+        for node in outer_tree.body:
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target = node.targets[0]
+                if not isinstance(target, ast.Name):
+                    raise ValueError("outer module assignment target differs")
+                seen_outer_assignments[target.id] = ast.unparse(node.value)
+            elif not isinstance(
+                node,
+                (
+                    ast.Import, ast.ImportFrom, ast.FunctionDef,
+                    ast.AsyncFunctionDef, ast.ClassDef,
+                ),
+            ):
+                raise ValueError("outer module contains executable statements")
+        if seen_outer_assignments != expected_outer_assignments:
+            raise ValueError("outer module assignments differ")
+        if (
+            hashlib.sha256(bootstrap_source.encode("utf-8")).hexdigest()
+            != AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256
+        ):
+            errors.append("Azure CLI sealed bootstrap source digest differs")
+        bootstrap_tree = ast.parse(bootstrap_source)
+    except (SyntaxError, TypeError, ValueError):
+        errors.append("Azure CLI sealed account-binding bootstrap is unavailable")
+        return
+
+    expected_top_level_shape = ['from __future__ import annotations', 'import ctypes', 'import hashlib', 'import json', 'import os', 'from pathlib import Path, PurePosixPath', 'import runpy', 'import select', 'import signal', 'import stat', 'import sys', 'import tempfile', 'import time', 'import zipfile', 'assign:TAMPER_EXIT', 'assign:ISOLATION_EXIT', 'assign:CHUNK_SIZE', 'assign:MAX_CLOUD_SELECTION_BYTES', 'assign:MAX_ACCOUNT_ASSERTION_BYTES', 'assign:ACCOUNT_ASSERTION_TIMEOUT_SECONDS', 'assign:EXPECTED_CLOUD_NAME', 'assign:EXPECTED_TENANT_ID', 'assign:EXPECTED_SUBSCRIPTION_ID', 'assign:ACCOUNT_ASSERTION_FIELDS', 'assign:WRITE_COMMAND_PREFIXES', 'assign:REQUIRED_APPARMOR_PROFILE', 'function:fail', 'function:signature', 'function:safe_archive_path', 'function:archive_target', 'function:validate_package_archive', 'function:copy_archived_verified', 'function:copy_config_file', 'function:config_file_digest', 'function:copy_private_azure_config', 'function:install_private_azure_cloud_config', 'function:validate_host_userns_profile', 'function:close_fd', 'function:close_inherited_descriptors', 'function:write_proc_mapping', 'function:write_id_maps', 'function:kill_account_process_group', 'function:terminate_account_child', 'function:terminate_child', 'function:arm_parent_death_signal', 'function:exit_with_child_status', 'function:wait_child_exit_without_reap', 'function:verify_write_account_binding', 'function:validate_account_binding_payload', 'function:enter_mapped_user_namespace', 'function:isolate', 'function:main', 'call:main']
+    if _bootstrap_top_level_shape(bootstrap_tree) != expected_top_level_shape:
+        errors.append("Azure CLI sealed bootstrap top-level shape differs")
+
+    expected_literals = {
+        "MAX_ACCOUNT_ASSERTION_BYTES": 16384,
+        "ACCOUNT_ASSERTION_TIMEOUT_SECONDS": 30.0,
+        "EXPECTED_CLOUD_NAME": "AzureCloud",
+        "EXPECTED_TENANT_ID": EXACT_BINDINGS["tenant_id"],
+        "EXPECTED_SUBSCRIPTION_ID": EXACT_BINDINGS["subscription_id"],
+        "WRITE_COMMAND_PREFIXES": (
+            ("provider", "register"),
+            ("group", "create"),
+            ("deployment", "group", "create"),
+            ("functionapp", "deployment", "source", "config-zip"),
+        ),
+    }
+    for name, expected in expected_literals.items():
+        if (
+            _top_level_literal_assignments(bootstrap_tree, name) != [expected]
+            or _module_scope_binding_count(bootstrap_tree, name) != 1
+            or _name_store_or_delete_count(bootstrap_tree, name) != 1
+            or _pattern_binding_count(bootstrap_tree, name) != 0
+        ):
+            errors.append(f"Azure CLI sealed bootstrap {name} differs")
+    if (
+        _frozenset_literal_assignments(
+            bootstrap_tree,
+            "ACCOUNT_ASSERTION_FIELDS",
+        ) != [frozenset({"id", "tenantId", "environmentName", "state"})]
+        or _module_scope_binding_count(
+            bootstrap_tree,
+            "ACCOUNT_ASSERTION_FIELDS",
+        ) != 1
+        or _name_store_or_delete_count(
+            bootstrap_tree,
+            "ACCOUNT_ASSERTION_FIELDS",
+        ) != 1
+        or _pattern_binding_count(
+            bootstrap_tree,
+            "ACCOUNT_ASSERTION_FIELDS",
+        ) != 0
+    ):
+        errors.append("Azure CLI sealed account assertion fields differ")
+
+    attribute_store_targets = [
+        _call_name(node)
+        for node in ast.walk(bootstrap_tree)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+    ]
+    if attribute_store_targets != ["sys.argv", "sys.argv"]:
+        errors.append(
+            "Azure CLI sealed bootstrap attribute-write targets differ"
+        )
+
+    dynamic_namespace_calls = {
+        "globals", "locals", "vars", "exec", "eval", "compile",
+        "setattr", "delattr",
+    }
+    bootstrap_call_names = {
+        _call_name(node.func)
+        for node in ast.walk(bootstrap_tree)
+        if isinstance(node, ast.Call)
+    }
+    dynamic_namespace_names = dynamic_namespace_calls | {"__builtins__"}
+    referenced_names = {
+        node.id for node in ast.walk(bootstrap_tree)
+        if isinstance(node, ast.Name)
+    }
+    if (
+        dynamic_namespace_calls & bootstrap_call_names
+        or dynamic_namespace_names & referenced_names
+    ):
+        errors.append(
+            "Azure CLI sealed bootstrap must not mutate its namespace dynamically"
+        )
+
+    required_function_names = (
+        "main",
+        "verify_write_account_binding",
+        "validate_account_binding_payload",
+        "close_inherited_descriptors",
+        "wait_child_exit_without_reap",
+        "kill_account_process_group",
+        "terminate_account_child",
+        "arm_parent_death_signal",
+    )
+    functions = {
+        name: _function_definition(bootstrap_tree, name)
+        for name in required_function_names
+    }
+    missing_or_shadowed = [
+        name for name, function in functions.items() if function is None
+    ]
+    if missing_or_shadowed:
+        errors.append(
+            "Azure CLI sealed account-binding functions are missing or "
+            "shadowed: " + ", ".join(missing_or_shadowed)
+        )
+        return
+    main_function = functions["main"]
+    verify_function = functions["verify_write_account_binding"]
+    wait_function = functions["wait_child_exit_without_reap"]
+    kill_function = functions["kill_account_process_group"]
+    terminate_function = functions["terminate_account_child"]
+    assert main_function is not None
+    assert verify_function is not None
+    assert wait_function is not None
+    assert kill_function is not None
+    assert terminate_function is not None
+
+    kill_calls = [
+        _call_name(node.func)
+        for node in ast.walk(kill_function)
+        if isinstance(node, ast.Call)
+    ]
+    terminate_calls = [
+        _call_name(node.func)
+        for node in ast.walk(terminate_function)
+        if isinstance(node, ast.Call)
+    ]
+    if (
+        kill_calls.count("os.killpg") != 1
+        or kill_calls.count("os.kill") != 1
+        or terminate_calls.count("kill_account_process_group") != 1
+        or terminate_calls.count("os.waitpid") != 1
+    ):
+        errors.append(
+            "Azure CLI account cleanup must kill the process group with a "
+            "leader fallback and reap the child"
+        )
+
+    wait_calls = [
+        _call_name(node.func)
+        for node in ast.walk(wait_function)
+        if isinstance(node, ast.Call)
+    ]
+    wait_attributes = {
+        node.attr for node in ast.walk(wait_function)
+        if isinstance(node, ast.Attribute)
+    }
+    if (
+        wait_calls.count("os.waitid") != 1
+        or "WNOWAIT" not in wait_attributes
+        or _has_constant_false_control(wait_function)
+    ):
+        errors.append(
+            "Azure CLI account child must be observed without reaping before "
+            "its process group is terminated"
+        )
+
+    main_calls = [
+        (_call_name(node.func), node.lineno)
+        for node in ast.walk(main_function)
+        if isinstance(node, ast.Call)
+    ]
+    verify_lines = [
+        line for name, line in main_calls
+        if name == "verify_write_account_binding"
+    ]
+    write_lines = [
+        line for name, line in main_calls if name == "runpy.run_module"
+    ]
+    direct_verify_lines = _direct_call_statement_lines(
+        main_function,
+        "verify_write_account_binding",
+    )
+    direct_write_lines = _direct_call_statement_lines(
+        main_function,
+        "runpy.run_module",
+    )
+    config_lines = _environment_assignment_lines(main_function, "AZURE_CONFIG_DIR")
+    if not (
+        len(config_lines) == len(verify_lines) == len(write_lines) == 1
+        and direct_verify_lines == verify_lines
+        and direct_write_lines == write_lines
+        and config_lines[0] < verify_lines[0] < write_lines[0]
+    ):
+        errors.append(
+            "Azure CLI sealed main must bind one private config, assert once, "
+            "then execute exactly one target command"
+        )
+
+    account_argv_values = [
+        ast.unparse(node.value)
+        for node in ast.walk(verify_function)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Attribute)
+            and _call_name(target) == "sys.argv"
+            for target in node.targets
+        )
+    ]
+    expected_account_argv = (
+        "['az', 'account', 'show', '--subscription', "
+        "EXPECTED_SUBSCRIPTION_ID, '--query', "
+        "'{id:id,tenantId:tenantId,environmentName:environmentName,state:state}', "
+        "'--output', 'json', '--only-show-errors']"
+    )
+    if account_argv_values != [expected_account_argv]:
+        errors.append("Azure CLI sealed account assertion argv differs")
+
+    verifier_calls = [
+        (_call_name(node.func), node.lineno)
+        for node in ast.walk(verify_function)
+        if isinstance(node, ast.Call)
+    ]
+    verifier_names = [name for name, _ in verifier_calls]
+    account_cli_lines = [
+        line for name, line in verifier_calls if name == "runpy.run_module"
+    ]
+    close_lines = [
+        line for name, line in verifier_calls
+        if name == "close_inherited_descriptors"
+    ]
+    observe_lines = [
+        line for name, line in verifier_calls
+        if name == "wait_child_exit_without_reap"
+    ]
+    kill_lines = [
+        line for name, line in verifier_calls
+        if name == "kill_account_process_group"
+    ]
+    direct_observe_lines = _direct_call_statement_lines(
+        verify_function,
+        "wait_child_exit_without_reap",
+    )
+    direct_kill_lines = _direct_call_statement_lines(
+        verify_function,
+        "kill_account_process_group",
+    )
+    reap_lines = [
+        line for name, line in verifier_calls if name == "os.waitpid"
+    ]
+    if not (
+        verifier_names.count("os.fork") == 1
+        and verifier_names.count("os.pipe2") == 1
+        and verifier_names.count("os.setsid") == 1
+        and verifier_names.count("arm_parent_death_signal") == 1
+        and verifier_names.count("select.select") == 1
+        and verifier_names.count("wait_child_exit_without_reap") == 1
+        and verifier_names.count("validate_account_binding_payload") == 1
+        and verifier_names.count("kill_account_process_group") == 1
+        and verifier_names.count("terminate_account_child") >= 1
+        and len(account_cli_lines) == len(close_lines) == 1
+        and len(observe_lines) == len(kill_lines) == len(reap_lines) == 1
+        and direct_observe_lines == observe_lines
+        and direct_kill_lines == kill_lines
+        and not _has_constant_false_control(verify_function)
+        and close_lines[0] < account_cli_lines[0]
+        and observe_lines[0] < kill_lines[0] < reap_lines[0]
+    ):
+        errors.append(
+            "Azure CLI account child must be parent-pinned, bounded, reaped, "
+            "FD-closed and validated exactly once"
+        )
+
+
 def _literal_assignment(tree: ast.AST, name: str) -> Any:
     for node in ast.walk(tree):
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):

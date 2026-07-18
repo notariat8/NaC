@@ -78,8 +78,18 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertIn('.nac-empty-extensions', source)
         self.assertIn('os.environ["AZURE_EXTENSION_USE_DYNAMIC_INSTALL"] = "no"', source)
         self.assertIn("copy_private_azure_config", source)
-        self.assertIn("validate_private_azure_profile", source)
-        self.assertIn('"environmentName") != "AzureCloud"', source)
+        self.assertIn("install_private_azure_cloud_config", source)
+        self.assertIn("verify_write_account_binding", source)
+        self.assertNotIn("validate_private_azure_profile", source)
+        self.assertIn('account.get("environmentName") != EXPECTED_CLOUD_NAME', source)
+        self.assertIn('account.get("state") != "Enabled"', source)
+        self.assertIn("MAX_ACCOUNT_ASSERTION_BYTES = 16384", source)
+        self.assertIn("os.pipe2(os.O_CLOEXEC)", source)
+        self.assertIn("os.setsid()", source)
+        self.assertIn("os.waitid(", source)
+        self.assertIn("os.WNOWAIT", source)
+        self.assertIn("kill_account_process_group", source)
+        self.assertIn("len(payload) > MAX_ACCOUNT_ASSERTION_BYTES", source)
         self.assertEqual(source.count('name == "clouds.config"'), 2)
         self.assertIn("expected_cloud_selection_sha256", source)
         self.assertIn("MAX_CLOUD_SELECTION_BYTES = 4096", source)
@@ -247,33 +257,291 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 except ProcessLookupError:
                     pass
 
-    def test_sealed_bootstrap_accepts_bom_prefixed_bound_azure_profile(self) -> None:
+    def test_sealed_bootstrap_keeps_cli_profile_state_opaque_and_pins_cloud(
+        self,
+    ) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
-        validate_private_azure_profile = namespace[
-            "validate_private_azure_profile"
+        install_private_azure_cloud_config = namespace[
+            "install_private_azure_cloud_config"
         ]
 
         with tempfile.TemporaryDirectory() as tmp:
-            profile = Path(tmp) / "azureProfile.json"
+            root = Path(tmp)
+            profile = root / "azureProfile.json"
+            profile_payload = {"installationId": "opaque-cli-state"}
             profile.write_text(
-                json.dumps(
-                    {
-                        "subscriptions": [
-                            {
-                                "id": EXPECTED_SUBSCRIPTION_ID,
-                                "tenantId": EXPECTED_TENANT_ID,
-                                "environmentName": EXPECTED_CLOUD_NAME,
-                                "isDefault": True,
-                            }
-                        ]
-                    }
-                ),
+                json.dumps(profile_payload),
                 encoding="utf-8-sig",
             )
+            (root / "config").write_text(
+                "[cloud]\nname = AzureGermanCloud\n",
+                encoding="utf-8",
+            )
 
-            validate_private_azure_profile(Path(tmp))
+            install_private_azure_cloud_config(root)
+
+            self.assertEqual(
+                json.loads(profile.read_text(encoding="utf-8-sig")),
+                profile_payload,
+            )
+            self.assertEqual(
+                (root / "config").read_text(encoding="utf-8"),
+                "[cloud]\nname = AzureCloud\n",
+            )
+
+    def test_sealed_bootstrap_account_binding_payload_is_exact(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        validate = namespace["validate_account_binding_payload"]
+        self.assertEqual(namespace["MAX_ACCOUNT_ASSERTION_BYTES"], 16384)
+        self.assertEqual(
+            namespace["ACCOUNT_ASSERTION_FIELDS"],
+            frozenset({"id", "tenantId", "environmentName", "state"}),
+        )
+        self.assertEqual(
+            namespace["WRITE_COMMAND_PREFIXES"],
+            (
+                ("provider", "register"),
+                ("group", "create"),
+                ("deployment", "group", "create"),
+                ("functionapp", "deployment", "source", "config-zip"),
+            ),
+        )
+        valid = {
+            "id": EXPECTED_SUBSCRIPTION_ID,
+            "tenantId": EXPECTED_TENANT_ID,
+            "environmentName": EXPECTED_CLOUD_NAME,
+            "state": "Enabled",
+        }
+
+        validate(json.dumps(valid).encode("utf-8"))
+
+        invalid = (
+            {**valid, "state": "Disabled"},
+            {**valid, "tenantId": "00000000-0000-0000-0000-000000000000"},
+            {**valid, "id": "00000000-0000-0000-0000-000000000000"},
+            {**valid, "environmentName": "AzureGermanCloud"},
+            {**valid, "extra": "ambiguous"},
+        )
+        for account in invalid:
+            with self.subTest(account_keys=sorted(account)):
+                with self.assertRaisesRegex(SystemExit, "86"):
+                    validate(json.dumps(account).encode("utf-8"))
+        duplicate_key = (
+            b'{"id":"first","id":"second","tenantId":"tenant",'
+            b'"environmentName":"AzureCloud","state":"Enabled"}'
+        )
+        for payload in (b"", b"[]", b"not-json", b"\xff", duplicate_key):
+            with self.subTest(payload=payload):
+                with self.assertRaisesRegex(SystemExit, "86"):
+                    validate(payload)
+
+    def test_sealed_bootstrap_asserts_account_once_before_each_write(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        verify = namespace["verify_write_account_binding"]
+        valid = {
+            "id": EXPECTED_SUBSCRIPTION_ID,
+            "tenantId": EXPECTED_TENANT_ID,
+            "environmentName": EXPECTED_CLOUD_NAME,
+            "state": "Enabled",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            calls = Path(tmp) / "calls"
+            snapshot = Path(tmp) / "private-azure-config"
+            snapshot.mkdir()
+
+            def fake_run_module(*_args: object, **_kwargs: object) -> None:
+                with calls.open("a", encoding="utf-8") as stream:
+                    stream.write(
+                        json.dumps(
+                            {
+                                "config": os.environ["AZURE_CONFIG_DIR"],
+                                "argv": list(namespace["sys"].argv),
+                            }
+                        )
+                        + "\n"
+                    )
+                print(json.dumps(valid), flush=True)
+
+            with (
+                patch.dict(
+                    os.environ,
+                    {"AZURE_CONFIG_DIR": str(snapshot)},
+                ),
+                patch.object(
+                    namespace["runpy"],
+                    "run_module",
+                    side_effect=fake_run_module,
+                ),
+            ):
+                for prefix in namespace["WRITE_COMMAND_PREFIXES"]:
+                    calls.write_bytes(b"")
+                    verify([*prefix, "--synthetic-test-option", "value"])
+                    records = [
+                        json.loads(line)
+                        for line in calls.read_text(encoding="utf-8").splitlines()
+                    ]
+                    self.assertEqual(
+                        records,
+                        [
+                            {
+                                "config": str(snapshot),
+                                "argv": [
+                                    "az", "account", "show",
+                                    "--subscription",
+                                    EXPECTED_SUBSCRIPTION_ID,
+                                    "--query",
+                                    (
+                                        "{id:id,tenantId:tenantId,"
+                                        "environmentName:environmentName,"
+                                        "state:state}"
+                                    ),
+                                    "--output", "json", "--only-show-errors",
+                                ],
+                            }
+                        ],
+                    )
+
+                calls.write_bytes(b"")
+                verify(["provider", "show", "--namespace", "Microsoft.Web"])
+                self.assertEqual(calls.read_bytes(), b"")
+
+    def test_sealed_bootstrap_account_assertion_fails_closed(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        verify = namespace["verify_write_account_binding"]
+
+        def run_with_payload(payload: bytes) -> None:
+            def fake_run_module(*_args: object, **_kwargs: object) -> None:
+                os.write(1, payload)
+
+            with patch.object(
+                namespace["runpy"],
+                "run_module",
+                side_effect=fake_run_module,
+            ):
+                verify(["group", "create", "--name", "nac-test"])
+
+        wrong_state = json.dumps(
+            {
+                "id": EXPECTED_SUBSCRIPTION_ID,
+                "tenantId": EXPECTED_TENANT_ID,
+                "environmentName": EXPECTED_CLOUD_NAME,
+                "state": "Disabled",
+            }
+        ).encode("utf-8")
+        with self.assertRaisesRegex(SystemExit, "86"):
+            run_with_payload(wrong_state)
+        with self.assertRaisesRegex(SystemExit, "86"):
+            run_with_payload(b"x" * 16385)
+
+    def test_sealed_bootstrap_account_child_closes_fds_and_times_out(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        verify = namespace["verify_write_account_binding"]
+        valid = {
+            "id": EXPECTED_SUBSCRIPTION_ID,
+            "tenantId": EXPECTED_TENANT_ID,
+            "environmentName": EXPECTED_CLOUD_NAME,
+            "state": "Enabled",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            inherited_fd = os.open(Path(tmp) / "inherited", os.O_CREAT | os.O_RDWR)
+            try:
+                def assert_fd_closed(*_args: object, **_kwargs: object) -> None:
+                    try:
+                        os.fstat(inherited_fd)
+                    except OSError:
+                        print(json.dumps(valid), flush=True)
+                    else:
+                        print("{}", flush=True)
+
+                with patch.object(
+                    namespace["runpy"],
+                    "run_module",
+                    side_effect=assert_fd_closed,
+                ):
+                    verify(["provider", "register", "--namespace", "Microsoft.Web"])
+            finally:
+                os.close(inherited_fd)
+
+        namespace["ACCOUNT_ASSERTION_TIMEOUT_SECONDS"] = 0.05
+
+        def hang(*_args: object, **_kwargs: object) -> None:
+            time.sleep(5)
+
+        started = time.monotonic()
+        with (
+            patch.object(namespace["runpy"], "run_module", side_effect=hang),
+            self.assertRaisesRegex(SystemExit, "86"),
+        ):
+            verify(["group", "create", "--name", "nac-test"])
+        self.assertLess(time.monotonic() - started, 1.0)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            descendant_pid_path = Path(tmp) / "descendant-pid"
+
+            def fork_descendant(
+                *_args: object,
+                **_kwargs: object,
+            ) -> None:
+                descendant_pid = os.fork()
+                if descendant_pid == 0:
+                    os.close(1)
+                    time.sleep(5)
+                    os._exit(0)
+                descendant_pid_path.write_text(
+                    str(descendant_pid),
+                    encoding="ascii",
+                )
+                print(json.dumps(valid), flush=True)
+
+            with patch.object(
+                namespace["runpy"],
+                "run_module",
+                side_effect=fork_descendant,
+            ):
+                verify(["group", "create", "--name", "nac-test"])
+
+            descendant_pid = int(
+                descendant_pid_path.read_text(encoding="ascii")
+            )
+            deadline = time.monotonic() + 1.0
+            state = ""
+            while time.monotonic() < deadline:
+                try:
+                    state = (
+                        Path(f"/proc/{descendant_pid}/stat")
+                        .read_text(encoding="ascii")
+                        .split()[2]
+                    )
+                except (FileNotFoundError, IndexError, OSError):
+                    state = "gone"
+                    break
+                if state == "Z":
+                    break
+                time.sleep(0.01)
+            self.assertIn(state, {"gone", "Z"})
+
+        def delayed_setsid() -> None:
+            time.sleep(5)
+
+        started = time.monotonic()
+        with (
+            patch.object(namespace["os"], "setsid", side_effect=delayed_setsid),
+            self.assertRaisesRegex(SystemExit, "86"),
+        ):
+            verify(["group", "create", "--name", "nac-test"])
+        self.assertLess(time.monotonic() - started, 1.0)
 
     def test_sealed_bootstrap_requires_dedicated_profile_when_restricted(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
@@ -557,12 +825,12 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             self.assertRegex(argv[5], r"\A/proc/self/fd/[0-9]+\Z")
             azure_argv = argv[6:]
             self.assertEqual(azure_argv[-3:], ["--output", "json", "--only-show-errors"])
-            if azure_argv[:2] != ["account", "show"]:
-                subscription_index = azure_argv.index("--subscription")
-                self.assertEqual(
-                    azure_argv[subscription_index + 1],
-                    EXPECTED_SUBSCRIPTION_ID,
-                )
+            subscription_index = azure_argv.index("--subscription")
+            self.assertEqual(
+                azure_argv[subscription_index + 1],
+                EXPECTED_SUBSCRIPTION_ID,
+            )
+            self.assertEqual(azure_argv.count("--subscription"), 1)
             self.assertEqual(len(call.kwargs["pass_fds"]), 4)
 
     def test_process_boundary_is_argv_only_shell_false_and_env_filtered(self) -> None:
@@ -1395,6 +1663,19 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         )
         self.assertNotIn("user", json.dumps(readiness))
         self.assertEqual(process.call_count, 1)
+        account_argv = process.call_args.args[0][6:]
+        self.assertEqual(
+            account_argv,
+            [
+                "account",
+                "show",
+                "--subscription",
+                EXPECTED_SUBSCRIPTION_ID,
+                "--output",
+                "json",
+                "--only-show-errors",
+            ],
+        )
 
     def test_custom_cloud_config_is_rejected_before_subprocess(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1645,6 +1926,29 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(result["code"], "AZURE_CLI_CONFIG_UNTRUSTED")
         process.assert_not_called()
 
+    def test_unauthenticated_cli_state_fails_closed_without_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=86,
+                stdout="profile-secret-must-not-escape",
+                stderr="token-secret-must-not-escape",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                readiness = check_azure_cli_readiness(
+                    binary=binary,
+                    expected_binary_sha256=_binary_sha256(binary),
+                )
+
+        self.assertEqual(readiness["status"], "NOT_READY")
+        self.assertEqual(readiness["code"], "AZURE_CLI_RUNTIME_TAMPERED")
+        self.assertFalse(readiness["ready"])
+        self.assertNotIn("secret", json.dumps(readiness))
+
     def test_wrong_cloud_is_not_ready(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
@@ -1696,6 +2000,34 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         )
         self.assertFalse(readiness["ready"])
         self.assertNotIn("00000000", json.dumps(readiness))
+
+    def test_disabled_subscription_is_not_ready(self) -> None:
+        readiness = _readiness_for_account(
+            tenant_id=EXPECTED_TENANT_ID,
+            subscription_id=EXPECTED_SUBSCRIPTION_ID,
+            state="Disabled",
+        )
+
+        self.assertEqual(readiness["status"], "NOT_READY")
+        self.assertEqual(
+            readiness["code"],
+            "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
+        )
+        self.assertFalse(readiness["ready"])
+        self.assertNotIn("Disabled", json.dumps(readiness))
+
+    def test_missing_subscription_state_is_not_ready(self) -> None:
+        readiness = _readiness_for_account(
+            tenant_id=EXPECTED_TENANT_ID,
+            subscription_id=EXPECTED_SUBSCRIPTION_ID,
+            state=None,
+        )
+
+        self.assertEqual(readiness["status"], "NOT_READY")
+        self.assertEqual(
+            readiness["code"],
+            "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
+        )
 
     def test_missing_binary_is_not_ready_without_subprocess(self) -> None:
         with patch("nac_bff.azure_live_commands.subprocess.run") as process:
@@ -1802,6 +2134,7 @@ def _readiness_for_account(
     *,
     tenant_id: str,
     subscription_id: str,
+    state: str | None = "Enabled",
 ) -> dict[str, object]:
     with tempfile.TemporaryDirectory() as tmp:
         binary = _fake_binary(Path(tmp))
@@ -1814,6 +2147,7 @@ def _readiness_for_account(
                     "id": subscription_id,
                     "tenantId": tenant_id,
                     "environmentName": EXPECTED_CLOUD_NAME,
+                    **({"state": state} if state is not None else {}),
                 }
             ),
             stderr="",

@@ -178,8 +178,21 @@ in ein zweites privates `tmpfs` kopiert. Eine benutzerdefinierte
 mit dem Abschnitt `[AzureCloud]` und ausschließlich der freigegebenen
 `subscription` wird als Preflight-Metadatum akzeptiert. Ihr stabil gemessener
 SHA-256 wird im versiegelten Runtime-Manifest gebunden, unmittelbar vor dem
-Auslassen erneut geprüft und die Datei nicht in das private `tmpfs` übernommen. Jeder Azure-CLI-Prozess prüft dort genau ein Default-Profil mit dem freigegebenen
-Tenant, der freigegebenen Subscription und `environmentName == AzureCloud`.
+Auslassen erneut geprüft und die Datei nicht in das private `tmpfs` übernommen. Azure-CLI-Profil- und Cache-Dateien bleiben dort für NaC opak und sind kein
+Vertrauensanker. Ein authentisierter Azure-CLI-Kontostatus bleibt jedoch
+zwingend; ein Profil nur mit `installationId` ist abgemeldet und stoppt vor
+jedem Write. Der private Runtime-Snapshot ersetzt Host-Cloud-Defaults durch
+eine deterministische Konfiguration mit `name = AzureCloud`; jeder Befehl erhält
+die freigegebene Subscription explizit. Unmittelbar vor jedem Write startet der
+versiegelte Supervisor aus demselben privaten Config-Snapshot einen frischen
+`account show --subscription ...`-Child und akzeptiert ausschließlich die vier
+Felder `id`, `tenantId`, `environmentName` und `state` mit den gebundenen Werten
+und `state == Enabled`. Doppelte JSON-Schlüssel werden abgelehnt; der
+parent-death-gebundene Child nutzt eine Close-on-exec-Pipe, schließt vor dem
+Azure-CLI-Import alle geerbten Nicht-Standarddeskriptoren, läuft in einer
+eigenen Session und hat ein 30-Sekunden-Limit. Rohdaten und
+Fehlerausgaben dieses Readbacks werden verworfen; Timeout, Signal oder ein
+ungültiger Payload stoppen und reapen den Child vor dem Ziel-Write.
 Alle Extension-Quellen
 werden auf ein leeres, read-only Verzeichnis umgebunden und die dynamische
 Extension-Installation wird deaktiviert. Unterstützt der Host diese Isolation

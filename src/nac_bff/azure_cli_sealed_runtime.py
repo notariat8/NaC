@@ -440,16 +440,32 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import runpy
+import select
 import signal
 import stat
 import sys
 import tempfile
+import time
 import zipfile
 
 TAMPER_EXIT = 86
 ISOLATION_EXIT = 87
 CHUNK_SIZE = 1024 * 1024
 MAX_CLOUD_SELECTION_BYTES = 4096
+MAX_ACCOUNT_ASSERTION_BYTES = 16384
+ACCOUNT_ASSERTION_TIMEOUT_SECONDS = 30.0
+EXPECTED_CLOUD_NAME = "AzureCloud"
+EXPECTED_TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
+EXPECTED_SUBSCRIPTION_ID = "37cd9645-6cb9-4278-88ee-e80377cd951c"
+ACCOUNT_ASSERTION_FIELDS = frozenset(
+    {"id", "tenantId", "environmentName", "state"}
+)
+WRITE_COMMAND_PREFIXES = (
+    ("provider", "register"),
+    ("group", "create"),
+    ("deployment", "group", "create"),
+    ("functionapp", "deployment", "source", "config-zip"),
+)
 REQUIRED_APPARMOR_PROFILE = "nac-azure-cli-sealed-runtime (unconfined)"
 
 def fail(code):
@@ -621,28 +637,28 @@ def copy_private_azure_config(source, destination, expected_cloud_selection_sha2
     if (destination / "clouds.config").exists():
         fail(TAMPER_EXIT)
 
-def validate_private_azure_profile(config_root):
-    profile = config_root / "azureProfile.json"
+def install_private_azure_cloud_config(config_root):
+    config = config_root / "config"
     try:
-        payload = json.loads(profile.read_text(encoding="utf-8-sig"))
-        subscriptions = payload["subscriptions"]
-    except (OSError, KeyError, TypeError, ValueError):
-        fail(TAMPER_EXIT)
-    if not isinstance(subscriptions, list):
-        fail(TAMPER_EXIT)
-    exact = [
-        row for row in subscriptions
-        if isinstance(row, dict)
-        and str(row.get("id", "")).lower()
-            == "37cd9645-6cb9-4278-88ee-e80377cd951c"
-    ]
-    if (
-        len(exact) != 1
-        or str(exact[0].get("tenantId", "")).lower()
-            != "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
-        or exact[0].get("environmentName") != "AzureCloud"
-        or exact[0].get("isDefault") is not True
-    ):
+        if config.exists() or config.is_symlink():
+            metadata = config.lstat()
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+                fail(TAMPER_EXIT)
+            config.unlink()
+        descriptor = os.open(
+            config,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        try:
+            payload = b"[cloud]\nname = AzureCloud\n"
+            if os.write(descriptor, payload) != len(payload):
+                fail(TAMPER_EXIT)
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    except OSError:
         fail(TAMPER_EXIT)
 
 def validate_host_userns_profile(
@@ -669,6 +685,15 @@ def close_fd(descriptor):
         os.close(descriptor)
     except OSError:
         pass
+
+def close_inherited_descriptors():
+    try:
+        maximum = os.sysconf("SC_OPEN_MAX")
+    except (OSError, TypeError, ValueError):
+        fail(TAMPER_EXIT)
+    if not isinstance(maximum, int) or maximum < 3 or maximum > 2 ** 24:
+        fail(TAMPER_EXIT)
+    os.closerange(3, maximum)
 
 def write_proc_mapping(path, payload):
     flags = os.O_WRONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -697,6 +722,22 @@ def write_id_maps(pid, uid, gid, proc_root=Path("/proc")):
     except (OSError, ValueError):
         return False
     return True
+
+def kill_account_process_group(pid):
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except OSError:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+def terminate_account_child(pid):
+    kill_account_process_group(pid)
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
 
 def terminate_child(pid):
     try:
@@ -736,6 +777,145 @@ def exit_with_child_status(pid):
         os.kill(os.getpid(), signum)
         os._exit(128 + signum)
     os._exit(ISOLATION_EXIT)
+
+def wait_child_exit_without_reap(pid, deadline):
+    while True:
+        try:
+            result = os.waitid(
+                os.P_PID,
+                pid,
+                os.WEXITED | os.WNOHANG | os.WNOWAIT,
+            )
+        except (ChildProcessError, OSError):
+            terminate_account_child(pid)
+            fail(TAMPER_EXIT)
+        if result is not None:
+            return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            terminate_account_child(pid)
+            fail(TAMPER_EXIT)
+        time.sleep(min(0.01, remaining))
+
+def verify_write_account_binding(azure_argv):
+    if not any(
+        tuple(azure_argv[:len(prefix)]) == prefix
+        for prefix in WRITE_COMMAND_PREFIXES
+    ):
+        return
+    parent_pid = os.getpid()
+    try:
+        output_read, output_write = os.pipe2(os.O_CLOEXEC)
+    except OSError:
+        fail(TAMPER_EXIT)
+    try:
+        pid = os.fork()
+    except OSError:
+        close_fd(output_read)
+        close_fd(output_write)
+        fail(TAMPER_EXIT)
+    if pid == 0:
+        close_fd(output_read)
+        try:
+            libc = ctypes.CDLL(None, use_errno=True)
+            if not arm_parent_death_signal(libc, parent_pid):
+                os._exit(TAMPER_EXIT)
+            os.setsid()
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(output_write, 1)
+            os.dup2(devnull, 2)
+            close_fd(output_write)
+            close_fd(devnull)
+            close_inherited_descriptors()
+            sys.argv = [
+                "az", "account", "show",
+                "--subscription", EXPECTED_SUBSCRIPTION_ID,
+                "--query",
+                "{id:id,tenantId:tenantId,environmentName:environmentName,state:state}",
+                "--output", "json", "--only-show-errors",
+            ]
+            exit_code = 0
+            try:
+                runpy.run_module("azure.cli", run_name="__main__")
+            except SystemExit as exc:
+                exit_code = exc.code if isinstance(exc.code, int) else 1
+            try:
+                sys.stdout.flush()
+            except (AttributeError, OSError):
+                exit_code = 1
+            os._exit(exit_code)
+        except BaseException:
+            os._exit(TAMPER_EXIT)
+    close_fd(output_write)
+    payload = bytearray()
+    oversized = False
+    deadline = time.monotonic() + ACCOUNT_ASSERTION_TIMEOUT_SECONDS
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                terminate_account_child(pid)
+                fail(TAMPER_EXIT)
+            try:
+                readable, _, _ = select.select(
+                    [output_read], [], [], remaining
+                )
+            except (OSError, ValueError):
+                terminate_account_child(pid)
+                fail(TAMPER_EXIT)
+            if not readable:
+                terminate_account_child(pid)
+                fail(TAMPER_EXIT)
+            chunk = os.read(output_read, CHUNK_SIZE)
+            if not chunk:
+                break
+            payload.extend(chunk)
+            if len(payload) > MAX_ACCOUNT_ASSERTION_BYTES:
+                oversized = True
+                break
+    except OSError:
+        terminate_account_child(pid)
+        fail(TAMPER_EXIT)
+    finally:
+        close_fd(output_read)
+    if oversized:
+        terminate_account_child(pid)
+        fail(TAMPER_EXIT)
+    wait_child_exit_without_reap(pid, deadline)
+    kill_account_process_group(pid)
+    try:
+        _, status = os.waitpid(pid, 0)
+    except (ChildProcessError, OSError):
+        fail(TAMPER_EXIT)
+    if not os.WIFEXITED(status) or os.WEXITSTATUS(status) != 0:
+        fail(TAMPER_EXIT)
+    validate_account_binding_payload(bytes(payload))
+
+def validate_account_binding_payload(payload):
+    def unique_object(pairs):
+        keys = [key for key, _ in pairs]
+        if len(keys) != len(set(keys)):
+            fail(TAMPER_EXIT)
+        return dict(pairs)
+
+    try:
+        account = json.loads(
+            payload.decode("utf-8"),
+            object_pairs_hook=unique_object,
+        )
+    except (AttributeError, UnicodeDecodeError, TypeError, ValueError):
+        fail(TAMPER_EXIT)
+    if (
+        not isinstance(account, dict)
+        or set(account) != ACCOUNT_ASSERTION_FIELDS
+        or account.get("environmentName") != EXPECTED_CLOUD_NAME
+        or str(account.get("tenantId", "")).lower()
+            != EXPECTED_TENANT_ID
+        or str(account.get("id", "")).lower()
+            != EXPECTED_SUBSCRIPTION_ID
+        or account.get("state") != "Enabled"
+    ):
+        fail(TAMPER_EXIT)
 
 def enter_mapped_user_namespace(libc, clone_newuser, uid, gid):
     parent_pid = os.getpid()
@@ -857,7 +1037,7 @@ def main():
             private_config,
             expected_cloud_selection_sha256,
         )
-        validate_private_azure_profile(private_config)
+        install_private_azure_cloud_config(private_config)
         azure_argv = sys.argv[3:]
     try:
         with zipfile.ZipFile(package_archive_path, mode="r") as package_archive:
@@ -906,6 +1086,7 @@ def main():
     os.environ["AZURE_EXTENSION_DEV_SOURCES"] = ""
     os.environ["AZURE_EXTENSION_USE_DYNAMIC_INSTALL"] = "no"
     os.environ["AZURE_CONFIG_DIR"] = str(private_config)
+    verify_write_account_binding(azure_argv)
     sys.argv = ["az", *azure_argv]
     runpy.run_module("azure.cli", run_name="__main__")
 
