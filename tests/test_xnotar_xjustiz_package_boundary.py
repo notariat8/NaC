@@ -14,9 +14,11 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.validate_xnotar_xjustiz_package_boundary import (  # noqa: E402
     CONTRACT_PATH,
     FIXTURE_PATH,
+    GIT_EXECUTABLE,
     INTERFACE_ID,
     MODULE_TARGET,
     VERSION_PIN,
+    _tracked_repository_files,
     validate_contract,
     validate_package_manifest,
 )
@@ -178,6 +180,10 @@ class XNotarXJustizPackageBoundaryTests(unittest.TestCase):
         self.assertEqual("package_boundary_metadata_only_no_import", row["mvp_boundary"])
         self.assertIn("xjustiz_message_pointer", row["families"])
 
+    def test_tracked_file_scan_uses_bound_git_binary(self) -> None:
+        self.assertEqual(GIT_EXECUTABLE, Path("/usr/bin/git"))
+        self.assertTrue(GIT_EXECUTABLE.is_file())
+
     def test_no_raw_exchange_artifacts_are_committed(self) -> None:
         forbidden_suffixes = {".zip", ".xsd", ".wsdl", ".xml"}
         forbidden_names = {
@@ -185,9 +191,7 @@ class XNotarXJustizPackageBoundaryTests(unittest.TestCase):
             "beN _ Onlinehilfe der Bundesnotarkammer.html",
             "xjustiz_nachricht.xml",
         }
-        for path in REPO_ROOT.rglob("*"):
-            if ".git" in path.parts or not path.is_file():
-                continue
+        for path in _tracked_repository_files():
             if path.suffix.lower() in forbidden_suffixes:
                 self.fail(f"raw package artifact must not be committed: {path.relative_to(REPO_ROOT)}")
             if path.name in forbidden_names:

@@ -108,6 +108,8 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
                 self.assertIn(term, self.template)
 
         self.assertNotIn("alwaysReady", self.template)
+        self.assertNotIn("FUNCTIONS_WORKER_RUNTIME", self.template)
+        self.assertEqual(self.template.count("functionAppConfig:"), 1)
         self.assertRegex(
             self.template,
             r"@minValue\(1\)\s*@maxValue\(10\)\s*"

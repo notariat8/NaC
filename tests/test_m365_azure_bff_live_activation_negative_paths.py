@@ -200,6 +200,10 @@ def _run_with_plans(
         patch("nac_bff.azure_activation_runner._head_commit", return_value=COMMIT),
         patch("nac_bff.azure_activation_runner._head_tree", return_value=TREE),
         patch("nac_bff.azure_activation_runner._HOST_LOCK_ROOT", lock_root),
+        patch(
+            "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+            repo_root / ".legacy-test-locks",
+        ),
     ):
         return run_azure_bff_live_activation(
             repo_root=repo_root,

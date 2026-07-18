@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "xnotar-xjustiz-package-boundary.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "xnotar-xjustiz-package-boundary.md"
+GIT_EXECUTABLE = Path("/usr/bin/git")
 
 CONTRACT_ID = "workflow.xnotar_xjustiz_package_boundary"
 MANIFEST_SCHEMA_VERSION = "nac.xnotar-xjustiz-package-boundary/v0.1"
@@ -404,14 +406,23 @@ def _validate_docs_and_repo_boundary() -> list[str]:
         if marker not in path.read_text(encoding="utf-8"):
             errors.append(f"{_display_path(path)} enthaelt Marker nicht: {marker}")
 
-    for path in REPO_ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts:
-            continue
+    for path in _tracked_repository_files():
         if path.suffix.lower() in FORBIDDEN_REPOSITORY_SUFFIXES:
             errors.append(f"Rohformat darf nicht im Repo liegen: {path.relative_to(REPO_ROOT)}")
         if path.name in FORBIDDEN_REPOSITORY_NAMES and path != CONTRACT_PATH:
             errors.append(f"Quell-/Payload-Artefakt darf nicht im Repo liegen: {path.relative_to(REPO_ROOT)}")
     return errors
+
+
+def _tracked_repository_files() -> list[Path]:
+    if not GIT_EXECUTABLE.is_file():
+        raise RuntimeError("gebundene Git-Binaerdatei fehlt")
+    result = subprocess.run(
+        [str(GIT_EXECUTABLE), "-C", str(REPO_ROOT), "ls-files", "-z"],
+        check=True,
+        capture_output=True,
+    )
+    return [REPO_ROOT / item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
 
 
 def _validate_manifest_identity(payload: dict[str, Any]) -> list[str]:

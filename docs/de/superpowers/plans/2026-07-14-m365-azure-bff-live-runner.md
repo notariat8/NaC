@@ -255,8 +255,27 @@ Die einzigen Laufzustände sind `OFFLINE_READY`, `LIVE_APPROVED`,
 `FAILED_PARTIAL` und `PASSED`. Jeder Schritt schreibt append-only,
 hashverkettete, atomar umbenannte und gefsyncte redigierte Events. Provider-
 Write und lokales Ledger werden nicht fälschlich als verteilte Transaktion
-dargestellt. Ein Crash-Fenster bleibt `FAILED_PARTIAL`; es wird im MVP nicht
-automatisch abgeglichen oder fortgesetzt.
+dargestellt. Ein Crash-Fenster bleibt `FAILED_PARTIAL`. Ausschließlich ein
+`AZURE_CLI_TIMEOUT` beim gebundenen ARM-Baseline-Deployment löst einen eng
+begrenzten read-only Readback desselben Deployment-Namens aus. Auch ein dabei
+ermitteltes `Succeeded` setzt den alten Lauf nicht fort, sondern verlangt einen
+neuen owner- und hashgebundenen Lauf. Stale, laufende, fehlende oder ungültige Readbacks sowie sämtliche Readback-,
+Parsing- und Validierungsfehler bleiben `AZURE_DEPLOYMENT_STATE_AMBIGUOUS`.
+Kompakter und historischer Binding-Lock bleiben als reboot-persistente
+Quarantäne unter dem per `getpwuid` aufgelösten
+`~/.local/state/nac/m365-bff-live-activation` bestehen. Während der Migration
+hält der neue Runner zusätzlich den historischen Lock im alten temporären
+`nac-m365-bff-live-activation-locks`-Namespace und blockiert damit parallel
+laufende ältere Runner; nach dem Upgrade dürfen ältere Runner-Versionen nicht
+mehr gestartet werden. Beide Lock-Hashes sind im hashverketteten Laufzustand
+gebunden. Ein Readback wird dem abgelaufenen Write nur zugerechnet,
+wenn sein Template-Hash exakt dem vorbereiteten, owner-gebundenen ARM-Template
+entspricht. Ein Write-Replay, Rollback oder Löschen findet nicht statt. Eine
+terminal fehlgeschlagene Baseline darf ein neuer Lauf nur dann als bekannten
+Teilzustand behandeln, wenn zuerst die exakte Entra-App aufgelöst wurde; fehlt
+sie, wird der Teilzustand abgelehnt. Sämtliche ARM-Parameter müssen exakt passen
+und der ARM-Template-Hash muss entweder dem aktuellen owner-gebundenen Template
+oder dem für Issue #660 explizit genehmigten Legacy-Template entsprechen.
 
 Der erste Fehler stoppt alle Folgeschritte. Nach mindestens einem Write wird
 der Zustand `FAILED_PARTIAL`. Es gibt keinen automatischen Rollback und keine

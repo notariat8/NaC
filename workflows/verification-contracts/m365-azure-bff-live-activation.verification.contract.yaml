@@ -305,6 +305,29 @@ negative_tests:
       later_steps_run: false
       automatic_rollbacks_exact: 0
       automatic_deletions_exact: 0
+  - id: arm_deployment_timeout_reconciliation
+    arrange: Make the exact hash-bound ARM deployment outlive the local Azure CLI timeout, then return terminal Succeeded, Failed, Canceled, stale, missing, malformed and non-terminal provider readbacks.
+    assert:
+      state: FAILED_PARTIAL
+      later_steps_run: false
+      deployment_create_calls_exact: 1
+      reconciliation_write_calls_exact: 0
+      automatic_rollbacks_exact: 0
+      automatic_deletions_exact: 0
+      stable_error_codes:
+        - AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN
+        - AZURE_BASELINE_DEPLOYMENT_FAILED
+        - AZURE_BASELINE_DEPLOYMENT_CANCELED
+        - AZURE_DEPLOYMENT_STATE_AMBIGUOUS
+      unresolved_target_lock_retained: true
+      cross_version_legacy_lock_namespace_held: true
+      legacy_host_lock_namespace_held: true
+      readback_failures_map_to_ambiguous: true
+      legacy_lock_hash_ledger_bound: true
+      reconciled_template_hash_exact: true
+      failed_baseline_missing_entra_rejected: true
+      failed_baseline_entra_and_parameters_exact: true
+      failed_baseline_template_hash_owner_bound: true
   - id: resume_disabled
     arrange: Supply --resume or set resume true before provider-specific read-only reconcilers exist for every write step and crash window.
     assert:

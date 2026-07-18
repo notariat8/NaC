@@ -366,8 +366,10 @@ def run_azure_cli(
         data = {}
     else:
         try:
-            data = json.loads(completed.stdout)
-        except (TypeError, json.JSONDecodeError):
+            data = json.loads(
+                completed.stdout, object_pairs_hook=_unique_json_object
+            )
+        except (TypeError, ValueError):
             return _command_result(
                 ok=False,
                 code="AZURE_CLI_OUTPUT_INVALID",
@@ -381,6 +383,15 @@ def run_azure_cli(
         returncode=completed.returncode,
         data=data,
     )
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value: dict[str, object] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON key")
+        value[key] = item
+    return value
 
 
 def check_azure_cli_readiness(

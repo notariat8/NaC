@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pwd
 import fcntl
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -83,7 +84,14 @@ _SUMMARY_COUNT_KEYS = {
     "automatic_deletion_count",
 }
 _SUMMARY_BOOL_KEYS = _SUMMARY_EVIDENCE_KEYS - _SUMMARY_COUNT_KEYS
-_HOST_LOCK_ROOT = Path(tempfile.gettempdir()) / "nac-m365-bff-live-activation-locks"
+_HOST_STATE_RELATIVE_PATH = ".local/state/nac/m365-bff-live-activation"
+_HOST_LOCK_ROOT = (
+    Path(pwd.getpwuid(os.geteuid()).pw_dir) / _HOST_STATE_RELATIVE_PATH
+)
+_LEGACY_HOST_STATE_RELATIVE_PATH = "nac-m365-bff-live-activation-locks"
+_LEGACY_HOST_LOCK_ROOT = (
+    Path(tempfile.gettempdir()) / _LEGACY_HOST_STATE_RELATIVE_PATH
+)
 _GIT_EXECUTABLE = Path("/usr/bin/git")
 _STEP_11_SUMMARY_SIGNAL_KEYS = (
     "healthz_before_auth_passed",
@@ -203,16 +211,41 @@ def run_azure_bff_live_activation(
     if run_root not in run_dir.parents:
         return _blocked_result(request, "OUTPUT_SCOPE_REJECTED")
 
-    target_binding_sha256 = _sha256_json(plan.get("bindings", {}))
+    target_bindings = plan.get("bindings", {})
+    target_binding_sha256 = _binding_sha256_json(target_bindings)
+    legacy_target_binding_sha256 = _sha256_json(target_bindings)
     global_lock_root = _HOST_LOCK_ROOT.expanduser().absolute()
+    legacy_host_lock_root = _LEGACY_HOST_LOCK_ROOT.expanduser().absolute()
     if not _prepare_host_state_root(global_lock_root):
         return _blocked_result(request, "HOST_STATE_ROOT_INVALID")
+    if not _prepare_host_state_root(legacy_host_lock_root):
+        return _blocked_result(request, "LEGACY_HOST_STATE_ROOT_INVALID")
     lock_path = global_lock_root / f"{target_binding_sha256}.lock"
+    legacy_lock_path = global_lock_root / f"{legacy_target_binding_sha256}.lock"
+    legacy_host_lock_path = (
+        legacy_host_lock_root / f"{legacy_target_binding_sha256}.lock"
+    )
     receipt_path = _success_receipt_path(
         global_lock_root, target_binding_sha256, request
     )
+    legacy_host_lock_fd = _acquire_lock(
+        legacy_host_lock_path, request.expected_activation_hash
+    )
+    if legacy_host_lock_fd is None:
+        return _blocked_result(request, "LEGACY_HOST_ACTIVATION_LOCK_HELD")
+    legacy_lock_fd = _acquire_lock(
+        legacy_lock_path, request.expected_activation_hash
+    )
+    if legacy_lock_fd is None:
+        os.close(legacy_host_lock_fd)
+        _unlink_and_fsync(legacy_host_lock_path)
+        return _blocked_result(request, "LEGACY_ACTIVATION_LOCK_HELD")
     lock_fd = _acquire_lock(lock_path, request.expected_activation_hash)
     if lock_fd is None:
+        os.close(legacy_lock_fd)
+        os.close(legacy_host_lock_fd)
+        _unlink_and_fsync(legacy_lock_path)
+        _unlink_and_fsync(legacy_host_lock_path)
         receipt_status = _success_receipt_status(
             receipt_path, target_binding_sha256, request
         )
@@ -298,7 +331,10 @@ def run_azure_bff_live_activation(
             _cleanup_never_written_run(run_dir, run_root)
             release_lock = True
             return _blocked_result(request, "FINAL_PREWRITE_BINDING_MISMATCH")
-        if _sha256_json(final_plan.get("bindings", {})) != target_binding_sha256:
+        if (
+            _binding_sha256_json(final_plan.get("bindings", {}))
+            != target_binding_sha256
+        ):
             _cleanup_never_written_run(run_dir, run_root)
             release_lock = True
             return _blocked_result(request, "TARGET_BINDING_MISMATCH")
@@ -352,20 +388,20 @@ def run_azure_bff_live_activation(
             except ActivationStepError as exc:
                 result, release_lock = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
-                    exc.code, now, lock_path=lock_path
+                    exc.code, now, lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
                 )
                 return result
             except Exception:
                 result, release_lock = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
-                    "STEP_FAILED", now, lock_path=lock_path
+                    "STEP_FAILED", now, lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
                 )
                 return result
             if outcome["status"] != "PASSED":
                 result, release_lock = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
                     outcome["stable_error_code"] or "STEP_FAILED", now,
-                    lock_path=lock_path
+                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
                 )
                 return result
             if (
@@ -381,7 +417,7 @@ def run_azure_bff_live_activation(
                     step_id,
                     "PREBUILT_INPUTS_NOT_VERIFIED",
                     now,
-                    lock_path=lock_path,
+                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path),
                 )
                 return result
             signal_error = _required_summary_signal_error(step_id, outcome)
@@ -395,7 +431,7 @@ def run_azure_bff_live_activation(
                     step_id,
                     signal_error,
                     now,
-                    lock_path=lock_path,
+                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path),
                 )
                 return result
 
@@ -474,6 +510,8 @@ def run_azure_bff_live_activation(
                 raise ActivationStepError("FINAL_COMMIT_VERIFICATION_FAILED")
             _unlink_and_fsync(recovery_marker_path)
             _unlink_and_fsync(lock_path)
+            _unlink_and_fsync(legacy_lock_path)
+            _unlink_and_fsync(legacy_host_lock_path)
             return evidence
         except Exception as exc:
             code = (
@@ -495,8 +533,12 @@ def run_azure_bff_live_activation(
             )
     finally:
         os.close(lock_fd)
+        os.close(legacy_lock_fd)
+        os.close(legacy_host_lock_fd)
         if release_lock:
             _unlink_and_fsync(lock_path)
+            _unlink_and_fsync(legacy_lock_path)
+            _unlink_and_fsync(legacy_host_lock_path)
 
 
 def reconcile_azure_bff_live_activation_lock(
@@ -535,6 +577,21 @@ def reconcile_azure_bff_live_activation_lock(
     if not _prepare_host_state_root(global_lock_root):
         return _failed_execution_result(request, "HOST_STATE_ROOT_INVALID")
     lock_path = global_lock_root / f"{target_binding_sha256}.lock"
+    legacy_target_binding_sha256 = state.get("legacy_target_binding_sha256")
+    if (
+        not isinstance(legacy_target_binding_sha256, str)
+        or not _SHA256_RE.fullmatch(legacy_target_binding_sha256)
+    ):
+        return _failed_execution_result(request, "FINALIZATION_STATE_INVALID")
+    legacy_lock_path = global_lock_root / f"{legacy_target_binding_sha256}.lock"
+    legacy_host_lock_root = _LEGACY_HOST_LOCK_ROOT.expanduser().absolute()
+    if not _prepare_host_state_root(legacy_host_lock_root):
+        return _failed_execution_result(
+            request, "LEGACY_HOST_STATE_ROOT_INVALID"
+        )
+    legacy_host_lock_path = (
+        legacy_host_lock_root / f"{legacy_target_binding_sha256}.lock"
+    )
     lock_fd, lock_error = _acquire_existing_lock_for_recovery(lock_path)
     if lock_error:
         return _failed_execution_result(request, lock_error)
@@ -543,6 +600,26 @@ def reconcile_azure_bff_live_activation_lock(
         lock = _read_secure_canonical_json(lock_path)
         if lock != {"activation_hash": request.expected_activation_hash}:
             return _failed_execution_result(request, "ACTIVATION_LOCK_INVALID")
+        legacy_lock_owned = False
+        if legacy_lock_path.exists():
+            legacy_lock = _read_secure_canonical_json(legacy_lock_path)
+            if legacy_lock != {"activation_hash": request.expected_activation_hash}:
+                return _failed_execution_result(
+                    request, "LEGACY_ACTIVATION_LOCK_INVALID"
+                )
+            legacy_lock_owned = True
+        legacy_host_lock_owned = False
+        if legacy_host_lock_path.exists():
+            legacy_host_lock = _read_secure_canonical_json(
+                legacy_host_lock_path
+            )
+            if legacy_host_lock != {
+                "activation_hash": request.expected_activation_hash
+            }:
+                return _failed_execution_result(
+                    request, "LEGACY_HOST_ACTIVATION_LOCK_INVALID"
+                )
+            legacy_host_lock_owned = True
         if not _terminal_chain_is_valid(state, ledger_dir):
             return _failed_execution_result(request, "LEDGER_CHAIN_INVALID")
         passed_steps = [
@@ -617,6 +694,10 @@ def reconcile_azure_bff_live_activation_lock(
         if _read_secure_canonical_json(reconciled_marker_path) != reconciled:
             raise ActivationStepError("FINALIZATION_RECONCILE_INVALID")
         _unlink_and_fsync(lock_path)
+        if legacy_lock_owned and legacy_lock_path != lock_path:
+            _unlink_and_fsync(legacy_lock_path)
+        if legacy_host_lock_owned:
+            _unlink_and_fsync(legacy_host_lock_path)
         return {
             **inspection,
             "error": {"code": "FINALIZATION_LOCK_RECONCILED"},
@@ -1018,7 +1099,7 @@ def _permission_boundary_hash(root: Path) -> str | None:
         boundary = contract["permission_boundary"]
     except (OSError, KeyError, json.JSONDecodeError, TypeError):
         return None
-    return _sha256_json(boundary)
+    return _binding_sha256_json(boundary)
 
 
 def _prepare_host_state_root(root: Path) -> bool:
@@ -1265,7 +1346,8 @@ def _load_or_initialize_state(
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "reason_sha256": _sha256(request.reason),
         "correlation_id_sha256": _sha256(request.correlation_id),
-        "target_binding_sha256": _sha256_json(plan.get("bindings", {})),
+        "target_binding_sha256": _binding_sha256_json(plan.get("bindings", {})),
+        "legacy_target_binding_sha256": _sha256_json(plan.get("bindings", {})),
         "permission_boundary_sha256": permission_boundary_sha256,
         "ledger_head_sha256": "0" * 64,
         "ledger_sequence": 0,
@@ -1294,7 +1376,7 @@ def _load_or_initialize_state(
             "activation_hash", "approved_commit_sha", "approved_tree_sha",
             "approval_reference_sha256", "approval_body_sha256",
             "toolchain_attestations_sha256", "correlation_id_sha256",
-            "target_binding_sha256",
+            "target_binding_sha256", "legacy_target_binding_sha256",
             "permission_boundary_sha256",
         )
     }
@@ -1325,7 +1407,8 @@ def _resume_bindings_match(
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "reason_sha256": _sha256(request.reason),
         "correlation_id_sha256": _sha256(request.correlation_id),
-        "target_binding_sha256": _sha256_json(plan.get("bindings", {})),
+        "target_binding_sha256": _binding_sha256_json(plan.get("bindings", {})),
+        "legacy_target_binding_sha256": _sha256_json(plan.get("bindings", {})),
         "permission_boundary_sha256": permission_boundary_sha256,
     }
     return all(state.get(key) == value for key, value in expected.items())
@@ -1382,7 +1465,7 @@ def _state_matches_chain(
         "activation_hash", "approved_commit_sha", "approved_tree_sha",
         "approval_reference_sha256", "approval_body_sha256",
         "toolchain_attestations_sha256", "correlation_id_sha256",
-        "target_binding_sha256",
+        "target_binding_sha256", "legacy_target_binding_sha256",
         "permission_boundary_sha256",
     ):
         if state.get(key) != bindings.get(key):
@@ -1711,7 +1794,7 @@ def _fail_partial(
     code: str,
     now: Callable[[], datetime] | None,
     *,
-    lock_path: Path,
+    lock_paths: tuple[Path, ...],
 ) -> tuple[dict[str, Any], bool]:
     safe_code = _safe_error_code(code)
     prior = _state_step(state, step_id)
@@ -1734,7 +1817,9 @@ def _fail_partial(
         outcome={"stable_error_code": safe_code}, now=now
     )
     _atomic_json_write(state_path, state)
-    _record_lock_release(ledger_dir, state, state_path, now)
+    preserve_quarantine = safe_code == "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+    if not preserve_quarantine:
+        _record_lock_release(ledger_dir, state, state_path, now)
     if not _terminal_chain_is_valid(state, ledger_dir):
         return _failed_execution_result(
             request, "LEDGER_CHAIN_INVALID"
@@ -1746,7 +1831,9 @@ def _fail_partial(
     _atomic_json_write(evidence_path, evidence)
     if _read_secure_canonical_json(evidence_path) != evidence:
         raise ActivationStepError("EVIDENCE_FINAL_COMMIT_INVALID")
-    _unlink_and_fsync(lock_path)
+    if not preserve_quarantine:
+        for lock_path in lock_paths:
+            _unlink_and_fsync(lock_path)
     return evidence, False
 
 
@@ -2084,6 +2171,13 @@ def _sha256(value: str) -> str:
 
 def _sha256_json(value: object) -> str:
     return hashlib.sha256(_canonical_json_bytes(value)).hexdigest()
+
+
+def _binding_sha256_json(value: object) -> str:
+    payload = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def _utc_now(now: Callable[[], datetime] | None) -> str:

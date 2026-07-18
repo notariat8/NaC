@@ -110,6 +110,9 @@ from .live_synthetic_workspace import (
 
 _LIVE_CONTRACT = Path("workflows/contracts/m365-azure-bff-live-activation.contract.json")
 _BICEP_TEMPLATE = Path("deploy/runtime/azure/nac-bff/infra/compiled/main.json")
+_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES = ("14963684813925800234",)
+_DEPLOYMENT_RECONCILIATION_ATTEMPTS = 5
+_DEPLOYMENT_RECONCILIATION_DELAY_SECONDS = 2.0
 _FUNCTION_BUILD = Path("deploy/runtime/azure/nac-bff/build_package.py")
 _SPFX_ROOT = Path("spfx/nac-bpmn-viewer")
 _SPFX_BUILD_OUTPUT_DIRECTORIES = frozenset(
@@ -846,6 +849,10 @@ class AzureBffLiveExecutionPort:
         approved_tree_source: ApprovedTreePort | None = None,
         m365_readback_attempts: int = 5,
         m365_readback_delay_seconds: float = 0.5,
+        deployment_reconciliation_attempts: int = _DEPLOYMENT_RECONCILIATION_ATTEMPTS,
+        deployment_reconciliation_delay_seconds: float = (
+            _DEPLOYMENT_RECONCILIATION_DELAY_SECONDS
+        ),
         sleep: Any = time.sleep,
     ) -> None:
         self._repo_root = repo_root.resolve()
@@ -857,10 +864,21 @@ class AzureBffLiveExecutionPort:
         self._http_readiness = http_readiness
         self._synthetic = synthetic
         self._approved_tree_source = approved_tree_source
-        if m365_readback_attempts < 1 or m365_readback_delay_seconds < 0:
-            raise ValueError("invalid M365 readback policy")
+        if (
+            m365_readback_attempts < 1
+            or m365_readback_delay_seconds < 0
+            or deployment_reconciliation_attempts < 1
+            or deployment_reconciliation_delay_seconds < 0
+        ):
+            raise ValueError("invalid readback policy")
         self._m365_readback_attempts = m365_readback_attempts
         self._m365_readback_delay_seconds = m365_readback_delay_seconds
+        self._deployment_reconciliation_attempts = (
+            deployment_reconciliation_attempts
+        )
+        self._deployment_reconciliation_delay_seconds = (
+            deployment_reconciliation_delay_seconds
+        )
         self._sleep = sleep
         self._monotonic = time.monotonic
         self._api: ApiApplicationBinding | None = None
@@ -870,6 +888,7 @@ class AzureBffLiveExecutionPort:
         self._function_package_sha256: str | None = None
         self._spfx_package_sha256: str | None = None
         self._bicep_sha256: str | None = None
+        self._bicep_template_hash: str | None = None
         self._static_inputs_sha256: str | None = None
         self._approved_tree_snapshot_sha256: str | None = None
         self._bicep_parameters_sha256: str | None = None
@@ -882,6 +901,7 @@ class AzureBffLiveExecutionPort:
         self._prepared_inputs_path: Path | None = None
         self._spfx_plan: Any | None = None
         self._deployment_preexisting = False
+        self._preexisting_deployment_correlation_id: str | None = None
         self._deployed_template_hash: str | None = None
         self._deployed_parameters_sha256: str | None = None
         self._deployed_prepared_inputs_sha256: str | None = None
@@ -929,8 +949,8 @@ class AzureBffLiveExecutionPort:
         ):
             return {"status": "FAILED", "code": "GRAPH_TARGET_SITE_MISMATCH"}
         try:
-            self._inspect_azure_prewrite(context)
             self._api = inspect_entra_api_application_prewrite(self._graph)
+            self._inspect_azure_prewrite(context)
             self._inspect_existing_graph_prewrite(require_complete=False)
             self._inspect_m365_prewrite(require_complete=False)
             self._actor_id = self._resolve_actor()
@@ -978,6 +998,7 @@ class AzureBffLiveExecutionPort:
             raise ActivationStepError("AZURE_RESOURCE_GROUP_PREFLIGHT_FAILED")
         self._resource_group_absent = exists["data"] is False
         self._deployment_preexisting = False
+        self._preexisting_deployment_correlation_id = None
         if exists["data"] is False:
             if require_deployment:
                 raise ActivationStepError("AZURE_BASELINE_READBACK_MISSING")
@@ -1016,8 +1037,28 @@ class AzureBffLiveExecutionPort:
         data = deployment.get("data")
         if not isinstance(data, dict):
             raise ActivationStepError("AZURE_BASELINE_PREFLIGHT_FAILED")
+        properties = data.get("properties")
+        if isinstance(properties, dict) and properties.get("provisioningState") == "Failed":
+            if self._api is None:
+                raise ActivationStepError(
+                    "AZURE_FAILED_BASELINE_ENTRA_BINDING_MISSING"
+                )
+            self._validate_deployment_operation_identity(data)
+            if str(properties["templateHash"]) not in (
+                self._approved_failed_baseline_template_hashes()
+            ):
+                raise ActivationStepError(
+                    "AZURE_FAILED_BASELINE_TEMPLATE_NOT_APPROVED"
+                )
+            self._preexisting_deployment_correlation_id = str(
+                properties["correlationId"]
+            ).lower()
+            return 1
         self._validate_deployment_readback(data, require_current_binding=False)
         self._deployment_preexisting = True
+        self._preexisting_deployment_correlation_id = str(
+            data["properties"]["correlationId"]
+        ).lower()
         # Evidence counts stable invariants, never provider-specific child resources.
         return 12 if require_deployment else 1
 
@@ -1041,18 +1082,19 @@ class AzureBffLiveExecutionPort:
         properties = deployment.get("properties")
         if not isinstance(properties, dict):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
+        self._validate_deployment_operation_identity(deployment)
         template_hash = properties.get("templateHash")
         parameters = properties.get("parameters")
         if (
             properties.get("provisioningState") != "Succeeded"
-            or properties.get("mode") != "Incremental"
-            or not isinstance(template_hash, (str, int))
-            or not str(template_hash)
-            or not isinstance(parameters, dict)
         ):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
-        _validate_deployment_parameters(parameters, self._api)
         self._bind_deployment_outputs(deployment)
+        if (
+            self._bicep_template_hash is not None
+            and str(template_hash) != self._bicep_template_hash
+        ):
+            raise ActivationStepError("AZURE_DEPLOYMENT_INPUT_DRIFT")
         if require_current_binding:
             if self._api is None:
                 raise ActivationStepError("API_APPLICATION_BINDING_MISSING")
@@ -1065,6 +1107,101 @@ class AzureBffLiveExecutionPort:
                 != self._deployed_prepared_inputs_sha256
             ):
                 raise ActivationStepError("AZURE_DEPLOYMENT_INPUT_DRIFT")
+
+    def _validate_deployment_operation_identity(
+        self, deployment: Mapping[str, Any]
+    ) -> None:
+        properties = deployment.get("properties")
+        if not isinstance(properties, dict):
+            raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
+        template_hash = properties.get("templateHash")
+        parameters = properties.get("parameters")
+        correlation_id = str(properties.get("correlationId", "")).lower()
+        if (
+            properties.get("mode") != "Incremental"
+            or not isinstance(template_hash, (str, int))
+            or not str(template_hash)
+            or not isinstance(parameters, dict)
+            or not _UUID_RE.fullmatch(correlation_id)
+        ):
+            raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
+        _validate_deployment_parameters(parameters, self._api)
+
+    def _approved_failed_baseline_template_hashes(self) -> frozenset[str]:
+        bicep = (self._repo_root / _BICEP_TEMPLATE).resolve()
+        if self._repo_root not in bicep.parents:
+            raise ActivationStepError("BICEP_TEMPLATE_HASH_INVALID")
+        return frozenset(
+            {
+                *_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES,
+                _arm_template_hash(bicep),
+            }
+        )
+
+    def _reconcile_timed_out_deployment(self, context: ActivationContext) -> None:
+        for attempt in range(self._deployment_reconciliation_attempts):
+            terminal_error: str | None = None
+            try:
+                result = self._azure.run(
+                    [
+                        "deployment",
+                        "group",
+                        "show",
+                        "--name",
+                        _deployment_name(context),
+                        "--resource-group",
+                        RESOURCE_GROUP,
+                    ]
+                )
+                data = result.get("data")
+                if result.get("ok") is True and isinstance(data, dict):
+                    self._validate_deployment_operation_identity(data)
+                    properties = data["properties"]
+                    if (
+                        self._bicep_template_hash is None
+                        or str(properties["templateHash"])
+                        != self._bicep_template_hash
+                    ):
+                        raise ActivationStepError(
+                            "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+                        )
+                    correlation_id = str(properties["correlationId"]).lower()
+                    state = properties.get("provisioningState")
+                    if correlation_id == self._preexisting_deployment_correlation_id:
+                        state = "Stale"
+                    elif state == "Succeeded":
+                        self._validate_deployment_readback(
+                            data, require_current_binding=False
+                        )
+                        terminal_error = (
+                            "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN"
+                        )
+                    elif state == "Failed":
+                        terminal_error = "AZURE_BASELINE_DEPLOYMENT_FAILED"
+                    elif state == "Canceled":
+                        terminal_error = "AZURE_BASELINE_DEPLOYMENT_CANCELED"
+                    elif state not in {"Accepted", "Running", "Stale"}:
+                        raise ActivationStepError(
+                            "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+                        )
+                elif result.get("code") != "AZURE_RESOURCE_NOT_FOUND":
+                    raise ActivationStepError(
+                        "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+                    )
+            except Exception:
+                raise ActivationStepError(
+                    "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+                ) from None
+            if terminal_error is not None:
+                raise ActivationStepError(terminal_error)
+            if attempt + 1 < self._deployment_reconciliation_attempts:
+                try:
+                    self._sleep(self._deployment_reconciliation_delay_seconds)
+                except Exception:
+                    raise ActivationStepError(
+                        "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+                    ) from None
+        raise ActivationStepError("AZURE_DEPLOYMENT_STATE_AMBIGUOUS")
 
     def _inspect_existing_graph_prewrite(self, *, require_complete: bool) -> int:
         if self._uami_app_id is None:
@@ -1350,6 +1487,7 @@ class AzureBffLiveExecutionPort:
         self._spfx_package_sha256 = spfx_digest
         self._bicep_path = bicep_path
         self._bicep_sha256 = bicep_digest
+        self._bicep_template_hash = _arm_template_hash(bicep_path)
         self._static_inputs_sha256 = _sha256_json(
             self._static_input_binding(context)
         )
@@ -1575,22 +1713,26 @@ class AzureBffLiveExecutionPort:
             self._bicep_parameters_sha256,
             "BICEP_PARAMETERS_SNAPSHOT_MISSING",
         )
-        result = self._azure_json_bound(
-            [
-                "deployment",
-                "group",
-                "create",
-                "--name",
-                _deployment_name(context),
-                "--resource-group",
-                RESOURCE_GROUP,
-                "--template-file",
-                str(bicep),
-                "--parameters",
-                f"@{parameters}",
-                "--mode",
-                "Incremental",
-            ],
+        run_bound = getattr(self._azure, "run_bound", None)
+        if not callable(run_bound):
+            raise ActivationStepError("AZURE_CLI_ARTIFACT_BINDING_UNAVAILABLE")
+        command = [
+            "deployment",
+            "group",
+            "create",
+            "--name",
+            _deployment_name(context),
+            "--resource-group",
+            RESOURCE_GROUP,
+            "--template-file",
+            str(bicep),
+            "--parameters",
+            f"@{parameters}",
+            "--mode",
+            "Incremental",
+        ]
+        bound_result = run_bound(
+            command,
             {
                 str(bicep): (bicep, str(self._bicep_sha256)),
                 str(parameters): (
@@ -1599,6 +1741,15 @@ class AzureBffLiveExecutionPort:
                 ),
             },
         )
+        if bound_result.get("ok") is not True:
+            if bound_result.get("code") == "AZURE_CLI_TIMEOUT":
+                self._reconcile_timed_out_deployment(context)
+            raise ActivationStepError(
+                str(bound_result.get("code") or "AZURE_CLI_COMMAND_FAILED")
+            )
+        result = bound_result.get("data")
+        if not isinstance(result, dict):
+            raise ActivationStepError("AZURE_CLI_COMMAND_FAILED")
         self._validate_deployment_readback(result, require_current_binding=False)
         properties = result["properties"]
         self._deployed_template_hash = str(properties["templateHash"])
@@ -3222,6 +3373,17 @@ def _require_digest(expected: str, path: Path) -> None:
         raise ActivationStepError("BUILD_ARTIFACT_HASH_INVALID")
     if _stable_file_sha256(path) != expected:
         raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
+
+
+def _arm_template_hash(path: Path) -> str:
+    try:
+        template = json.loads(path.read_text(encoding="utf-8"))
+        template_hash = str(template["metadata"]["_generator"]["templateHash"])
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
+        raise ActivationStepError("BICEP_TEMPLATE_HASH_INVALID") from None
+    if not template_hash.isdigit():
+        raise ActivationStepError("BICEP_TEMPLATE_HASH_INVALID")
+    return template_hash
 
 
 def _load_json(path: Path) -> dict[str, Any]:

@@ -77,6 +77,64 @@ PROVIDER_READBACK_POLICY = {
     "ambiguous_state_error": "AZURE_PROVIDER_STATE_AMBIGUOUS",
     "maximum_register_writes_per_namespace": 1,
 }
+DEPLOYMENT_RECONCILIATION_POLICY = {
+    "trigger_error_exact": "AZURE_CLI_TIMEOUT",
+    "read_only_operation_exact": "deployment group show",
+    "attempts": 5,
+    "delay_seconds": 2.0,
+    "same_deployment_correlation_id_rejected_as_stale": True,
+    "terminal_success_error": (
+        "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN"
+    ),
+    "terminal_failure_error": "AZURE_BASELINE_DEPLOYMENT_FAILED",
+    "terminal_canceled_error": "AZURE_BASELINE_DEPLOYMENT_CANCELED",
+    "unresolved_error": "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+    "unresolved_target_lock_retained": True,
+    "cross_version_legacy_lock_namespace_held": True,
+    "legacy_host_lock_namespace_held": True,
+    "readback_failures_map_to_ambiguous": True,
+    "legacy_lock_hash_ledger_bound": True,
+    "reconciled_template_hash_must_equal_prepared_owner_bound_template": True,
+    "continue_original_run_allowed": False,
+    "automatic_replay_allowed": False,
+    "automatic_rollback_or_deletion_allowed": False,
+}
+
+FAILED_BASELINE_ACCEPTANCE_POLICY = {
+    "entra_binding_resolved_before_azure_read": True,
+    "missing_entra_binding_rejected": True,
+    "parameter_binding_exact": True,
+    "current_owner_bound_template_hash_allowed": True,
+    "approved_legacy_template_hashes": ["14963684813925800234"],
+}
+
+HOST_STATE_RELATIVE_PATH = ".local/state/nac/m365-bff-live-activation"
+LEGACY_HOST_STATE_RELATIVE_PATH = "nac-m365-bff-live-activation-locks"
+EXCLUSIVE_LOCK_PERSISTENCE_POLICY = {
+    "path_template": (
+        "<effective-os-user-home>/.local/state/nac/"
+        "m365-bff-live-activation/<target-binding-sha256>.lock"
+    ),
+    "legacy_compatibility_path_template": (
+        "<effective-os-user-home>/.local/state/nac/"
+        "m365-bff-live-activation/<legacy-target-binding-sha256>.lock"
+    ),
+    "effective_user_home_resolution_exact": (
+        "pwd.getpwuid(os.geteuid()).pw_dir"
+    ),
+    "reboot_persistent": True,
+    "temporary_primary_state_allowed": False,
+    "legacy_host_namespace_path_template": (
+        "<temporary-directory>/nac-m365-bff-live-activation-locks/"
+        "<legacy-target-binding-sha256>.lock"
+    ),
+    "legacy_host_namespace_migration_lock_required": True,
+    "legacy_host_namespace_temporary_migration_only": True,
+    "legacy_runner_execution_after_upgrade_allowed": False,
+    "both_namespaces_held_for_new_runs": True,
+    "ambiguous_arm_state_retains_both_persistent_locks": True,
+    "ambiguous_arm_state_retains_legacy_host_migration_lock": True,
+}
 
 TOOLCHAIN_ATTESTATION_FIELDS = [
     "azure_cli_toolchain_sha256", "m365_cli_sha256",
@@ -123,7 +181,8 @@ NEGATIVE_TEST_IDS = [
     "dirty_tree", "wrong_target", "duplicates", "broader_permissions",
     "race", "secret_sentinel", "prepared_input_drift",
     "health_auth_ready_order", "synthetic_restoration_failure",
-    "first_error_after_write", "resume_disabled",
+    "first_error_after_write", "arm_deployment_timeout_reconciliation",
+    "resume_disabled",
 ]
 THRESHOLDS = {
     "owner_gate_count": 1,
@@ -217,6 +276,21 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
     "synthetic_restoration_failure": {
         "stable_error_code": "SYNTHETIC_STATE_RESTORATION_FAILED"
     },
+    "arm_deployment_timeout_reconciliation": {
+        "unresolved_target_lock_retained": True,
+        "cross_version_legacy_lock_namespace_held": True,
+        "legacy_lock_hash_ledger_bound": True,
+        "reconciled_template_hash_exact": True,
+        "failed_baseline_missing_entra_rejected": True,
+        "failed_baseline_entra_and_parameters_exact": True,
+        "failed_baseline_template_hash_owner_bound": True,
+        "stable_error_codes": [
+            "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN",
+            "AZURE_BASELINE_DEPLOYMENT_FAILED",
+            "AZURE_BASELINE_DEPLOYMENT_CANCELED",
+            "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+        ]
+    },
     "toolchain_attestation_tamper": {
         "stable_error_codes": [
             "TOOLCHAIN_ATTESTATION_INVALID",
@@ -231,6 +305,13 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "toolchain_attestations_sha256", "TOOLCHAIN_ATTESTATION_INVALID",
         "RESUME_DISABLED_FOR_MVP", "reconcile_azure_bff_live_activation_lock",
         "FINALIZATION_LOCK_RECONCILED",
+        "LEGACY_ACTIVATION_LOCK_HELD",
+        "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+        "preserve_quarantine", "legacy_target_binding_sha256",
+        "_HOST_STATE_RELATIVE_PATH", "_LEGACY_HOST_LOCK_ROOT",
+        "_LEGACY_HOST_STATE_RELATIVE_PATH",
+        "LEGACY_HOST_ACTIVATION_LOCK_HELD",
+        "pwd.getpwuid(os.geteuid()).pw_dir",
     ),
     COMPOSITION_PATH: (
         "prepared-inputs.redacted.json", "bicep_parameters_snapshot_sha256",
@@ -247,6 +328,16 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_PROVIDER_POLL_WITHOUT_REGISTER_STATES", "_PROVIDER_SUCCESS_STATE",
         "_PROVIDER_TIMEOUT_ERROR", "_PROVIDER_AMBIGUOUS_STATE_ERROR",
         "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE",
+        "_reconcile_timed_out_deployment",
+        "_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES",
+        "_approved_failed_baseline_template_hashes",
+        "AZURE_FAILED_BASELINE_TEMPLATE_NOT_APPROVED",
+        "AZURE_FAILED_BASELINE_ENTRA_BINDING_MISSING",
+        "_bicep_template_hash",
+        "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN",
+        "AZURE_BASELINE_DEPLOYMENT_FAILED",
+        "AZURE_BASELINE_DEPLOYMENT_CANCELED",
+        "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
     ),
     ATTESTATION_PATH: (
         "build_activation_attestation_plan",
@@ -328,9 +419,28 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_provider_registration_polls_readback_without_repeating_write",
         "test_provider_registration_poll_rejects_unknown_state",
         "test_provider_registration_reuses_inflight_registration_without_write",
+        "test_bicep_timeout_reconciles_terminal_failure_without_replay",
+        "test_bicep_timeout_reconciled_success_requires_new_run",
+        "test_bicep_timeout_rejects_stale_success_as_ambiguous",
+        "test_bicep_timeout_keeps_nonterminal_state_ambiguous",
+        "test_bicep_timeout_rejects_foreign_template_hash_as_ambiguous",
+        "test_bicep_timeout_rejects_malformed_template_hash_as_ambiguous",
+        "test_bicep_timeout_maps_malformed_succeeded_outputs_to_ambiguous",
+        "test_bicep_timeout_maps_readback_adapter_exception_to_ambiguous",
+        "test_prewrite_accepts_exact_failed_incremental_baseline_for_new_run",
+        "test_prewrite_accepts_current_owner_bound_failed_baseline",
+        "test_prewrite_rejects_failed_baseline_without_entra_binding",
+        "test_prewrite_rejects_unapproved_failed_baseline_template",
+        "test_prewrite_rejects_failed_baseline_with_foreign_api_audience",
         "test_provider_registration_poll_propagates_cli_failure",
         "test_provider_registration_maps_cli_timeout_to_readback_timeout",
         "test_provider_registration_rejects_readback_after_deadline",
+    ),
+    Path("tests/test_nac_bff_azure_activation_runner.py"): (
+        "test_legacy_binding_lock_blocks_new_hash_namespace",
+        "test_old_host_lock_namespace_blocks_new_runner",
+        "test_ambiguous_arm_state_retains_cross_version_quarantine",
+        "test_default_host_state_root_is_persistent_user_state",
     ),
 }
 TEST_PATHS = (
@@ -492,6 +602,23 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         "readback_policy"
     ) != PROVIDER_READBACK_POLICY:
         errors.append("domain provider readback policy differs")
+    deployment_step = steps[3] if isinstance(steps, list) and len(steps) > 3 else None
+    if not isinstance(deployment_step, dict) or deployment_step.get(
+        "timeout_reconciliation"
+    ) != DEPLOYMENT_RECONCILIATION_POLICY:
+        errors.append("domain ARM deployment timeout reconciliation policy differs")
+
+    if not isinstance(deployment_step, dict) or deployment_step.get(
+        "failed_baseline_acceptance"
+    ) != FAILED_BASELINE_ACCEPTANCE_POLICY:
+        errors.append("domain ARM failed-baseline acceptance policy differs")
+
+    exclusive_lock = domain.get("exclusive_lock")
+    if not isinstance(exclusive_lock, dict) or any(
+        exclusive_lock.get(key) != value
+        for key, value in EXCLUSIVE_LOCK_PERSISTENCE_POLICY.items()
+    ):
+        errors.append("domain persistent host lock policy differs")
 
     gate = domain.get("consolidated_owner_gate")
     if not isinstance(gate, dict):
@@ -909,6 +1036,18 @@ def _validate_runner(path: Path, errors: list[str]) -> None:
         actual = _literal_assignment(tree, name)
         if not isinstance(actual, (set, frozenset)) or actual != expected:
             errors.append(f"runner {name} must equal the contract field set")
+    if (
+        _top_level_literal_assignments(tree, "_HOST_STATE_RELATIVE_PATH")
+        != [HOST_STATE_RELATIVE_PATH]
+    ):
+        errors.append("runner persistent host state path differs")
+    if (
+        _top_level_literal_assignments(
+            tree, "_LEGACY_HOST_STATE_RELATIVE_PATH"
+        )
+        != [LEGACY_HOST_STATE_RELATIVE_PATH]
+    ):
+        errors.append("runner legacy host lock path differs")
     if "RESUME_DISABLED_FOR_MVP" not in _string_literals(tree):
         errors.append("runner must emit RESUME_DISABLED_FOR_MVP")
 
@@ -934,6 +1073,28 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
             composition_tree, "_APPROVED_OWNER_ASSOCIATIONS"
         ) != tuple(OWNER_ASSOCIATIONS):
             errors.append("composition owner association allowlist differs")
+        for name, expected in (
+            (
+                "_DEPLOYMENT_RECONCILIATION_ATTEMPTS",
+                DEPLOYMENT_RECONCILIATION_POLICY["attempts"],
+            ),
+            (
+                "_DEPLOYMENT_RECONCILIATION_DELAY_SECONDS",
+                DEPLOYMENT_RECONCILIATION_POLICY["delay_seconds"],
+            ),
+            (
+                "_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES",
+                tuple(
+                    FAILED_BASELINE_ACCEPTANCE_POLICY[
+                        "approved_legacy_template_hashes"
+                    ]
+                ),
+            ),
+        ):
+            if _top_level_literal_assignments(composition_tree, name) != [expected]:
+                errors.append(
+                    f"composition {name} differs from ARM reconciliation contract"
+                )
         for name, expected in (
             ("_PROVIDER_READBACK_ATTEMPTS", PROVIDER_READBACK_POLICY["attempts"]),
             ("_PROVIDER_READBACK_DELAY_SECONDS", PROVIDER_READBACK_POLICY["delay_seconds"]),

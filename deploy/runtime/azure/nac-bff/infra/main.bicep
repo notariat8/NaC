@@ -277,7 +277,6 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     AzureWebJobsStorage__accountName: storageAccount.name
     AzureWebJobsStorage__clientId: managedIdentity.properties.clientId
     AzureWebJobsStorage__credential: 'managedidentity'
-    FUNCTIONS_WORKER_RUNTIME: 'python'
     M365_TENANT_ID: m365TenantId
     NAC_BFF_TENANT_ID: m365TenantId
     NAC_BFF_AUDIENCE: bffApiAudience

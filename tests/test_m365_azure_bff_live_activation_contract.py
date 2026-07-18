@@ -657,10 +657,25 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                     f"_STEP_EVIDENCE_KEYS = {set(validator.STEP_FIELDS)!r}",
                     f"_SUMMARY_EVIDENCE_KEYS = {set(validator.SUMMARY_FIELDS)!r}",
                     f"_SUMMARY_COUNT_KEYS = {set(validator.SUMMARY_COUNT_FIELDS)!r}",
+                    (
+                        "_HOST_STATE_RELATIVE_PATH = "
+                        f"{validator.HOST_STATE_RELATIVE_PATH!r}"
+                    ),
+                    (
+                        "_LEGACY_HOST_STATE_RELATIVE_PATH = "
+                        f"{validator.LEGACY_HOST_STATE_RELATIVE_PATH!r}"
+                    ),
                     'RESUME_ERROR = "RESUME_DISABLED_FOR_MVP"',
                     'TOOLCHAIN_ERROR = "TOOLCHAIN_ATTESTATION_INVALID"',
                     'RECOVERY_CALL = "reconcile_azure_bff_live_activation_lock"',
                     'RECOVERY_RESULT = "FINALIZATION_LOCK_RECONCILED"',
+                    'LEGACY_LOCK = "LEGACY_ACTIVATION_LOCK_HELD"',
+                    'LEGACY_HOST_ROOT = "_LEGACY_HOST_LOCK_ROOT"',
+                    'LEGACY_HOST_LOCK = "LEGACY_HOST_ACTIVATION_LOCK_HELD"',
+                    'ARM_AMBIGUOUS = "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"',
+                    'QUARANTINE = "preserve_quarantine"',
+                    'LEGACY_HASH = "legacy_target_binding_sha256"',
+                    'HOST_RESOLUTION = "pwd.getpwuid(os.geteuid()).pw_dir"',
                 )
             )
             + "\n",
@@ -685,6 +700,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                     "_PROVIDER_READBACK_ATTEMPTS = 5\n"
                     "_PROVIDER_READBACK_DELAY_SECONDS = 12.0\n"
                     "_PROVIDER_READBACK_MAX_SECONDS = 60.0\n"
+                    "_DEPLOYMENT_RECONCILIATION_ATTEMPTS = 5\n"
+                    "_DEPLOYMENT_RECONCILIATION_DELAY_SECONDS = 2.0\n"
+                    "_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES = "
+                    "(\"14963684813925800234\",)\n"
                     + "\n".join(f"# {marker}" for marker in markers)
                     + "\n"
                 )

@@ -241,7 +241,25 @@ The only run states are `OFFLINE_READY`, `LIVE_APPROVED`, `FAILED_PARTIAL`,
 and `PASSED`. Every step writes append-only, hash-chained, atomically renamed,
 and fsynced redacted events. A provider write and local ledger are not falsely
 claimed to be a distributed transaction. A crash window remains
-`FAILED_PARTIAL`; the MVP neither reconciles nor continues it automatically.
+`FAILED_PARTIAL`. Only an `AZURE_CLI_TIMEOUT` on the bound ARM baseline
+deployment triggers a narrow read-only lookup of that same deployment name.
+Even a reconciled `Succeeded` result never continues the old run and instead
+requires a new owner- and hash-bound run. Stale, active, missing, or invalid readbacks and every readback, parsing, or
+validation failure remain `AZURE_DEPLOYMENT_STATE_AMBIGUOUS`. Compact and
+historical binding locks remain as reboot-persistent quarantine under the
+effective-user home resolved through `getpwuid` at
+`~/.local/state/nac/m365-bff-live-activation`. During migration, the new runner
+also holds the historical lock in the former temporary
+`nac-m365-bff-live-activation-locks` namespace and therefore blocks concurrently
+running older runners; older runner versions must not be started after the
+upgrade. Both lock hashes are bound into the hash-chained run state. A readback
+is attributed to the timed-out write only when its template hash exactly
+matches the prepared owner-bound ARM template. No write replay, rollback, or
+deletion occurs. A new run may treat a terminal failed baseline as a known
+partial state only after resolving the exact Entra application; a missing
+application rejects that state. Every ARM parameter must match exactly, and the
+ARM template hash must be either the current owner-bound template or the legacy
+template explicitly approved for Issue #660.
 
 The first error stops every later step. After at least one write, the state is
 `FAILED_PARTIAL`. There is no automatic rollback, deletion, uninstall,
