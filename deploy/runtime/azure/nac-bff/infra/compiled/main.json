@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.45.6.27763",
-      "templateHash": "14963684813925800234"
+      "version": "0.45.15.27210",
+      "templateHash": "12117878019922581049"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
@@ -344,7 +344,6 @@
         "AzureWebJobsStorage__accountName": "[format('stnacbff{0}', variables('resourceToken'))]",
         "AzureWebJobsStorage__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), '2023-01-31').clientId]",
         "AzureWebJobsStorage__credential": "managedidentity",
-        "FUNCTIONS_WORKER_RUNTIME": "python",
         "M365_TENANT_ID": "[parameters('m365TenantId')]",
         "NAC_BFF_TENANT_ID": "[parameters('m365TenantId')]",
         "NAC_BFF_AUDIENCE": "[parameters('bffApiAudience')]",

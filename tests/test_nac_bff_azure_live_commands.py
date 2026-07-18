@@ -981,6 +981,30 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
         self.assertNotIn("not-json", json.dumps(result))
 
+    def test_duplicate_json_keys_are_rejected_and_redacted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout='{"provisioningState":"Running",'
+                '"provisioningState":"Succeeded"}',
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
+        self.assertNotIn("provisioningState", json.dumps(result))
+
     def test_provider_register_accepts_empty_success_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "notarial-application-interface-inventory.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "notarial-application-interface-inventory.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "notarial-application-interface-inventory.md"
+GIT_EXECUTABLE = Path("/usr/bin/git")
 
 REQUIRED_INTERFACE_IDS = {
     "mandantenportal",
@@ -75,6 +77,21 @@ PROHIBITED_MARKERS = {
     "<xsd:schema",
     "<xs:schema",
 }
+
+
+def tracked_repository_files() -> list[Path]:
+    if not GIT_EXECUTABLE.is_file():
+        raise RuntimeError("gebundene Git-Binaerdatei fehlt")
+    result = subprocess.run(
+        [str(GIT_EXECUTABLE), "-C", str(REPO_ROOT), "ls-files", "-z"],
+        check=True,
+        capture_output=True,
+    )
+    return [
+        REPO_ROOT / item.decode("utf-8")
+        for item in result.stdout.split(b"\0")
+        if item
+    ]
 
 
 def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:

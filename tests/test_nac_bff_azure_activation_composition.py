@@ -69,6 +69,8 @@ APPROVAL_REFERENCE = (
 API_APP_ID = "11111111-1111-4111-8111-111111111111"
 API_SERVICE_PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222"
 UAMI_APP_ID = "33333333-3333-4333-8333-333333333333"
+DEPLOYMENT_CORRELATION_ID = "88888888-8888-4888-8888-888888888888"
+UPDATED_DEPLOYMENT_CORRELATION_ID = "99999999-9999-4999-8999-999999999999"
 ACTOR_ID = "44444444-4444-4444-8444-444444444444"
 PERMISSION_REQUEST_ID = "55555555-5555-4555-8555-555555555555"
 APP_CATALOG_ID = "66666666-6666-4666-8666-666666666666"
@@ -180,10 +182,17 @@ def _deployment_parameters(app_id: str = API_APP_ID) -> dict:
     }
 
 
-def _deployment_payload(outputs: dict, *, template_hash: str = "arm-template-001") -> dict:
+def _deployment_payload(
+    outputs: dict,
+    *,
+    template_hash: str = "12117878019922581049",
+    correlation_id: str = DEPLOYMENT_CORRELATION_ID,
+    provisioning_state: str = "Succeeded",
+) -> dict:
     return {
         "properties": {
-            "provisioningState": "Succeeded",
+            "provisioningState": provisioning_state,
+            "correlationId": correlation_id,
             "mode": "Incremental",
             "templateHash": template_hash,
             "parameters": _deployment_parameters(),
@@ -339,7 +348,9 @@ class _FakeAzure:
         self.group_exists_result: dict | None = None
         self.resources: list[dict] = []
         self.deployment: dict | None = None
+        self.deployment_show_results: list[dict] = []
         self.bound_artifacts = []
+        self.bound_result: dict | None = None
         self.failure: dict | None = None
         self.bounded_calls: list[tuple[tuple[str, ...], float]] = []
         self.on_bounded_call = None
@@ -349,6 +360,9 @@ class _FakeAzure:
 
     def run_bound(self, argv, bound_artifacts):
         self.bound_artifacts.append(dict(bound_artifacts))
+        if self.bound_result is not None:
+            self.commands.append(tuple(argv))
+            return dict(self.bound_result)
         return self.run(argv)
 
     def run_with_timeout(self, argv, *, timeout_seconds):
@@ -419,6 +433,8 @@ class _FakeAzure:
             }
             return {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": self.group}
         if command[:3] == ("deployment", "group", "show"):
+            if self.deployment_show_results:
+                return dict(self.deployment_show_results.pop(0))
             if self.deployment is None:
                 return {
                     "ok": False,
@@ -436,6 +452,9 @@ class _FakeAzure:
             parameters_path = Path(parameters_reference.removeprefix("@"))
             parameters = json.loads(parameters_path.read_text())["parameters"]
             self.deployment = _deployment_payload(self.deployment_outputs)
+            self.deployment["properties"]["correlationId"] = (
+                UPDATED_DEPLOYMENT_CORRELATION_ID
+            )
             self.deployment["properties"]["parameters"] = parameters
             return {
                 "ok": True,
@@ -1389,7 +1408,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
         )
         bicep.parent.mkdir(parents=True)
-        bicep.write_text('{"$schema":"test","resources":[]}\n')
+        bicep.write_text('{"$schema":"test","metadata":{"_generator":{"templateHash":"12117878019922581049"}},"resources":[]}\n')
         config = self.repo_root / "spfx/nac-bpmn-viewer/config/package-solution.json"
         config.parent.mkdir(parents=True)
         config.write_text("{}\n")
@@ -1412,6 +1431,8 @@ class AzureBffCompositionTests(unittest.TestCase):
             synthetic=self.synthetic,
             m365_readback_attempts=3,
             m365_readback_delay_seconds=0,
+            deployment_reconciliation_attempts=2,
+            deployment_reconciliation_delay_seconds=0,
             sleep=lambda _seconds: None,
         )
 
@@ -1585,6 +1606,86 @@ class AzureBffCompositionTests(unittest.TestCase):
                 for command in self.azure.commands
             )
         )
+
+    def test_prewrite_accepts_exact_failed_incremental_baseline_for_new_run(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertFalse(self.port._deployment_preexisting)
+        self.assertEqual(
+            self.port._preexisting_deployment_correlation_id,
+            DEPLOYMENT_CORRELATION_ID,
+        )
+
+    def test_prewrite_rejects_failed_baseline_without_entra_binding(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+
+        result = self._prewrite(api_binding=None)
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_FAILED_BASELINE_ENTRA_BINDING_MISSING",
+        )
+
+    def test_prewrite_accepts_current_owner_bound_failed_baseline(self) -> None:
+        self.azure.resources = _azure_resources()
+        current_template_hash = json.loads(
+            (
+                self.repo_root
+                / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+            ).read_text(encoding="utf-8")
+        )["metadata"]["_generator"]["templateHash"]
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash=current_template_hash,
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertFalse(self.port._deployment_preexisting)
+
+    def test_prewrite_rejects_unapproved_failed_baseline_template(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="foreign-template",
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"], "AZURE_FAILED_BASELINE_TEMPLATE_NOT_APPROVED"
+        )
+
+    def test_prewrite_rejects_failed_baseline_with_foreign_api_audience(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+        self.azure.deployment["properties"]["parameters"]["bffApiAudience"] = {
+            "value": "99999999-9999-4999-8999-999999999999"
+        }
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_DEPLOYMENT_PARAMETERS_INVALID")
 
     def test_cross_hash_reuses_stable_target_bound_deployment(self) -> None:
         self.azure.resources = _azure_resources()
@@ -2351,6 +2452,297 @@ class AzureBffCompositionTests(unittest.TestCase):
             self.port.execute_step(STEPS[3], self.context)
         self.assertEqual(raised.exception.code, "BICEP_OUTPUT_MISMATCH")
 
+    def test_bicep_timeout_reconciles_terminal_failure_without_replay(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(
+                    self.azure.deployment_outputs,
+                    correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                    provisioning_state="Failed",
+                ),
+            }
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_BASELINE_DEPLOYMENT_FAILED"
+        )
+        self.assertEqual(
+            sum(
+                command[:3] == ("deployment", "group", "create")
+                for command in self.azure.commands
+            ),
+            1,
+        )
+        self.assertEqual(
+            sum(
+                command[:3] == ("deployment", "group", "show")
+                for command in self.azure.commands
+            ),
+            1,
+        )
+
+    def test_bicep_timeout_rejects_foreign_template_hash_as_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(
+                    self.azure.deployment_outputs,
+                    correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                    provisioning_state="Failed",
+                    template_hash="99999999999999999999",
+                ),
+            }
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_rejects_malformed_template_hash_as_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        malformed = _deployment_payload(
+            self.azure.deployment_outputs,
+            correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+            provisioning_state="Failed",
+        )
+        malformed["properties"]["templateHash"] = {"unexpected": True}
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": malformed,
+            }
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_maps_malformed_succeeded_outputs_to_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        malformed_outputs = dict(self.azure.deployment_outputs)
+        malformed_outputs["functionAppHostName"] = {"value": "foreign.example"}
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(
+                    malformed_outputs,
+                    correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                ),
+            }
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_maps_readback_adapter_exception_to_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+
+        with (
+            patch.object(
+                self.azure,
+                "run",
+                side_effect=RuntimeError("readback adapter failed"),
+            ),
+            self.assertRaises(ActivationStepError) as raised,
+        ):
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_reconciled_success_requires_new_run(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(
+                    self.azure.deployment_outputs,
+                    correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                ),
+            }
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code,
+            "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN",
+        )
+        self.assertFalse(
+            any(
+                command[:2] in {("provider", "register"), ("group", "create")}
+                for command in self.azure.commands
+            )
+        )
+
+    def test_bicep_timeout_rejects_stale_success_as_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.port._preexisting_deployment_correlation_id = (
+            DEPLOYMENT_CORRELATION_ID
+        )
+        self.azure.commands.clear()
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(self.azure.deployment_outputs),
+            },
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(self.azure.deployment_outputs),
+            },
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_keeps_nonterminal_state_ambiguous(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.azure.deployment_show_results = [
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": _deployment_payload(
+                    self.azure.deployment_outputs,
+                    correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                    provisioning_state=state,
+                ),
+            }
+            for state in ("Running", "Accepted")
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[3], self.context)
+
+        self.assertEqual(
+            raised.exception.code, "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+        )
+
+    def test_bicep_timeout_distinguishes_canceled_and_missing(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        cases = (
+            (
+                [
+                    {
+                        "ok": True,
+                        "code": "AZURE_CLI_COMMAND_PASSED",
+                        "data": _deployment_payload(
+                            self.azure.deployment_outputs,
+                            correlation_id=UPDATED_DEPLOYMENT_CORRELATION_ID,
+                            provisioning_state="Canceled",
+                        ),
+                    }
+                ],
+                "AZURE_BASELINE_DEPLOYMENT_CANCELED",
+            ),
+            (
+                [
+                    {
+                        "ok": False,
+                        "code": "AZURE_RESOURCE_NOT_FOUND",
+                        "data": None,
+                    },
+                    {
+                        "ok": False,
+                        "code": "AZURE_RESOURCE_NOT_FOUND",
+                        "data": None,
+                    },
+                ],
+                "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+            ),
+        )
+
+        for readbacks, expected in cases:
+            with self.subTest(expected=expected):
+                self.azure.commands.clear()
+                self.azure.deployment_show_results = list(readbacks)
+                with self.assertRaises(ActivationStepError) as raised:
+                    self.port.execute_step(STEPS[3], self.context)
+                self.assertEqual(raised.exception.code, expected)
+                self.assertEqual(
+                    sum(
+                        command[:3] == ("deployment", "group", "create")
+                        for command in self.azure.commands
+                    ),
+                    1,
+                )
+
     def test_spfx_scope_pending_approval_reuse_and_broader_duplicate_block(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
         self.port._api = _binding()  # Bind state as established by step three.
@@ -2973,6 +3365,10 @@ class AzureBffCompositionTests(unittest.TestCase):
             patch(
                 "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
                 lock_root,
+            ),
+            patch(
+                "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                lock_root.parent / ".legacy-test-live-locks",
             ),
             patch(
                 "nac_bff.azure_activation_composition."

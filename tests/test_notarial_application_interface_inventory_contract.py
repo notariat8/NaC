@@ -9,6 +9,7 @@ from scripts.validate_notarial_application_interface_inventory import (
     DOC_DE,
     DOC_EN,
     REQUIRED_INTERFACE_IDS,
+    tracked_repository_files,
     validate_contract,
 )
 
@@ -126,9 +127,7 @@ class NotarialApplicationInterfaceInventoryContractTests(unittest.TestCase):
             "beN _ Onlinehilfe der Bundesnotarkammer.html",
             "xjustiz_0000_grunddatensatz_3_3.xsd",
         }
-        for path in REPO_ROOT.rglob("*"):
-            if ".git" in path.parts:
-                continue
+        for path in tracked_repository_files():
             if path.suffix in forbidden_suffixes:
                 self.fail(f"source archive must not be committed: {path.relative_to(REPO_ROOT)}")
             if path.name in forbidden_names:

@@ -412,7 +412,18 @@
       "subscription_id",
       "workspace_id"
     ],
-    "path_template": "<host-temporary-directory>/nac-m365-bff-live-activation-locks/<target-binding-sha256>.lock",
+    "path_template": "<effective-os-user-home>/.local/state/nac/m365-bff-live-activation/<target-binding-sha256>.lock",
+    "legacy_compatibility_path_template": "<effective-os-user-home>/.local/state/nac/m365-bff-live-activation/<legacy-target-binding-sha256>.lock",
+    "effective_user_home_resolution_exact": "pwd.getpwuid(os.geteuid()).pw_dir",
+    "reboot_persistent": true,
+    "temporary_primary_state_allowed": false,
+    "legacy_host_namespace_path_template": "<temporary-directory>/nac-m365-bff-live-activation-locks/<legacy-target-binding-sha256>.lock",
+    "legacy_host_namespace_migration_lock_required": true,
+    "legacy_host_namespace_temporary_migration_only": true,
+    "legacy_runner_execution_after_upgrade_allowed": false,
+    "both_namespaces_held_for_new_runs": true,
+    "ambiguous_arm_state_retains_both_persistent_locks": true,
+    "ambiguous_arm_state_retains_legacy_host_migration_lock": true,
     "host_scope_exact": "all worktrees and clones on the single execution host",
     "cross_host_coordination_provided": false,
     "independent_of_output_path_activation_hash_and_correlation_id": true,
@@ -590,7 +601,36 @@
       "id": "deploy_bicep_baseline",
       "mode": "azure_write",
       "exact_target": "rg-nac-bff-test/func-nac-bff-test-funktion8",
-      "idempotency": "deploy only the prebuilt hash-bound Bicep and parameter snapshots with exact verified Entra appId as bffApiAudience and read back outputs"
+      "idempotency": "deploy only the prebuilt hash-bound Bicep and parameter snapshots with exact verified Entra appId as bffApiAudience and read back outputs",
+      "timeout_reconciliation": {
+        "trigger_error_exact": "AZURE_CLI_TIMEOUT",
+        "read_only_operation_exact": "deployment group show",
+        "attempts": 5,
+        "delay_seconds": 2.0,
+        "same_deployment_correlation_id_rejected_as_stale": true,
+        "terminal_success_error": "AZURE_BASELINE_DEPLOYMENT_SUCCEEDED_REQUIRES_NEW_RUN",
+        "terminal_failure_error": "AZURE_BASELINE_DEPLOYMENT_FAILED",
+        "terminal_canceled_error": "AZURE_BASELINE_DEPLOYMENT_CANCELED",
+        "unresolved_error": "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+        "unresolved_target_lock_retained": true,
+        "cross_version_legacy_lock_namespace_held": true,
+        "legacy_host_lock_namespace_held": true,
+        "readback_failures_map_to_ambiguous": true,
+        "legacy_lock_hash_ledger_bound": true,
+        "reconciled_template_hash_must_equal_prepared_owner_bound_template": true,
+        "continue_original_run_allowed": false,
+        "automatic_replay_allowed": false,
+        "automatic_rollback_or_deletion_allowed": false
+      },
+      "failed_baseline_acceptance": {
+        "entra_binding_resolved_before_azure_read": true,
+        "missing_entra_binding_rejected": true,
+        "parameter_binding_exact": true,
+        "current_owner_bound_template_hash_allowed": true,
+        "approved_legacy_template_hashes": [
+          "14963684813925800234"
+        ]
+      }
     },
     {
       "order": 5,
@@ -766,7 +806,7 @@
   },
   "failure_behavior": {
     "gate_hash_git_target_permission_duplicate_or_lock_failure_before_first_write": "stop_with_current_state_and_zero_writes",
-    "first_error_after_any_write": "append_FAILED_event_set_FAILED_PARTIAL_release_lock_and_stop_except_when_finalization_integrity_cannot_be_proved",
+    "first_error_after_any_write": "append_FAILED_event_set_FAILED_PARTIAL_release_lock_and_stop_except_when_finalization_integrity_cannot_be_proved_or_ARM_state_is_ambiguous",
     "resume_request": "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP",
     "automatic_recovery_rollback_or_deletion": "forbidden",
     "human_remediation": "requires a new explicit owner decision; changed bindings require a new consolidated owner gate",

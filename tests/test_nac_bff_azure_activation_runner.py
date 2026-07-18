@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
+import pwd
 from pathlib import Path
 import tempfile
 import unittest
@@ -12,6 +14,11 @@ from nac_bff.azure_activation_runner import (
     ActivationStepError,
     DEFAULT_OUTPUT_ROOT,
     LiveActivationRequest,
+    _binding_sha256_json,
+    _HOST_LOCK_ROOT,
+    _LEGACY_HOST_LOCK_ROOT,
+    _LEGACY_HOST_STATE_RELATIVE_PATH,
+    _HOST_STATE_RELATIVE_PATH,
     _load_existing_evidence,
     _sha256_json,
     _atomic_json_write,
@@ -58,6 +65,7 @@ class _Port:
         self,
         *,
         fail_at: str | None = None,
+        fail_code: str = "INJECTED_FAILURE",
         outcome: dict | None = None,
         ordering: list[str] | None = None,
         prewrite_failures: int = 0,
@@ -66,6 +74,7 @@ class _Port:
         step_11_signals: dict[str, object] | None = None,
     ) -> None:
         self.fail_at = fail_at
+        self.fail_code = fail_code
         self.outcome = outcome
         self.ordering = ordering
         self.prewrite_failures = prewrite_failures
@@ -108,7 +117,7 @@ class _Port:
         del context
         self.calls.append(step_id)
         if step_id == self.fail_at:
-            raise ActivationStepError("INJECTED_FAILURE")
+            raise ActivationStepError(self.fail_code)
         result = dict(self.outcome or {
             "status": "PASSED",
             "classification": "verified",
@@ -165,8 +174,18 @@ def _run_dir(root: Path) -> Path:
 
 
 def _lock_path(root: Path) -> Path:
+    target_hash = _binding_sha256_json({"workspace_id": "notary_team_01"})
+    return root / ".test-locks" / f"{target_hash}.lock"
+
+
+def _legacy_lock_path(root: Path) -> Path:
     target_hash = _sha256_json({"workspace_id": "notary_team_01"})
     return root / ".test-locks" / f"{target_hash}.lock"
+
+
+def _legacy_host_lock_path(root: Path) -> Path:
+    target_hash = _sha256_json({"workspace_id": "notary_team_01"})
+    return root / ".legacy-test-locks" / f"{target_hash}.lock"
 
 
 def _receipt_path(root: Path) -> Path:
@@ -181,6 +200,17 @@ def _receipt_path(root: Path) -> Path:
 
 
 class AzureBffActivationRunnerTests(unittest.TestCase):
+    def test_binding_hash_uses_approval_compact_json_canonicalization(self) -> None:
+        binding = {"workspace_id": "notary_team_01", "tenant_id": "f8"}
+        compact = json.dumps(
+            binding, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+
+        self.assertEqual(
+            _binding_sha256_json(binding), hashlib.sha256(compact).hexdigest()
+        )
+        self.assertNotEqual(_binding_sha256_json(binding), _sha256_json(binding))
+
     def _managed_temp(self) -> Path:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -234,6 +264,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             patch(
                 "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
                 activation_lock_root,
+            ),
+            patch(
+                "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                activation_repo_root / ".legacy-test-locks",
             ),
         ):
             return run_azure_bff_live_activation(
@@ -293,6 +327,143 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 self.assertEqual(result["error"]["code"], code)
                 self.assertFalse(result["writes_started"])
                 self.assertEqual(port.calls, [])
+
+    def test_default_host_state_root_is_persistent_user_state(self) -> None:
+        expected = (
+            Path(pwd.getpwuid(os.geteuid()).pw_dir)
+            / ".local/state/nac/m365-bff-live-activation"
+        )
+        self.assertEqual(
+            _HOST_STATE_RELATIVE_PATH,
+            ".local/state/nac/m365-bff-live-activation",
+        )
+        self.assertEqual(_HOST_LOCK_ROOT, expected)
+        self.assertNotEqual(_HOST_LOCK_ROOT.parent, Path(tempfile.gettempdir()))
+        self.assertEqual(
+            _LEGACY_HOST_STATE_RELATIVE_PATH,
+            "nac-m365-bff-live-activation-locks",
+        )
+        self.assertEqual(
+            _LEGACY_HOST_LOCK_ROOT,
+            Path(tempfile.gettempdir())
+            / "nac-m365-bff-live-activation-locks",
+        )
+
+    def test_legacy_binding_lock_blocks_new_hash_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            legacy_lock = _legacy_lock_path(root)
+            legacy_lock.parent.mkdir(parents=True)
+            legacy_lock.write_text(
+                json.dumps({"activation_hash": "9" * 64}, sort_keys=True) + "\n"
+            )
+            port = _Port()
+
+            result = self._run(port, repo_root=root)
+
+            self.assertEqual(
+                result["error"]["code"], "LEGACY_ACTIVATION_LOCK_HELD"
+            )
+            self.assertEqual(port.prewrite_calls, 0)
+            self.assertEqual(port.calls, [])
+            self.assertTrue(legacy_lock.exists())
+
+    def test_old_host_lock_namespace_blocks_new_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old_lock = _legacy_host_lock_path(root)
+            old_lock.parent.mkdir(parents=True)
+            old_lock.write_text(
+                json.dumps({"activation_hash": "9" * 64}, sort_keys=True) + "\n"
+            )
+            port = _Port()
+
+            result = self._run(port, repo_root=root)
+
+            self.assertEqual(
+                result["error"]["code"],
+                "LEGACY_HOST_ACTIVATION_LOCK_HELD",
+            )
+            self.assertEqual(port.prewrite_calls, 0)
+            self.assertEqual(port.calls, [])
+            self.assertTrue(old_lock.exists())
+
+    def test_ambiguous_arm_state_retains_cross_version_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self._run(
+                _Port(
+                    fail_at="deploy_bicep_baseline",
+                    fail_code="AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+                ),
+                repo_root=root,
+            )
+
+            self.assertEqual(first["status"], "FAILED_PARTIAL")
+            self.assertEqual(
+                first["step_results"][-1]["stable_error_code"],
+                "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+            )
+            self.assertTrue(_lock_path(root).exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
+            self.assertTrue(_legacy_host_lock_path(root).exists())
+            state = json.loads(
+                (_run_dir(root) / "resume-state.redacted.json").read_text()
+            )
+            events, chain_error = _validate_event_chain(
+                _run_dir(root) / "ledger"
+            )
+            self.assertIsNone(chain_error)
+            self.assertEqual(
+                events[0]["bindings"]["legacy_target_binding_sha256"],
+                state["legacy_target_binding_sha256"],
+            )
+            self.assertTrue(_state_matches_chain(state, events))
+            tampered_state = dict(state)
+            tampered_state["legacy_target_binding_sha256"] = "0" * 64
+            self.assertFalse(_state_matches_chain(tampered_state, events))
+
+            other_hash = "9" * 64
+            retry_port = _Port()
+            second = self._run(
+                retry_port,
+                request=_request(expected_activation_hash=other_hash),
+                plans=[_plan(activation_hash=other_hash)],
+                repo_root=root,
+            )
+
+            self.assertEqual(
+                second["error"]["code"],
+                "LEGACY_HOST_ACTIVATION_LOCK_HELD",
+            )
+            self.assertEqual(retry_port.prewrite_calls, 0)
+            self.assertEqual(retry_port.calls, [])
+            self.assertTrue(_lock_path(root).exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
+            self.assertTrue(_legacy_host_lock_path(root).exists())
+
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                reconcile = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+
+            self.assertEqual(
+                reconcile["error"]["code"], "FINALIZATION_STATE_INVALID"
+            )
+            self.assertTrue(_lock_path(root).exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
 
     def test_dirty_tree_blocks_before_plan_or_execution(self) -> None:
         port = _Port()
@@ -489,6 +660,8 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 phases[-2:], ["TERMINAL", "LOCK_RELEASE_AUTHORIZED"]
             )
             self.assertFalse(_lock_path(root).exists())
+            self.assertFalse(_legacy_lock_path(root).exists())
+            self.assertFalse(_legacy_host_lock_path(root).exists())
             commit_marker = run_dir / "activation.commit.redacted.json"
             self.assertTrue(commit_marker.exists())
             receipt = json.loads(_receipt_path(root).read_text())
@@ -620,7 +793,9 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             second_repo.mkdir()
             shared_lock_root = root / "host-locks"
             shared_lock_root.mkdir(mode=0o700)
-            target_hash = _sha256_json({"workspace_id": "notary_team_01"})
+            target_hash = _binding_sha256_json(
+                {"workspace_id": "notary_team_01"}
+            )
             lock = shared_lock_root / f"{target_hash}.lock"
             descriptor = os.open(
                 lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
@@ -769,9 +944,15 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             state_path = run_dir / "resume-state.redacted.json"
             before_lock = lock_path.read_bytes()
             before_state = state_path.read_bytes()
-            with patch(
-                "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
-                root / ".test-locks",
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
             ):
                 inspected = reconcile_azure_bff_live_activation_lock(
                     repo_root=root,
@@ -798,6 +979,8 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             )
             self.assertFalse(released["recovery"]["lock_held"])
             self.assertFalse(lock_path.exists())
+            self.assertFalse(_legacy_lock_path(root).exists())
+            self.assertFalse(_legacy_host_lock_path(root).exists())
             self.assertTrue(
                 (
                     run_dir
@@ -834,9 +1017,15 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             )
             self.assertEqual(marker["status"], "FINALIZATION_IN_PROGRESS")
             self.assertTrue(_lock_path(root).exists())
-            with patch(
-                "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
-                root / ".test-locks",
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
             ):
                 inspected = reconcile_azure_bff_live_activation_lock(
                     repo_root=root,
@@ -871,9 +1060,15 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             marker = json.loads(marker_path.read_text())
             marker["target_binding_sha256"] = "0" * 64
             _atomic_json_write(marker_path, marker)
-            with patch(
-                "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
-                root / ".test-locks",
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
             ):
                 result = reconcile_azure_bff_live_activation_lock(
                     repo_root=root,
@@ -1103,8 +1298,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 result = self._run(_Port(), repo_root=root)
 
             self.assertEqual(result["status"], "PASSED")
-            self.assertEqual(observed, ["fully-committed"])
+            self.assertEqual(observed, ["fully-committed"] * 3)
             self.assertFalse(_lock_path(root).exists())
+            self.assertFalse(_legacy_lock_path(root).exists())
+            self.assertFalse(_legacy_host_lock_path(root).exists())
 
     def test_passed_evidence_without_receipt_is_never_final(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
