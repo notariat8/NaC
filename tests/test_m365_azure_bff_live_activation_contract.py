@@ -56,6 +56,16 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
+    def test_portable_ast_dump_ignores_python_type_params_field(self) -> None:
+        first = ast.parse("def target():\n    return 1\n").body[0]
+        second = ast.parse("def target():\n    return 1\n").body[0]
+        second.type_params = [ast.Name(id="T", ctx=ast.Load())]
+
+        self.assertEqual(
+            validator._portable_ast_dump(first),
+            validator._portable_ast_dump(second),
+        )
+
     def test_issue_and_acceptance_binding_mutation_fails(self) -> None:
         payload = self._domain()
         payload["leading_issue"] = validator.PARENT_ISSUE

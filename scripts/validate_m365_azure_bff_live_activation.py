@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import json
 import os
@@ -81,17 +82,17 @@ AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "property_drift_behavior": "stop_before_first_write",
 }
 SMART_DETECTION_PREWRITE_AST_SHA256 = (
-    "446c1bfdd912441d2530ede98c21d7698c861acc3fee1293e40abc5fdb32f759"
+    "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
     "24ac4fc68d396ba39858e4494d281aa2c9b5e2c89ec95408300f2b9553032d17"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
-        "ed676bd62d3a783593bd503c1d7d4d610215b2f68c2f2088c5cf3ddb36770d0b"
+        "437a9a23c85e2a451d6e86f7fe52518eb2ec421cfb7b864276a12ce0fe8b5c32"
     ),
     "_validate_smart_detection_action_group": (
-        "60144e2a44fd61ec6dc7f74feb86f8a2b633b8dd8f49ecf30f8bbffd8827ccd2"
+        "adcbc7718151e08fdce6f05f862f377e01614999d107687f3b4b55423ae3960b"
     ),
 }
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
@@ -1284,6 +1285,16 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
     for relative in TEST_PATHS:
         if not (repo_root / relative).is_file():
             errors.append(f"missing activation test source: {relative.as_posix()}")
+
+
+def _portable_ast_dump(node: ast.AST) -> str:
+    normalized = copy.deepcopy(node)
+    for item in ast.walk(normalized):
+        if hasattr(item, "type_params"):
+            delattr(item, "type_params")
+    return ast.dump(normalized, include_attributes=False)
+
+
 def _assignment_value(tree: ast.AST, name: str) -> ast.AST | None:
     matches: list[ast.AST] = []
     for node in ast.walk(tree):
@@ -1408,7 +1419,7 @@ def _validate_smart_detection_composition_structure(
     else:
         for function in (identity_validator, property_validator):
             actual_sha256 = hashlib.sha256(
-                ast.dump(function, include_attributes=False).encode("utf-8")
+                _portable_ast_dump(function).encode("utf-8")
             ).hexdigest()
             if (
                 actual_sha256
@@ -1456,7 +1467,7 @@ def _validate_smart_detection_composition_structure(
         errors.append("composition Azure prewrite inventory method is unavailable")
         return
     inspect_sha256 = hashlib.sha256(
-        ast.dump(inspect_method, include_attributes=False).encode("utf-8")
+        _portable_ast_dump(inspect_method).encode("utf-8")
     ).hexdigest()
     if inspect_sha256 != SMART_DETECTION_PREWRITE_AST_SHA256:
         errors.append("composition Azure prewrite AST shape differs")
