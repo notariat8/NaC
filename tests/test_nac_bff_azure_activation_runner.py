@@ -353,7 +353,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             legacy_lock = _legacy_lock_path(root)
-            legacy_lock.parent.mkdir(parents=True)
+            legacy_lock.parent.mkdir(parents=True, mode=0o700)
             legacy_lock.write_text(
                 json.dumps({"activation_hash": "9" * 64}, sort_keys=True) + "\n"
             )
@@ -372,7 +372,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             old_lock = _legacy_host_lock_path(root)
-            old_lock.parent.mkdir(parents=True)
+            old_lock.parent.mkdir(parents=True, mode=0o700)
             old_lock.write_text(
                 json.dumps({"activation_hash": "9" * 64}, sort_keys=True) + "\n"
             )

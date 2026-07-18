@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.45.15.27210",
-      "templateHash": "12117878019922581049"
+      "version": "0.45.6.27763",
+      "templateHash": "13643045116711268849"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
