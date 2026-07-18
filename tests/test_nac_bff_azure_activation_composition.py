@@ -318,6 +318,7 @@ class _FakeAzure:
             "Microsoft.Storage": "Registered",
             "Microsoft.OperationalInsights": "Registered",
         }
+        self.provider_register_result_state = "Registered"
         self.group: dict | None = {
             "name": RESOURCE_GROUP,
             "location": LOCATION,
@@ -366,7 +367,7 @@ class _FakeAzure:
             }
         if command[:2] == ("provider", "register"):
             namespace = command[command.index("--namespace") + 1]
-            self.providers[namespace] = "Registered"
+            self.providers[namespace] = self.provider_register_result_state
             return {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": {}}
         if command[:2] == ("group", "exists"):
             if self.group_exists_result is not None:
@@ -2063,6 +2064,16 @@ class AzureBffCompositionTests(unittest.TestCase):
             command for command in self.azure.commands if command[:2] == ("provider", "register")
         ]
         self.assertEqual(len(registrations), 1)
+
+    def test_provider_registration_requires_registered_readback(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.providers["Microsoft.Storage"] = "NotRegistered"
+        self.azure.provider_register_result_state = "Registering"
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[0], self.context)
+
+        self.assertEqual(raised.exception.code, "AZURE_PROVIDER_NOT_REGISTERED")
 
     def test_resource_group_create_reuse_and_mismatch(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")

@@ -344,15 +344,22 @@ def run_azure_cli(
             returncode=completed.returncode,
         )
 
-    try:
-        data = json.loads(completed.stdout)
-    except (TypeError, json.JSONDecodeError):
-        return _command_result(
-            ok=False,
-            code="AZURE_CLI_OUTPUT_INVALID",
-            command=family,
-            returncode=completed.returncode,
-        )
+    if (
+        family == ("provider", "register")
+        and isinstance(completed.stdout, str)
+        and not completed.stdout.strip()
+    ):
+        data = {}
+    else:
+        try:
+            data = json.loads(completed.stdout)
+        except (TypeError, json.JSONDecodeError):
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_OUTPUT_INVALID",
+                command=family,
+                returncode=completed.returncode,
+            )
     return _command_result(
         ok=True,
         code="AZURE_CLI_OK",
