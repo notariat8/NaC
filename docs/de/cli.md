@@ -322,6 +322,7 @@ nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint bff-azure-readiness --format json
 nac m365 teams-sharepoint bff-azure-activation-plan --format json
 nac m365 teams-sharepoint bff-azure-activation-attestations --bff-attestation-provisioner-certificate <public-certificate-path> --format json
+nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <public-certificate-path> --format json
 nac m365 teams-sharepoint bff-azure-activate-live --owner-approved --execute-live-activation --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> --format json
 nac m365 teams-sharepoint bff-azure-activation-recovery --owner-approved --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> [--confirm-unlock] --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
@@ -377,6 +378,8 @@ Dateiinhalte, Environment-Werte, Credentials, Tenant-/App-IDs und
 Provider-Rohantworten bleiben ausgeschlossen.
 
 `bff-azure-activation-attestations` misst lokal die acht nicht-geheimen Ausführungs-Digests und gibt den kombinierten Owner-Hash samt vollständiger Live-CLI-Argumentmap aus. Der Befehl liest keinen Private Key und führt keine Provider-Anfrage aus. Optionale `--bff-attestation-*`-Pfade dürfen ausschließlich die dokumentierten, fest gepinnten Ausführungspfade explizit bestätigen; jede Abweichung führt zu `NOT_READY`.
+
+`bff-azure-activation-owner-gate` erzeugt daraus offline den exakten kompakten Owner-Kommentar und dessen SHA-256. Der Befehl prüft Commit, Tree und sauberen Worktree vor und nach der Erzeugung, liest keinen Private Key und führt keine Provider-Anfrage aus. Binding-Hashes verwenden kompaktes sortiertes JSON ohne abschließende Newline; der getrennte Toolchain-Gesamthash behält exakt eine Newline. Pretty-JSON, zusätzliche Leerzeichen oder eine Newline am Kommentarende sind nicht freigabegleich und werden vom Live-Verifier abgewiesen. Bei `NOT_READY` wird keine partielle Approval-Payload ausgegeben.
 
 Auf Ubuntu mit aktivem
 `kernel.apparmor_restrict_unprivileged_userns=1` ist vor

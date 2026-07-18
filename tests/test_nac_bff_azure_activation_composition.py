@@ -23,6 +23,7 @@ from nac_bff.azure_activation import (
     TEAM_ID,
     TENANT_ID,
 )
+from nac_bff.azure_activation_approval import canonical_owner_comment_body
 from nac_bff.azure_activation_composition import (
     AzureBffLiveExecutionPort,
     GitHubApprovalVerifier,
@@ -789,7 +790,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
         }
         if payload_change:
             payload.update(payload_change)
-        body = json.dumps(payload, sort_keys=True)
+        body = canonical_owner_comment_body(payload)
         request = _request(body_sha256=_sha256_text(body))
         comment = {
             "user": {"login": "ofunk"},
@@ -858,6 +859,23 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             self._verify(request, context, plan, comment),
             {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
         )
+
+    def test_noncanonical_equivalent_body_is_rejected(self) -> None:
+        temporary, request, context, plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        for body in (comment["body"] + "\n", json.dumps(json.loads(comment["body"]), indent=2)):
+            with self.subTest(body=body):
+                changed_request = replace(
+                    request, approval_body_sha256=_sha256_text(body)
+                )
+                changed_comment = {**comment, "body": body}
+                self.assertEqual(
+                    self._verify(changed_request, context, plan, changed_comment),
+                    {
+                        "status": "FAILED",
+                        "code": "APPROVAL_PAYLOAD_MISMATCH",
+                    },
+                )
 
     def test_toolchain_attestation_tamper_breaks_approval_binding(self) -> None:
         temporary, request, context, plan, comment = self._fixture()

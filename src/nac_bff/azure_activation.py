@@ -83,6 +83,9 @@ _PACKAGE_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
     "workflows/contracts/m365-azure-bff-live-activation.contract.json",
+    "src/nac_bff/azure_activation_approval.py",
+    "src/nac_bff/azure_activation_attestations.py",
+    "src/nac_bff/azure_activation_owner_gate.py",
     "src/nac_bff/azure_activation_runner.py",
     "src/nac_bff/azure_activation_composition.py",
     "src/nac_bff/approved_git_tree.py",
@@ -498,7 +501,7 @@ def _activation_contract_valid(root: Path) -> bool:
         "automatic_rollback_allowed": False,
         "synthetic_data_only": True,
     }
-    expected_steps = [step["id"] for step in _activation_steps()]
+    expected_steps = list(activation_step_ids())
     return all(
         (
             contract.get("schema_version") == SCHEMA_VERSION,
@@ -511,6 +514,10 @@ def _activation_contract_valid(root: Path) -> bool:
             contract.get("status") == "OFFLINE_READY_LIVE_DEFERRED",
         )
     )
+
+
+def activation_step_ids() -> tuple[str, ...]:
+    return tuple(step["id"] for step in _activation_steps())
 
 
 def _activation_steps() -> list[dict[str, Any]]:

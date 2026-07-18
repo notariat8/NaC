@@ -81,6 +81,24 @@
       "resume_enabled": false,
       "automatic_unlock_allowed": false,
       "output_fields_allowlisted": true
+    },
+    "owner_gate_preparation": {
+      "command": "nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <public-certificate-path> --format json",
+      "offline_only": true,
+      "provider_requests_exact": 0,
+      "private_key_reads_exact": 0,
+      "clean_commit_and_tree_checked_before_and_after": true,
+      "output_status_required": "READY",
+      "output_fields_required": [
+        "approved_commit",
+        "approved_tree",
+        "activation_hash",
+        "toolchain_attestations_sha256",
+        "owner_approval_payload",
+        "owner_comment_body",
+        "owner_comment_body_sha256",
+        "live_cli_arguments"
+      ]
     }
   },
   "consolidated_owner_gate": {
@@ -222,7 +240,10 @@
           "config-zip"
         ]
       ]
-    }
+    },
+    "binding_hash_canonical_payload": "UTF-8 JSON value with sorted keys, compact separators and no trailing newline",
+    "owner_comment_body_canonical_payload": "exact compact sorted-key JSON approval object with no leading or trailing whitespace",
+    "semantically_equivalent_noncanonical_body_allowed": false
   },
   "git_execution_gate": {
     "approved_commit_sha_required": true,
@@ -850,5 +871,14 @@
     "human_remediation": "requires a new explicit owner decision; changed bindings require a new consolidated owner gate",
     "finalization_integrity_failure": "retain_lock_write_redacted_recovery_marker_and_require_owner_bound_read_only_reconcile_before_explicit_unlock"
   },
-  "verification_contract": "workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml"
+  "verification_contract": "workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml",
+  "owner_gate_safety_rework_issue": "https://github.com/notariat8/NaC/issues/664",
+  "owner_gate_safety_rework_acceptance_ids": [
+    "AC-664-01",
+    "AC-664-02",
+    "AC-664-03",
+    "AC-664-04",
+    "AC-664-05",
+    "AC-664-06"
+  ]
 }

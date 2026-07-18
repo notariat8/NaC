@@ -7,6 +7,14 @@ leading_issue: https://github.com/notariat8/NaC/issues/632
 parent_issue: https://github.com/notariat8/NaC/issues/620
 safety_rework_issue: https://github.com/notariat8/NaC/issues/658
 azure_inventory_safety_rework_issue: https://github.com/notariat8/NaC/issues/662
+owner_gate_safety_rework_issue: https://github.com/notariat8/NaC/issues/664
+owner_gate_safety_rework_acceptance_ids:
+  - AC-664-01
+  - AC-664-02
+  - AC-664-03
+  - AC-664-04
+  - AC-664-05
+  - AC-664-06
 safety_rework_acceptance_ids:
   - AC-001
   - AC-002
@@ -27,6 +35,8 @@ acceptance_ids:
 applies_when:
   paths:
     - src/nac_bff/azure_activation.py
+    - src/nac_bff/azure_activation_approval.py
+    - src/nac_bff/azure_activation_owner_gate.py
     - src/nac_bff/azure_activation_attestations.py
     - src/nac_bff/azure_activation_composition.py
     - src/nac_bff/azure_activation_runner.py
@@ -71,13 +81,14 @@ required_context:
   runtime:
     - immutable owner approval snapshot from Issue #632 authored by exact login ofunk
     - fresh clean-worktree, HEAD and HEAD-tree output
+    - fresh offline canonical owner-gate output with exact compact comment body and body SHA-256
     - two fresh offline activation-plan outputs
     - target-global lock, prebuilt hash-bound deployment inputs and verified new local ledger
     - read-only provider preflight captured by injected adapters
     - final allowlisted redacted evidence
 
 checks:
-  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
   - python3 scripts/nac.py contracts verify
   - python3 scripts/validate_spec_traceability.py
@@ -138,6 +149,8 @@ invariants:
   - toolchain_attestations_sha256 is derived only from the exact non-secret azure_cli_toolchain_sha256, m365_cli_sha256, m365_node_sha256, build_python_sha256, build_node_sha256, build_npm_cli_sha256, gh_cli_sha256 and provisioner_certificate_sha256 digests; approval reuse with any changed individual digest or combined hash is forbidden.
   - Final evidence and the host success receipt contain the same toolchain_attestations_sha256 value as the consolidated owner gate; a mismatch blocks PASSED.
   - The offline bff-azure-activation-attestations command derives the eight individual digests, combined hash and live CLI argument map without provider requests or private-key reads; inventing expected values inside live execution is forbidden.
+  - The offline bff-azure-activation-owner-gate command checks clean HEAD and tree before and after generation, emits the exact compact owner comment body without trailing newline and its SHA-256, makes zero provider requests, reads no private key and emits no partial approval payload on NOT_READY.
+  - Owner target, permission and step bindings use sorted compact JSON without a trailing newline; the toolchain combined hash remains separately defined with exactly one trailing newline. Pretty JSON, leading or trailing whitespace and semantically equivalent noncanonical comment bodies are rejected.
   - Immediately before every local Python or Node subprocess, executable bytes are copied from one O_NOFOLLOW/fstat/SHA-256 verified read into sealed Linux memfds; m365_cli_sha256 and build_npm_cli_sha256 bind deterministic full runtime-module-tree manifests, while sealed CommonJS/ESM loaders reject unmanifested, symlinked, native or changed module bytes and compile or evaluate only the exact per-load O_NOFOLLOW/fstat/SHA-256 verified bytes.
   - Azure CLI never executes the original mutable wrapper: its root-owned interpreter, bootstrap and manifest are sealed in memfds, the owner-bound full site-packages tree is copied with per-file O_NOFOLLOW/fstat/SHA-256 verification into a private user/mount namespace and remounted read-only; host Azure configuration is stably copied into a second private tmpfs, custom clouds.config is rejected, an exact bounded host selection containing only [AzureCloud] and the approved subscription is accepted solely as preflight metadata, its stable SHA-256 is sealed into the runtime manifest and revalidated immediately before omission from that private tmpfs, and Azure CLI profile/cache files remain opaque to NaC, but an authenticated Azure CLI account state remains mandatory and installationId-only state fails closed before writes; the private runtime replaces host cloud defaults with an exact AzureCloud config, injects the approved subscription into every command, and before each write a fresh parent-death-pinned child asserts exactly id, tenantId, environmentName and state=Enabled from the same private config snapshot within 30 seconds; duplicate JSON keys fail closed, a close-on-exec pipe is used, inherited non-stdio descriptors are closed before the Azure CLI import, the child runs in a dedicated session whose process group is killed and reaped, stdout/stderr never enter evidence, and timeout, signal or invalid payload terminates and reaps the child before any target write; all extension roots are replaced with one empty read-only private directory, dynamic extension installation is disabled, and unavailable namespace isolation fails before any provider request.
   - Azure deployment consumes only the repository-committed, reproducibly compiled and hash-bound ARM JSON snapshot; runtime Bicep compilation, config-selected Bicep binaries and dynamic Bicep installation are forbidden.
