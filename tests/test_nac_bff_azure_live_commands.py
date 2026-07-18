@@ -713,6 +713,122 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
         self.assertNotIn("not-json", json.dumps(result))
 
+    def test_provider_register_accepts_empty_success_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="\n",
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    [
+                        "provider",
+                        "register",
+                        "--namespace",
+                        "Microsoft.Web",
+                        "--wait",
+                    ],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_OK")
+        self.assertEqual(result["data"], {})
+
+    def test_provider_register_rejects_nonempty_invalid_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="not-json",
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    [
+                        "provider",
+                        "register",
+                        "--namespace",
+                        "Microsoft.Web",
+                        "--wait",
+                    ],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
+
+    def test_read_command_rejects_empty_success_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    ["account", "show"],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
+
+    def test_other_write_command_rejects_empty_success_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run",
+                return_value=completed,
+            ):
+                result = run_azure_cli(
+                    [
+                        "group",
+                        "create",
+                        "--name",
+                        "rg-nac-bff-test",
+                        "--location",
+                        "germanywestcentral",
+                        "--tags",
+                        "workload=nac-bff",
+                        "environment=test",
+                        "dataClassification=no-production-data",
+                    ],
+                    binary=binary,
+                    expected_binary_sha256=digest,
+                )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_OUTPUT_INVALID")
+
 
     def test_bound_artifact_replaces_provider_path_with_sealed_descriptor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
