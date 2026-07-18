@@ -5,6 +5,15 @@
   "status": "OFFLINE_READY",
   "leading_issue": "https://github.com/notariat8/NaC/issues/632",
   "parent_issue": "https://github.com/notariat8/NaC/issues/620",
+  "safety_rework_issue": "https://github.com/notariat8/NaC/issues/658",
+  "safety_rework_acceptance_ids": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006"
+  ],
   "acceptance_ids": [
     "AC-632-01",
     "AC-632-02",
@@ -164,11 +173,55 @@
       "azure_cli_default_cloud_selection_metadata_mode": "exact_AzureCloud_subscription_only_preflight_then_omitted",
       "azure_cli_default_cloud_selection_binding_mode": "stable_preflight_sha256_sealed_manifest_revalidated_before_omission",
       "azure_cli_default_cloud_selection_max_bytes": 4096,
-      "azure_cli_config_mode": "stable_nofollow_exact_default_selection_preflight_then_omitted_from_private_mount_namespace_tmpfs_plus_per_process_exact_profile_binding",
+      "azure_cli_config_mode": "stable_nofollow_opaque_cli_state_private_mount_namespace_tmpfs_plus_generated_exact_AzureCloud_config_and_same_snapshot_per_write_account_assertion",
       "provider_artifact_binding_mode": "expected_sha256_pre_and_post_verified_private_readonly_by_default_filename_preserving_snapshot_via_inherited_directory_fd_attested_provider_same_account_attacker_excluded",
       "spfx_package_reproducibility_mode": "two_independent_builds_sorted_zip_fixed_metadata_and_solution_uuid5_normalized_generated_xml_ids",
       "teams_package_binding_mode": "stable_single_descriptor_bytes_canonical_root_only_zip_exact_capability_free_manifest_allowlist_png_validation_and_post_download_sha256_provider_binding",
-      "node_runtime_extension_mode": "pinned_commonjs_load_cache_extensions_resolver_prototype_container_load_require_compile_with_preexecution_module_instance_require_null_prototype_cache_container_pending_active_completed_cache_identity_provenance_canonical_node_builtin_ids_manifest_verified_pirates_only_js_transform_nonreplaceable_cjs_json_native_terminals_and_captured_set_candidate_iteration_stream_listener_push_emit"
+      "node_runtime_extension_mode": "pinned_commonjs_load_cache_extensions_resolver_prototype_container_load_require_compile_with_preexecution_module_instance_require_null_prototype_cache_container_pending_active_completed_cache_identity_provenance_canonical_node_builtin_ids_manifest_verified_pirates_only_js_transform_nonreplaceable_cjs_json_native_terminals_and_captured_set_candidate_iteration_stream_listener_push_emit",
+      "azure_cli_profile_schema_dependency_allowed": false,
+      "azure_cli_profile_state_opaque_to_nac": true,
+      "azure_cli_authenticated_account_state_required": true,
+      "azure_cli_installation_id_only_profile_behavior": "fail_closed_as_unauthenticated_before_write",
+      "azure_cli_private_cloud_config_mode": "generated_exact_AzureCloud_in_private_snapshot",
+      "azure_cli_account_assertions_per_write_exact": 1,
+      "azure_cli_account_assertion_fields_exact": [
+        "id",
+        "tenantId",
+        "environmentName",
+        "state"
+      ],
+      "azure_cli_account_assertion_state_exact": "Enabled",
+      "azure_cli_account_assertion_max_bytes": 16384,
+      "azure_cli_account_assertion_timeout_seconds": 30.0,
+      "azure_cli_account_assertion_duplicate_keys_allowed": false,
+      "azure_cli_account_assertion_stdout_evidence_allowed": false,
+      "azure_cli_account_assertion_stderr_mode": "discard_to_devnull",
+      "azure_cli_account_assertion_parent_death_signal_required": true,
+      "azure_cli_account_assertion_inherited_fd_mode": "cloexec_pipe_close_all_non_stdio_before_azure_cli_import",
+      "azure_cli_account_assertion_process_group_mode": "dedicated_session_kill_group_and_reap_on_failure_or_completion",
+      "azure_cli_account_assertion_failure_behavior": "terminate_and_reap_child_then_fail_closed_before_target_write",
+      "azure_cli_account_assertion_same_private_config_snapshot_required": true,
+      "azure_cli_write_prefixes_exact": [
+        [
+          "provider",
+          "register"
+        ],
+        [
+          "group",
+          "create"
+        ],
+        [
+          "deployment",
+          "group",
+          "create"
+        ],
+        [
+          "functionapp",
+          "deployment",
+          "source",
+          "config-zip"
+        ]
+      ]
     }
   },
   "git_execution_gate": {
@@ -501,10 +554,18 @@
         "operation": "provider show",
         "deadline_clock": "time.monotonic",
         "per_call_timeout": "remaining_deadline_seconds",
-        "allowed_states": ["Registered", "Registering", "NotRegistered"],
+        "allowed_states": [
+          "Registered",
+          "Registering",
+          "NotRegistered"
+        ],
         "success_state": "Registered",
-        "register_on_states": ["NotRegistered"],
-        "poll_without_register_on_states": ["Registering"],
+        "register_on_states": [
+          "NotRegistered"
+        ],
+        "poll_without_register_on_states": [
+          "Registering"
+        ],
         "timeout_error": "AZURE_PROVIDER_NOT_REGISTERED",
         "ambiguous_state_error": "AZURE_PROVIDER_STATE_AMBIGUOUS",
         "maximum_register_writes_per_namespace": 1

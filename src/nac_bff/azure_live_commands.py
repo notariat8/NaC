@@ -254,7 +254,7 @@ def run_azure_cli(
         )
 
     azure_argv = [*command]
-    if family != _ACCOUNT_SHOW and not any(
+    if not any(
         token == "--subscription" or token.startswith("--subscription=")
         for token in command
     ):
@@ -435,12 +435,15 @@ def check_azure_cli_readiness(
     cloud_ready = account.get("environmentName") == EXPECTED_CLOUD_NAME
     tenant_ready = account.get("tenantId") == EXPECTED_TENANT_ID
     subscription_ready = account.get("id") == EXPECTED_SUBSCRIPTION_ID
+    state_ready = account.get("state") == "Enabled"
     if not cloud_ready:
         code = "AZURE_CLI_CLOUD_MISMATCH"
     elif not tenant_ready:
         code = "AZURE_CLI_TENANT_MISMATCH"
     elif not subscription_ready:
         code = "AZURE_CLI_SUBSCRIPTION_MISMATCH"
+    elif not state_ready:
+        code = "AZURE_CLI_SUBSCRIPTION_STATE_INVALID"
     else:
         code = "AZURE_CLI_READY"
     return _readiness_result(
@@ -450,6 +453,7 @@ def check_azure_cli_readiness(
         cloud_ready=cloud_ready,
         tenant_ready=tenant_ready,
         subscription_ready=subscription_ready,
+        state_ready=state_ready,
     )
 
 
@@ -589,7 +593,11 @@ _COMMON_VALIDATORS: dict[str, Callable[[tuple[str, ...]], bool]] = {
     "--subscription": _single_exact(EXPECTED_SUBSCRIPTION_ID)
 }
 _COMMAND_SCHEMAS = {
-    ("account", "show"): _CommandSchema(("account", "show")),
+    ("account", "show"): _CommandSchema(
+        ("account", "show"),
+        optional=_COMMON_OPTIONAL,
+        validators=_COMMON_VALIDATORS,
+    ),
     ("provider", "show"): _CommandSchema(
         ("provider", "show"),
         required=frozenset({"--namespace"}),
@@ -1309,6 +1317,7 @@ def _readiness_result(
     cloud_ready: bool = False,
     tenant_ready: bool,
     subscription_ready: bool,
+    state_ready: bool = False,
 ) -> dict[str, object]:
     ready = (
         binary_ready
@@ -1316,6 +1325,7 @@ def _readiness_result(
         and cloud_ready
         and tenant_ready
         and subscription_ready
+        and state_ready
     )
     return {
         "status": "READY" if ready else "NOT_READY",
@@ -1334,6 +1344,10 @@ def _readiness_result(
             {
                 "id": "subscription",
                 "status": "READY" if subscription_ready else "NOT_READY",
+            },
+            {
+                "id": "subscription_state",
+                "status": "READY" if state_ready else "NOT_READY",
             },
         ],
         "redaction": {

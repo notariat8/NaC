@@ -167,8 +167,19 @@ containing section `[AzureCloud]` and solely the approved `subscription` is
 accepted as preflight metadata. Its stably measured SHA-256 is bound into the
 sealed runtime manifest, revalidated immediately before omission, and the file
 is not copied into the private `tmpfs`. Every
-Azure CLI process validates exactly one default profile bound
-to the approved tenant, approved subscription and `environmentName == AzureCloud`.
+Azure CLI profile and cache files remain opaque to NaC and are not a trust
+anchor. An authenticated Azure CLI account state is still mandatory; an
+installationId-only profile is signed out and stops before every write. The
+private runtime snapshot replaces host cloud defaults with a
+deterministic `name = AzureCloud` configuration, and every command receives the
+approved subscription explicitly. Immediately before every write, the sealed
+supervisor starts a fresh `account show --subscription ...` child from the same
+private config snapshot and accepts only the four fields `id`, `tenantId`,
+`environmentName`, and `state` with the bound values and `state == Enabled`.
+Duplicate JSON keys are rejected; the parent-death-pinned child uses a
+close-on-exec pipe, closes all inherited non-standard descriptors before
+importing Azure CLI, runs in its own session, and has a 30-second limit. Raw readback data and errors are discarded; timeout, signal,
+or an invalid payload stops and reaps the child before the target write.
 All extension
 sources are rebound to one empty read-only directory and dynamic extension
 installation is disabled. A host without this isolation stops before any
