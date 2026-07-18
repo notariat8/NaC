@@ -19,6 +19,7 @@ from nac_bff.azure_activation import (
     RESOURCE_GROUP,
     SITE_ID,
     SITE_URL,
+    SUBSCRIPTION_ID,
     TEAM_ID,
     TENANT_ID,
 )
@@ -31,6 +32,7 @@ from nac_bff.azure_activation_composition import (
     _copy_snapshot,
     _deployment_name,
     _normalize_zip_archive,
+    _validate_azure_resource_inventory,
     build_live_activation_execution_port,
     inspect_entra_api_application_prewrite,
 )
@@ -257,6 +259,53 @@ def _azure_resources() -> list[dict]:
     ]
 
 
+def _smart_detection_action_group(*, detail: bool = True) -> dict:
+    value = {
+        "type": "Microsoft.Insights/ActionGroups",
+        "name": "Application Insights Smart Detection",
+        "id": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}"
+            "/providers/Microsoft.Insights/actionGroups/"
+            "Application Insights Smart Detection"
+        ),
+        "resourceGroup": RESOURCE_GROUP,
+        "location": "Global",
+        "tags": None,
+        "kind": None,
+        "sku": None,
+        "managedBy": None,
+        "properties": None,
+    }
+    if detail:
+        value["properties"] = {
+            "groupShortName": "SmartDetect",
+            "enabled": True,
+            "emailReceivers": [],
+            "smsReceivers": [],
+            "webhookReceivers": [],
+            "eventHubReceivers": [],
+            "itsmReceivers": [],
+            "azureAppPushReceivers": [],
+            "automationRunbookReceivers": [],
+            "voiceReceivers": [],
+            "logicAppReceivers": [],
+            "azureFunctionReceivers": [],
+            "armRoleReceivers": [
+                {
+                    "name": "Monitoring Contributor",
+                    "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+                    "useCommonAlertSchema": True,
+                },
+                {
+                    "name": "Monitoring Reader",
+                    "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+                    "useCommonAlertSchema": True,
+                },
+            ],
+        }
+    return value
+
+
 def _catalog_detail() -> dict:
     return {
         "ID": APP_CATALOG_ID,
@@ -347,6 +396,12 @@ class _FakeAzure:
         }
         self.group_exists_result: dict | None = None
         self.resources: list[dict] = []
+        self.resource_list_results: list[list[dict] | dict] = []
+        self.resource_list_exception_on_call: int | None = None
+        self.resource_list_call_count = 0
+        self.smart_detection_action_group = _smart_detection_action_group()
+        self.resource_show_result: dict | None = None
+        self.resource_show_exception: Exception | None = None
         self.deployment: dict | None = None
         self.deployment_show_results: list[dict] = []
         self.bound_artifacts = []
@@ -416,10 +471,30 @@ class _FakeAzure:
                 return {"ok": False, "code": "AZURE_RESOURCE_NOT_FOUND", "data": None}
             return {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": self.group}
         if command[:2] == ("resource", "list"):
+            self.resource_list_call_count += 1
+            if self.resource_list_exception_on_call == self.resource_list_call_count:
+                raise RuntimeError("resource list adapter failed")
+            data = (
+                self.resource_list_results.pop(0)
+                if self.resource_list_results
+                else self.resources
+            )
+            if isinstance(data, dict):
+                return dict(data)
             return {
                 "ok": True,
                 "code": "AZURE_CLI_COMMAND_PASSED",
-                "data": list(self.resources),
+                "data": list(data),
+            }
+        if command[:2] == ("resource", "show"):
+            if self.resource_show_exception is not None:
+                raise self.resource_show_exception
+            if self.resource_show_result is not None:
+                return dict(self.resource_show_result)
+            return {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": dict(self.smart_detection_action_group),
             }
         if command[:2] == ("group", "create"):
             self.group = {
@@ -1622,6 +1697,248 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(
             self.port._preexisting_deployment_correlation_id,
             DEPLOYMENT_CORRELATION_ID,
+        )
+
+    def test_smart_detection_validator_accepts_case_insensitive_type_and_location(self) -> None:
+        companion = _smart_detection_action_group()
+        companion["type"] = "microsoft.insights/actiongroups"
+        companion["location"] = "global"
+
+        _validate_azure_resource_inventory([*_azure_resources(), companion])
+
+    def test_smart_detection_validator_rejects_identity_and_shape_drift(self) -> None:
+        mutations = (
+            ("foreign_group", lambda item: item.__setitem__("resourceGroup", "foreign"), "AZURE_RESOURCE_INVENTORY_UNEXPECTED"),
+            ("missing_id", lambda item: item.pop("id"), "AZURE_RESOURCE_INVENTORY_UNEXPECTED"),
+            ("foreign_subscription", lambda item: item.__setitem__("id", item["id"].replace(SUBSCRIPTION_ID, "00000000-0000-0000-0000-000000000000")), "AZURE_RESOURCE_INVENTORY_UNEXPECTED"),
+            ("child_resource_suffix", lambda item: item.__setitem__("id", item["id"] + "/receivers/foreign"), "AZURE_RESOURCE_INVENTORY_UNEXPECTED"),
+            ("wrong_location", lambda item: item.__setitem__("location", LOCATION), "AZURE_RESOURCE_PROPERTY_DRIFT"),
+            ("wrong_short_name", lambda item: item["properties"].__setitem__("groupShortName", "Other"), "AZURE_RESOURCE_PROPERTY_DRIFT"),
+            ("non_boolean_enabled", lambda item: item["properties"].__setitem__("enabled", 1), "AZURE_RESOURCE_PROPERTY_DRIFT"),
+            ("missing_receiver", lambda item: item["properties"].pop("smsReceivers"), "AZURE_RESOURCE_PROPERTY_DRIFT"),
+            ("wrong_arm_role", lambda item: item["properties"]["armRoleReceivers"][0].__setitem__("roleId", "foreign"), "AZURE_RESOURCE_PROPERTY_DRIFT"),
+        )
+        for label, mutate, expected in mutations:
+            with self.subTest(label=label):
+                companion = json.loads(json.dumps(_smart_detection_action_group()))
+                mutate(companion)
+                with self.assertRaises(ActivationStepError) as raised:
+                    _validate_azure_resource_inventory(
+                        [*_azure_resources(), companion]
+                    )
+                self.assertEqual(raised.exception.code, expected)
+
+    def test_smart_detection_validator_rejects_duplicate_companion(self) -> None:
+        companion = _smart_detection_action_group()
+        with self.assertRaises(ActivationStepError) as raised:
+            _validate_azure_resource_inventory(
+                [*_azure_resources(), companion, dict(companion)]
+            )
+        self.assertEqual(
+            raised.exception.code,
+            "AZURE_RESOURCE_INVENTORY_DUPLICATE",
+        )
+
+    def test_prewrite_accepts_exact_smart_detection_companion_after_detail_read(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(
+            sum(
+                command[:2] == ("resource", "list")
+                for command in self.azure.commands
+            ),
+            2,
+        )
+        self.assertEqual(
+            sum(
+                command[:2] == ("resource", "show")
+                for command in self.azure.commands
+            ),
+            1,
+        )
+        self.assertIn(
+            (
+                "resource",
+                "show",
+                "--resource-group",
+                RESOURCE_GROUP,
+                "--resource-type",
+                "Microsoft.Insights/ActionGroups",
+                "--name",
+                "Application Insights Smart Detection",
+                "--api-version",
+                "2021-09-01",
+            ),
+            self.azure.commands,
+        )
+
+    def test_prewrite_rejects_foreign_smart_detection_summary_before_detail_read(self) -> None:
+        companion = _smart_detection_action_group(detail=False)
+        companion["resourceGroup"] = "foreign-rg"
+        self.azure.resources = [*_azure_resources(), companion]
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_RESOURCE_INVENTORY_UNEXPECTED")
+        self.assertFalse(
+            any(command[:2] == ("resource", "show") for command in self.azure.commands)
+        )
+
+    def test_prewrite_rejects_foreign_smart_detection_detail_identity(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.smart_detection_action_group["id"] = (
+            self.azure.smart_detection_action_group["id"]
+            .replace(SUBSCRIPTION_ID, "00000000-0000-0000-0000-000000000000")
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_RESOURCE_INVENTORY_UNEXPECTED")
+
+    def test_prewrite_rejects_inventory_change_during_companion_readback(self) -> None:
+        initial = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        changed = json.loads(json.dumps(initial))
+        changed[0]["name"] += "-changed"
+        self.azure.resource_list_results = [initial, changed]
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_RESOURCE_INVENTORY_CHANGED_DURING_READBACK",
+        )
+
+    def test_prewrite_maps_smart_detection_adapter_exception(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.resource_show_exception = RuntimeError("adapter failed")
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+        )
+
+    def test_prewrite_maps_second_inventory_adapter_exception(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.resource_list_exception_on_call = 2
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+        )
+
+    def test_prewrite_maps_second_inventory_failure_result(self) -> None:
+        inventory = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.resource_list_results = [
+            inventory,
+            {
+                "ok": False,
+                "code": "AZURE_CLI_COMMAND_FAILED",
+                "data": None,
+            },
+        ]
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+        )
+
+    def test_prewrite_maps_malformed_second_inventory_result(self) -> None:
+        inventory = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.resource_list_results = [
+            inventory,
+            {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": [None],
+            },
+        ]
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+        )
+
+    def test_prewrite_maps_smart_detection_detail_read_failure(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.resource_show_result = {
+            "ok": False,
+            "code": "AZURE_RESOURCE_NOT_FOUND",
+            "data": None,
+        }
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"],
+            "AZURE_SMART_DETECTION_READBACK_FAILED",
+        )
+
+    def test_prewrite_rejects_smart_detection_receiver_drift(self) -> None:
+        self.azure.resources = [
+            *_azure_resources(),
+            _smart_detection_action_group(detail=False),
+        ]
+        self.azure.smart_detection_action_group["properties"][
+            "emailReceivers"
+        ] = [{}]
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_RESOURCE_PROPERTY_DRIFT")
+
+    def test_prewrite_rejects_arbitrary_action_group_without_detail_read(self) -> None:
+        arbitrary = _smart_detection_action_group(detail=False)
+        arbitrary["name"] = "Foreign Action Group"
+        self.azure.resources = [*_azure_resources(), arbitrary]
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_RESOURCE_INVENTORY_UNEXPECTED")
+        self.assertFalse(
+            any(
+                command[:2] == ("resource", "show")
+                for command in self.azure.commands
+            )
         )
 
     def test_prewrite_rejects_failed_baseline_without_entra_binding(self) -> None:

@@ -51,6 +51,7 @@ ALLOWED_COMMAND_PREFIXES = (
     ("deployment", "group", "create"),
     ("deployment", "group", "show"),
     ("resource", "list"),
+    ("resource", "show"),
     ("functionapp", "deployment", "source", "config-zip"),
 )
 
@@ -58,6 +59,9 @@ _PROVIDER_NAMESPACES = frozenset(
     {"Microsoft.Web", "Microsoft.Storage", "Microsoft.OperationalInsights"}
 )
 _DEPLOYMENT_NAME_RE = re.compile(r"nac-bff-[0-9a-f]{12}\Z")
+_SMART_DETECTION_ACTION_GROUP_NAME = "Application Insights Smart Detection"
+_SMART_DETECTION_ACTION_GROUP_TYPE = "Microsoft.Insights/ActionGroups"
+_SMART_DETECTION_ACTION_GROUP_API_VERSION = "2021-09-01"
 _UUID_RE = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z",
     re.IGNORECASE,
@@ -659,6 +663,24 @@ _COMMAND_SCHEMAS = {
         optional=_COMMON_OPTIONAL,
         validators={
             "--resource-group": _single_exact(RESOURCE_GROUP),
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("resource", "show"): _CommandSchema(
+        ("resource", "show"),
+        required=frozenset(
+            {"--resource-group", "--resource-type", "--name", "--api-version"}
+        ),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            "--resource-type": _single_exact(
+                _SMART_DETECTION_ACTION_GROUP_TYPE
+            ),
+            "--name": _single_exact(_SMART_DETECTION_ACTION_GROUP_NAME),
+            "--api-version": _single_exact(
+                _SMART_DETECTION_ACTION_GROUP_API_VERSION
+            ),
             **_COMMON_VALIDATORS,
         },
     ),

@@ -65,6 +65,168 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         self.assertTrue(any("leading_issue" in error for error in errors))
         self.assertTrue(any("acceptance_ids" in error for error in errors))
 
+    def test_azure_smart_detection_companion_policy_mutations_fail(self) -> None:
+        payload = self._domain()
+        payload["prewrite_inventory"][
+            "azure_application_insights_companion_exact"
+        ]["name_exact"] = "Foreign Action Group"
+        payload["prewrite_inventory"][
+            "azure_application_insights_companion_count_allowed"
+        ] = [0, 2]
+        self._write_domain(payload)
+        verification = self._verification()
+        verification["azure_inventory_safety_rework_issue"] = (
+            validator.SAFETY_REWORK_ISSUE
+        )
+        self._write_verification(verification)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "domain Azure Application Insights companion policy differs",
+            errors,
+        )
+        self.assertIn(
+            "domain Azure Application Insights companion cardinality differs",
+            errors,
+        )
+        self.assertTrue(
+            any(
+                "azure_inventory_safety_rework_issue" in error
+                for error in errors
+            )
+        )
+
+    def test_smart_detection_implementation_mutations_fail(self) -> None:
+        composition = self.root / validator.COMPOSITION_PATH
+        source = composition.read_text(encoding="utf-8")
+        source = source.replace(
+            '"roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa"',
+            '"roleId": "00000000-0000-0000-0000-000000000000"',
+            1,
+        ).replace(
+            "def _validate_smart_detection_action_group_identity("
+            "value: object) -> None:\n"
+            "    if (",
+            "def _validate_smart_detection_action_group_identity("
+            "value: object) -> None:\n"
+            "    return\n"
+            "    if (",
+            1,
+        ).replace(
+            "            try:\n"
+            "                repeated_resources = self._azure.run(",
+            "            self._azure.run(\n"
+            '                ["resource", "list", "--resource-group", RESOURCE_GROUP]\n'
+            "            )\n"
+            "            try:\n"
+            "                repeated_resources = self._azure.run(",
+            1,
+        )
+        source = source.replace(
+            'if exists["data"] is False:',
+            'if exists["data"] is True:',
+            1,
+        )
+        source += (
+            "\nfrom foreign import value as "
+            "_SMART_DETECTION_ACTION_GROUP_NAME\n"
+            "match None:\n"
+            "    case _ as _SMART_DETECTION_ACTION_GROUP_TYPE:\n"
+            "        pass\n"
+        )
+        composition.write_text(source, encoding="utf-8")
+
+        commands = self.root / validator.AZURE_LIVE_COMMANDS_PATH
+        source = commands.read_text(encoding="utf-8")
+        schema_anchor = (
+            '"--resource-type": _single_exact(\n'
+            "                _SMART_DETECTION_ACTION_GROUP_TYPE\n"
+            "            ),"
+        )
+        source = source.replace(
+            schema_anchor,
+            '"--resource-type": _single_exact(\n'
+            "                _SMART_DETECTION_ACTION_GROUP_NAME\n"
+            "            ),",
+            1,
+        )
+        source = source.replace(
+            '    ("deployment", "group", "show"): _CommandSchema(',
+            '    ("resource", "show"): _CommandSchema(('
+            '"resource", "show")),\n'
+            '    ("deployment", "group", "show"): _CommandSchema(',
+            1,
+        )
+        source += (
+            '\n_COMMAND_SCHEMAS[("resource", "show")] = '
+            '_CommandSchema(("resource", "show"))\n'
+        )
+        commands.write_text(source, encoding="utf-8")
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "composition _SMART_DETECTION_ARM_ROLE_RECEIVERS differs "
+            "from companion contract",
+            errors,
+        )
+        self.assertIn(
+            "composition Azure prewrite AST shape differs",
+            errors,
+        )
+        self.assertIn(
+            "composition Smart Detection readback sequence differs",
+            errors,
+        )
+        self.assertIn(
+            "composition Smart Detection "
+            "_validate_smart_detection_action_group_identity shape differs",
+            errors,
+        )
+        self.assertIn(
+            "Azure command schemas AST shape differs",
+            errors,
+        )
+        self.assertIn(
+            "Azure command resource show schema cardinality differs",
+            errors,
+        )
+        self.assertIn(
+            "Azure command resource show schema differs from contract",
+            errors,
+        )
+
+    def test_smart_detection_evidence_and_invariant_mutations_fail(self) -> None:
+        payload = self._verification()
+        payload["required_evidence"] = [
+            item.replace(
+                "azure_smart_detection_companion_drift",
+                "removed_smart_detection_drift",
+            )
+            if isinstance(item, str)
+            else item
+            for item in payload["required_evidence"]
+        ]
+        payload["invariants"] = [
+            item.replace("canonical ARM ID", "unbound ARM ID")
+            if isinstance(item, str)
+            else item
+            for item in payload["invariants"]
+        ]
+        self._write_verification(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "verification required evidence must include Smart Detection drift",
+            errors,
+        )
+        self.assertIn(
+            "verification Smart Detection identity invariant differs",
+            errors,
+        )
+
     def test_toolchain_approval_binding_mutation_fails(self) -> None:
         payload = self._domain()
         payload["consolidated_owner_gate"][
@@ -688,33 +850,11 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if relative == validator.COMPOSITION_PATH:
-                source = (
-                    "_APPROVED_OWNER_ASSOCIATIONS = (\"OWNER\", \"MEMBER\")\n"
-                    "_SAFE_PROVIDER_STATES = (\"Registered\", \"Registering\", \"NotRegistered\")\n"
-                    "_PROVIDER_REGISTER_STATES = (\"NotRegistered\",)\n"
-                    "_PROVIDER_POLL_WITHOUT_REGISTER_STATES = (\"Registering\",)\n"
-                    "_PROVIDER_SUCCESS_STATE = \"Registered\"\n"
-                    "_PROVIDER_TIMEOUT_ERROR = \"AZURE_PROVIDER_NOT_REGISTERED\"\n"
-                    "_PROVIDER_AMBIGUOUS_STATE_ERROR = \"AZURE_PROVIDER_STATE_AMBIGUOUS\"\n"
-                    "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 1\n"
-                    "_PROVIDER_READBACK_ATTEMPTS = 5\n"
-                    "_PROVIDER_READBACK_DELAY_SECONDS = 12.0\n"
-                    "_PROVIDER_READBACK_MAX_SECONDS = 60.0\n"
-                    "_DEPLOYMENT_RECONCILIATION_ATTEMPTS = 5\n"
-                    "_DEPLOYMENT_RECONCILIATION_DELAY_SECONDS = 2.0\n"
-                    "_APPROVED_FAILED_BASELINE_TEMPLATE_HASHES = "
-                    "(\"14963684813925800234\",)\n"
-                    + "\n".join(f"# {marker}" for marker in markers)
-                    + "\n"
-                )
+                source = (REPO_ROOT / relative).read_text(encoding="utf-8")
             elif relative == validator.AZURE_CLI_SEALED_RUNTIME_PATH:
                 source = (REPO_ROOT / relative).read_text(encoding="utf-8")
             elif relative == validator.AZURE_LIVE_COMMANDS_PATH:
-                source = (
-                    "_MAX_CLOUD_SELECTION_BYTES = 4096\n"
-                    + "\n".join(f"# {marker}" for marker in markers)
-                    + "\n"
-                )
+                source = (REPO_ROOT / relative).read_text(encoding="utf-8")
             else:
                 source = "\n".join(markers) + "\n"
             path.write_text(source, encoding="utf-8")

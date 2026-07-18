@@ -197,6 +197,7 @@ Before the first write, checks run in this order:
 
 1. Validate the approval snapshot, Azure/M365 sessions, and all exact target values read-only.
 2. Run a complete read-only inventory of Entra application/service-principal, UAMI role, site-grant, App Catalog, SPFx permission/install, page/webpart, and synthetic-key matches; exclude duplicates and broader permissions before any possible write.
+   The Action Group `Application Insights Smart Detection` created automatically by Application Insights is accepted only with the canonical ARM ID of the bound subscription and resource group. One exact argument-bound detail read through Azure Monitor API `2021-09-01` is bracketed by two stable inventory-identity reads. It must be `Global`, `SmartDetect`, enabled, contain exactly the `Monitoring Contributor` and `Monitoring Reader` ARM roles with common alert schema, and expose explicitly empty lists for every other receiver kind. Any foreign or changed identity, adapter exception, other Action Group, missing property, or drift stops before the first write.
 3. Acquire the target-global nonblocking lock for tenant, subscription, and workspace regardless of output path, activation hash, or correlation ID.
 4. Initialize only a new ledger; existing or partial runs cannot continue in the MVP.
 5. Prebuild the Function OneDeploy package, site-scoped `.sppkg`, reproducibly compiled ARM JSON, and resolved parameter snapshot, then hash-bind them to the commit, tree, and activation hash.
