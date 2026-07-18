@@ -318,6 +318,8 @@ class _FakeAzure:
             "Microsoft.Storage": "Registered",
             "Microsoft.OperationalInsights": "Registered",
         }
+        self.provider_show_result_states: dict[str, list[str]] = {}
+        self.provider_show_results: dict[str, list[dict | None]] = {}
         self.provider_register_result_state = "Registered"
         self.group: dict | None = {
             "name": RESOURCE_GROUP,
@@ -339,6 +341,8 @@ class _FakeAzure:
         self.deployment: dict | None = None
         self.bound_artifacts = []
         self.failure: dict | None = None
+        self.bounded_calls: list[tuple[tuple[str, ...], float]] = []
+        self.on_bounded_call = None
 
     def check_readiness(self):
         return dict(self.ready)
@@ -346,6 +350,14 @@ class _FakeAzure:
     def run_bound(self, argv, bound_artifacts):
         self.bound_artifacts.append(dict(bound_artifacts))
         return self.run(argv)
+
+    def run_with_timeout(self, argv, *, timeout_seconds):
+        command = tuple(argv)
+        self.bounded_calls.append((command, timeout_seconds))
+        result = self.run(argv)
+        if self.on_bounded_call is not None:
+            self.on_bounded_call(command)
+        return result
 
     def run(self, argv):
         validated, family, validation_code = _validated_command(argv)
@@ -360,6 +372,14 @@ class _FakeAzure:
             return dict(self.failure)
         if command[:2] == ("provider", "show"):
             namespace = command[command.index("--namespace") + 1]
+            states = self.provider_show_result_states.get(namespace, [])
+            results = self.provider_show_results.get(namespace, [])
+            if results:
+                result = results.pop(0)
+                if result is not None:
+                    return dict(result)
+            if states:
+                self.providers[namespace] = states.pop(0)
             return {
                 "ok": True,
                 "code": "AZURE_CLI_COMMAND_PASSED",
@@ -1414,6 +1434,26 @@ class AzureBffCompositionTests(unittest.TestCase):
         ):
             return self.port.verify_prewrite(self.context, _request())
 
+    def _bind_provider_clock(self) -> list[float]:
+        now = [0.0]
+        delays: list[float] = []
+
+        def sleep(seconds: float) -> None:
+            delays.append(seconds)
+            now[0] += seconds
+
+        self.port._sleep = sleep
+        self.port._monotonic = lambda: now[0]
+        self._provider_clock_now = now
+        return delays
+
+    def _provider_timeouts(self, namespace: str) -> list[float]:
+        return [
+            timeout_seconds
+            for command, timeout_seconds in self.azure.bounded_calls
+            if command[command.index("--namespace") + 1] == namespace
+        ]
+
     def test_prewrite_stops_at_approval_azure_m365_and_graph_boundaries(self) -> None:
         self.approval.result = {"status": "FAILED", "code": "APPROVAL_PAYLOAD_MISMATCH"}
         self.assertEqual(self._prewrite()["code"], "APPROVAL_PAYLOAD_MISMATCH")
@@ -2047,6 +2087,8 @@ class AzureBffCompositionTests(unittest.TestCase):
 
     def test_provider_registration_is_idempotent(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
         reused = self.port.execute_step(STEPS[0], self.context)
         self.assertEqual(reused["classification"], "reused")
         self.assertFalse(
@@ -2055,6 +2097,18 @@ class AzureBffCompositionTests(unittest.TestCase):
                 for command in self.azure.commands
             )
         )
+        self.assertEqual(
+            len(
+                [
+                    command
+                    for command in self.azure.commands
+                    if command[:2] == ("provider", "show")
+                ]
+            ),
+            6,
+        )
+        self.assertEqual(delays, [])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0])
 
         self.azure.commands.clear()
         self.azure.providers["Microsoft.Storage"] = "NotRegistered"
@@ -2067,12 +2121,205 @@ class AzureBffCompositionTests(unittest.TestCase):
 
     def test_provider_registration_requires_registered_readback(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+
         self.azure.providers["Microsoft.Storage"] = "NotRegistered"
         self.azure.provider_register_result_state = "Registering"
 
         with self.assertRaises(ActivationStepError) as raised:
             self.port.execute_step(STEPS[0], self.context)
 
+        self.assertEqual(raised.exception.code, "AZURE_PROVIDER_NOT_REGISTERED")
+        shows = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "show")
+            and command[command.index("--namespace") + 1] == "Microsoft.Storage"
+        ]
+        registrations = [
+            command for command in self.azure.commands if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(len(shows), 6)
+        self.assertEqual(len(registrations), 1)
+        self.assertEqual(delays, [12.0, 12.0, 12.0, 12.0])
+        self.assertEqual(
+            self._provider_timeouts("Microsoft.Storage"),
+            [60.0, 48.0, 36.0, 24.0, 12.0],
+        )
+
+    def test_provider_registration_polls_readback_without_repeating_write(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+
+        self.azure.provider_show_result_states["Microsoft.Storage"] = [
+            "NotRegistered",
+            "Registering",
+            "Registered",
+        ]
+        self.azure.provider_register_result_state = "Registering"
+
+        updated = self.port.execute_step(STEPS[0], self.context)
+
+        self.assertEqual(updated["classification"], "updated")
+        registrations = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(len(registrations), 1)
+        shows = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "show")
+            and command[command.index("--namespace") + 1] == "Microsoft.Storage"
+        ]
+        self.assertEqual(len(shows), 3)
+        self.assertEqual(delays, [12.0])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0, 48.0])
+
+    def test_provider_registration_poll_rejects_unknown_state(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+
+        self.azure.provider_show_result_states["Microsoft.Storage"] = [
+            "NotRegistered",
+            "Unknown",
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[0], self.context)
+
+        self.assertEqual(raised.exception.code, "AZURE_PROVIDER_STATE_AMBIGUOUS")
+        shows = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "show")
+            and command[command.index("--namespace") + 1] == "Microsoft.Storage"
+        ]
+        registrations = [
+            command for command in self.azure.commands if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(len(shows), 2)
+        self.assertEqual(len(registrations), 1)
+        self.assertEqual(delays, [])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0])
+
+    def test_provider_registration_reuses_inflight_registration_without_write(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+        self.azure.provider_show_result_states["Microsoft.Storage"] = [
+            "Registering",
+            "Registering",
+            "Registered",
+        ]
+
+        reused = self.port.execute_step(STEPS[0], self.context)
+
+        shows = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "show")
+            and command[command.index("--namespace") + 1] == "Microsoft.Storage"
+        ]
+        registrations = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(reused["classification"], "reused")
+        self.assertEqual(len(shows), 3)
+        self.assertEqual(registrations, [])
+        self.assertEqual(delays, [12.0])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0, 48.0])
+
+    def test_provider_registration_poll_propagates_cli_failure(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+        self.azure.provider_show_result_states["Microsoft.Storage"] = [
+            "NotRegistered",
+            "Registering",
+        ]
+        self.azure.provider_show_results["Microsoft.Storage"] = [
+            None,
+            None,
+            {"ok": False, "code": "AZURE_CLI_COMMAND_FAILED", "data": None},
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[0], self.context)
+
+        registrations = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "register")
+        ]
+        shows = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "show")
+            and command[command.index("--namespace") + 1] == "Microsoft.Storage"
+        ]
+        self.assertEqual(raised.exception.code, "AZURE_CLI_COMMAND_FAILED")
+        self.assertEqual(len(registrations), 1)
+        self.assertEqual(len(shows), 3)
+        self.assertEqual(delays, [12.0])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0, 48.0])
+
+    def test_provider_registration_maps_cli_timeout_to_readback_timeout(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+        self.azure.provider_show_result_states["Microsoft.Storage"] = [
+            "NotRegistered",
+            "Registering",
+        ]
+        self.azure.provider_show_results["Microsoft.Storage"] = [
+            None,
+            None,
+            {"ok": False, "code": "AZURE_CLI_TIMEOUT", "data": None},
+        ]
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[0], self.context)
+
+        registrations = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(raised.exception.code, "AZURE_PROVIDER_NOT_REGISTERED")
+        self.assertEqual(len(registrations), 1)
+        self.assertEqual(delays, [12.0])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0, 48.0])
+
+    def test_provider_registration_rejects_readback_after_deadline(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.commands.clear()
+        delays = self._bind_provider_clock()
+
+        def exceed_deadline(command: tuple[str, ...]) -> None:
+            namespace = command[command.index("--namespace") + 1]
+            if namespace == "Microsoft.Storage":
+                self._provider_clock_now[0] = 61.0
+
+        self.azure.on_bounded_call = exceed_deadline
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[0], self.context)
+
+        registrations = [
+            command
+            for command in self.azure.commands
+            if command[:2] == ("provider", "register")
+        ]
+        self.assertEqual(registrations, [])
+        self.assertEqual(delays, [])
+        self.assertEqual(self._provider_timeouts("Microsoft.Storage"), [60.0])
         self.assertEqual(raised.exception.code, "AZURE_PROVIDER_NOT_REGISTERED")
 
     def test_resource_group_create_reuse_and_mismatch(self) -> None:

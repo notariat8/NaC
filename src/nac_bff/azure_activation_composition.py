@@ -147,7 +147,16 @@ _BFF_URL = (
 )
 _GRAPH_ME_URL = "https://graph.microsoft.com/v1.0/me?$select=id"
 _PROVIDERS = ("Microsoft.Web", "Microsoft.Storage", "Microsoft.OperationalInsights")
-_SAFE_PROVIDER_STATES = frozenset({"Registered", "Registering", "NotRegistered"})
+_SAFE_PROVIDER_STATES = ("Registered", "Registering", "NotRegistered")
+_PROVIDER_REGISTER_STATES = ("NotRegistered",)
+_PROVIDER_POLL_WITHOUT_REGISTER_STATES = ("Registering",)
+_PROVIDER_SUCCESS_STATE = "Registered"
+_PROVIDER_TIMEOUT_ERROR = "AZURE_PROVIDER_NOT_REGISTERED"
+_PROVIDER_AMBIGUOUS_STATE_ERROR = "AZURE_PROVIDER_STATE_AMBIGUOUS"
+_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 1
+_PROVIDER_READBACK_ATTEMPTS = 5
+_PROVIDER_READBACK_DELAY_SECONDS = 12.0
+_PROVIDER_READBACK_MAX_SECONDS = 60.0
 _NODE_NPM_CANDIDATES = (
     (
         Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
@@ -853,6 +862,7 @@ class AzureBffLiveExecutionPort:
         self._m365_readback_attempts = m365_readback_attempts
         self._m365_readback_delay_seconds = m365_readback_delay_seconds
         self._sleep = sleep
+        self._monotonic = time.monotonic
         self._api: ApiApplicationBinding | None = None
         self._uami_app_id: str | None = None
         self._actor_id: str | None = None
@@ -1451,25 +1461,58 @@ class AzureBffLiveExecutionPort:
             )
             state = result.get("registrationState")
             if state not in _SAFE_PROVIDER_STATES:
-                raise ActivationStepError("AZURE_PROVIDER_STATE_AMBIGUOUS")
-            if state != "Registered":
+                raise ActivationStepError(_PROVIDER_AMBIGUOUS_STATE_ERROR)
+            if state in _PROVIDER_REGISTER_STATES:
                 self._require_static_inputs(context)
-                self._azure_json(
-                    [
-                        "provider",
-                        "register",
-                        "--namespace",
-                        namespace,
-                        "--wait",
-                    ]
-                )
-                updated += 1
-            verified = self._azure_json(
-                ["provider", "show", "--namespace", namespace]
-            )
-            if verified.get("registrationState") != "Registered":
-                raise ActivationStepError("AZURE_PROVIDER_NOT_REGISTERED")
+                for _ in range(_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE):
+                    self._azure_json(
+                        [
+                            "provider",
+                            "register",
+                            "--namespace",
+                            namespace,
+                            "--wait",
+                        ]
+                    )
+                    updated += 1
+            self._poll_provider_registration(namespace)
         return _outcome("updated" if updated else "reused", updated=updated, verified=3)
+
+    def _poll_provider_registration(self, namespace: str) -> None:
+        deadline = self._monotonic() + _PROVIDER_READBACK_MAX_SECONDS
+        for attempt in range(_PROVIDER_READBACK_ATTEMPTS):
+            remaining_seconds = deadline - self._monotonic()
+            if remaining_seconds <= 0:
+                raise ActivationStepError(_PROVIDER_TIMEOUT_ERROR)
+            try:
+                verified = self._azure_json_with_timeout(
+                    ["provider", "show", "--namespace", namespace],
+                    timeout_seconds=remaining_seconds,
+                )
+            except ActivationStepError as exc:
+                if exc.code == "AZURE_CLI_TIMEOUT":
+                    raise ActivationStepError(_PROVIDER_TIMEOUT_ERROR) from None
+                raise
+            if self._monotonic() > deadline:
+                raise ActivationStepError(_PROVIDER_TIMEOUT_ERROR)
+            state = verified.get("registrationState")
+            if state not in _SAFE_PROVIDER_STATES:
+                raise ActivationStepError(_PROVIDER_AMBIGUOUS_STATE_ERROR)
+            if state == _PROVIDER_SUCCESS_STATE:
+                return
+            if state not in (
+                *_PROVIDER_REGISTER_STATES,
+                *_PROVIDER_POLL_WITHOUT_REGISTER_STATES,
+            ):
+                raise ActivationStepError(_PROVIDER_AMBIGUOUS_STATE_ERROR)
+            if attempt + 1 < _PROVIDER_READBACK_ATTEMPTS:
+                remaining_seconds = deadline - self._monotonic()
+                if remaining_seconds <= 0:
+                    break
+                self._sleep(
+                    min(_PROVIDER_READBACK_DELAY_SECONDS, remaining_seconds)
+                )
+        raise ActivationStepError(_PROVIDER_TIMEOUT_ERROR)
 
     def _ensure_resource_group(self, context: ActivationContext) -> dict[str, Any]:
         exists = self._azure.run(["group", "exists", "--name", RESOURCE_GROUP])
@@ -2147,6 +2190,23 @@ class AzureBffLiveExecutionPort:
         data = result.get("data")
         if result.get("ok") is not True or not isinstance(data, dict):
             raise ActivationStepError(str(result.get("code") or "AZURE_CLI_COMMAND_FAILED"))
+        return data
+
+    def _azure_json_with_timeout(
+        self,
+        argv: list[str],
+        *,
+        timeout_seconds: float,
+    ) -> dict[str, Any]:
+        run_with_timeout = getattr(self._azure, "run_with_timeout", None)
+        if not callable(run_with_timeout):
+            raise ActivationStepError("AZURE_CLI_TIMEOUT_BOUNDARY_UNAVAILABLE")
+        result = run_with_timeout(argv, timeout_seconds=timeout_seconds)
+        data = result.get("data")
+        if result.get("ok") is not True or not isinstance(data, dict):
+            raise ActivationStepError(
+                str(result.get("code") or "AZURE_CLI_COMMAND_FAILED")
+            )
         return data
 
     def _azure_json_bound(

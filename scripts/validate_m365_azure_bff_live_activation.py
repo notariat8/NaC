@@ -53,6 +53,21 @@ APPROVAL_FIELDS = [
     "no_automatic_rollback_or_deletion",
 ]
 OWNER_ASSOCIATIONS = ["OWNER", "MEMBER"]
+PROVIDER_READBACK_POLICY = {
+    "attempts": 5,
+    "delay_seconds": 12.0,
+    "maximum_elapsed_seconds": 60.0,
+    "operation": "provider show",
+    "deadline_clock": "time.monotonic",
+    "per_call_timeout": "remaining_deadline_seconds",
+    "allowed_states": ["Registered", "Registering", "NotRegistered"],
+    "register_on_states": ["NotRegistered"],
+    "poll_without_register_on_states": ["Registering"],
+    "success_state": "Registered",
+    "timeout_error": "AZURE_PROVIDER_NOT_REGISTERED",
+    "ambiguous_state_error": "AZURE_PROVIDER_STATE_AMBIGUOUS",
+    "maximum_register_writes_per_namespace": 1,
+}
 
 TOOLCHAIN_ATTESTATION_FIELDS = [
     "azure_cli_toolchain_sha256", "m365_cli_sha256",
@@ -216,6 +231,13 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_APPROVED_OWNER_ASSOCIATIONS",
         "not isinstance(author_association, str)",
         "build_node_runtime_integrity_payloads",
+        "_PROVIDER_READBACK_ATTEMPTS", "_PROVIDER_READBACK_DELAY_SECONDS",
+        "_PROVIDER_READBACK_MAX_SECONDS", "_poll_provider_registration",
+        "_azure_json_with_timeout", "time.monotonic",
+        "_SAFE_PROVIDER_STATES", "_PROVIDER_REGISTER_STATES",
+        "_PROVIDER_POLL_WITHOUT_REGISTER_STATES", "_PROVIDER_SUCCESS_STATE",
+        "_PROVIDER_TIMEOUT_ERROR", "_PROVIDER_AMBIGUOUS_STATE_ERROR",
+        "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE",
     ),
     ATTESTATION_PATH: (
         "build_activation_attestation_plan",
@@ -264,7 +286,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     ),
     AZURE_LIVE_COMMANDS_PATH: (
         "_exact_default_cloud_selection_digest", "_MAX_CLOUD_SELECTION_BYTES",
-        "ConfigParser", "O_NONBLOCK",
+        "ConfigParser", "O_NONBLOCK", "run_with_timeout",
         "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
@@ -277,6 +299,15 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     README_PATH: (
         "m365-azure-bff-live-activation.contract.json",
         "validate_m365_azure_bff_live_activation.py",
+    ),
+    Path("tests/test_nac_bff_azure_activation_composition.py"): (
+        "test_provider_registration_requires_registered_readback",
+        "test_provider_registration_polls_readback_without_repeating_write",
+        "test_provider_registration_poll_rejects_unknown_state",
+        "test_provider_registration_reuses_inflight_registration_without_write",
+        "test_provider_registration_poll_propagates_cli_failure",
+        "test_provider_registration_maps_cli_timeout_to_readback_timeout",
+        "test_provider_registration_rejects_readback_after_deadline",
     ),
 }
 TEST_PATHS = (
@@ -431,6 +462,11 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
     ] if isinstance(steps, list) else []
     if actual_steps != list(enumerate(STEP_IDS, start=1)) or len(actual_steps) != 12:
         errors.append("domain steps must contain the exact ordered twelve-step sequence")
+    provider_step = steps[0] if isinstance(steps, list) and steps else None
+    if not isinstance(provider_step, dict) or provider_step.get(
+        "readback_policy"
+    ) != PROVIDER_READBACK_POLICY:
+        errors.append("domain provider readback policy differs")
 
     gate = domain.get("consolidated_owner_gate")
     if not isinstance(gate, dict):
@@ -832,6 +868,27 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
             composition_tree, "_APPROVED_OWNER_ASSOCIATIONS"
         ) != tuple(OWNER_ASSOCIATIONS):
             errors.append("composition owner association allowlist differs")
+        for name, expected in (
+            ("_PROVIDER_READBACK_ATTEMPTS", PROVIDER_READBACK_POLICY["attempts"]),
+            ("_PROVIDER_READBACK_DELAY_SECONDS", PROVIDER_READBACK_POLICY["delay_seconds"]),
+            ("_PROVIDER_READBACK_MAX_SECONDS", PROVIDER_READBACK_POLICY["maximum_elapsed_seconds"]),
+            ("_SAFE_PROVIDER_STATES", tuple(PROVIDER_READBACK_POLICY["allowed_states"])),
+            ("_PROVIDER_REGISTER_STATES", tuple(PROVIDER_READBACK_POLICY["register_on_states"])),
+            (
+                "_PROVIDER_POLL_WITHOUT_REGISTER_STATES",
+                tuple(PROVIDER_READBACK_POLICY["poll_without_register_on_states"]),
+            ),
+            ("_PROVIDER_SUCCESS_STATE", PROVIDER_READBACK_POLICY["success_state"]),
+            ("_PROVIDER_TIMEOUT_ERROR", PROVIDER_READBACK_POLICY["timeout_error"]),
+            ("_PROVIDER_AMBIGUOUS_STATE_ERROR", PROVIDER_READBACK_POLICY["ambiguous_state_error"]),
+            (
+                "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE",
+                PROVIDER_READBACK_POLICY["maximum_register_writes_per_namespace"],
+            ),
+        ):
+            if _top_level_literal_assignments(composition_tree, name) != [expected]:
+                errors.append(f"composition {name} differs from provider contract")
+
     try:
         azure_live_tree = ast.parse(
             (repo_root / AZURE_LIVE_COMMANDS_PATH).read_text(encoding="utf-8")
@@ -859,6 +916,24 @@ def _literal_assignment(tree: ast.AST, name: str) -> Any:
             except (TypeError, ValueError):
                 return None
     return None
+
+
+def _top_level_literal_assignments(tree: ast.AST, name: str) -> list[Any]:
+    values: list[Any] = []
+    for node in getattr(tree, "body", []):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(
+            isinstance(target, ast.Name) and target.id == name
+            for target in targets
+        ):
+            continue
+        try:
+            values.append(ast.literal_eval(node.value))
+        except (TypeError, ValueError):
+            values.append(None)
+    return values
 
 
 def _string_literals(tree: ast.AST) -> set[str]:

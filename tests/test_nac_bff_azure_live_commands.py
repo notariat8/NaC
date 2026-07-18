@@ -1718,6 +1718,26 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(result["code"], "AZURE_CLI_COMMAND_BLOCKED")
         self.assertEqual(readiness["code"], "AZURE_CLI_BINARY_NOT_FOUND")
 
+    def test_adapter_forwards_per_call_timeout(self) -> None:
+        adapter = AzureCliAdapter(
+            binary="/trusted/azure/az",
+            expected_binary_sha256="a" * 64,
+            environ={},
+        )
+        expected = {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": {}}
+
+        with patch(
+            "nac_bff.azure_live_commands.run_azure_cli",
+            return_value=expected,
+        ) as run:
+            result = adapter.run_with_timeout(
+                ["provider", "show", "--namespace", "Microsoft.Storage"],
+                timeout_seconds=17.5,
+            )
+
+        self.assertEqual(result, expected)
+        self.assertEqual(run.call_args.kwargs["timeout_seconds"], 17.5)
+
 
 def _fake_binary(root: Path) -> Path:
     venv = root / "azure-cli-venv"

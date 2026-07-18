@@ -493,7 +493,22 @@
         "Microsoft.Storage",
         "Microsoft.OperationalInsights"
       ],
-      "idempotency": "register only providers not already Registered; read back each exact namespace"
+      "idempotency": "register exactly once only when NotRegistered; poll Registering without another write; read back each exact namespace",
+      "readback_policy": {
+        "attempts": 5,
+        "delay_seconds": 12.0,
+        "maximum_elapsed_seconds": 60.0,
+        "operation": "provider show",
+        "deadline_clock": "time.monotonic",
+        "per_call_timeout": "remaining_deadline_seconds",
+        "allowed_states": ["Registered", "Registering", "NotRegistered"],
+        "success_state": "Registered",
+        "register_on_states": ["NotRegistered"],
+        "poll_without_register_on_states": ["Registering"],
+        "timeout_error": "AZURE_PROVIDER_NOT_REGISTERED",
+        "ambiguous_state_error": "AZURE_PROVIDER_STATE_AMBIGUOUS",
+        "maximum_register_writes_per_namespace": 1
+      }
     },
     {
       "order": 2,

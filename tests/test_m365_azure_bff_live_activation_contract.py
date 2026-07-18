@@ -170,6 +170,102 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.validate(self.root),
         )
 
+    def test_provider_readback_policy_contract_mutation_fails(self) -> None:
+        payload = self._domain()
+        payload["steps"][0]["readback_policy"]["attempts"] = 4
+        self._write_domain(payload)
+
+        self.assertIn(
+            "domain provider readback policy differs",
+            validator.validate(self.root),
+        )
+
+    def test_provider_readback_constant_mutations_fail(self) -> None:
+        composition = self.root / validator.COMPOSITION_PATH
+        source = composition.read_text(encoding="utf-8")
+        source = source.replace(
+            "_PROVIDER_READBACK_ATTEMPTS = 5",
+            "_PROVIDER_READBACK_ATTEMPTS = 4",
+        ).replace(
+            "_PROVIDER_READBACK_DELAY_SECONDS = 12.0",
+            "_PROVIDER_READBACK_DELAY_SECONDS = 10.0",
+        ).replace(
+            "_PROVIDER_READBACK_MAX_SECONDS = 60.0",
+            "_PROVIDER_READBACK_MAX_SECONDS = 30.0",
+        )
+        composition.write_text(source, encoding="utf-8")
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "composition _PROVIDER_READBACK_ATTEMPTS differs from provider contract",
+            errors,
+        )
+        self.assertIn(
+            "composition _PROVIDER_READBACK_DELAY_SECONDS differs from provider contract",
+            errors,
+        )
+        self.assertIn(
+            "composition _PROVIDER_READBACK_MAX_SECONDS differs from provider contract",
+            errors,
+        )
+
+    def test_provider_runtime_policy_mutations_fail(self) -> None:
+        composition = self.root / validator.COMPOSITION_PATH
+        source = composition.read_text(encoding="utf-8")
+        replacements = {
+            '_SAFE_PROVIDER_STATES = ("Registered", "Registering", "NotRegistered")': (
+                '_SAFE_PROVIDER_STATES = ("Registered", "Registering", "Unknown")'
+            ),
+            '_PROVIDER_REGISTER_STATES = ("NotRegistered",)': (
+                '_PROVIDER_REGISTER_STATES = ("Registering",)'
+            ),
+            '_PROVIDER_POLL_WITHOUT_REGISTER_STATES = ("Registering",)': (
+                '_PROVIDER_POLL_WITHOUT_REGISTER_STATES = ("NotRegistered",)'
+            ),
+            '_PROVIDER_SUCCESS_STATE = "Registered"': (
+                '_PROVIDER_SUCCESS_STATE = "Registering"'
+            ),
+            '_PROVIDER_TIMEOUT_ERROR = "AZURE_PROVIDER_NOT_REGISTERED"': (
+                '_PROVIDER_TIMEOUT_ERROR = "AZURE_CLI_TIMEOUT"'
+            ),
+            '_PROVIDER_AMBIGUOUS_STATE_ERROR = "AZURE_PROVIDER_STATE_AMBIGUOUS"': (
+                '_PROVIDER_AMBIGUOUS_STATE_ERROR = "AZURE_CLI_COMMAND_FAILED"'
+            ),
+            "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 1": (
+                "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 2"
+            ),
+        }
+        for current, mutated in replacements.items():
+            source = source.replace(current, mutated)
+        composition.write_text(source, encoding="utf-8")
+
+        errors = validator.validate(self.root)
+
+        for name in (
+            "_SAFE_PROVIDER_STATES", "_PROVIDER_REGISTER_STATES",
+            "_PROVIDER_POLL_WITHOUT_REGISTER_STATES", "_PROVIDER_SUCCESS_STATE",
+            "_PROVIDER_TIMEOUT_ERROR", "_PROVIDER_AMBIGUOUS_STATE_ERROR",
+            "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE",
+        ):
+            self.assertIn(f"composition {name} differs from provider contract", errors)
+
+    def test_provider_runtime_policy_duplicate_assignment_fails(self) -> None:
+        composition = self.root / validator.COMPOSITION_PATH
+        composition.write_text(
+            composition.read_text(encoding="utf-8")
+            + "\n_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 2\n",
+            encoding="utf-8",
+        )
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "composition _PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE differs "
+            "from provider contract",
+            errors,
+        )
+
     def test_behavioral_verification_runs_exact_modules(self) -> None:
         completed = validator.subprocess.CompletedProcess(
             args=[], returncode=0, stdout="ok", stderr=""
@@ -256,6 +352,16 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             if relative == validator.COMPOSITION_PATH:
                 source = (
                     "_APPROVED_OWNER_ASSOCIATIONS = (\"OWNER\", \"MEMBER\")\n"
+                    "_SAFE_PROVIDER_STATES = (\"Registered\", \"Registering\", \"NotRegistered\")\n"
+                    "_PROVIDER_REGISTER_STATES = (\"NotRegistered\",)\n"
+                    "_PROVIDER_POLL_WITHOUT_REGISTER_STATES = (\"Registering\",)\n"
+                    "_PROVIDER_SUCCESS_STATE = \"Registered\"\n"
+                    "_PROVIDER_TIMEOUT_ERROR = \"AZURE_PROVIDER_NOT_REGISTERED\"\n"
+                    "_PROVIDER_AMBIGUOUS_STATE_ERROR = \"AZURE_PROVIDER_STATE_AMBIGUOUS\"\n"
+                    "_PROVIDER_MAX_REGISTER_WRITES_PER_NAMESPACE = 1\n"
+                    "_PROVIDER_READBACK_ATTEMPTS = 5\n"
+                    "_PROVIDER_READBACK_DELAY_SECONDS = 12.0\n"
+                    "_PROVIDER_READBACK_MAX_SECONDS = 60.0\n"
                     + "\n".join(f"# {marker}" for marker in markers)
                     + "\n"
                 )
@@ -272,7 +378,13 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         for relative in validator.TEST_PATHS:
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(marker_text, encoding="utf-8")
+            if path.exists():
+                path.write_text(
+                    path.read_text(encoding="utf-8") + marker_text,
+                    encoding="utf-8",
+                )
+            else:
+                path.write_text(marker_text, encoding="utf-8")
 
     def _domain(self) -> dict:
         return json.loads(

@@ -107,6 +107,20 @@ class AzureCliAdapter:
             timeout_seconds=self._timeout_seconds,
         )
 
+    def run_with_timeout(
+        self,
+        argv: object,
+        *,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        return run_azure_cli(
+            argv,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=timeout_seconds,
+        )
+
     def run_bound(
         self,
         argv: object,
