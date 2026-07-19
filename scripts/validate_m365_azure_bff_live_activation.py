@@ -20,9 +20,12 @@ VERIFICATION_PATH = Path(
     "workflows/verification-contracts/"
     "m365-azure-bff-live-activation.verification.contract.yaml"
 )
+ACTIVATION_PLAN_PATH = Path("src/nac_bff/azure_activation.py")
 RUNNER_PATH = Path("src/nac_bff/azure_activation_runner.py")
 COMPOSITION_PATH = Path("src/nac_bff/azure_activation_composition.py")
 ATTESTATION_PATH = Path("src/nac_bff/azure_activation_attestations.py")
+APPROVAL_PATH = Path("src/nac_bff/azure_activation_approval.py")
+OWNER_GATE_PATH = Path("src/nac_bff/azure_activation_owner_gate.py")
 CLI_PATH = Path("src/nac_cli/cli.py")
 M365_RUNNER_PATH = Path("src/nac_m365_graph/mvp_test_environment_deploy.py")
 SEALED_TOOLCHAIN_PATH = Path("src/nac_m365_graph/sealed_toolchain.py")
@@ -41,6 +44,10 @@ LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
 SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/658"
 AZURE_INVENTORY_SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/662"
+OWNER_GATE_SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/664"
+OWNER_GATE_SAFETY_REWORK_ACCEPTANCE_IDS = [
+    f"AC-664-{index:02d}" for index in range(1, 7)
+]
 AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "safety_rework_issue": AZURE_INVENTORY_SAFETY_REWORK_ISSUE,
     "type_case_insensitive": "Microsoft.Insights/ActionGroups",
@@ -365,6 +372,12 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
     "resume_disabled": {"stable_error_code": "RESUME_DISABLED_FOR_MVP"},
 }
 SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
+    ACTIVATION_PLAN_PATH: (
+        "src/nac_bff/azure_activation_approval.py",
+        "src/nac_bff/azure_activation_attestations.py",
+        "src/nac_bff/azure_activation_owner_gate.py",
+        "activation_step_ids",
+    ),
     RUNNER_PATH: (
         "_EVIDENCE_KEYS", "_STEP_EVIDENCE_KEYS", "_SUMMARY_EVIDENCE_KEYS",
         "toolchain_attestations_sha256", "TOOLCHAIN_ATTESTATION_INVALID",
@@ -406,15 +419,34 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_SMART_DETECTION_ACTION_GROUP_NAME",
         "_SMART_DETECTION_ARM_ROLE_RECEIVERS",
         "AZURE_SMART_DETECTION_READBACK_FAILED",
+        "build_owner_approval_payload",
+        "canonical_owner_comment_body",
     ),
     ATTESTATION_PATH: (
         "build_activation_attestation_plan",
+        "TOOLCHAIN_ATTESTATION_FIELDS",
+        "LIVE_CLI_ARGUMENT_BY_ATTESTATION",
+        "calculate_toolchain_attestations_sha256",
         "toolchain_attestations_sha256",
         "reads_private_key",
         "executes_provider_requests",
     ),
+    APPROVAL_PATH: (
+        "approval_binding_sha256",
+        "build_owner_approval_payload",
+        "canonical_owner_comment_body",
+        "owner_comment_body_sha256",
+    ),
+    OWNER_GATE_PATH: (
+        "build_activation_owner_gate",
+        "SOURCE_TREE_CHANGED_DURING_GATE_BUILD",
+        "owner_comment_body_sha256",
+        "provider_requests_made",
+        "private_key_read",
+    ),
     CLI_PATH: (
         "bff-azure-activate-live", "bff-azure-activation-attestations",
+        "bff-azure-activation-owner-gate",
         "bff-azure-activation-recovery", "--confirm-unlock",
         "--owner-approved", "--execute-live-activation",
         "--azure-cli-toolchain-sha256", "--m365-cli-sha256",
@@ -485,7 +517,26 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_sealed_bootstrap_account_child_closes_fds_and_times_out",
         "test_blocked_argv_never_reaches_subprocess",
     ),
+    Path("tests/test_nac_bff_azure_activation.py"): (
+        "test_current_repository_produces_hash_bound_ready_plan",
+        "src/nac_bff/azure_activation_approval.py",
+        "src/nac_bff/azure_activation_attestations.py",
+        "src/nac_bff/azure_activation_owner_gate.py",
+    ),
+    Path("tests/test_nac_bff_azure_activation_owner_gate.py"): (
+        "test_binding_hash_has_no_toolchain_trailing_newline",
+        "test_binding_or_permission_mutation_changes_approval_body_hash",
+        "test_binding_hash_rejects_nonstandard_json_numbers",
+        "test_builder_rejects_noncanonical_step_sequence",
+        "test_builder_rejects_inconsistent_attestations_and_live_arguments",
+        "test_builder_redacts_repo_path_resolution_failure",
+        "test_builder_rejects_dirty_or_changed_tree_without_partial_gate",
+        "test_builder_redacts_unexpected_exception_details",
+        "test_builder_propagates_attestation_not_ready_without_private_key",
+        "test_cli_requires_public_certificate_path",
+    ),
     Path("tests/test_nac_bff_azure_activation_composition.py"): (
+        "test_noncanonical_equivalent_body_is_rejected",
         "test_provider_registration_requires_registered_readback",
         "test_provider_registration_polls_readback_without_repeating_write",
         "test_provider_registration_poll_rejects_unknown_state",
@@ -526,6 +577,7 @@ TEST_PATHS = (
     Path("tests/test_nac_m365_node_runtime_integrity.py"),
     Path("tests/test_nac_bff_azure_activation.py"),
     Path("tests/test_nac_bff_azure_activation_attestations.py"),
+    Path("tests/test_nac_bff_azure_activation_owner_gate.py"),
     Path("tests/test_nac_bff_azure_activation_runner.py"),
     Path("tests/test_nac_bff_azure_activation_cli.py"),
     Path("tests/test_nac_bff_azure_activation_composition.py"),
@@ -544,6 +596,7 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_nac_m365_node_runtime_integrity",
     "tests.test_nac_bff_azure_activation",
     "tests.test_nac_bff_azure_activation_attestations",
+    "tests.test_nac_bff_azure_activation_owner_gate",
     "tests.test_nac_bff_azure_activation_runner",
     "tests.test_nac_bff_azure_activation_composition",
     "tests.test_nac_bff_graph_activation",
@@ -661,6 +714,10 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "parent_issue": PARENT_ISSUE,
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
+            "owner_gate_safety_rework_issue": OWNER_GATE_SAFETY_REWORK_ISSUE,
+            "owner_gate_safety_rework_acceptance_ids": (
+                OWNER_GATE_SAFETY_REWORK_ACCEPTANCE_IDS
+            ),
             "acceptance_ids": ACCEPTANCE_IDS,
             "verification_contract": VERIFICATION_PATH.as_posix(),
         },
@@ -998,6 +1055,50 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         if target.get("lists") != EXACT_LIST_IDS:
             errors.append("domain exact list IDs differ")
 
+    owner_gate = domain.get("runner_interface", {}).get("owner_gate_preparation")
+    expected_owner_gate = {
+        "command": (
+            "nac m365 teams-sharepoint bff-azure-activation-owner-gate "
+            "--bff-attestation-provisioner-certificate "
+            "<public-certificate-path> --format json"
+        ),
+        "offline_only": True,
+        "provider_requests_exact": 0,
+        "private_key_reads_exact": 0,
+        "clean_commit_and_tree_checked_before_and_after": True,
+        "output_status_required": "READY",
+        "output_fields_required": [
+            "approved_commit",
+            "approved_tree",
+            "activation_hash",
+            "toolchain_attestations_sha256",
+            "owner_approval_payload",
+            "owner_comment_body",
+            "owner_comment_body_sha256",
+            "live_cli_arguments",
+        ],
+    }
+    if owner_gate != expected_owner_gate:
+        errors.append("domain owner gate preparation interface differs")
+
+    consolidated_gate = domain.get("consolidated_owner_gate", {})
+    expected_canonical_gate = {
+        "binding_hash_canonical_payload": (
+            "UTF-8 JSON value with sorted keys, compact separators and no "
+            "trailing newline"
+        ),
+        "owner_comment_body_canonical_payload": (
+            "exact compact sorted-key JSON approval object with no leading "
+            "or trailing whitespace"
+        ),
+        "semantically_equivalent_noncanonical_body_allowed": False,
+    }
+    if not isinstance(consolidated_gate, dict) or any(
+        consolidated_gate.get(key) != value
+        for key, value in expected_canonical_gate.items()
+    ):
+        errors.append("domain owner gate canonical payload policy differs")
+
     recovery = domain.get("runner_interface", {}).get("finalization_recovery")
     expected_recovery = {
         "command": "nac m365 teams-sharepoint bff-azure-activation-recovery",
@@ -1032,6 +1133,12 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "azure_inventory_safety_rework_issue": (
                 AZURE_INVENTORY_SAFETY_REWORK_ISSUE
+            ),
+            "owner_gate_safety_rework_issue": (
+                OWNER_GATE_SAFETY_REWORK_ISSUE
+            ),
+            "owner_gate_safety_rework_acceptance_ids": (
+                OWNER_GATE_SAFETY_REWORK_ACCEPTANCE_IDS
             ),
             "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "acceptance_ids": ACCEPTANCE_IDS,

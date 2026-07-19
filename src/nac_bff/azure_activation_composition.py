@@ -76,6 +76,11 @@ from .azure_activation_runner import (
     ActivationStepError,
     LiveActivationRequest,
 )
+from .azure_activation_approval import (
+    APPROVAL_KEYS,
+    build_owner_approval_payload,
+    canonical_owner_comment_body,
+)
 from .approved_git_tree import (
     ApprovedGitTreeError,
     ApprovedTreeSnapshot,
@@ -219,18 +224,6 @@ _COMMENT_RE = re.compile(
 _APPROVED_OWNER_LOGIN = "ofunk"
 _APPROVED_OWNER_ASSOCIATIONS = ("OWNER", "MEMBER")
 _MAX_CREDENTIAL_FILE_BYTES = 1024 * 1024
-_APPROVAL_KEYS = {
-    "owner-approved",
-    "expected_activation_sha256",
-    "approved_commit_sha",
-    "approved_tree_sha",
-    "toolchain_attestations_sha256",
-    "target_binding_sha256",
-    "permission_boundary_sha256",
-    "step_sequence_sha256",
-    "no_automatic_rollback_or_deletion",
-}
-
 
 class ApprovalVerifier(Protocol):
     def verify(
@@ -386,26 +379,26 @@ class GitHubApprovalVerifier:
             payload = json.loads(body)
         except json.JSONDecodeError:
             return {"status": "FAILED", "code": "APPROVAL_PAYLOAD_INVALID"}
-        if not isinstance(payload, dict) or set(payload) != _APPROVAL_KEYS:
+        if not isinstance(payload, dict) or set(payload) != APPROVAL_KEYS:
             return {"status": "FAILED", "code": "APPROVAL_PAYLOAD_INVALID"}
 
         contract = _load_json(context.repo_root / _LIVE_CONTRACT)
-        expected = {
-            "owner-approved": True,
-            "expected_activation_sha256": context.activation_hash,
-            "approved_commit_sha": context.approved_commit,
-            "approved_tree_sha": context.approved_tree,
-            "toolchain_attestations_sha256": (
-                request.toolchain_attestations_sha256
-            ),
-            "target_binding_sha256": _sha256_json(plan.get("bindings")),
-            "permission_boundary_sha256": _sha256_json(contract.get("permission_boundary")),
-            "step_sequence_sha256": _sha256_json(
-                [step.get("id") for step in plan.get("steps", [])]
-            ),
-            "no_automatic_rollback_or_deletion": True,
-        }
-        if payload != expected:
+        try:
+            expected = build_owner_approval_payload(
+                activation_hash=context.activation_hash,
+                approved_commit=context.approved_commit,
+                approved_tree=context.approved_tree,
+                toolchain_attestations_sha256=(
+                    request.toolchain_attestations_sha256
+                ),
+                bindings=plan.get("bindings"),
+                permission_boundary=contract.get("permission_boundary"),
+                step_ids=[step.get("id") for step in plan.get("steps", [])],
+            )
+            canonical_body = canonical_owner_comment_body(expected)
+        except (TypeError, ValueError):
+            return {"status": "FAILED", "code": "APPROVAL_PAYLOAD_INVALID"}
+        if payload != expected or body != canonical_body:
             return {"status": "FAILED", "code": "APPROVAL_PAYLOAD_MISMATCH"}
         return {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"}
 

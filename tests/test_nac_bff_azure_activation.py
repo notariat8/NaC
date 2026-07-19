@@ -82,6 +82,13 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         }
         self.assertIn("generated:nac-bff-function.zip", bindings)
         self.assertIn("generated:spfx-source-manifest", bindings)
+        for path in (
+            "src/nac_bff/azure_activation_approval.py",
+            "src/nac_bff/azure_activation_attestations.py",
+            "src/nac_bff/azure_activation_owner_gate.py",
+        ):
+            self.assertIn(path, bindings)
+            self.assertRegex(bindings[path]["sha256"], r"^[0-9a-f]{64}$")
         spfx_manifest = bindings["generated:spfx-source-manifest"]
         self.assertEqual(spfx_manifest["source"], "git_tracked_files_only")
         self.assertGreater(spfx_manifest["file_count"], 10)

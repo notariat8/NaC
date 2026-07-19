@@ -12,7 +12,7 @@ from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
 
 
 _SCHEMA_VERSION = "nac.m365-azure-bff-activation-attestations/v1"
-_SHA256_NAMES = (
+TOOLCHAIN_ATTESTATION_FIELDS = (
     "azure_cli_toolchain_sha256",
     "m365_cli_sha256",
     "m365_node_sha256",
@@ -22,6 +22,10 @@ _SHA256_NAMES = (
     "gh_cli_sha256",
     "provisioner_certificate_sha256",
 )
+LIVE_CLI_ARGUMENT_BY_ATTESTATION = {
+    name: "--" + name.removesuffix("_sha256").replace("_", "-") + "-sha256"
+    for name in TOOLCHAIN_ATTESTATION_FIELDS
+}
 AZURE_CLI_EXECUTION_PATH = Path("/tmp/nac-azure-cli-venv/bin/az")
 M365_CLI_EXECUTION_PATH = Path(
     "/tmp/nac-m365-tools/m365-cli/lib/node_modules/"
@@ -102,7 +106,7 @@ def build_activation_attestation_plan(
             paths["provisioner_certificate"], executable=False
         ),
     }
-    if tuple(measured) != _SHA256_NAMES or any(value is None for value in measured.values()):
+    if tuple(measured) != TOOLCHAIN_ATTESTATION_FIELDS or any(value is None for value in measured.values()):
         return {
             "schema_version": _SCHEMA_VERSION,
             "status": "NOT_READY",
@@ -110,25 +114,18 @@ def build_activation_attestation_plan(
             "reads_private_key": False,
             "executes_provider_requests": False,
         }
-    attestations = {name: str(measured[name]) for name in _SHA256_NAMES}
-    combined = _sha256_json(attestations)
+    attestations = {name: str(measured[name]) for name in TOOLCHAIN_ATTESTATION_FIELDS}
+    combined = calculate_toolchain_attestations_sha256(attestations)
     return {
         "schema_version": _SCHEMA_VERSION,
         "status": "READY",
         "toolchain_attestations": attestations,
         "toolchain_attestations_sha256": combined,
         "live_cli_arguments": {
-            "--azure-cli-toolchain-sha256": attestations["azure_cli_toolchain_sha256"],
-            "--m365-cli-sha256": attestations["m365_cli_sha256"],
-            "--m365-node-sha256": attestations["m365_node_sha256"],
-            "--build-python-sha256": attestations["build_python_sha256"],
-            "--build-node-sha256": attestations["build_node_sha256"],
-            "--build-npm-cli-sha256": attestations["build_npm_cli_sha256"],
-            "--gh-cli-sha256": attestations["gh_cli_sha256"],
-            "--provisioner-certificate-sha256": attestations[
-                "provisioner_certificate_sha256"
-            ],
+            LIVE_CLI_ARGUMENT_BY_ATTESTATION[name]: attestations[name]
+            for name in TOOLCHAIN_ATTESTATION_FIELDS
         },
+
         "reads_private_key": False,
         "executes_provider_requests": False,
     }
@@ -204,7 +201,9 @@ def _trusted_parent_chain(path: Path) -> bool:
     return True
 
 
-def _sha256_json(value: Mapping[str, str]) -> str:
+def calculate_toolchain_attestations_sha256(
+    value: Mapping[str, str],
+) -> str:
     payload = (
         json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
         + "\n"

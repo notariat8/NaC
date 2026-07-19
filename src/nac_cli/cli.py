@@ -32,6 +32,10 @@ from nac_bff.azure_activation import (
 from nac_bff.azure_activation_attestations import (
     build_activation_attestation_plan,
 )
+from nac_bff.azure_activation_owner_gate import (
+    build_activation_owner_gate,
+    format_activation_owner_gate,
+)
 from nac_bff.azure_readiness import (
     build_azure_bff_readiness,
     format_azure_bff_readiness,
@@ -691,6 +695,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "bff-azure-activation-plan",
             "bff-azure-activation-attestations",
+            "bff-azure-activation-owner-gate",
             "bff-azure-activate-live",
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
@@ -2507,6 +2512,39 @@ def command_m365(args: argparse.Namespace) -> int:
                     )
                 else:
                     print(f"ERROR: {payload['error']['code']}")
+            return 0 if payload["status"] == "READY" else 2
+
+        if args.teams_sharepoint_command == "bff-azure-activation-owner-gate":
+            if args.bff_attestation_provisioner_certificate is None:
+                payload = {
+                    "schema_version": (
+                        "nac.m365-azure-bff-activation-owner-gate/v1"
+                    ),
+                    "status": "NOT_READY",
+                    "error_code": "PROVISIONER_CERTIFICATE_PATH_REQUIRED",
+                    "boundaries": {
+                        "network_accessed": False,
+                        "provider_requests_made": 0,
+                        "private_key_read": False,
+                        "tenant_writes_started": False,
+                    },
+                }
+            else:
+                payload = build_activation_owner_gate(
+                    repo_root,
+                    args.bff_attestation_provisioner_certificate,
+                    azure_cli_path=args.bff_attestation_azure_cli,
+                    m365_cli_path=args.bff_attestation_m365_cli,
+                    m365_node_path=args.bff_attestation_m365_node,
+                    build_python_path=args.bff_attestation_build_python,
+                    build_node_path=args.bff_attestation_build_node,
+                    build_npm_cli_path=args.bff_attestation_build_npm_cli,
+                    gh_cli_path=args.bff_attestation_gh_cli,
+                )
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(format_activation_owner_gate(payload).rstrip())
             return 0 if payload["status"] == "READY" else 2
 
         if args.teams_sharepoint_command == "bff-azure-readiness":
