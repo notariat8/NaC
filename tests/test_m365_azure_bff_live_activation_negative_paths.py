@@ -46,6 +46,7 @@ BUILD_NODE_HASH = "4" * 64
 BUILD_NPM_HASH = "5" * 64
 GH_CLI_HASH = "6" * 64
 PROVISIONER_CERTIFICATE_HASH = "7" * 64
+PROVISIONER_BOOTSTRAP_BINDING_HASH = "9" * 64
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
 )
@@ -149,6 +150,9 @@ def _request(*, approval_body_sha256: str = APPROVAL_BODY_HASH) -> LiveActivatio
         build_npm_cli_sha256=BUILD_NPM_HASH,
         gh_cli_sha256=GH_CLI_HASH,
         provisioner_certificate_sha256=PROVISIONER_CERTIFICATE_HASH,
+        provisioner_bootstrap_binding_sha256=(
+            PROVISIONER_BOOTSTRAP_BINDING_HASH
+        ),
         reason="Activate the exact synthetic BFF target.",
         correlation_id="nac-bff-live-20260715",
         owner_approved=True,
@@ -240,6 +244,9 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
                 "expected_activation_sha256": ACTIVATION_HASH,
                 "approved_commit_sha": COMMIT,
                 "approved_tree_sha": TREE,
+                "provisioner_bootstrap_binding_sha256": (
+                    PROVISIONER_BOOTSTRAP_BINDING_HASH
+                ),
                 "target_binding_sha256": _sha256_json(plan["bindings"]),
                 "permission_boundary_sha256": _sha256_json(permission_boundary),
                 "step_sequence_sha256": _sha256_json(list(STEPS)),

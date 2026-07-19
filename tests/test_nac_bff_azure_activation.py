@@ -86,6 +86,8 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             "src/nac_bff/azure_activation_approval.py",
             "src/nac_bff/azure_activation_attestations.py",
             "src/nac_bff/azure_activation_owner_gate.py",
+            "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+            "src/nac_m365_graph/provisioner_env_bootstrap.py",
         ):
             self.assertIn(path, bindings)
             self.assertRegex(bindings[path]["sha256"], r"^[0-9a-f]{64}$")
@@ -118,6 +120,29 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         self.assertFalse(first["boundaries"]["production_data_allowed"])
         self.assertFalse(first["boundaries"]["other_workspaces_allowed"])
         self.assertFalse(first["boundaries"]["credential_changes_allowed"])
+
+    def test_provisioner_bootstrap_source_drift_changes_activation_hash(
+        self,
+    ) -> None:
+        baseline = build_azure_bff_activation_plan(REPO_ROOT)
+        original_read_bytes = Path.read_bytes
+        for relative in (
+            "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+            "src/nac_m365_graph/provisioner_env_bootstrap.py",
+        ):
+            target = (REPO_ROOT / relative).resolve()
+
+            def drifted_read_bytes(path):
+                raw = original_read_bytes(path)
+                return raw + b"\n# simulated source drift\n" if path.resolve() == target else raw
+
+            with self.subTest(relative=relative), patch.object(
+                Path, "read_bytes", drifted_read_bytes
+            ):
+                changed = build_azure_bff_activation_plan(REPO_ROOT)
+            self.assertNotEqual(
+                changed["activation_hash"], baseline["activation_hash"]
+            )
 
     def test_spfx_source_manifest_is_stable_before_and_after_build_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1275,6 +1275,8 @@ def build_parser() -> argparse.ArgumentParser:
     teams_sharepoint.add_argument("--bff-attestation-build-npm-cli", type=Path)
     teams_sharepoint.add_argument("--bff-attestation-gh-cli", type=Path)
     teams_sharepoint.add_argument("--bff-attestation-provisioner-certificate", type=Path)
+    teams_sharepoint.add_argument("--bff-provisioner-state", type=Path)
+    teams_sharepoint.add_argument("--bff-provisioner-private-key", type=Path)
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
     m365.set_defaults(func=command_m365)
@@ -2515,13 +2517,17 @@ def command_m365(args: argparse.Namespace) -> int:
             return 0 if payload["status"] == "READY" else 2
 
         if args.teams_sharepoint_command == "bff-azure-activation-owner-gate":
-            if args.bff_attestation_provisioner_certificate is None:
+            if (
+                args.bff_attestation_provisioner_certificate is None
+                or args.bff_provisioner_state is None
+                or args.bff_provisioner_private_key is None
+            ):
                 payload = {
                     "schema_version": (
                         "nac.m365-azure-bff-activation-owner-gate/v1"
                     ),
                     "status": "NOT_READY",
-                    "error_code": "PROVISIONER_CERTIFICATE_PATH_REQUIRED",
+                    "error_code": "PROVISIONER_BOOTSTRAP_INPUTS_REQUIRED",
                     "boundaries": {
                         "network_accessed": False,
                         "provider_requests_made": 0,
@@ -2540,6 +2546,8 @@ def command_m365(args: argparse.Namespace) -> int:
                     build_node_path=args.bff_attestation_build_node,
                     build_npm_cli_path=args.bff_attestation_build_npm_cli,
                     gh_cli_path=args.bff_attestation_gh_cli,
+                    provisioner_state=args.bff_provisioner_state,
+                    provisioner_private_key=args.bff_provisioner_private_key,
                 )
             if args.format == "json":
                 print_json(payload)
@@ -7746,6 +7754,7 @@ def _add_bff_azure_owner_binding_arguments(parser: argparse.ArgumentParser) -> N
     parser.add_argument("--build-npm-cli-sha256", required=True)
     parser.add_argument("--gh-cli-sha256", required=True)
     parser.add_argument("--provisioner-certificate-sha256", required=True)
+    parser.add_argument("--provisioner-bootstrap-binding-sha256", required=True)
     parser.add_argument("--reason", required=True)
     parser.add_argument("--correlation-id", required=True)
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -7768,6 +7777,9 @@ def _live_activation_request_from_args(args: argparse.Namespace):
         build_npm_cli_sha256=args.build_npm_cli_sha256,
         gh_cli_sha256=args.gh_cli_sha256,
         provisioner_certificate_sha256=args.provisioner_certificate_sha256,
+        provisioner_bootstrap_binding_sha256=(
+            args.provisioner_bootstrap_binding_sha256
+        ),
         reason=args.reason,
         correlation_id=args.correlation_id,
         owner_approved=args.owner_approved,
@@ -7825,6 +7837,9 @@ def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) ->
         ),
     )
     _add_bff_azure_owner_binding_arguments(parser)
+    parser.add_argument("--provisioner-state", type=Path, required=True)
+    parser.add_argument("--provisioner-certificate-path", type=Path, required=True)
+    parser.add_argument("--provisioner-private-key-path", type=Path, required=True)
     parser.add_argument("--execute-live-activation", action="store_true")
     command_argv = argv[:command_index] + argv[command_index + 3 :]
     if (
@@ -7855,6 +7870,9 @@ def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) ->
 
     try:
         from nac_bff.azure_activation_composition import build_live_activation_execution_port
+        from nac_bff.azure_activation_provisioner_bootstrap import (
+            build_activation_provisioner_bootstrap,
+        )
         from nac_bff.azure_activation_runner import (
             DEFAULT_OUTPUT_ROOT,
             LiveActivationRequest,
@@ -7873,7 +7891,38 @@ def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) ->
             "LIVE_ACTIVATION_CONFIG_INVALID", args.format
         )
     try:
-        execution_port = build_live_activation_execution_port(repo_root, request)
+        bootstrap = build_activation_provisioner_bootstrap(
+            args.provisioner_state,
+            args.provisioner_certificate_path,
+            args.provisioner_private_key_path,
+            env=os.environ,
+        )
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "PROVISIONER_ENV_BOOTSTRAP_FAILED", args.format
+        )
+    if bootstrap.readiness.get("status") != "PASSED":
+        error_code = bootstrap.readiness.get("error_code")
+        return _emit_bff_azure_activation_error(
+            error_code
+            if isinstance(error_code, str)
+            else "PROVISIONER_ENV_BOOTSTRAP_NOT_READY",
+            args.format,
+        )
+    if (
+        bootstrap.binding_sha256 is None
+        or bootstrap.binding_sha256
+        != request.provisioner_bootstrap_binding_sha256
+    ):
+        return _emit_bff_azure_activation_error(
+            "PROVISIONER_BOOTSTRAP_BINDING_MISMATCH", args.format
+        )
+    effective_env = dict(os.environ)
+    effective_env.update(bootstrap.env_overlay)
+    try:
+        execution_port = build_live_activation_execution_port(
+            repo_root, request, environ=effective_env
+        )
     except Exception:
         return _emit_bff_azure_activation_error(
             "LIVE_ACTIVATION_FACTORY_FAILED", args.format

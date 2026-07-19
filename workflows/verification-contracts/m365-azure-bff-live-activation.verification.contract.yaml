@@ -5,6 +5,14 @@ title: M365 Azure BFF live activation verification
 status: OFFLINE_READY
 leading_issue: https://github.com/notariat8/NaC/issues/632
 parent_issue: https://github.com/notariat8/NaC/issues/620
+provisioner_bootstrap_issue: https://github.com/notariat8/NaC/issues/666
+provisioner_bootstrap_acceptance_ids:
+  - AC-666-01
+  - AC-666-02
+  - AC-666-03
+  - AC-666-04
+  - AC-666-05
+  - AC-666-06
 safety_rework_issue: https://github.com/notariat8/NaC/issues/658
 azure_inventory_safety_rework_issue: https://github.com/notariat8/NaC/issues/662
 owner_gate_safety_rework_issue: https://github.com/notariat8/NaC/issues/664
@@ -36,6 +44,7 @@ applies_when:
   paths:
     - src/nac_bff/azure_activation.py
     - src/nac_bff/azure_activation_approval.py
+    - src/nac_bff/azure_activation_provisioner_bootstrap.py
     - src/nac_bff/azure_activation_owner_gate.py
     - src/nac_bff/azure_activation_attestations.py
     - src/nac_bff/azure_activation_composition.py
@@ -45,8 +54,10 @@ applies_when:
     - src/nac_bff/graph_activation.py
     - src/nac_bff/live_synthetic_workspace.py
     - src/nac_cli/cli.py
+    - src/nac_m365_graph/provisioner_env_bootstrap.py
     - src/nac_m365_graph/spfx_site_deployment.py
     - src/nac_m365_graph/mvp_test_environment_deploy.py
+    - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
     - tests/test_nac_bff_azure_activation*.py
     - tests/test_nac_bff_azure_activation_attestations.py
     - tests/test_nac_bff_azure_live_commands.py
@@ -80,15 +91,16 @@ required_context:
     - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json
   runtime:
     - immutable owner approval snapshot from Issue #632 authored by exact login ofunk
+    - explicit absolute provisioner state, public-certificate and owner-only private-key paths plus the redacted provisioner_bootstrap_binding_sha256 emitted by the canonical owner gate
     - fresh clean-worktree, HEAD and HEAD-tree output
-    - fresh offline canonical owner-gate output with exact compact comment body and body SHA-256
+    - fresh offline canonical owner-gate output with exact compact comment body, body SHA-256 and redacted provisioner-bootstrap readiness
     - two fresh offline activation-plan outputs
     - target-global lock, prebuilt hash-bound deployment inputs and verified new local ledger
     - read-only provider preflight captured by injected adapters
     - final allowlisted redacted evidence
 
 checks:
-  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
   - python3 scripts/nac.py contracts verify
   - python3 scripts/validate_spec_traceability.py
@@ -96,6 +108,50 @@ checks:
   - python3 scripts/validate_doc_links.py
   - python3 scripts/nac.py doctor --profile strict
   - git diff --check
+
+provisioner_bootstrap_verification:
+  owner_gate_flags_exact:
+    - --bff-provisioner-state
+    - --bff-attestation-provisioner-certificate
+    - --bff-provisioner-private-key
+  live_flags_exact:
+    - --provisioner-bootstrap-binding-sha256
+    - --provisioner-state
+    - --provisioner-certificate-path
+    - --provisioner-private-key-path
+  recovery_flags_exact:
+    - --provisioner-bootstrap-binding-sha256
+  all_paths_absolute_and_metadata_trusted: true
+  state_tenant_and_provisioner_app_binding_exact: true
+  binding_field_exact: provisioner_bootstrap_binding_sha256
+  binding_pattern: "^[0-9a-f]{64}$"
+  state_read_mode_exact: single_O_NOFOLLOW_CLOEXEC_descriptor_with_pre_open_and_post_read_fstat_snapshot
+  state_maximum_bytes_exact: 131072
+  binding_inputs_exact:
+    - state_sha256_from_atomically_read_bytes
+    - state_path_sha256
+    - certificate_path_sha256
+    - private_key_path_sha256
+    - tenant_id
+    - provisioner_client_id
+    - graph_base_url
+  owner_payload_live_and_recovery_value_must_match_exactly: true
+  owner_gate_live_cli_arguments_flag_exact: --provisioner-bootstrap-binding-sha256
+  binding_mismatch_behavior_exact: PROVISIONER_BOOTSTRAP_BINDING_MISMATCH_before_live_factory_provider_access_or_tenant_write
+  graph_v1_only: true
+  certificate_mode_only: true
+  private_key_content_reads_exact: 0
+  provider_requests_before_bootstrap_pass_exact: 0
+  tenant_writes_before_bootstrap_pass_exact: 0
+  global_process_environment_mutation_allowed: false
+  effective_environment_passed_explicitly_to_live_factory: true
+  readiness_redacted_fields_exact:
+    - tenant_id_emitted
+    - client_id_emitted
+    - credential_paths_emitted
+    - credential_values_emitted
+  readiness_redacted_field_values_exact: false
+  blocked_error_prefix_exact: PROVISIONER_
 
 exact_bindings:
   expected_activation_sha256:
@@ -150,6 +206,8 @@ invariants:
   - Final evidence and the host success receipt contain the same toolchain_attestations_sha256 value as the consolidated owner gate; a mismatch blocks PASSED.
   - The offline bff-azure-activation-attestations command derives the eight individual digests, combined hash and live CLI argument map without provider requests or private-key reads; inventing expected values inside live execution is forbidden.
   - The offline bff-azure-activation-owner-gate command checks clean HEAD and tree before and after generation, emits the exact compact owner comment body without trailing newline and its SHA-256, makes zero provider requests, reads no private key and emits no partial approval payload on NOT_READY.
+  - provisioner_bootstrap_binding_sha256 is derived from the SHA-256 of state bytes read atomically through one O_NOFOLLOW and size-bounded descriptor plus SHA-256 values of the explicit state, certificate and private-key paths, tenant, provisioner client and Graph v1.0 binding; the raw state and paths remain redacted, and owner payload, generated live CLI arguments, live request and recovery must carry the exact same value.
+  - Any supplied but changed provisioner_bootstrap_binding_sha256 fails before the live factory, provider access or tenant write with PROVISIONER_BOOTSTRAP_BINDING_MISMATCH.
   - Owner target, permission and step bindings use sorted compact JSON without a trailing newline; the toolchain combined hash remains separately defined with exactly one trailing newline. Pretty JSON, leading or trailing whitespace and semantically equivalent noncanonical comment bodies are rejected.
   - Immediately before every local Python or Node subprocess, executable bytes are copied from one O_NOFOLLOW/fstat/SHA-256 verified read into sealed Linux memfds; m365_cli_sha256 and build_npm_cli_sha256 bind deterministic full runtime-module-tree manifests, while sealed CommonJS/ESM loaders reject unmanifested, symlinked, native or changed module bytes and compile or evaluate only the exact per-load O_NOFOLLOW/fstat/SHA-256 verified bytes.
   - Azure CLI never executes the original mutable wrapper: its root-owned interpreter, bootstrap and manifest are sealed in memfds, the owner-bound full site-packages tree is copied with per-file O_NOFOLLOW/fstat/SHA-256 verification into a private user/mount namespace and remounted read-only; host Azure configuration is stably copied into a second private tmpfs, custom clouds.config is rejected, an exact bounded host selection containing only [AzureCloud] and the approved subscription is accepted solely as preflight metadata, its stable SHA-256 is sealed into the runtime manifest and revalidated immediately before omission from that private tmpfs, and Azure CLI profile/cache files remain opaque to NaC, but an authenticated Azure CLI account state remains mandatory and installationId-only state fails closed before writes; the private runtime replaces host cloud defaults with an exact AzureCloud config, injects the approved subscription into every command, and before each write a fresh parent-death-pinned child asserts exactly id, tenantId, environmentName and state=Enabled from the same private config snapshot within 30 seconds; duplicate JSON keys fail closed, a close-on-exec pipe is used, inherited non-stdio descriptors are closed before the Azure CLI import, the child runs in a dedicated session whose process group is killed and reaped, stdout/stderr never enter evidence, and timeout, signal or invalid payload terminates and reaps the child before any target write; all extension roots are replaced with one empty read-only private directory, dynamic extension installation is disabled, and unavailable namespace isolation fails before any provider request.
@@ -353,6 +411,63 @@ negative_tests:
       failed_baseline_missing_entra_rejected: true
       failed_baseline_entra_and_parameters_exact: true
       failed_baseline_template_hash_owner_bound: true
+  - id: lock_journal_torn_release
+    arrange: Tear the append of a RELEASED JSON-lines record once at each primary, legacy and legacy-host marker after committed state and receipt exist.
+    assert:
+      release_positions_exact:
+        - primary
+        - legacy
+        - legacy_host
+      state: FAILED_PARTIAL
+      stable_error_code: FINALIZATION_LOCK_RELEASE_FAILED
+      committed_state_and_success_receipt_retained: true
+      recovery_marker_retained: true
+      confirmed_recovery_result: FINALIZATION_LOCK_RECONCILED
+  - id: lock_recovery_retry_after_torn_release
+    arrange: Authorize recovery, tear the second RELEASED journal append, then retry the same owner-bound confirm-unlock request.
+    assert:
+      first_recovery_error_code: FINALIZATION_LOCK_RELEASE_FAILED
+      reconcile_marker_retained: true
+      second_recovery_result: FINALIZATION_LOCK_RECONCILED
+      all_three_markers_released: true
+  - id: invalid_existing_lock_journal
+    arrange: Precreate an owner-only regular lock file that is empty, malformed, noncanonical, or has an invalid marker state.
+    assert:
+      acquisition_succeeds: false
+      existing_bytes_changed: false
+      provider_read_calls_exact: 0
+      provider_write_calls_exact: 0
+  - id: recovery_marker_completeness
+    arrange: Remove any one of the primary, legacy or legacy-host markers, or remove a required host-state directory, before read-only recovery.
+    assert:
+      all_three_markers_required: true
+      missing_directories_created: false
+      provider_read_calls_exact: 0
+      provider_write_calls_exact: 0
+  - id: provisioner_bootstrap_source_drift
+    arrange: Change one byte in either provisioner bootstrap source after the activation plan was hash-bound.
+    assert:
+      source_paths_exact:
+        - src/nac_bff/azure_activation_provisioner_bootstrap.py
+        - src/nac_m365_graph/provisioner_env_bootstrap.py
+      activation_hash_changes_for_each_source: true
+      provider_write_calls_exact: 0
+  - id: legacy_newline_lock_recovery
+    arrange: Replace all three HELD lock markers of a valid recoverable run with the canonical legacy single activation-hash object including its trailing newline.
+    assert:
+      legacy_marker_shape_exact: canonical_single_activation_hash_object_with_trailing_newline
+      unattended_reacquisition_allowed: false
+      confirmed_recovery_result: FINALIZATION_LOCK_RECONCILED
+      all_three_markers_released: true
+  - id: terminal_failed_partial_torn_release
+    arrange: Persist a non-ambiguous terminal FAILED_PARTIAL state and evidence, then tear one of the three RELEASED journal appends.
+    assert:
+      state: FAILED_PARTIAL
+      stable_error_code: TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED
+      recovery_marker_status_exact: TERMINAL_RELEASE_IN_PROGRESS
+      ambiguous_provider_state_allowed: false
+      confirmed_recovery_result: FINALIZATION_LOCK_RECONCILED
+      all_three_markers_released: true
   - id: resume_disabled
     arrange: Supply --resume or set resume true before provider-specific read-only reconcilers exist for every write step and crash window.
     assert:
@@ -363,6 +478,7 @@ negative_tests:
       stable_error_code: RESUME_DISABLED_FOR_MVP
 
 required_evidence:
+  - Redacted provisioner-bootstrap readiness proving trusted explicit state/certificate/key metadata, exact tenant/application binding, certificate-only Graph v1.0 mode, zero private-key content reads, zero provider requests and zero tenant writes; IDs, paths and credential values remain omitted.
   - Immutable Issue #632 owner approval snapshot metadata for exact login ofunk and body SHA-256, stored only as a reference hash in the final artifact; Issue #620 remains parent context.
   - Approved commit and tree plus two matching activation-hash recomputations.
   - Exact target-binding and permission-boundary SHA-256 values.
@@ -373,7 +489,7 @@ required_evidence:
   - Redacted readback proving exactly Sites.Selected, exact target-site read, exact BFF Matter.Read and zero broader permissions.
   - Redacted read-only convergence summary proving causal deployment-input binding, zero duplicate readback and no automatic rollback or deletion; replaying provider writes is not claimed.
   - Redacted ordered probe and restoration summary proving healthz before auth, authenticated read before readyz and verified restoration to assigned synthetic state; incomplete/crashed runs remain non-success and require read-only reconciliation plus manual recovery.
-  - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, azure_smart_detection_companion_drift, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure and disabled resume.
+  - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, azure_smart_detection_companion_drift, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure, torn lock-journal release at all three marker positions, retryable recovery release, invalid or incomplete lock-marker sets, provisioner-bootstrap source drift, canonical legacy-newline lock recovery, terminal FAILED_PARTIAL torn-release recovery and disabled resume.
 
 host_success_receipt:
   required_for_passed: true
@@ -386,6 +502,7 @@ host_success_receipt:
     - approval_reference_sha256
     - approved_commit_sha
     - approved_tree_sha
+    - provisioner_bootstrap_binding_sha256
     - toolchain_attestations_sha256
     - target_binding_sha256
     - evidence_sha256
@@ -409,6 +526,7 @@ evidence_policy:
     - approved_commit_sha
     - approved_tree_sha
     - approval_reference_sha256
+    - provisioner_bootstrap_binding_sha256
     - toolchain_attestations_sha256
     - target_binding_sha256
     - permission_boundary_sha256
@@ -466,6 +584,7 @@ pass_condition:
   automatic_deletion_count_exact: 0
   ledger_hash_chain_valid: true
   prebuilt_inputs_verified: true
+  provisioner_bootstrap_readiness_passed_before_live_factory: true
   toolchain_attestations_match_owner_gate_and_host_success_receipt: true
   healthz_before_auth_passed: true
   authenticated_read_passed: true
@@ -481,6 +600,7 @@ pass_condition:
   secret_sentinel_matches_exact: 0
 
 failure_behavior:
+  provisioner_bootstrap_failure: stop_before_live_factory_provider_access_or_tenant_write_with_stable_PROVISIONER_error
   owner_gate_hash_git_target_permission_duplicate_or_lock_failure: stop_before_first_write
   first_error_after_any_write: set_FAILED_PARTIAL_append_redacted_terminal_event_and_stop
   resume_request: reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP

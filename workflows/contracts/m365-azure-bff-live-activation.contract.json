@@ -5,6 +5,15 @@
   "status": "OFFLINE_READY",
   "leading_issue": "https://github.com/notariat8/NaC/issues/632",
   "parent_issue": "https://github.com/notariat8/NaC/issues/620",
+  "provisioner_bootstrap_issue": "https://github.com/notariat8/NaC/issues/666",
+  "provisioner_bootstrap_acceptance_ids": [
+    "AC-666-01",
+    "AC-666-02",
+    "AC-666-03",
+    "AC-666-04",
+    "AC-666-05",
+    "AC-666-06"
+  ],
   "safety_rework_issue": "https://github.com/notariat8/NaC/issues/658",
   "safety_rework_acceptance_ids": [
     "AC-001",
@@ -53,6 +62,10 @@
       "--build-npm-cli-sha256 <64-lowercase-hex>",
       "--gh-cli-sha256 <64-lowercase-hex>",
       "--provisioner-certificate-sha256 <64-lowercase-hex>",
+      "--provisioner-bootstrap-binding-sha256 <64-lowercase-hex>",
+      "--provisioner-state <absolute-state-path>",
+      "--provisioner-certificate-path <absolute-public-certificate-path>",
+      "--provisioner-private-key-path <absolute-private-key-path>",
       "--reason <non-empty-owner-reason>",
       "--correlation-id <safe-correlation-id>"
     ],
@@ -74,6 +87,7 @@
     "finalization_recovery": {
       "command": "nac m365 teams-sharepoint bff-azure-activation-recovery",
       "same_owner_binding_arguments_as_live_runner_required": true,
+      "provisioner_bootstrap_binding_sha256_required": true,
       "owner_approved_required": true,
       "read_only_inspection_default": true,
       "unlock_argument_exact": "--confirm-unlock",
@@ -83,7 +97,7 @@
       "output_fields_allowlisted": true
     },
     "owner_gate_preparation": {
-      "command": "nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <public-certificate-path> --format json",
+      "command": "nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <absolute-public-certificate-path> --bff-provisioner-state <absolute-state-path> --bff-provisioner-private-key <absolute-private-key-path> --format json",
       "offline_only": true,
       "provider_requests_exact": 0,
       "private_key_reads_exact": 0,
@@ -97,9 +111,89 @@
         "owner_approval_payload",
         "owner_comment_body",
         "owner_comment_body_sha256",
-        "live_cli_arguments"
+        "live_cli_arguments",
+        "provisioner_bootstrap_binding_sha256",
+        "provisioner_bootstrap"
       ]
     }
+  },
+  "provisioner_bootstrap": {
+    "schema_version_exact": "nac.m365-azure-bff-provisioner-bootstrap/v1",
+    "execution_phase_exact": "before_live_factory_and_before_any_provider_access",
+    "owner_gate_inputs_exact": [
+      "--bff-provisioner-state <absolute-state-path>",
+      "--bff-attestation-provisioner-certificate <absolute-public-certificate-path>",
+      "--bff-provisioner-private-key <absolute-private-key-path>"
+    ],
+    "live_inputs_exact": [
+      "--provisioner-bootstrap-binding-sha256 <64-lowercase-hex>",
+      "--provisioner-state <absolute-state-path>",
+      "--provisioner-certificate-path <absolute-public-certificate-path>",
+      "--provisioner-private-key-path <absolute-private-key-path>"
+    ],
+    "state_binding_exact": {
+      "status": "PASSED",
+      "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+      "application_display_name": "NaC M365 Provisioning",
+      "application_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+    },
+    "graph_base_url_exact": "https://graph.microsoft.com/v1.0",
+    "certificate_authentication_only": true,
+    "secret_or_access_token_environment_allowed": false,
+    "input_file_policy": {
+      "absolute_paths_required": true,
+      "regular_non_symlink_files_required": true,
+      "trusted_parent_chain_required": true,
+      "state_and_certificate_group_or_other_writable_allowed": false,
+      "private_key_owner_uid_exact": "effective_os_user",
+      "private_key_modes_exact": [
+        "0400",
+        "0600"
+      ],
+      "private_key_content_reads_exact": 0,
+      "private_key_digest_allowed": false
+    },
+    "binding_policy": {
+      "field_exact": "provisioner_bootstrap_binding_sha256",
+      "pattern": "^[0-9a-f]{64}$",
+      "state_read_mode_exact": "single_O_NOFOLLOW_CLOEXEC_descriptor_with_pre_open_and_post_read_fstat_snapshot",
+      "state_maximum_bytes_exact": 131072,
+      "canonical_encoding_exact": "sorted_compact_json_utf8_without_trailing_newline",
+      "inputs_exact": [
+        "state_sha256_from_atomically_read_bytes",
+        "state_path_sha256",
+        "certificate_path_sha256",
+        "private_key_path_sha256",
+        "tenant_id",
+        "provisioner_client_id",
+        "graph_base_url"
+      ],
+      "raw_state_bytes_or_paths_emitted_allowed": false,
+      "owner_payload_live_and_recovery_value_must_match_exactly": true,
+      "owner_gate_live_cli_arguments_flag_exact": "--provisioner-bootstrap-binding-sha256",
+      "mismatch_behavior": "stop_before_live_factory_provider_access_or_tenant_write_with_PROVISIONER_BOOTSTRAP_BINDING_MISMATCH"
+    },
+    "environment_policy": {
+      "global_process_environment_mutation_allowed": false,
+      "effective_environment_mode": "copy_current_environment_then_apply_non_secret_bootstrap_overlay",
+      "factory_receives_effective_environment_explicitly": true,
+      "overlay_variable_names_only_in_readiness": true,
+      "environment_values_in_readiness_or_evidence_allowed": false
+    },
+    "redacted_readiness": {
+      "status_values_exact": [
+        "PASSED",
+        "BLOCKED"
+      ],
+      "provider_requests_made_exact": 0,
+      "tenant_writes_started_exact": false,
+      "private_key_read_exact": false,
+      "tenant_id_emitted_exact": false,
+      "client_id_emitted_exact": false,
+      "credential_paths_emitted_exact": false,
+      "credential_values_emitted_exact": false
+    },
+    "failure_behavior": "stable_PROVISIONER_error_before_live_factory_provider_access_or_tenant_write"
   },
   "consolidated_owner_gate": {
     "gate_count_exact": 1,
@@ -130,6 +224,7 @@
       "expected_activation_sha256",
       "approved_commit_sha",
       "approved_tree_sha",
+      "provisioner_bootstrap_binding_sha256",
       "target_binding_sha256",
       "permission_boundary_sha256",
       "step_sequence_sha256",
@@ -139,6 +234,7 @@
     "per_step_or_implicit_approval_allowed": false,
     "approval_reuse_for_different_hash_commit_tree_or_target_allowed": false,
     "approval_reuse_for_different_toolchain_allowed": false,
+    "approval_reuse_for_different_provisioner_bootstrap_binding_allowed": false,
     "toolchain_attestation_binding": {
       "field_exact": "toolchain_attestations_sha256",
       "pattern": "^[0-9a-f]{64}$",
@@ -486,7 +582,34 @@
     "host_scope_exact": "all worktrees and clones on the single execution host",
     "cross_host_coordination_provided": false,
     "independent_of_output_path_activation_hash_and_correlation_id": true,
-    "acquisition": "atomic_create_exclusive_and_nonblocking_os_lock",
+    "acquisition": "append_only_canonical_json_lines_journal_and_nonblocking_flock",
+    "marker_journal_format_exact": "canonical_compact_json_lines_one_fsynced_HELD_or_RELEASED_transition_per_record",
+    "incomplete_trailing_entry_behavior": "ignore_only_when_prior_complete_valid_record_exists_then_truncate_under_flock_before_append",
+    "existing_empty_or_invalid_journal_behavior": "block_fail_closed",
+    "release_positions_exact": [
+      "primary",
+      "legacy",
+      "legacy_host"
+    ],
+    "marker_states_exact": [
+      "HELD",
+      "RELEASED"
+    ],
+    "marker_activation_hash_bound": true,
+    "persistent_lockfiles_not_unlinked": true,
+    "ownership_via_flock_only": true,
+    "held_marker_blocks_unattended_reacquisition": true,
+    "recovery_requires_all_three_lock_markers": true,
+    "committed_mixed_marker_recovery_allowed": true,
+    "recovery_marker_retained_until_all_released_readback": true,
+    "read_only_recovery_creates_directories": false,
+    "marker_release_fault_injection_required": true,
+    "recovery_release_retryable_after_partial_append": true,
+    "legacy_single_object_newline_marker_recovery_supported": true,
+    "legacy_held_marker_unattended_reacquisition_allowed": false,
+    "terminal_failed_partial_release_marker_required": true,
+    "torn_terminal_release_owner_bound_recovery_supported": true,
+    "torn_terminal_release_result_exact": "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
     "file_mode": "0600",
     "second_holder_behavior": "fail_before_first_write",
     "stale_lock_auto_break_allowed": false,
@@ -511,6 +634,7 @@
       "approval_reference_sha256",
       "approved_commit_sha",
       "approved_tree_sha",
+      "provisioner_bootstrap_binding_sha256",
       "toolchain_attestations_sha256",
       "target_binding_sha256",
       "evidence_sha256",
@@ -783,6 +907,7 @@
       "approved_commit_sha",
       "approved_tree_sha",
       "approval_reference_sha256",
+      "provisioner_bootstrap_binding_sha256",
       "toolchain_attestations_sha256",
       "target_binding_sha256",
       "permission_boundary_sha256",
@@ -865,7 +990,7 @@
   },
   "failure_behavior": {
     "gate_hash_git_target_permission_duplicate_or_lock_failure_before_first_write": "stop_with_current_state_and_zero_writes",
-    "first_error_after_any_write": "append_FAILED_event_set_FAILED_PARTIAL_release_lock_and_stop_except_when_finalization_integrity_cannot_be_proved_or_ARM_state_is_ambiguous",
+    "first_error_after_any_write": "append_FAILED_event_set_FAILED_PARTIAL_mark_lock_RELEASED_and_stop_except_when_finalization_integrity_cannot_be_proved_or_ARM_state_is_ambiguous",
     "resume_request": "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP",
     "automatic_recovery_rollback_or_deletion": "forbidden",
     "human_remediation": "requires a new explicit owner decision; changed bindings require a new consolidated owner gate",

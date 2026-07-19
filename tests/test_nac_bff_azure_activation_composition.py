@@ -139,6 +139,7 @@ def _request(*, body_sha256: str = "f" * 64) -> LiveActivationRequest:
         build_npm_cli_sha256=BUILD_NPM_CLI_SHA256,
         gh_cli_sha256=GH_CLI_SHA256,
         provisioner_certificate_sha256=PROVISIONER_CERTIFICATE_SHA256,
+        provisioner_bootstrap_binding_sha256="9" * 64,
         reason="Activate the exact synthetic BFF target.",
         correlation_id="nac-bff-live-20260714",
         owner_approved=True,
@@ -769,6 +770,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             "expected_activation_sha256": ACTIVATION_HASH,
             "approved_commit_sha": COMMIT,
             "approved_tree_sha": TREE,
+            "provisioner_bootstrap_binding_sha256": "9" * 64,
             "toolchain_attestations_sha256": _runner_sha256_json(
                 {
                     "azure_cli_toolchain_sha256": AZURE_CLI_TOOLCHAIN_SHA256,

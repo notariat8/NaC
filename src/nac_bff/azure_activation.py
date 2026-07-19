@@ -86,6 +86,8 @@ _ARTIFACT_PATHS = (
     "src/nac_bff/azure_activation_approval.py",
     "src/nac_bff/azure_activation_attestations.py",
     "src/nac_bff/azure_activation_owner_gate.py",
+    "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+    "src/nac_m365_graph/provisioner_env_bootstrap.py",
     "src/nac_bff/azure_activation_runner.py",
     "src/nac_bff/azure_activation_composition.py",
     "src/nac_bff/approved_git_tree.py",

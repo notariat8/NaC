@@ -59,7 +59,8 @@ _ALLOWED_OUTCOME_KEYS = {
 _EVIDENCE_KEYS = {
     "schema_version", "status", "started_at_utc", "finished_at_utc",
     "activation_hash", "approved_commit_sha", "approved_tree_sha",
-    "approval_reference_sha256", "toolchain_attestations_sha256",
+    "approval_reference_sha256", "provisioner_bootstrap_binding_sha256",
+    "toolchain_attestations_sha256",
     "target_binding_sha256",
     "permission_boundary_sha256", "ledger_head_sha256", "step_results", "summary",
 }
@@ -92,6 +93,7 @@ _LEGACY_HOST_STATE_RELATIVE_PATH = "nac-m365-bff-live-activation-locks"
 _LEGACY_HOST_LOCK_ROOT = (
     Path(tempfile.gettempdir()) / _LEGACY_HOST_STATE_RELATIVE_PATH
 )
+_MAX_SECURE_ARTIFACT_BYTES = 8 * 1024 * 1024
 _GIT_EXECUTABLE = Path("/usr/bin/git")
 _STEP_11_SUMMARY_SIGNAL_KEYS = (
     "healthz_before_auth_passed",
@@ -140,6 +142,7 @@ class LiveActivationRequest:
     build_npm_cli_sha256: str
     gh_cli_sha256: str
     provisioner_certificate_sha256: str
+    provisioner_bootstrap_binding_sha256: str
     reason: str
     correlation_id: str
     owner_approved: bool
@@ -211,6 +214,10 @@ def run_azure_bff_live_activation(
     if run_root not in run_dir.parents:
         return _blocked_result(request, "OUTPUT_SCOPE_REJECTED")
 
+    recovery_marker_path = (
+        run_dir / "activation.finalization-recovery.redacted.json"
+    )
+
     target_bindings = plan.get("bindings", {})
     target_binding_sha256 = _binding_sha256_json(target_bindings)
     legacy_target_binding_sha256 = _sha256_json(target_bindings)
@@ -237,15 +244,21 @@ def run_azure_bff_live_activation(
         legacy_lock_path, request.expected_activation_hash
     )
     if legacy_lock_fd is None:
+        _write_lock_marker(
+            legacy_host_lock_fd, request.expected_activation_hash, "RELEASED"
+        )
         os.close(legacy_host_lock_fd)
-        _unlink_and_fsync(legacy_host_lock_path)
         return _blocked_result(request, "LEGACY_ACTIVATION_LOCK_HELD")
     lock_fd = _acquire_lock(lock_path, request.expected_activation_hash)
     if lock_fd is None:
+        _write_lock_marker(
+            legacy_lock_fd, request.expected_activation_hash, "RELEASED"
+        )
+        _write_lock_marker(
+            legacy_host_lock_fd, request.expected_activation_hash, "RELEASED"
+        )
         os.close(legacy_lock_fd)
         os.close(legacy_host_lock_fd)
-        _unlink_and_fsync(legacy_lock_path)
-        _unlink_and_fsync(legacy_host_lock_path)
         receipt_status = _success_receipt_status(
             receipt_path, target_binding_sha256, request
         )
@@ -255,16 +268,14 @@ def run_azure_bff_live_activation(
             return _blocked_result(request, "SUCCESS_RECEIPT_INVALID")
         return _blocked_result(request, "ACTIVATION_LOCK_HELD")
 
-    release_lock = False
+    release_lock_marker = True
     try:
         receipt_status = _success_receipt_status(
             receipt_path, target_binding_sha256, request
         )
         if receipt_status == "VALID":
-            release_lock = True
             return _blocked_result(request, "ACTIVATION_ALREADY_COMMITTED")
         if receipt_status == "INVALID":
-            release_lock = True
             return _blocked_result(request, "SUCCESS_RECEIPT_INVALID")
         run_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(run_root, 0o700)
@@ -282,7 +293,6 @@ def run_azure_bff_live_activation(
             or commit_marker_path.exists()
             or recovery_marker_path.exists()
         ):
-            release_lock = True
             return _blocked_result(request, "EXISTING_RUN_REQUIRES_REVIEW")
         if run_dir.exists():
             _cleanup_never_written_run(run_dir, run_root)
@@ -303,16 +313,13 @@ def run_azure_bff_live_activation(
             prewrite = execution_port.verify_prewrite(context, request)
         except ActivationStepError as exc:
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, exc.code)
         except Exception:
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "PREWRITE_VERIFICATION_FAILED")
         if not isinstance(prewrite, dict) or prewrite.get("status") != "PASSED":
             code = prewrite.get("code") if isinstance(prewrite, dict) else None
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(
                 request,
                 _safe_error_code(
@@ -322,25 +329,21 @@ def run_azure_bff_live_activation(
 
         if type(prewrite.get("prebuilt_inputs_verified")) is not bool:
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "PREWRITE_RESULT_INVALID")
 
         final_plan = build_azure_bff_activation_plan(root)
         final_error = _validate_final_bindings(root, request, final_plan)
         if final_error:
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "FINAL_PREWRITE_BINDING_MISMATCH")
         if (
             _binding_sha256_json(final_plan.get("bindings", {}))
             != target_binding_sha256
         ):
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "TARGET_BINDING_MISMATCH")
         if _permission_boundary_hash(root) != permission_hash:
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "PERMISSION_BOUNDARY_MISMATCH")
         if (
             _head_commit(root) != request.approved_commit
@@ -348,14 +351,12 @@ def run_azure_bff_live_activation(
             or not _clean_tree(root)
         ):
             _cleanup_never_written_run(run_dir, run_root)
-            release_lock = True
             return _blocked_result(request, "FINAL_PREWRITE_BINDING_MISMATCH")
 
         state, error = _load_or_initialize_state(
             state_path, ledger_dir, request, final_plan, permission_hash, False, now
         )
         if error:
-            release_lock = True
             return _blocked_result(request, error)
         state["prebuilt_inputs_verified"] = prewrite[
             "prebuilt_inputs_verified"
@@ -367,6 +368,7 @@ def run_azure_bff_live_activation(
         _atomic_json_write(state_path, state)
 
         for order, step in enumerate(final_plan["steps"], start=1):
+            release_lock_marker = False
             step_id = step["id"]
             prior = _state_step(state, step_id)
             attempt = int(prior.get("attempt", 0)) + 1 if prior else 1
@@ -386,29 +388,28 @@ def run_azure_bff_live_activation(
                     step_id=step_id,
                 )
             except ActivationStepError as exc:
-                result, release_lock = _fail_partial(
+                result, release_lock_marker = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
-                    exc.code, now, lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
+                    exc.code, now
                 )
                 return result
             except Exception:
-                result, release_lock = _fail_partial(
+                result, release_lock_marker = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
-                    "STEP_FAILED", now, lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
+                    "STEP_FAILED", now
                 )
                 return result
             if outcome["status"] != "PASSED":
-                result, release_lock = _fail_partial(
+                result, release_lock_marker = _fail_partial(
                     state, ledger_dir, state_path, evidence_path, request, step_id,
-                    outcome["stable_error_code"] or "STEP_FAILED", now,
-                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path)
+                    outcome["stable_error_code"] or "STEP_FAILED", now
                 )
                 return result
             if (
                 step_id == "ensure_entra_api_application"
                 and outcome.get("prebuilt_inputs_verified") is not True
             ):
-                result, release_lock = _fail_partial(
+                result, release_lock_marker = _fail_partial(
                     state,
                     ledger_dir,
                     state_path,
@@ -417,12 +418,11 @@ def run_azure_bff_live_activation(
                     step_id,
                     "PREBUILT_INPUTS_NOT_VERIFIED",
                     now,
-                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path),
                 )
                 return result
             signal_error = _required_summary_signal_error(step_id, outcome)
             if signal_error is not None:
-                result, release_lock = _fail_partial(
+                result, release_lock_marker = _fail_partial(
                     state,
                     ledger_dir,
                     state_path,
@@ -431,7 +431,6 @@ def run_azure_bff_live_activation(
                     step_id,
                     signal_error,
                     now,
-                    lock_paths=(lock_path, legacy_lock_path, legacy_host_lock_path),
                 )
                 return result
 
@@ -508,10 +507,23 @@ def run_azure_bff_live_activation(
                 evidence_path, request, receipt_path=receipt_path
             ) != evidence:
                 raise ActivationStepError("FINAL_COMMIT_VERIFICATION_FAILED")
-            _unlink_and_fsync(recovery_marker_path)
-            _unlink_and_fsync(lock_path)
-            _unlink_and_fsync(legacy_lock_path)
-            _unlink_and_fsync(legacy_host_lock_path)
+            release_lock_marker = False
+            try:
+                _release_lock_markers_verified(
+                    (lock_fd, legacy_lock_fd, legacy_host_lock_fd),
+                    request.expected_activation_hash,
+                )
+            except Exception:
+                return _failed_execution_result(
+                    request, "FINALIZATION_LOCK_RELEASE_FAILED"
+                )
+            try:
+                _unlink_and_fsync(recovery_marker_path)
+            except OSError:
+                return _failed_execution_result(
+                    request,
+                    "FINALIZATION_RECOVERY_MARKER_CLEANUP_FAILED",
+                )
             return evidence
         except Exception as exc:
             code = (
@@ -532,13 +544,36 @@ def run_azure_bff_live_activation(
                 now=now,
             )
     finally:
-        os.close(lock_fd)
-        os.close(legacy_lock_fd)
-        os.close(legacy_host_lock_fd)
-        if release_lock:
-            _unlink_and_fsync(lock_path)
-            _unlink_and_fsync(legacy_lock_path)
-            _unlink_and_fsync(legacy_host_lock_path)
+        release_error: Exception | None = None
+        if release_lock_marker:
+            try:
+                _release_lock_markers_verified(
+                    (lock_fd, legacy_lock_fd, legacy_host_lock_fd),
+                    request.expected_activation_hash,
+                )
+                if recovery_marker_path.exists():
+                    _unlink_and_fsync(recovery_marker_path)
+            except Exception as exc:
+                release_error = exc
+        for descriptor in (lock_fd, legacy_lock_fd, legacy_host_lock_fd):
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
+        recoverable_marker = _read_secure_canonical_json(
+            recovery_marker_path
+        )
+        if release_error is not None:
+            if (
+                isinstance(recoverable_marker, dict)
+                and recoverable_marker.get("status")
+                == "TERMINAL_RELEASE_IN_PROGRESS"
+            ):
+                return _failed_execution_result(
+                    request,
+                    "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
+                )
+            raise release_error
 
 
 def reconcile_azure_bff_live_activation_lock(
@@ -574,7 +609,7 @@ def reconcile_azure_bff_live_activation_lock(
     if not isinstance(target_binding_sha256, str) or not _SHA256_RE.fullmatch(target_binding_sha256):
         return _failed_execution_result(request, "FINALIZATION_STATE_INVALID")
     global_lock_root = _HOST_LOCK_ROOT.expanduser().absolute()
-    if not _prepare_host_state_root(global_lock_root):
+    if not _existing_host_state_root_is_valid(global_lock_root):
         return _failed_execution_result(request, "HOST_STATE_ROOT_INVALID")
     lock_path = global_lock_root / f"{target_binding_sha256}.lock"
     legacy_target_binding_sha256 = state.get("legacy_target_binding_sha256")
@@ -585,7 +620,7 @@ def reconcile_azure_bff_live_activation_lock(
         return _failed_execution_result(request, "FINALIZATION_STATE_INVALID")
     legacy_lock_path = global_lock_root / f"{legacy_target_binding_sha256}.lock"
     legacy_host_lock_root = _LEGACY_HOST_LOCK_ROOT.expanduser().absolute()
-    if not _prepare_host_state_root(legacy_host_lock_root):
+    if not _existing_host_state_root_is_valid(legacy_host_lock_root):
         return _failed_execution_result(
             request, "LEGACY_HOST_STATE_ROOT_INVALID"
         )
@@ -596,44 +631,64 @@ def reconcile_azure_bff_live_activation_lock(
     if lock_error:
         return _failed_execution_result(request, lock_error)
     assert lock_fd is not None
+    legacy_lock_fd: int | None = None
+    legacy_host_lock_fd: int | None = None
     try:
-        lock = _read_secure_canonical_json(lock_path)
-        if lock != {"activation_hash": request.expected_activation_hash}:
-            return _failed_execution_result(request, "ACTIVATION_LOCK_INVALID")
-        legacy_lock_owned = False
-        if legacy_lock_path.exists():
-            legacy_lock = _read_secure_canonical_json(legacy_lock_path)
-            if legacy_lock != {"activation_hash": request.expected_activation_hash}:
-                return _failed_execution_result(
-                    request, "LEGACY_ACTIVATION_LOCK_INVALID"
-                )
-            legacy_lock_owned = True
-        legacy_host_lock_owned = False
-        if legacy_host_lock_path.exists():
-            legacy_host_lock = _read_secure_canonical_json(
-                legacy_host_lock_path
+        lock = _read_lock_marker_descriptor(lock_fd)
+        legacy_lock_fd, legacy_lock_error = (
+            _acquire_existing_lock_for_recovery(legacy_lock_path)
+        )
+        if legacy_lock_error or legacy_lock_fd is None:
+            return _failed_execution_result(
+                request, "LEGACY_ACTIVATION_LOCK_INVALID"
             )
-            if legacy_host_lock != {
-                "activation_hash": request.expected_activation_hash
-            }:
-                return _failed_execution_result(
-                    request, "LEGACY_HOST_ACTIVATION_LOCK_INVALID"
-                )
-            legacy_host_lock_owned = True
+        legacy_lock = _read_lock_marker_descriptor(legacy_lock_fd)
+        legacy_host_lock_fd, legacy_host_lock_error = (
+            _acquire_existing_lock_for_recovery(legacy_host_lock_path)
+        )
+        if legacy_host_lock_error or legacy_host_lock_fd is None:
+            return _failed_execution_result(
+                request, "LEGACY_HOST_ACTIVATION_LOCK_INVALID"
+            )
+        legacy_host_lock = _read_lock_marker_descriptor(legacy_host_lock_fd)
         if not _terminal_chain_is_valid(state, ledger_dir):
             return _failed_execution_result(request, "LEDGER_CHAIN_INVALID")
+        marker = _read_secure_canonical_json(recovery_marker_path)
+        receipt_path = _success_receipt_path(
+            global_lock_root, target_binding_sha256, request
+        )
+        terminal_release_pending = bool(
+            state.get("status") == "FAILED_PARTIAL"
+            and isinstance(marker, dict)
+            and marker.get("status") == "TERMINAL_RELEASE_IN_PROGRESS"
+            and _finalization_recovery_marker_is_valid(
+                marker,
+                state=state,
+                request=request,
+                state_path=state_path,
+                evidence_path=evidence_path,
+                commit_marker_path=commit_marker_path,
+                receipt_path=receipt_path,
+            )
+        )
         passed_steps = [
             step for step in state.get("steps", [])
             if isinstance(step, dict) and step.get("status") == "PASSED"
         ]
-        if len(passed_steps) != 12 or any(
-            step.get("status") == "FAILED"
-            for step in state.get("steps", [])
-            if isinstance(step, dict)
+        failed_steps = [
+            step for step in state.get("steps", [])
+            if isinstance(step, dict) and step.get("status") == "FAILED"
+        ]
+        if not terminal_release_pending and (
+            len(passed_steps) != 12 or failed_steps
         ):
-            return _failed_execution_result(request, "FINALIZATION_STATE_INVALID")
-        marker = _read_secure_canonical_json(recovery_marker_path)
-        receipt_path = _success_receipt_path(global_lock_root, target_binding_sha256, request)
+            return _failed_execution_result(
+                request, "FINALIZATION_STATE_INVALID"
+            )
+        if terminal_release_pending and len(failed_steps) != 1:
+            return _failed_execution_result(
+                request, "FINALIZATION_STATE_INVALID"
+            )
         committed = _committed_recovery_state_is_valid(
             state=state,
             state_path=state_path,
@@ -644,16 +699,60 @@ def reconcile_azure_bff_live_activation_lock(
             target_binding_sha256=target_binding_sha256,
             request=request,
         )
-        if not committed and not _finalization_recovery_marker_is_valid(
-            marker,
+        reconciled_candidate = _reconcile_marker_payload(
             state=state,
             request=request,
             state_path=state_path,
-            evidence_path=evidence_path,
-            commit_marker_path=commit_marker_path,
-            receipt_path=receipt_path,
+            lock_path=lock_path,
+            target_binding_sha256=target_binding_sha256,
+            committed=committed,
+        )
+        existing_reconciled = _read_secure_canonical_json(
+            reconciled_marker_path
+        )
+        if reconciled_marker_path.exists() and not _reconcile_marker_matches(
+            existing_reconciled, reconciled_candidate
         ):
-            return _failed_execution_result(request, "FINALIZATION_RECOVERY_MARKER_INVALID")
+            return _failed_execution_result(
+                request, "FINALIZATION_RECONCILE_INVALID"
+            )
+        reconcile_authorized = _reconcile_marker_matches(
+            existing_reconciled, reconciled_candidate
+        )
+        allow_released_markers = (
+            committed or reconcile_authorized or terminal_release_pending
+        )
+        for lock_marker, error_code in (
+            (lock, "ACTIVATION_LOCK_INVALID"),
+            (legacy_lock, "LEGACY_ACTIVATION_LOCK_INVALID"),
+            (legacy_host_lock, "LEGACY_HOST_ACTIVATION_LOCK_INVALID"),
+        ):
+            if not _recovery_lock_marker_matches(
+                lock_marker,
+                request.expected_activation_hash,
+                committed=allow_released_markers,
+            ):
+                return _failed_execution_result(request, error_code)
+        all_markers_released = all(
+            _released_lock_marker_matches(
+                item, request.expected_activation_hash
+            )
+            for item in (lock, legacy_lock, legacy_host_lock)
+        )
+        if (not committed or not all_markers_released) and not (
+            _finalization_recovery_marker_is_valid(
+                marker,
+                state=state,
+                request=request,
+                state_path=state_path,
+                evidence_path=evidence_path,
+                commit_marker_path=commit_marker_path,
+                receipt_path=receipt_path,
+            )
+        ):
+            return _failed_execution_result(
+                request, "FINALIZATION_RECOVERY_MARKER_INVALID"
+            )
         inspection = {
             "status": "FAILED_PARTIAL",
             "writes_started": True,
@@ -661,7 +760,11 @@ def reconcile_azure_bff_live_activation_lock(
                 "code": (
                     "FINALIZATION_STALE_SUCCESS_LOCK"
                     if committed
-                    else "FINALIZATION_RECOVERY_REQUIRED"
+                    else (
+                        "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED"
+                        if terminal_release_pending
+                        else "FINALIZATION_RECOVERY_REQUIRED"
+                    )
                 )
             },
             "recovery": {
@@ -674,30 +777,27 @@ def reconcile_azure_bff_live_activation_lock(
         }
         if not confirm_unlock:
             return inspection
-        reconciled = {
-            "schema_version": FINALIZATION_RECOVERY_SCHEMA_VERSION,
-            "status": "LOCK_RELEASE_AUTHORIZED_BY_RECONCILE",
-            "activation_hash": request.expected_activation_hash,
-            "approval_body_sha256": request.approval_body_sha256,
-            "approval_reference_sha256": _sha256(request.owner_approval_reference),
-            "approved_commit_sha": request.approved_commit,
-            "approved_tree_sha": request.approved_tree,
-            "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
-            "target_binding_sha256": target_binding_sha256,
-            "state_sha256": _artifact_sha256(state_path),
-            "ledger_head_sha256": state["ledger_head_sha256"],
-            "lock_sha256": _artifact_sha256(lock_path),
-            "committed_artifacts_valid": committed,
-            "resume_enabled": False,
-        }
-        _atomic_json_create(reconciled_marker_path, reconciled)
-        if _read_secure_canonical_json(reconciled_marker_path) != reconciled:
-            raise ActivationStepError("FINALIZATION_RECONCILE_INVALID")
-        _unlink_and_fsync(lock_path)
-        if legacy_lock_owned and legacy_lock_path != lock_path:
-            _unlink_and_fsync(legacy_lock_path)
-        if legacy_host_lock_owned:
-            _unlink_and_fsync(legacy_host_lock_path)
+        if not reconcile_authorized:
+            _atomic_json_create(
+                reconciled_marker_path, reconciled_candidate
+            )
+            existing_reconciled = _read_secure_canonical_json(
+                reconciled_marker_path
+            )
+            if existing_reconciled != reconciled_candidate:
+                raise ActivationStepError(
+                    "FINALIZATION_RECONCILE_INVALID"
+                )
+        assert existing_reconciled is not None
+        try:
+            _release_lock_markers_verified(
+                (lock_fd, legacy_lock_fd, legacy_host_lock_fd),
+                request.expected_activation_hash,
+            )
+        except Exception:
+            return _failed_execution_result(
+                request, "FINALIZATION_LOCK_RELEASE_FAILED"
+            )
         return {
             **inspection,
             "error": {"code": "FINALIZATION_LOCK_RECONCILED"},
@@ -712,6 +812,13 @@ def reconcile_azure_bff_live_activation_lock(
     except Exception:
         return _failed_execution_result(request, "FINALIZATION_RECONCILE_FAILED")
     finally:
+        for descriptor in (legacy_lock_fd, legacy_host_lock_fd):
+            if descriptor is None:
+                continue
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_UN)
         finally:
@@ -785,6 +892,9 @@ def _finalization_recovery_marker(
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approved_commit_sha": request.approved_commit,
         "approved_tree_sha": request.approved_tree,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "target_binding_sha256": state["target_binding_sha256"],
         "permission_boundary_sha256": state["permission_boundary_sha256"],
@@ -813,6 +923,7 @@ def _finalization_recovery_marker_is_valid(
         "schema_version", "status", "error_code", "activation_hash",
         "approval_body_sha256", "approval_reference_sha256",
         "approved_commit_sha", "approved_tree_sha",
+        "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256", "target_binding_sha256",
         "permission_boundary_sha256", "ledger_head_sha256", "state_sha256",
         "evidence_sha256", "final_commit_marker_sha256",
@@ -820,7 +931,11 @@ def _finalization_recovery_marker_is_valid(
     }
     if set(marker) != expected_keys or marker.get("schema_version") != FINALIZATION_RECOVERY_SCHEMA_VERSION:
         return False
-    if marker.get("status") not in {"FINALIZATION_IN_PROGRESS", "FINALIZATION_FAILED"}:
+    if marker.get("status") not in {
+        "FINALIZATION_IN_PROGRESS",
+        "FINALIZATION_FAILED",
+        "TERMINAL_RELEASE_IN_PROGRESS",
+    }:
         return False
     if marker.get("resume_enabled") is not False:
         return False
@@ -830,6 +945,9 @@ def _finalization_recovery_marker_is_valid(
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approved_commit_sha": request.approved_commit,
         "approved_tree_sha": request.approved_tree,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "target_binding_sha256": state["target_binding_sha256"],
         "permission_boundary_sha256": state["permission_boundary_sha256"],
@@ -837,11 +955,19 @@ def _finalization_recovery_marker_is_valid(
     if any(marker.get(key) != value for key, value in expected.items()):
         return False
     error_code = marker.get("error_code")
-    if marker["status"] == "FINALIZATION_FAILED" and not (
+    if marker["status"] in {
+        "FINALIZATION_FAILED",
+        "TERMINAL_RELEASE_IN_PROGRESS",
+    } and not (
         isinstance(error_code, str) and _SAFE_CODE_RE.fullmatch(error_code)
     ):
         return False
     if marker["status"] == "FINALIZATION_IN_PROGRESS" and error_code is not None:
+        return False
+    if (
+        marker["status"] == "TERMINAL_RELEASE_IN_PROGRESS"
+        and state.get("status") != "FAILED_PARTIAL"
+    ):
         return False
     for key in (
         "ledger_head_sha256", "state_sha256", "evidence_sha256",
@@ -852,7 +978,10 @@ def _finalization_recovery_marker_is_valid(
             isinstance(value, str) and _SHA256_RE.fullmatch(value)
         ):
             return False
-    if marker["status"] == "FINALIZATION_FAILED":
+    if marker["status"] in {
+        "FINALIZATION_FAILED",
+        "TERMINAL_RELEASE_IN_PROGRESS",
+    }:
         current = {
             "ledger_head_sha256": state["ledger_head_sha256"],
             "state_sha256": _artifact_sha256(state_path),
@@ -874,10 +1003,18 @@ def _recovery_state_matches_request(
         "approved_tree_sha": request.approved_tree,
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approval_body_sha256": request.approval_body_sha256,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
     }
     return all(state.get(key) == value for key, value in expected.items()) and (
-        state.get("status") in {"FINALIZING", "FINALIZATION_FAILED", "PASSED"}
+        state.get("status") in {
+            "FINALIZING",
+            "FINALIZATION_FAILED",
+            "FAILED_PARTIAL",
+            "PASSED",
+        }
     )
 
 
@@ -911,20 +1048,60 @@ def _committed_recovery_state_is_valid(
     )
 
 
+def _reconcile_marker_payload(
+    *,
+    state: dict[str, Any],
+    request: LiveActivationRequest,
+    state_path: Path,
+    lock_path: Path,
+    target_binding_sha256: str,
+    committed: bool,
+) -> dict[str, Any]:
+    return {
+        "schema_version": FINALIZATION_RECOVERY_SCHEMA_VERSION,
+        "status": "LOCK_RELEASE_AUTHORIZED_BY_RECONCILE",
+        "activation_hash": request.expected_activation_hash,
+        "approval_body_sha256": request.approval_body_sha256,
+        "approval_reference_sha256": _sha256(
+            request.owner_approval_reference
+        ),
+        "approved_commit_sha": request.approved_commit,
+        "approved_tree_sha": request.approved_tree,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
+        "toolchain_attestations_sha256": (
+            request.toolchain_attestations_sha256
+        ),
+        "target_binding_sha256": target_binding_sha256,
+        "state_sha256": _artifact_sha256(state_path),
+        "ledger_head_sha256": state["ledger_head_sha256"],
+        "lock_sha256": _artifact_sha256(lock_path),
+        "committed_artifacts_valid": committed,
+        "resume_enabled": False,
+    }
+
+
+def _reconcile_marker_matches(
+    marker: dict[str, Any] | None, candidate: dict[str, Any]
+) -> bool:
+    if not isinstance(marker, dict) or set(marker) != set(candidate):
+        return False
+    lock_sha256 = marker.get("lock_sha256")
+    if not isinstance(lock_sha256, str) or not _SHA256_RE.fullmatch(
+        lock_sha256
+    ):
+        return False
+    return all(
+        marker.get(key) == value
+        for key, value in candidate.items()
+        if key != "lock_sha256"
+    )
+
+
 def _artifact_sha256(path: Path) -> str | None:
-    try:
-        metadata = path.lstat()
-        if (
-            not stat.S_ISREG(metadata.st_mode)
-            or stat.S_ISLNK(metadata.st_mode)
-            or metadata.st_uid != os.geteuid()
-            or stat.S_IMODE(metadata.st_mode) != 0o600
-            or metadata.st_nlink != 1
-        ):
-            return None
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-    except OSError:
-        return None
+    raw = _read_secure_artifact_bytes(path)
+    return hashlib.sha256(raw).hexdigest() if raw is not None else None
 
 
 def _acquire_existing_lock_for_recovery(
@@ -978,6 +1155,10 @@ def _validate_request(request: LiveActivationRequest) -> str | None:
         return "APPROVAL_REFERENCE_INVALID"
     if not _SHA256_RE.fullmatch(request.approval_body_sha256):
         return "APPROVAL_BODY_HASH_INVALID"
+    if not _SHA256_RE.fullmatch(
+        request.provisioner_bootstrap_binding_sha256
+    ):
+        return "PROVISIONER_BOOTSTRAP_BINDING_INVALID"
     if any(
         not _SHA256_RE.fullmatch(value)
         for value in request.toolchain_attestations.values()
@@ -1112,6 +1293,12 @@ def _prepare_host_state_root(root: Path) -> bool:
     return _secure_host_directory(root) and _secure_host_directory(receipts)
 
 
+def _existing_host_state_root_is_valid(root: Path) -> bool:
+    return _secure_host_directory(root) and _secure_host_directory(
+        root / "success-receipts"
+    )
+
+
 def _secure_host_directory(path: Path) -> bool:
     try:
         metadata = path.lstat()
@@ -1134,6 +1321,9 @@ def _receipt_bindings(
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approved_commit_sha": request.approved_commit,
         "approved_tree_sha": request.approved_tree,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "target_binding_sha256": target_binding_sha256,
     }
@@ -1156,6 +1346,15 @@ def _success_receipt(
     commit_marker_path: Path,
     state_path: Path,
 ) -> dict[str, Any]:
+    artifact_hashes = {
+        "evidence_sha256": _artifact_sha256(evidence_path),
+        "final_commit_marker_sha256": _artifact_sha256(commit_marker_path),
+        "final_state_sha256": _artifact_sha256(state_path),
+    }
+    if any(value is None for value in artifact_hashes.values()):
+        raise ActivationStepError(
+            "SUCCESS_RECEIPT_SOURCE_ARTIFACT_INVALID"
+        )
     payload = {
         "schema_version": SUCCESS_RECEIPT_SCHEMA_VERSION,
         "status": "COMMITTED",
@@ -1164,13 +1363,12 @@ def _success_receipt(
         "approval_reference_sha256": state["approval_reference_sha256"],
         "approved_commit_sha": state["approved_commit_sha"],
         "approved_tree_sha": state["approved_tree_sha"],
+        "provisioner_bootstrap_binding_sha256": state[
+            "provisioner_bootstrap_binding_sha256"
+        ],
         "toolchain_attestations_sha256": state["toolchain_attestations_sha256"],
         "target_binding_sha256": state["target_binding_sha256"],
-        "evidence_sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
-        "final_commit_marker_sha256": hashlib.sha256(
-            commit_marker_path.read_bytes()
-        ).hexdigest(),
-        "final_state_sha256": hashlib.sha256(state_path.read_bytes()).hexdigest(),
+        **artifact_hashes,
     }
     payload["receipt_sha256"] = _sha256_json(payload)
     return payload
@@ -1194,6 +1392,7 @@ def _success_receipt_status(
         "schema_version", "status", "activation_hash",
         "approval_body_sha256", "approval_reference_sha256",
         "approved_commit_sha", "approved_tree_sha",
+        "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256", "target_binding_sha256",
         "evidence_sha256", "final_commit_marker_sha256",
         "final_state_sha256", "receipt_sha256",
@@ -1222,19 +1421,100 @@ def _success_receipt_status(
 
 
 def _read_secure_canonical_json(path: Path) -> dict[str, Any] | None:
+    return _decode_canonical_json(_read_secure_artifact_bytes(path))
+
+
+def _read_secure_canonical_json_descriptor(
+    descriptor: int,
+) -> dict[str, Any] | None:
     try:
-        metadata = path.lstat()
+        opened = os.fstat(descriptor)
         if (
-            not stat.S_ISREG(metadata.st_mode)
-            or stat.S_ISLNK(metadata.st_mode)
-            or metadata.st_uid != os.geteuid()
-            or stat.S_IMODE(metadata.st_mode) != 0o600
-            or metadata.st_nlink != 1
+            not _trusted_secure_artifact_metadata(opened)
+            or opened.st_size < 1
+            or opened.st_size > _MAX_SECURE_ARTIFACT_BYTES
         ):
             return None
-        raw = path.read_bytes()
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        raw = _read_bounded_descriptor(descriptor)
+        after = os.fstat(descriptor)
+        if raw is None or not _same_secure_snapshot(opened, after):
+            return None
+        return _decode_canonical_json(raw)
+    except OSError:
+        return None
+
+
+def _read_secure_artifact_bytes(path: Path) -> bytes | None:
+    descriptor: int | None = None
+    try:
+        before = path.lstat()
+        if (
+            not _trusted_secure_artifact_metadata(before)
+            or before.st_size < 1
+            or before.st_size > _MAX_SECURE_ARTIFACT_BYTES
+        ):
+            return None
+        descriptor = os.open(
+            path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+        )
+        opened = os.fstat(descriptor)
+        if not _same_secure_snapshot(before, opened):
+            return None
+        raw = _read_bounded_descriptor(descriptor)
+        after = os.fstat(descriptor)
+        if raw is None or not _same_secure_snapshot(opened, after):
+            return None
+        return raw
+    except OSError:
+        return None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _read_bounded_descriptor(descriptor: int) -> bytes | None:
+    chunks: list[bytes] = []
+    total = 0
+    while total <= _MAX_SECURE_ARTIFACT_BYTES:
+        chunk = os.read(
+            descriptor,
+            min(65536, _MAX_SECURE_ARTIFACT_BYTES + 1 - total),
+        )
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+        total += len(chunk)
+    return None
+
+
+def _trusted_secure_artifact_metadata(metadata: os.stat_result) -> bool:
+    return bool(
+        stat.S_ISREG(metadata.st_mode)
+        and metadata.st_uid == os.geteuid()
+        and stat.S_IMODE(metadata.st_mode) == 0o600
+        and metadata.st_nlink == 1
+    )
+
+
+def _same_secure_snapshot(
+    left: os.stat_result, right: os.stat_result
+) -> bool:
+    return (
+        left.st_dev, left.st_ino, left.st_mode, left.st_uid, left.st_gid,
+        left.st_nlink, left.st_size, left.st_mtime_ns, left.st_ctime_ns,
+    ) == (
+        right.st_dev, right.st_ino, right.st_mode, right.st_uid, right.st_gid,
+        right.st_nlink, right.st_size, right.st_mtime_ns, right.st_ctime_ns,
+    )
+
+
+def _decode_canonical_json(raw: bytes | None) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    try:
         value = json.loads(raw.decode("utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return None
     if not isinstance(value, dict) or raw != _canonical_json_bytes(value):
         return None
@@ -1267,6 +1547,9 @@ def _committed_artifacts_are_valid(
         "approved_commit_sha": request.approved_commit,
         "approved_tree_sha": request.approved_tree,
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
     }
     return bool(
@@ -1279,23 +1562,214 @@ def _committed_artifacts_are_valid(
     )
 
 
-def _acquire_lock(path: Path, activation_hash: str) -> int | None:
+def _lock_marker(activation_hash: str, status: str) -> dict[str, str]:
+    return {"activation_hash": activation_hash, "status": status}
+
+
+def _lock_marker_shape_is_valid(marker: dict[str, Any] | None) -> bool:
+    return bool(
+        isinstance(marker, dict)
+        and set(marker) == {"activation_hash", "status"}
+        and isinstance(marker.get("activation_hash"), str)
+        and _SHA256_RE.fullmatch(marker["activation_hash"])
+        and marker.get("status") in {"HELD", "RELEASED"}
+    )
+
+
+def _released_lock_marker_is_valid(
+    marker: dict[str, Any] | None
+) -> bool:
+    return _lock_marker_shape_is_valid(marker) and (
+        marker.get("status") == "RELEASED"
+    )
+
+
+def _held_lock_marker_matches(
+    marker: dict[str, Any] | None, activation_hash: str
+) -> bool:
+    return marker in (
+        {"activation_hash": activation_hash},
+        _lock_marker(activation_hash, "HELD"),
+    )
+
+
+def _released_lock_marker_matches(
+    marker: dict[str, Any] | None, activation_hash: str
+) -> bool:
+    return marker == _lock_marker(activation_hash, "RELEASED")
+
+
+def _recovery_lock_marker_matches(
+    marker: dict[str, Any] | None,
+    activation_hash: str,
+    *,
+    committed: bool,
+) -> bool:
+    return _held_lock_marker_matches(marker, activation_hash) or (
+        committed and _released_lock_marker_matches(marker, activation_hash)
+    )
+
+
+def _read_lock_marker_journal_descriptor(
+    descriptor: int,
+) -> tuple[dict[str, Any], int, bool] | None:
     try:
-        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        opened = os.fstat(descriptor)
+        if (
+            not _trusted_secure_artifact_metadata(opened)
+            or opened.st_size < 1
+            or opened.st_size > _MAX_SECURE_ARTIFACT_BYTES
+        ):
+            return None
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        raw = _read_bounded_descriptor(descriptor)
+        after = os.fstat(descriptor)
+        if raw is None or not _same_secure_snapshot(opened, after):
+            return None
+        if b"\n" not in raw:
+            try:
+                legacy_value = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                return None
+            legacy = legacy_value if isinstance(legacy_value, dict) else None
+            if legacy is None or _canonical_json_bytes(legacy) != raw + b"\n":
+                return None
+            legacy_activation_hash = legacy.get("activation_hash")
+            if not isinstance(legacy_activation_hash, str) or not (
+                _SHA256_RE.fullmatch(legacy_activation_hash)
+                and _held_lock_marker_matches(
+                    legacy, legacy_activation_hash
+                )
+            ):
+                return None
+            return legacy, len(raw), False
+        last_newline = raw.rfind(b"\n")
+        complete = raw[: last_newline + 1]
+        lines = complete.splitlines(keepends=True)
+        if not lines:
+            return None
+        marker: dict[str, Any] | None = None
+        for index, line in enumerate(lines):
+            marker = _decode_canonical_json(line)
+            if _lock_marker_shape_is_valid(marker):
+                continue
+            legacy_activation_hash = (
+                marker.get("activation_hash")
+                if isinstance(marker, dict)
+                else None
+            )
+            if not (
+                index == 0
+                and isinstance(legacy_activation_hash, str)
+                and _SHA256_RE.fullmatch(legacy_activation_hash)
+                and _held_lock_marker_matches(marker, legacy_activation_hash)
+            ):
+                return None
+        assert marker is not None
+        return marker, last_newline + 1, True
+    except OSError:
+        return None
+
+
+def _read_lock_marker_descriptor(
+    descriptor: int,
+) -> dict[str, Any] | None:
+    journal = _read_lock_marker_journal_descriptor(descriptor)
+    return journal[0] if journal is not None else None
+
+
+def _append_lock_marker_bytes(descriptor: int, raw: bytes) -> None:
+    if os.write(descriptor, raw) != len(raw):
+        raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+
+
+def _write_lock_marker(
+    descriptor: int, activation_hash: str, status: str
+) -> None:
+    metadata = os.fstat(descriptor)
+    if not _trusted_secure_artifact_metadata(metadata):
+        raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+    if status not in {"HELD", "RELEASED"}:
+        raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+    prefix = b""
+    if metadata.st_size:
+        journal = _read_lock_marker_journal_descriptor(descriptor)
+        if journal is None:
+            raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+        _, valid_end, ends_with_newline = journal
+        if valid_end != metadata.st_size:
+            os.ftruncate(descriptor, valid_end)
+            os.fsync(descriptor)
+        if not ends_with_newline:
+            prefix = b"\n"
+    os.lseek(descriptor, 0, os.SEEK_END)
+    raw = prefix + _canonical_json_bytes(
+        _lock_marker(activation_hash, status)
+    )
+    _append_lock_marker_bytes(descriptor, raw)
+    os.fsync(descriptor)
+    if not (
+        _read_lock_marker_descriptor(descriptor)
+        == _lock_marker(activation_hash, status)
+    ):
+        raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+
+
+def _release_lock_markers_verified(
+    descriptors: tuple[int, ...], activation_hash: str
+) -> None:
+    for descriptor in descriptors:
+        _write_lock_marker(descriptor, activation_hash, "RELEASED")
+    for descriptor in descriptors:
+        marker = _read_lock_marker_descriptor(descriptor)
+        if not _released_lock_marker_matches(marker, activation_hash):
+            raise ActivationStepError("FINALIZATION_LOCK_RELEASE_FAILED")
+
+
+def _acquire_lock(path: Path, activation_hash: str) -> int | None:
+    descriptor: int | None = None
+    created = False
+    try:
+        descriptor = os.open(
+            path,
+            os.O_CREAT | os.O_EXCL | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC,
+            0o600,
+        )
+        created = True
     except FileExistsError:
+        try:
+            descriptor = os.open(
+                path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
+            )
+        except OSError:
+            return None
+    except OSError:
         return None
     try:
+        metadata = os.fstat(descriptor)
+        if not _trusted_secure_artifact_metadata(metadata):
+            os.close(descriptor)
+            return None
         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.write(
-            descriptor,
-            _canonical_json_bytes({"activation_hash": activation_hash}),
-        )
-        os.fsync(descriptor)
+        if created:
+            if metadata.st_size != 0:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                os.close(descriptor)
+                return None
+        else:
+            marker = _read_lock_marker_descriptor(descriptor)
+            if not _released_lock_marker_is_valid(marker):
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                os.close(descriptor)
+                return None
+        _write_lock_marker(descriptor, activation_hash, "HELD")
         _fsync_directory(path.parent)
         return descriptor
+    except BlockingIOError:
+        os.close(descriptor)
+        return None
     except Exception:
         os.close(descriptor)
-        _unlink_and_fsync(path)
         raise
 
 
@@ -1311,9 +1785,8 @@ def _load_or_initialize_state(
     if state_path.exists() or ledger_dir.exists():
         if not resume:
             return {}, "EXISTING_RUN_REQUIRES_RESUME"
-        try:
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        state = _read_secure_canonical_json(state_path)
+        if state is None:
             return {}, "LEDGER_INVALID"
         events, chain_error = _validate_event_chain(ledger_dir)
         if chain_error or not _state_matches_chain(state, events):
@@ -1343,6 +1816,9 @@ def _load_or_initialize_state(
         "approved_tree_sha": request.approved_tree,
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approval_body_sha256": request.approval_body_sha256,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "reason_sha256": _sha256(request.reason),
         "correlation_id_sha256": _sha256(request.correlation_id),
@@ -1375,6 +1851,7 @@ def _load_or_initialize_state(
         for key in (
             "activation_hash", "approved_commit_sha", "approved_tree_sha",
             "approval_reference_sha256", "approval_body_sha256",
+            "provisioner_bootstrap_binding_sha256",
             "toolchain_attestations_sha256", "correlation_id_sha256",
             "target_binding_sha256", "legacy_target_binding_sha256",
             "permission_boundary_sha256",
@@ -1404,6 +1881,9 @@ def _resume_bindings_match(
         "approved_tree_sha": request.approved_tree,
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
         "approval_body_sha256": request.approval_body_sha256,
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
         "reason_sha256": _sha256(request.reason),
         "correlation_id_sha256": _sha256(request.correlation_id),
@@ -1429,10 +1909,12 @@ def _validate_event_chain(
         match = _EVENT_NAME_RE.fullmatch(path.name)
         if not match or int(match.group("sequence")) != sequence:
             return [], "LEDGER_CHAIN_INVALID"
+        raw = _read_secure_artifact_bytes(path)
+        if raw is None:
+            return [], "LEDGER_CHAIN_INVALID"
         try:
-            raw = path.read_bytes()
             event = json.loads(raw.decode("utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        except (UnicodeDecodeError, json.JSONDecodeError):
             return [], "LEDGER_CHAIN_INVALID"
         if raw != _canonical_json_bytes(event):
             return [], "LEDGER_CHAIN_INVALID"
@@ -1464,6 +1946,7 @@ def _state_matches_chain(
     for key in (
         "activation_hash", "approved_commit_sha", "approved_tree_sha",
         "approval_reference_sha256", "approval_body_sha256",
+        "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256", "correlation_id_sha256",
         "target_binding_sha256", "legacy_target_binding_sha256",
         "permission_boundary_sha256",
@@ -1793,8 +2276,6 @@ def _fail_partial(
     step_id: str,
     code: str,
     now: Callable[[], datetime] | None,
-    *,
-    lock_paths: tuple[Path, ...],
 ) -> tuple[dict[str, Any], bool]:
     safe_code = _safe_error_code(code)
     prior = _state_step(state, step_id)
@@ -1821,9 +2302,7 @@ def _fail_partial(
     if not preserve_quarantine:
         _record_lock_release(ledger_dir, state, state_path, now)
     if not _terminal_chain_is_valid(state, ledger_dir):
-        return _failed_execution_result(
-            request, "LEDGER_CHAIN_INVALID"
-        ), False
+        return _failed_execution_result(request, "LEDGER_CHAIN_INVALID"), False
     state["ledger_hash_chain_valid"] = True
     _atomic_json_write(state_path, state)
     evidence = _evidence_from_state(state)
@@ -1832,9 +2311,29 @@ def _fail_partial(
     if _read_secure_canonical_json(evidence_path) != evidence:
         raise ActivationStepError("EVIDENCE_FINAL_COMMIT_INVALID")
     if not preserve_quarantine:
-        for lock_path in lock_paths:
-            _unlink_and_fsync(lock_path)
-    return evidence, False
+        recovery_marker_path = state_path.with_name(
+            "activation.finalization-recovery.redacted.json"
+        )
+        recovery_marker = _finalization_recovery_marker(
+            state,
+            request,
+            status="TERMINAL_RELEASE_IN_PROGRESS",
+            error_code=safe_code,
+            state_path=state_path,
+            evidence_path=evidence_path,
+            commit_marker_path=state_path.with_name(
+                "activation.commit.redacted.json"
+            ),
+            receipt_path=state_path.with_name(
+                "activation.success-receipt.redacted.json"
+            ),
+        )
+        _atomic_json_write(recovery_marker_path, recovery_marker)
+        if _read_secure_canonical_json(recovery_marker_path) != recovery_marker:
+            raise ActivationStepError(
+                "FINALIZATION_RECOVERY_MARKER_FAILED"
+            )
+    return evidence, not preserve_quarantine
 
 
 def _evidence_from_state(state: dict[str, Any]) -> dict[str, Any]:
@@ -1850,6 +2349,9 @@ def _evidence_from_state(state: dict[str, Any]) -> dict[str, Any]:
         "approved_commit_sha": state["approved_commit_sha"],
         "approved_tree_sha": state["approved_tree_sha"],
         "approval_reference_sha256": state["approval_reference_sha256"],
+        "provisioner_bootstrap_binding_sha256": state[
+            "provisioner_bootstrap_binding_sha256"
+        ],
         "toolchain_attestations_sha256": state["toolchain_attestations_sha256"],
         "target_binding_sha256": state["target_binding_sha256"],
         "permission_boundary_sha256": state["permission_boundary_sha256"],
@@ -1977,6 +2479,7 @@ def _validate_evidence(evidence: dict[str, Any]) -> None:
         raise ActivationStepError("EVIDENCE_SUMMARY_INVALID")
     for key in (
         "activation_hash", "approval_reference_sha256",
+        "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256", "target_binding_sha256",
         "permission_boundary_sha256",
         "ledger_head_sha256",
@@ -2030,6 +2533,9 @@ def _load_existing_evidence(
         "approved_commit_sha": request.approved_commit,
         "approved_tree_sha": request.approved_tree,
         "approval_reference_sha256": _sha256(request.owner_approval_reference),
+        "provisioner_bootstrap_binding_sha256": (
+            request.provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": request.toolchain_attestations_sha256,
     }
     if evidence.get("status") != "PASSED" or any(
@@ -2048,12 +2554,17 @@ def _load_existing_evidence(
         return _blocked_result(request, "EVIDENCE_SUCCESS_RECEIPT_INVALID")
     receipt = _read_secure_canonical_json(receipt_path)
     state_path = path.with_name("resume-state.redacted.json")
-    if receipt is None or any(
-        receipt.get(key) != hashlib.sha256(artifact.read_bytes()).hexdigest()
-        for key, artifact in (
-            ("evidence_sha256", path),
-            ("final_commit_marker_sha256", marker_path),
-            ("final_state_sha256", state_path),
+    artifact_hashes = {
+        "evidence_sha256": _artifact_sha256(path),
+        "final_commit_marker_sha256": _artifact_sha256(marker_path),
+        "final_state_sha256": _artifact_sha256(state_path),
+    }
+    if (
+        receipt is None
+        or any(value is None for value in artifact_hashes.values())
+        or any(
+            receipt.get(key) != value
+            for key, value in artifact_hashes.items()
         )
     ):
         return _blocked_result(request, "EVIDENCE_SUCCESS_RECEIPT_INVALID")
@@ -2132,6 +2643,7 @@ def _atomic_append(path: Path, payload: bytes) -> None:
 def _unlink_and_fsync(path: Path) -> None:
     path.unlink(missing_ok=True)
     _fsync_directory(path.parent)
+
 
 
 def _fsync_directory(path: Path) -> None:

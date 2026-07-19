@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import fcntl
 import os
 import pwd
 from pathlib import Path
@@ -15,14 +16,18 @@ from nac_bff.azure_activation_runner import (
     DEFAULT_OUTPUT_ROOT,
     LiveActivationRequest,
     _binding_sha256_json,
+    _acquire_lock,
     _HOST_LOCK_ROOT,
     _LEGACY_HOST_LOCK_ROOT,
     _LEGACY_HOST_STATE_RELATIVE_PATH,
     _HOST_STATE_RELATIVE_PATH,
     _load_existing_evidence,
+    _read_secure_canonical_json,
+    _read_lock_marker_descriptor,
     _sha256_json,
     _atomic_json_write,
     _state_matches_chain,
+    _write_lock_marker,
     _validate_event_chain,
     reconcile_azure_bff_live_activation_lock,
     run_azure_bff_live_activation,
@@ -41,6 +46,7 @@ BUILD_NODE_HASH = "4" * 64
 BUILD_NPM_HASH = "5" * 64
 GH_CLI_HASH = "6" * 64
 PROVISIONER_CERTIFICATE_HASH = "7" * 64
+PROVISIONER_BOOTSTRAP_BINDING_HASH = "9" * 64
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
 )
@@ -149,6 +155,9 @@ def _request(**overrides) -> LiveActivationRequest:
         "build_npm_cli_sha256": BUILD_NPM_HASH,
         "gh_cli_sha256": GH_CLI_HASH,
         "provisioner_certificate_sha256": PROVISIONER_CERTIFICATE_HASH,
+        "provisioner_bootstrap_binding_sha256": (
+            PROVISIONER_BOOTSTRAP_BINDING_HASH
+        ),
         "reason": "Activate the synthetic MVP BFF",
         "correlation_id": "nac-bff-live-20260714",
         "owner_approved": True,
@@ -186,6 +195,16 @@ def _legacy_lock_path(root: Path) -> Path:
 def _legacy_host_lock_path(root: Path) -> Path:
     target_hash = _sha256_json({"workspace_id": "notary_team_01"})
     return root / ".legacy-test-locks" / f"{target_hash}.lock"
+
+
+def _read_test_lock_marker(path: Path) -> dict | None:
+    descriptor = os.open(
+        path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+    )
+    try:
+        return _read_lock_marker_descriptor(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _receipt_path(root: Path) -> Path:
@@ -611,7 +630,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             )
             run_dir = _run_dir(Path(tmp))
             self.assertFalse(run_dir.exists())
-            self.assertFalse(_lock_path(Path(tmp)).exists())
+            self.assertTrue(_lock_path(Path(tmp)).exists())
         self.assertEqual(result["status"], "OFFLINE_READY")
         self.assertEqual(
             result["error"]["code"], "FINAL_PREWRITE_BINDING_MISMATCH"
@@ -654,14 +673,16 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 evidence["ledger_head_sha256"],
                 __import__("hashlib").sha256(event_paths[-1].read_bytes()).hexdigest(),
             )
-            phases = [json.loads(path.read_text())["phase"] for path in event_paths]
+            phases = [
+                json.loads(path.read_text())["phase"] for path in event_paths
+            ]
             self.assertEqual(phases[0], "LOCK_ACQUIRED")
             self.assertEqual(
                 phases[-2:], ["TERMINAL", "LOCK_RELEASE_AUTHORIZED"]
             )
-            self.assertFalse(_lock_path(root).exists())
-            self.assertFalse(_legacy_lock_path(root).exists())
-            self.assertFalse(_legacy_host_lock_path(root).exists())
+            self.assertTrue(_lock_path(root).exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
+            self.assertTrue(_legacy_host_lock_path(root).exists())
             commit_marker = run_dir / "activation.commit.redacted.json"
             self.assertTrue(commit_marker.exists())
             receipt = json.loads(_receipt_path(root).read_text())
@@ -730,7 +751,15 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 sorted((run_dir / "ledger").glob("*-TERMINAL.redacted.json"))[-1]
                 .read_text()
             )
-            self.assertFalse(_lock_path(root).exists())
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "RELEASED"},
+                )
             self.assertEqual(
                 list((root / ".test-locks" / "success-receipts").glob("*")),
                 [],
@@ -800,6 +829,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             descriptor = os.open(
                 lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
             )
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
             try:
                 port = _Port()
                 result = self._run(
@@ -808,6 +838,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                     lock_root=shared_lock_root,
                 )
             finally:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
                 os.close(descriptor)
                 lock.unlink()
 
@@ -815,16 +846,32 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         self.assertEqual(port.prewrite_calls, 0)
         self.assertEqual(port.calls, [])
 
-    def test_prewrite_failure_leaves_no_state_and_same_approval_can_retry(self) -> None:
+    def test_prewrite_failure_releases_markers_and_new_approval_hash_can_retry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             port = _Port(prewrite_failures=1)
             first = self._run(port, repo_root=root)
             self.assertEqual(first["error"]["code"], "PREWRITE_TRANSIENT_FAILURE")
             self.assertFalse(_run_dir(root).exists())
-            self.assertFalse(_lock_path(root).exists())
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path)["status"], "RELEASED"
+                )
 
-            second = self._run(port, repo_root=root)
+            next_hash = "9" * 64
+            second = self._run(
+                port,
+                repo_root=root,
+                request=_request(expected_activation_hash=next_hash),
+                plans=[
+                    _plan(activation_hash=next_hash),
+                    _plan(activation_hash=next_hash),
+                ],
+            )
 
         self.assertEqual(second["status"], "PASSED")
         self.assertEqual(port.prewrite_calls, 2)
@@ -924,6 +971,160 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         self.assertEqual(result["error"]["code"], "LEDGER_CHAIN_INVALID")
         self.assertTrue(result["writes_started"])
 
+    def test_recovery_requires_legacy_markers_and_never_creates_roots(
+        self,
+    ) -> None:
+        def fail_evidence(path, payload):
+            if path.name == "activation.redacted.json":
+                raise OSError("simulated evidence write failure")
+            return _atomic_json_write(path, payload)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch(
+                "nac_bff.azure_activation_runner._atomic_json_write",
+                side_effect=fail_evidence,
+            ):
+                self._run(_Port(), repo_root=root)
+            _legacy_lock_path(root).unlink()
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                missing_legacy = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                )
+            self.assertEqual(
+                missing_legacy["error"]["code"],
+                "LEGACY_ACTIVATION_LOCK_INVALID",
+            )
+            self.assertFalse(_legacy_lock_path(root).exists())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch(
+                "nac_bff.azure_activation_runner._atomic_json_write",
+                side_effect=fail_evidence,
+            ):
+                self._run(_Port(), repo_root=root)
+            receipts = root / ".test-locks" / "success-receipts"
+            receipts.rmdir()
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                missing_root_member = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                )
+            self.assertEqual(
+                missing_root_member["error"]["code"],
+                "HOST_STATE_ROOT_INVALID",
+            )
+            self.assertFalse(receipts.exists())
+
+    def test_existing_empty_or_invalid_lock_journal_blocks_acquisition(
+        self,
+    ) -> None:
+        invalid_payloads = (
+            b"",
+            b"{}\n",
+            b'{"activation_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"BROKEN"}\n',
+        )
+        for raw in invalid_payloads:
+            with self.subTest(raw=raw), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "activation.lock"
+                path.write_bytes(raw)
+                path.chmod(0o600)
+                before = path.read_bytes()
+                self.assertIsNone(_acquire_lock(path, HASH))
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_canonical_newline_legacy_lock_is_reconciled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def fail_evidence(path, payload):
+                if path.name == "activation.redacted.json":
+                    raise OSError("simulated evidence write failure")
+                return _atomic_json_write(path, payload)
+
+            with patch(
+                "nac_bff.azure_activation_runner._atomic_json_write",
+                side_effect=fail_evidence,
+            ):
+                self._run(_Port(), repo_root=root)
+
+            legacy = (
+                json.dumps(
+                    {"activation_hash": HASH},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                + "\n"
+            ).encode("utf-8")
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                path.write_bytes(legacy)
+                path.chmod(0o600)
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                before = path.read_bytes()
+                self.assertIsNone(_acquire_lock(path, HASH))
+                self.assertEqual(path.read_bytes(), before)
+
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                recovered = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+            self.assertEqual(
+                recovered["error"]["code"],
+                "FINALIZATION_LOCK_RECONCILED",
+            )
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertTrue(path.read_bytes().startswith(legacy))
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "RELEASED"},
+                )
+
     def test_explicit_reconcile_is_read_only_until_confirmed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -954,6 +1155,19 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                     root / ".legacy-test-locks",
                 ),
             ):
+                mismatched = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(
+                        provisioner_bootstrap_binding_sha256="0" * 64
+                    ),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+                self.assertEqual(
+                    mismatched["error"]["code"],
+                    "FINALIZATION_STATE_INVALID",
+                )
+                self.assertTrue(lock_path.exists())
                 inspected = reconcile_azure_bff_live_activation_lock(
                     repo_root=root,
                     request=_request(),
@@ -978,15 +1192,437 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 released["error"]["code"], "FINALIZATION_LOCK_RECONCILED"
             )
             self.assertFalse(released["recovery"]["lock_held"])
-            self.assertFalse(lock_path.exists())
-            self.assertFalse(_legacy_lock_path(root).exists())
-            self.assertFalse(_legacy_host_lock_path(root).exists())
+            self.assertTrue(lock_path.exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
+            self.assertTrue(_legacy_host_lock_path(root).exists())
+            for path in (
+                lock_path,
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path)["status"], "RELEASED"
+                )
             self.assertTrue(
                 (
                     run_dir
                     / "activation.finalization-reconciled.redacted.json"
                 ).exists()
             )
+
+    def test_hard_crash_during_write_retains_all_markers_and_blocks_retry(
+        self,
+    ) -> None:
+        class SimulatedCrash(BaseException):
+            pass
+
+        class CrashPort(_Port):
+            def execute_step(self, step_id, context):
+                del step_id, context
+                raise SimulatedCrash()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaises(SimulatedCrash):
+                self._run(CrashPort(), repo_root=root)
+
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "HELD"},
+                )
+
+            next_hash = "9" * 64
+            blocked = self._run(
+                _Port(),
+                repo_root=root,
+                request=_request(expected_activation_hash=next_hash),
+                plans=[
+                    _plan(activation_hash=next_hash),
+                    _plan(activation_hash=next_hash),
+                ],
+            )
+            self.assertEqual(
+                blocked["error"]["code"],
+                "LEGACY_HOST_ACTIVATION_LOCK_HELD",
+            )
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                recovery = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+            self.assertEqual(
+                recovery["error"]["code"], "FINALIZATION_STATE_INVALID"
+            )
+
+    def test_partial_release_marker_writes_are_committed_and_recoverable(
+        self,
+    ) -> None:
+        original = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_write_lock_marker"],
+        )._write_lock_marker
+        for fail_at in (1, 2, 3):
+            with self.subTest(fail_at=fail_at), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                released_calls = 0
+
+                def fail_selected_release(descriptor, activation_hash, status):
+                    nonlocal released_calls
+                    if status == "RELEASED":
+                        released_calls += 1
+                        if released_calls == fail_at:
+                            raise OSError("simulated marker release failure")
+                    return original(descriptor, activation_hash, status)
+
+                with patch(
+                    "nac_bff.azure_activation_runner._write_lock_marker",
+                    side_effect=fail_selected_release,
+                ):
+                    result = self._run(_Port(), repo_root=root)
+
+                self.assertEqual(result["status"], "FAILED_PARTIAL")
+                self.assertEqual(
+                    result["error"]["code"],
+                    "FINALIZATION_LOCK_RELEASE_FAILED",
+                )
+                run_dir = _run_dir(root)
+                self.assertEqual(
+                    json.loads(
+                        (run_dir / "resume-state.redacted.json").read_text()
+                    )["status"],
+                    "PASSED",
+                )
+                self.assertTrue(_receipt_path(root).exists())
+                self.assertTrue(
+                    (
+                        run_dir
+                        / "activation.finalization-recovery.redacted.json"
+                    ).exists()
+                )
+
+                with (
+                    patch(
+                        "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                        root / ".test-locks",
+                    ),
+                    patch(
+                        "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                        root / ".legacy-test-locks",
+                    ),
+                ):
+                    recovered = reconcile_azure_bff_live_activation_lock(
+                        repo_root=root,
+                        request=_request(),
+                        output_root=root / DEFAULT_OUTPUT_ROOT,
+                        confirm_unlock=True,
+                    )
+                self.assertEqual(
+                    recovered["error"]["code"],
+                    "FINALIZATION_LOCK_RECONCILED",
+                )
+                self.assertTrue(
+                    recovered["recovery"]["committed_artifacts_valid"]
+                )
+                for path in (
+                    _lock_path(root),
+                    _legacy_lock_path(root),
+                    _legacy_host_lock_path(root),
+                ):
+                    self.assertEqual(
+                        _read_test_lock_marker(path),
+                        {"activation_hash": HASH, "status": "RELEASED"},
+                    )
+
+    def test_torn_release_journal_appends_are_recoverable(self) -> None:
+        runner = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_append_lock_marker_bytes"],
+        )
+        original_append = runner._append_lock_marker_bytes
+        for fail_at in (1, 2, 3):
+            with self.subTest(fail_at=fail_at), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                release_calls = 0
+
+                def tear_selected_release(descriptor, raw):
+                    nonlocal release_calls
+                    if b'"status":"RELEASED"' in raw:
+                        release_calls += 1
+                        if release_calls == fail_at:
+                            written = os.write(descriptor, raw[: len(raw) // 2])
+                            self.assertGreater(written, 0)
+                            os.fsync(descriptor)
+                            raise OSError("simulated torn marker append")
+                    return original_append(descriptor, raw)
+
+                with patch(
+                    "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+                    side_effect=tear_selected_release,
+                ):
+                    result = self._run(_Port(), repo_root=root)
+
+                self.assertEqual(
+                    result["error"]["code"],
+                    "FINALIZATION_LOCK_RELEASE_FAILED",
+                )
+                run_dir = _run_dir(root)
+                self.assertEqual(
+                    json.loads(
+                        (run_dir / "resume-state.redacted.json").read_text()
+                    )["status"],
+                    "PASSED",
+                )
+                self.assertTrue(_receipt_path(root).exists())
+                self.assertTrue(
+                    (
+                        run_dir
+                        / "activation.finalization-recovery.redacted.json"
+                    ).exists()
+                )
+                torn_path = (
+                    _lock_path(root),
+                    _legacy_lock_path(root),
+                    _legacy_host_lock_path(root),
+                )[fail_at - 1]
+                self.assertFalse(torn_path.read_bytes().endswith(b"\n"))
+                self.assertEqual(
+                    _read_test_lock_marker(torn_path),
+                    {"activation_hash": HASH, "status": "HELD"},
+                )
+                with (
+                    patch(
+                        "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                        root / ".test-locks",
+                    ),
+                    patch(
+                        "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                        root / ".legacy-test-locks",
+                    ),
+                ):
+                    recovered = reconcile_azure_bff_live_activation_lock(
+                        repo_root=root,
+                        request=_request(),
+                        output_root=root / DEFAULT_OUTPUT_ROOT,
+                        confirm_unlock=True,
+                    )
+                self.assertEqual(
+                    recovered["error"]["code"],
+                    "FINALIZATION_LOCK_RECONCILED",
+                )
+                for path in (
+                    _lock_path(root),
+                    _legacy_lock_path(root),
+                    _legacy_host_lock_path(root),
+                ):
+                    self.assertEqual(
+                        _read_test_lock_marker(path),
+                        {"activation_hash": HASH, "status": "RELEASED"},
+                    )
+
+    def test_terminal_failed_partial_torn_release_is_recoverable(
+        self,
+    ) -> None:
+        runner = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_append_lock_marker_bytes"],
+        )
+        original_append = runner._append_lock_marker_bytes
+        release_calls = 0
+
+        def tear_second_release(descriptor, raw):
+            nonlocal release_calls
+            if b'"status":"RELEASED"' in raw:
+                release_calls += 1
+                if release_calls == 2:
+                    written = os.write(descriptor, raw[: len(raw) // 2])
+                    self.assertGreater(written, 0)
+                    os.fsync(descriptor)
+                    raise OSError("simulated terminal release tear")
+            return original_append(descriptor, raw)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch(
+                "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+                side_effect=tear_second_release,
+            ):
+                result = self._run(
+                    _Port(fail_at=STEPS[3]), repo_root=root
+                )
+            self.assertEqual(result["status"], "FAILED_PARTIAL")
+            self.assertEqual(
+                result["error"]["code"],
+                "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
+            )
+            recovery_marker_path = (
+                _run_dir(root)
+                / "activation.finalization-recovery.redacted.json"
+            )
+            self.assertEqual(
+                json.loads(recovery_marker_path.read_text())["status"],
+                "TERMINAL_RELEASE_IN_PROGRESS",
+            )
+            self.assertFalse(
+                _legacy_lock_path(root).read_bytes().endswith(b"\n")
+            )
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                recovered = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+            self.assertEqual(
+                recovered["error"]["code"],
+                "FINALIZATION_LOCK_RECONCILED",
+            )
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "RELEASED"},
+                )
+
+    def test_recovery_release_is_retryable_after_torn_append(self) -> None:
+        runner = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_write_lock_marker", "_append_lock_marker_bytes"],
+        )
+        original_write = runner._write_lock_marker
+        initial_release_calls = 0
+
+        def fail_first_release(descriptor, activation_hash, status):
+            nonlocal initial_release_calls
+            if status == "RELEASED":
+                initial_release_calls += 1
+                if initial_release_calls == 1:
+                    raise OSError("simulated initial release failure")
+            return original_write(descriptor, activation_hash, status)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch(
+                "nac_bff.azure_activation_runner._write_lock_marker",
+                side_effect=fail_first_release,
+            ):
+                result = self._run(_Port(), repo_root=root)
+            self.assertEqual(
+                result["error"]["code"],
+                "FINALIZATION_LOCK_RELEASE_FAILED",
+            )
+
+            original_append = runner._append_lock_marker_bytes
+            recovery_release_calls = 0
+
+            def tear_second_recovery_release(descriptor, raw):
+                nonlocal recovery_release_calls
+                if b'"status":"RELEASED"' in raw:
+                    recovery_release_calls += 1
+                    if recovery_release_calls == 2:
+                        written = os.write(descriptor, raw[: len(raw) // 2])
+                        self.assertGreater(written, 0)
+                        os.fsync(descriptor)
+                        raise OSError("simulated recovery release tear")
+                return original_append(descriptor, raw)
+
+            patches = (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            )
+            with (
+                patches[0],
+                patches[1],
+                patch(
+                    "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+                    side_effect=tear_second_recovery_release,
+                ),
+            ):
+                first_recovery = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+            self.assertEqual(
+                first_recovery["error"]["code"],
+                "FINALIZATION_LOCK_RELEASE_FAILED",
+            )
+            reconciled_path = (
+                _run_dir(root)
+                / "activation.finalization-reconciled.redacted.json"
+            )
+            self.assertTrue(reconciled_path.exists())
+            self.assertFalse(
+                _legacy_lock_path(root).read_bytes().endswith(b"\n")
+            )
+            self.assertEqual(
+                _read_test_lock_marker(_legacy_lock_path(root)),
+                {"activation_hash": HASH, "status": "HELD"},
+            )
+
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._HOST_LOCK_ROOT",
+                    root / ".test-locks",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
+                    root / ".legacy-test-locks",
+                ),
+            ):
+                retried = reconcile_azure_bff_live_activation_lock(
+                    repo_root=root,
+                    request=_request(),
+                    output_root=root / DEFAULT_OUTPUT_ROOT,
+                    confirm_unlock=True,
+                )
+            self.assertEqual(
+                retried["error"]["code"],
+                "FINALIZATION_LOCK_RECONCILED",
+            )
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "RELEASED"},
+                )
 
     def test_hard_finalization_crash_leaves_inspectable_recovery_marker(self) -> None:
         class SimulatedCrash(BaseException):
@@ -1258,50 +1894,75 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             )
             self.assertTrue(_lock_path(root).exists())
 
-    def test_physical_lock_is_held_through_verified_final_receipt(self) -> None:
+    def test_persistent_lock_markers_are_released_after_verified_receipt(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            original_unlink = __import__(
-                "nac_bff.azure_activation_runner",
-                fromlist=["_unlink_and_fsync"],
-            )._unlink_and_fsync
-            observed = []
-
-            def assert_finalized_before_unlink(path):
-                if path.suffix == ".lock":
-                    run_dir = _run_dir(root)
-                    self.assertTrue(path.exists())
-                    self.assertEqual(
-                        json.loads(
-                            (run_dir / "resume-state.redacted.json").read_text()
-                        )["status"],
-                        "PASSED",
-                    )
-                    self.assertTrue(
-                        (run_dir / "activation.commit.redacted.json").exists()
-                    )
-                    self.assertTrue(_receipt_path(root).exists())
-                    last_event = json.loads(
-                        sorted((run_dir / "ledger").glob("*.redacted.json"))[-1]
-                        .read_text()
-                    )
-                    self.assertEqual(
-                        last_event["phase"], "LOCK_RELEASE_AUTHORIZED"
-                    )
-                    observed.append("fully-committed")
-                return original_unlink(path)
-
-            with patch(
-                "nac_bff.azure_activation_runner._unlink_and_fsync",
-                side_effect=assert_finalized_before_unlink,
-            ):
-                result = self._run(_Port(), repo_root=root)
+            result = self._run(_Port(), repo_root=root)
+            run_dir = _run_dir(root)
 
             self.assertEqual(result["status"], "PASSED")
-            self.assertEqual(observed, ["fully-committed"] * 3)
-            self.assertFalse(_lock_path(root).exists())
-            self.assertFalse(_legacy_lock_path(root).exists())
-            self.assertFalse(_legacy_host_lock_path(root).exists())
+            self.assertEqual(
+                json.loads((run_dir / "resume-state.redacted.json").read_text())[
+                    "status"
+                ],
+                "PASSED",
+            )
+            self.assertTrue(
+                (run_dir / "activation.commit.redacted.json").exists()
+            )
+            self.assertTrue(_receipt_path(root).exists())
+            last_event = json.loads(
+                sorted((run_dir / "ledger").glob("*.redacted.json"))[-1]
+                .read_text()
+            )
+            self.assertEqual(last_event["phase"], "LOCK_RELEASE_AUTHORIZED")
+
+            for path in (
+                _lock_path(root),
+                _legacy_lock_path(root),
+                _legacy_host_lock_path(root),
+            ):
+                self.assertEqual(
+                    _read_test_lock_marker(path),
+                    {"activation_hash": HASH, "status": "RELEASED"},
+                )
+                descriptor = os.open(
+                    path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
+                )
+                try:
+                    fcntl.flock(
+                        descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB
+                    )
+                finally:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    os.close(descriptor)
+
+    def test_released_marker_accepts_new_activation_and_held_blocks(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "activation.lock"
+            first = _acquire_lock(path, HASH)
+            self.assertIsNotNone(first)
+            assert first is not None
+            _write_lock_marker(first, HASH, "RELEASED")
+            fcntl.flock(first, fcntl.LOCK_UN)
+            os.close(first)
+
+            next_hash = "9" * 64
+            second = _acquire_lock(path, next_hash)
+            self.assertIsNotNone(second)
+            assert second is not None
+            fcntl.flock(second, fcntl.LOCK_UN)
+            os.close(second)
+
+            self.assertIsNone(_acquire_lock(path, "8" * 64))
+            self.assertEqual(
+                _read_test_lock_marker(path),
+                {"activation_hash": next_hash, "status": "HELD"},
+            )
 
     def test_passed_evidence_without_receipt_is_never_final(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1476,6 +2137,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             ("approved_commit_sha", "0" * 40),
             ("approved_tree_sha", "1" * 40),
             ("approval_reference_sha256", "2" * 64),
+            ("provisioner_bootstrap_binding_sha256", "3" * 64),
         )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1497,6 +2159,49 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                         loaded["error"]["code"],
                         "EVIDENCE_BINDING_MISMATCH",
                     )
+
+    def test_secure_canonical_json_rejects_path_swap_before_open(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "state.redacted.json"
+            replacement = root / "replacement.redacted.json"
+            backup = root / "original.redacted.json"
+            _atomic_json_write(path, {"status": "ORIGINAL"})
+            _atomic_json_write(replacement, {"status": "REPLACEMENT"})
+            original_open = os.open
+            swapped = False
+
+            def swap_before_open(target, flags, *args, **kwargs):
+                nonlocal swapped
+                if Path(target) == path and not swapped:
+                    swapped = True
+                    path.rename(backup)
+                    replacement.rename(path)
+                return original_open(target, flags, *args, **kwargs)
+
+            with patch(
+                "nac_bff.azure_activation_runner.os.open",
+                side_effect=swap_before_open,
+            ):
+                loaded = _read_secure_canonical_json(path)
+
+            self.assertTrue(swapped)
+            self.assertIsNone(loaded)
+
+    def test_symlinked_ledger_event_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._run(_Port(fail_at=STEPS[1]), repo_root=root)
+            ledger_dir = _run_dir(root) / "ledger"
+            event_path = sorted(ledger_dir.glob("*.redacted.json"))[0]
+            target = event_path.with_suffix(".target")
+            event_path.rename(target)
+            event_path.symlink_to(target)
+
+            events, error = _validate_event_chain(ledger_dir)
+
+            self.assertEqual(events, [])
+            self.assertEqual(error, "LEDGER_CHAIN_INVALID")
 
     def test_state_head_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

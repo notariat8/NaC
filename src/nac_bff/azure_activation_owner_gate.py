@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 import subprocess
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from .azure_activation import (
     activation_step_ids,
@@ -20,6 +20,9 @@ from .azure_activation_attestations import (
     TOOLCHAIN_ATTESTATION_FIELDS,
     build_activation_attestation_plan,
     calculate_toolchain_attestations_sha256,
+)
+from .azure_activation_provisioner_bootstrap import (
+    build_activation_provisioner_bootstrap,
 )
 
 
@@ -47,6 +50,9 @@ def build_activation_owner_gate(
     build_node_path: Path | None = None,
     build_npm_cli_path: Path | None = None,
     gh_cli_path: Path | None = None,
+    provisioner_state: Path | None = None,
+    provisioner_private_key: Path | None = None,
+    provisioner_env: Mapping[str, str] | None = None,
     activation_plan_builder: Callable[[Path], dict[str, Any]] = (
         build_azure_bff_activation_plan
     ),
@@ -59,6 +65,25 @@ def build_activation_owner_gate(
         before = _git_snapshot(root)
         if before[2]:
             raise _OwnerGateError("SOURCE_TREE_NOT_CLEAN")
+
+        bootstrap = build_activation_provisioner_bootstrap(
+            provisioner_state,
+            provisioner_certificate,
+            provisioner_private_key,
+            env=provisioner_env,
+        )
+        if bootstrap.readiness.get("status") != "PASSED":
+            error_code = bootstrap.readiness.get("error_code")
+            raise _OwnerGateError(
+                error_code
+                if isinstance(error_code, str)
+                else "PROVISIONER_ENV_BOOTSTRAP_NOT_READY"
+            )
+        if (
+            not isinstance(bootstrap.binding_sha256, str)
+            or _SHA256_RE.fullmatch(bootstrap.binding_sha256) is None
+        ):
+            raise _OwnerGateError("PROVISIONER_ENV_BOOTSTRAP_NOT_READY")
 
         plan = activation_plan_builder(root)
         if plan.get("status") != "READY":
@@ -103,6 +128,10 @@ def build_activation_owner_gate(
         }
         if live_cli_arguments != expected_live_arguments:
             raise _OwnerGateError("TOOLCHAIN_LIVE_ARGUMENTS_INVALID")
+        bound_live_cli_arguments = dict(live_cli_arguments)
+        bound_live_cli_arguments[
+            "--provisioner-bootstrap-binding-sha256"
+        ] = bootstrap.binding_sha256
 
         contract = _load_json(root / _LIVE_CONTRACT)
         permission_boundary = contract.get("permission_boundary")
@@ -123,6 +152,9 @@ def build_activation_owner_gate(
             activation_hash=str(plan.get("activation_hash", "")),
             approved_commit=before[0],
             approved_tree=before[1],
+            provisioner_bootstrap_binding_sha256=(
+                bootstrap.binding_sha256
+            ),
             toolchain_attestations_sha256=combined,
             bindings=bindings,
             permission_boundary=permission_boundary,
@@ -143,11 +175,15 @@ def build_activation_owner_gate(
             "approved_commit": before[0],
             "approved_tree": before[1],
             "activation_hash": plan["activation_hash"],
+            "provisioner_bootstrap_binding_sha256": (
+                bootstrap.binding_sha256
+            ),
             "toolchain_attestations_sha256": combined,
             "owner_approval_payload": payload,
             "owner_comment_body": body,
             "owner_comment_body_sha256": owner_comment_body_sha256(body),
-            "live_cli_arguments": live_cli_arguments,
+            "live_cli_arguments": bound_live_cli_arguments,
+            "provisioner_bootstrap": bootstrap.readiness,
             "boundaries": {
                 "network_accessed": False,
                 "provider_requests_made": 0,

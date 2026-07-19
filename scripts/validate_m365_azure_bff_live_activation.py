@@ -26,6 +26,15 @@ COMPOSITION_PATH = Path("src/nac_bff/azure_activation_composition.py")
 ATTESTATION_PATH = Path("src/nac_bff/azure_activation_attestations.py")
 APPROVAL_PATH = Path("src/nac_bff/azure_activation_approval.py")
 OWNER_GATE_PATH = Path("src/nac_bff/azure_activation_owner_gate.py")
+PROVISIONER_BOOTSTRAP_PATH = Path(
+    "src/nac_bff/azure_activation_provisioner_bootstrap.py"
+)
+PROVISIONER_ENV_BOOTSTRAP_PATH = Path(
+    "src/nac_m365_graph/provisioner_env_bootstrap.py"
+)
+PROVISIONER_BOOTSTRAP_TEST_PATH = Path(
+    "tests/test_nac_bff_azure_activation_provisioner_bootstrap.py"
+)
 CLI_PATH = Path("src/nac_cli/cli.py")
 M365_RUNNER_PATH = Path("src/nac_m365_graph/mvp_test_environment_deploy.py")
 SEALED_TOOLCHAIN_PATH = Path("src/nac_m365_graph/sealed_toolchain.py")
@@ -42,12 +51,73 @@ QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
 
 LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
+PROVISIONER_BOOTSTRAP_ISSUE = "https://github.com/notariat8/NaC/issues/666"
+PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS = [
+    f"AC-666-{index:02d}" for index in range(1, 7)
+]
 SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/658"
 AZURE_INVENTORY_SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/662"
 OWNER_GATE_SAFETY_REWORK_ISSUE = "https://github.com/notariat8/NaC/issues/664"
 OWNER_GATE_SAFETY_REWORK_ACCEPTANCE_IDS = [
     f"AC-664-{index:02d}" for index in range(1, 7)
 ]
+PROVISIONER_BOOTSTRAP_VERIFICATION = {
+    "owner_gate_flags_exact": [
+        "--bff-provisioner-state",
+        "--bff-attestation-provisioner-certificate",
+        "--bff-provisioner-private-key",
+    ],
+    "live_flags_exact": [
+        "--provisioner-bootstrap-binding-sha256",
+        "--provisioner-state",
+        "--provisioner-certificate-path",
+        "--provisioner-private-key-path",
+    ],
+    "recovery_flags_exact": [
+        "--provisioner-bootstrap-binding-sha256",
+    ],
+    "all_paths_absolute_and_metadata_trusted": True,
+    "state_tenant_and_provisioner_app_binding_exact": True,
+    "binding_field_exact": "provisioner_bootstrap_binding_sha256",
+    "binding_pattern": "^[0-9a-f]{64}$",
+    "state_read_mode_exact": (
+        "single_O_NOFOLLOW_CLOEXEC_descriptor_with_pre_open_and_"
+        "post_read_fstat_snapshot"
+    ),
+    "state_maximum_bytes_exact": 131072,
+    "binding_inputs_exact": [
+        "state_sha256_from_atomically_read_bytes",
+        "state_path_sha256",
+        "certificate_path_sha256",
+        "private_key_path_sha256",
+        "tenant_id",
+        "provisioner_client_id",
+        "graph_base_url",
+    ],
+    "owner_payload_live_and_recovery_value_must_match_exactly": True,
+    "owner_gate_live_cli_arguments_flag_exact": (
+        "--provisioner-bootstrap-binding-sha256"
+    ),
+    "binding_mismatch_behavior_exact": (
+        "PROVISIONER_BOOTSTRAP_BINDING_MISMATCH_before_live_factory_"
+        "provider_access_or_tenant_write"
+    ),
+    "graph_v1_only": True,
+    "certificate_mode_only": True,
+    "private_key_content_reads_exact": 0,
+    "provider_requests_before_bootstrap_pass_exact": 0,
+    "tenant_writes_before_bootstrap_pass_exact": 0,
+    "global_process_environment_mutation_allowed": False,
+    "effective_environment_passed_explicitly_to_live_factory": True,
+    "readiness_redacted_fields_exact": [
+        "tenant_id_emitted",
+        "client_id_emitted",
+        "credential_paths_emitted",
+        "credential_values_emitted",
+    ],
+    "readiness_redacted_field_values_exact": False,
+    "blocked_error_prefix_exact": "PROVISIONER_",
+}
 AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "safety_rework_issue": AZURE_INVENTORY_SAFETY_REWORK_ISSUE,
     "type_case_insensitive": "Microsoft.Insights/ActionGroups",
@@ -113,16 +183,41 @@ ACCEPTANCE_IDS = [f"AC-632-{index:02d}" for index in range(1, 9)]
 TOP_LEVEL_FIELDS = [
     "schema_version", "status", "started_at_utc", "finished_at_utc",
     "activation_hash", "approved_commit_sha", "approved_tree_sha",
-    "approval_reference_sha256", "toolchain_attestations_sha256",
+    "approval_reference_sha256", "provisioner_bootstrap_binding_sha256",
+    "toolchain_attestations_sha256",
     "target_binding_sha256",
     "permission_boundary_sha256", "ledger_head_sha256", "step_results", "summary",
 ]
 APPROVAL_FIELDS = [
     "owner-approved", "expected_activation_sha256",
     "approved_commit_sha", "approved_tree_sha",
+    "provisioner_bootstrap_binding_sha256",
     "target_binding_sha256", "permission_boundary_sha256",
     "step_sequence_sha256", "toolchain_attestations_sha256",
     "no_automatic_rollback_or_deletion",
+]
+LIVE_REQUIRED_ARGUMENTS = [
+    "--owner-approved",
+    "--execute-live-activation",
+    "--expected-activation-hash <64-lowercase-hex>",
+    "--approval-reference <immutable-github-issue-comment-url>",
+    "--approval-body-sha256 <64-lowercase-hex>",
+    "--approved-commit <40-lowercase-hex>",
+    "--approved-tree <40-lowercase-hex>",
+    "--azure-cli-toolchain-sha256 <64-lowercase-hex>",
+    "--m365-cli-sha256 <64-lowercase-hex>",
+    "--m365-node-sha256 <64-lowercase-hex>",
+    "--build-python-sha256 <64-lowercase-hex>",
+    "--build-node-sha256 <64-lowercase-hex>",
+    "--build-npm-cli-sha256 <64-lowercase-hex>",
+    "--gh-cli-sha256 <64-lowercase-hex>",
+    "--provisioner-certificate-sha256 <64-lowercase-hex>",
+    "--provisioner-bootstrap-binding-sha256 <64-lowercase-hex>",
+    "--provisioner-state <absolute-state-path>",
+    "--provisioner-certificate-path <absolute-public-certificate-path>",
+    "--provisioner-private-key-path <absolute-private-key-path>",
+    "--reason <non-empty-owner-reason>",
+    "--correlation-id <safe-correlation-id>",
 ]
 OWNER_ASSOCIATIONS = ["OWNER", "MEMBER"]
 PROVIDER_READBACK_POLICY = {
@@ -197,6 +292,27 @@ EXCLUSIVE_LOCK_PERSISTENCE_POLICY = {
     "both_namespaces_held_for_new_runs": True,
     "ambiguous_arm_state_retains_both_persistent_locks": True,
     "ambiguous_arm_state_retains_legacy_host_migration_lock": True,
+    "acquisition": "append_only_canonical_json_lines_journal_and_nonblocking_flock",
+    "marker_journal_format_exact": "canonical_compact_json_lines_one_fsynced_HELD_or_RELEASED_transition_per_record",
+    "incomplete_trailing_entry_behavior": "ignore_only_when_prior_complete_valid_record_exists_then_truncate_under_flock_before_append",
+    "existing_empty_or_invalid_journal_behavior": "block_fail_closed",
+    "release_positions_exact": ["primary", "legacy", "legacy_host"],
+    "marker_states_exact": ["HELD", "RELEASED"],
+    "marker_activation_hash_bound": True,
+    "persistent_lockfiles_not_unlinked": True,
+    "ownership_via_flock_only": True,
+    "held_marker_blocks_unattended_reacquisition": True,
+    "recovery_requires_all_three_lock_markers": True,
+    "committed_mixed_marker_recovery_allowed": True,
+    "recovery_marker_retained_until_all_released_readback": True,
+    "read_only_recovery_creates_directories": False,
+    "marker_release_fault_injection_required": True,
+    "recovery_release_retryable_after_partial_append": True,
+    "legacy_single_object_newline_marker_recovery_supported": True,
+    "legacy_held_marker_unattended_reacquisition_allowed": False,
+    "terminal_failed_partial_release_marker_required": True,
+    "torn_terminal_release_owner_bound_recovery_supported": True,
+    "torn_terminal_release_result_exact": "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
 }
 
 TOOLCHAIN_ATTESTATION_FIELDS = [
@@ -246,7 +362,12 @@ NEGATIVE_TEST_IDS = [
     "race", "secret_sentinel", "prepared_input_drift",
     "health_auth_ready_order", "synthetic_restoration_failure",
     "first_error_after_write", "arm_deployment_timeout_reconciliation",
-    "resume_disabled",
+    "lock_journal_torn_release",
+    "lock_recovery_retry_after_torn_release",
+    "invalid_existing_lock_journal", "recovery_marker_completeness",
+    "provisioner_bootstrap_source_drift",
+    "legacy_newline_lock_recovery",
+    "terminal_failed_partial_torn_release", "resume_disabled",
 ]
 THRESHOLDS = {
     "owner_gate_count": 1,
@@ -369,6 +490,54 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
             "APPROVAL_PAYLOAD_MISMATCH",
         ]
     },
+    "lock_journal_torn_release": {
+        "release_positions_exact": ["primary", "legacy", "legacy_host"],
+        "state": "FAILED_PARTIAL",
+        "stable_error_code": "FINALIZATION_LOCK_RELEASE_FAILED",
+        "committed_state_and_success_receipt_retained": True,
+        "recovery_marker_retained": True,
+        "confirmed_recovery_result": "FINALIZATION_LOCK_RECONCILED",
+    },
+    "lock_recovery_retry_after_torn_release": {
+        "first_recovery_error_code": "FINALIZATION_LOCK_RELEASE_FAILED",
+        "reconcile_marker_retained": True,
+        "second_recovery_result": "FINALIZATION_LOCK_RECONCILED",
+        "all_three_markers_released": True,
+    },
+    "invalid_existing_lock_journal": {
+        "acquisition_succeeds": False,
+        "existing_bytes_changed": False,
+        "provider_read_calls_exact": 0,
+        "provider_write_calls_exact": 0,
+    },
+    "recovery_marker_completeness": {
+        "all_three_markers_required": True,
+        "missing_directories_created": False,
+        "provider_read_calls_exact": 0,
+        "provider_write_calls_exact": 0,
+    },
+    "provisioner_bootstrap_source_drift": {
+        "source_paths_exact": [
+            "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+            "src/nac_m365_graph/provisioner_env_bootstrap.py",
+        ],
+        "activation_hash_changes_for_each_source": True,
+        "provider_write_calls_exact": 0,
+    },
+    "legacy_newline_lock_recovery": {
+        "legacy_marker_shape_exact": "canonical_single_activation_hash_object_with_trailing_newline",
+        "unattended_reacquisition_allowed": False,
+        "confirmed_recovery_result": "FINALIZATION_LOCK_RECONCILED",
+        "all_three_markers_released": True,
+    },
+    "terminal_failed_partial_torn_release": {
+        "state": "FAILED_PARTIAL",
+        "stable_error_code": "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
+        "recovery_marker_status_exact": "TERMINAL_RELEASE_IN_PROGRESS",
+        "ambiguous_provider_state_allowed": False,
+        "confirmed_recovery_result": "FINALIZATION_LOCK_RECONCILED",
+        "all_three_markers_released": True,
+    },
     "resume_disabled": {"stable_error_code": "RESUME_DISABLED_FOR_MVP"},
 }
 SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
@@ -376,11 +545,14 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "src/nac_bff/azure_activation_approval.py",
         "src/nac_bff/azure_activation_attestations.py",
         "src/nac_bff/azure_activation_owner_gate.py",
+        "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+        "src/nac_m365_graph/provisioner_env_bootstrap.py",
         "activation_step_ids",
     ),
     RUNNER_PATH: (
         "_EVIDENCE_KEYS", "_STEP_EVIDENCE_KEYS", "_SUMMARY_EVIDENCE_KEYS",
         "toolchain_attestations_sha256", "TOOLCHAIN_ATTESTATION_INVALID",
+        "provisioner_bootstrap_binding_sha256",
         "RESUME_DISABLED_FOR_MVP", "reconcile_azure_bff_live_activation_lock",
         "FINALIZATION_LOCK_RECONCILED",
         "LEGACY_ACTIVATION_LOCK_HELD",
@@ -421,6 +593,35 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "AZURE_SMART_DETECTION_READBACK_FAILED",
         "build_owner_approval_payload",
         "canonical_owner_comment_body",
+        "environ: Mapping[str, str] | None = None",
+        "os.environ if environ is None else environ",
+    ),
+    PROVISIONER_BOOTSTRAP_PATH: (
+        "nac.m365-azure-bff-provisioner-bootstrap/v1",
+        "build_activation_provisioner_bootstrap",
+        "PROVISIONER_SECRET_KEYS",
+        "_trusted_regular_file_metadata",
+        "_trusted_parent_chain",
+        "tenant_id_emitted",
+        "client_id_emitted",
+        "credential_paths_emitted",
+        "credential_values_emitted",
+        "provider_requests_made",
+        "private_key_read",
+        "tenant_writes_started",
+        "_MAX_STATE_BYTES = 128 * 1024",
+        "os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC",
+        "_bootstrap_binding_sha256",
+        "state_sha256",
+        "state_path_sha256",
+        "certificate_path_sha256",
+        "private_key_path_sha256",
+    ),
+    PROVISIONER_ENV_BOOTSTRAP_PATH: (
+        "build_provisioner_env_bootstrap",
+        "os.environ if env is None else env",
+        "M365_PROVISIONER_CLIENT_CERTIFICATE_PATH",
+        "M365_PROVISIONER_CLIENT_KEY_PATH",
     ),
     ATTESTATION_PATH: (
         "build_activation_attestation_plan",
@@ -433,6 +634,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     ),
     APPROVAL_PATH: (
         "approval_binding_sha256",
+        "provisioner_bootstrap_binding_sha256",
         "build_owner_approval_payload",
         "canonical_owner_comment_body",
         "owner_comment_body_sha256",
@@ -443,6 +645,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "owner_comment_body_sha256",
         "provider_requests_made",
         "private_key_read",
+        "provisioner_bootstrap",
+        "build_activation_provisioner_bootstrap",
+        "provisioner_bootstrap_binding_sha256",
+        "--provisioner-bootstrap-binding-sha256",
     ),
     CLI_PATH: (
         "bff-azure-activate-live", "bff-azure-activation-attestations",
@@ -454,6 +660,14 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "--build-node-sha256",
         "--build-npm-cli-sha256", "--gh-cli-sha256",
         "--provisioner-certificate-sha256",
+        "--provisioner-bootstrap-binding-sha256",
+        "--bff-provisioner-state", "--bff-provisioner-private-key",
+        "--provisioner-state", "--provisioner-certificate-path",
+        "--provisioner-private-key-path",
+        "effective_env = dict(os.environ)",
+        "effective_env.update(bootstrap.env_overlay)",
+        "environ=effective_env",
+        "PROVISIONER_BOOTSTRAP_BINDING_MISMATCH",
     ),
     M365_RUNNER_PATH: (
         "_safe_bff_http_denial", "Request failed with status code 403",
@@ -522,6 +736,19 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "src/nac_bff/azure_activation_approval.py",
         "src/nac_bff/azure_activation_attestations.py",
         "src/nac_bff/azure_activation_owner_gate.py",
+        "src/nac_bff/azure_activation_provisioner_bootstrap.py",
+        "src/nac_m365_graph/provisioner_env_bootstrap.py",
+        "test_provisioner_bootstrap_source_drift_changes_activation_hash",
+    ),
+    PROVISIONER_BOOTSTRAP_TEST_PATH: (
+        "test_valid_inputs_build_redacted_certificate_overlay",
+        "test_explicit_empty_env_does_not_inherit_secret_process_env",
+        "test_each_explicit_environment_binding_must_match_exactly",
+        "test_wrong_state_bindings_are_blocked_and_redacted",
+        "test_secret_or_non_v1_graph_modes_are_blocked",
+        "test_missing_untrusted_or_symlink_inputs_are_blocked",
+        "test_each_symlink_input_is_rejected",
+        "test_private_key_content_is_never_read",
     ),
     Path("tests/test_nac_bff_azure_activation_owner_gate.py"): (
         "test_binding_hash_has_no_toolchain_trailing_newline",
@@ -533,7 +760,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_builder_rejects_dirty_or_changed_tree_without_partial_gate",
         "test_builder_redacts_unexpected_exception_details",
         "test_builder_propagates_attestation_not_ready_without_private_key",
-        "test_cli_requires_public_certificate_path",
+        "test_cli_requires_all_provisioner_bootstrap_inputs",
     ),
     Path("tests/test_nac_bff_azure_activation_composition.py"): (
         "test_noncanonical_equivalent_body_is_rejected",
@@ -570,6 +797,19 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_old_host_lock_namespace_blocks_new_runner",
         "test_ambiguous_arm_state_retains_cross_version_quarantine",
         "test_default_host_state_root_is_persistent_user_state",
+        "test_persistent_lock_markers_are_released_after_verified_receipt",
+        "test_released_marker_accepts_new_activation_and_held_blocks",
+        "test_prewrite_failure_releases_markers_and_new_approval_hash_can_retry",
+        "test_failure_after_write_is_failed_partial_and_stops",
+        "test_hard_crash_during_write_retains_all_markers_and_blocks_retry",
+        "test_partial_release_marker_writes_are_committed_and_recoverable",
+        "test_torn_release_journal_appends_are_recoverable",
+        "test_recovery_release_is_retryable_after_torn_append",
+        "test_terminal_failed_partial_torn_release_is_recoverable",
+        "test_canonical_newline_legacy_lock_is_reconciled",
+        "test_existing_empty_or_invalid_lock_journal_blocks_acquisition",
+        "test_recovery_requires_legacy_markers_and_never_creates_roots",
+        "test_explicit_reconcile_is_read_only_until_confirmed",
     ),
 }
 TEST_PATHS = (
@@ -577,6 +817,7 @@ TEST_PATHS = (
     Path("tests/test_nac_m365_node_runtime_integrity.py"),
     Path("tests/test_nac_bff_azure_activation.py"),
     Path("tests/test_nac_bff_azure_activation_attestations.py"),
+    PROVISIONER_BOOTSTRAP_TEST_PATH,
     Path("tests/test_nac_bff_azure_activation_owner_gate.py"),
     Path("tests/test_nac_bff_azure_activation_runner.py"),
     Path("tests/test_nac_bff_azure_activation_cli.py"),
@@ -596,6 +837,7 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_nac_m365_node_runtime_integrity",
     "tests.test_nac_bff_azure_activation",
     "tests.test_nac_bff_azure_activation_attestations",
+    "tests.test_nac_bff_azure_activation_provisioner_bootstrap",
     "tests.test_nac_bff_azure_activation_owner_gate",
     "tests.test_nac_bff_azure_activation_runner",
     "tests.test_nac_bff_azure_activation_composition",
@@ -712,6 +954,10 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "contract_id": "m365.azure_bff_live_activation",
             "leading_issue": LEADING_ISSUE,
             "parent_issue": PARENT_ISSUE,
+            "provisioner_bootstrap_issue": PROVISIONER_BOOTSTRAP_ISSUE,
+            "provisioner_bootstrap_acceptance_ids": (
+                PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS
+            ),
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "owner_gate_safety_rework_issue": OWNER_GATE_SAFETY_REWORK_ISSUE,
@@ -1055,12 +1301,27 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         if target.get("lists") != EXACT_LIST_IDS:
             errors.append("domain exact list IDs differ")
 
+    runner_interface = domain.get("runner_interface", {})
+    if not isinstance(runner_interface, dict):
+        errors.append("domain runner_interface must be an object")
+    else:
+        _require_list(
+            runner_interface,
+            "required_arguments",
+            LIVE_REQUIRED_ARGUMENTS,
+            "domain live runner required arguments",
+            errors,
+        )
+
     owner_gate = domain.get("runner_interface", {}).get("owner_gate_preparation")
     expected_owner_gate = {
         "command": (
             "nac m365 teams-sharepoint bff-azure-activation-owner-gate "
             "--bff-attestation-provisioner-certificate "
-            "<public-certificate-path> --format json"
+            "<absolute-public-certificate-path> "
+            "--bff-provisioner-state <absolute-state-path> "
+            "--bff-provisioner-private-key <absolute-private-key-path> "
+            "--format json"
         ),
         "offline_only": True,
         "provider_requests_exact": 0,
@@ -1076,10 +1337,136 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "owner_comment_body",
             "owner_comment_body_sha256",
             "live_cli_arguments",
+            "provisioner_bootstrap_binding_sha256",
+            "provisioner_bootstrap",
         ],
     }
     if owner_gate != expected_owner_gate:
         errors.append("domain owner gate preparation interface differs")
+
+    bootstrap = domain.get("provisioner_bootstrap")
+    if not isinstance(bootstrap, dict):
+        errors.append("domain provisioner_bootstrap must be an object")
+    else:
+        _require_values(
+            bootstrap,
+            {
+                "schema_version_exact": (
+                    "nac.m365-azure-bff-provisioner-bootstrap/v1"
+                ),
+                "execution_phase_exact": (
+                    "before_live_factory_and_before_any_provider_access"
+                ),
+                "graph_base_url_exact": "https://graph.microsoft.com/v1.0",
+                "certificate_authentication_only": True,
+                "secret_or_access_token_environment_allowed": False,
+                "failure_behavior": (
+                    "stable_PROVISIONER_error_before_live_factory_"
+                    "provider_access_or_tenant_write"
+                ),
+            },
+            "domain provisioner bootstrap",
+            errors,
+        )
+        _require_list(
+            bootstrap,
+            "owner_gate_inputs_exact",
+            [
+                "--bff-provisioner-state <absolute-state-path>",
+                "--bff-attestation-provisioner-certificate "
+                "<absolute-public-certificate-path>",
+                "--bff-provisioner-private-key <absolute-private-key-path>",
+            ],
+            "domain provisioner owner-gate inputs",
+            errors,
+        )
+        _require_list(
+            bootstrap,
+            "live_inputs_exact",
+            [
+                "--provisioner-bootstrap-binding-sha256 <64-lowercase-hex>",
+                "--provisioner-state <absolute-state-path>",
+                "--provisioner-certificate-path "
+                "<absolute-public-certificate-path>",
+                "--provisioner-private-key-path <absolute-private-key-path>",
+            ],
+            "domain provisioner live inputs",
+            errors,
+        )
+        if bootstrap.get("state_binding_exact") != {
+            "status": "PASSED",
+            "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+            "application_display_name": "NaC M365 Provisioning",
+            "application_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+        }:
+            errors.append("domain provisioner state binding differs")
+        expected_binding_policy = {
+            "field_exact": "provisioner_bootstrap_binding_sha256",
+            "pattern": "^[0-9a-f]{64}$",
+            "state_read_mode_exact": (
+                "single_O_NOFOLLOW_CLOEXEC_descriptor_with_pre_open_and_"
+                "post_read_fstat_snapshot"
+            ),
+            "state_maximum_bytes_exact": 131072,
+            "canonical_encoding_exact": (
+                "sorted_compact_json_utf8_without_trailing_newline"
+            ),
+            "inputs_exact": [
+                "state_sha256_from_atomically_read_bytes",
+                "state_path_sha256",
+                "certificate_path_sha256",
+                "private_key_path_sha256",
+                "tenant_id",
+                "provisioner_client_id",
+                "graph_base_url",
+            ],
+            "raw_state_bytes_or_paths_emitted_allowed": False,
+            "owner_payload_live_and_recovery_value_must_match_exactly": True,
+            "owner_gate_live_cli_arguments_flag_exact": (
+                "--provisioner-bootstrap-binding-sha256"
+            ),
+            "mismatch_behavior": (
+                "stop_before_live_factory_provider_access_or_tenant_write_"
+                "with_PROVISIONER_BOOTSTRAP_BINDING_MISMATCH"
+            ),
+        }
+        if bootstrap.get("binding_policy") != expected_binding_policy:
+            errors.append("domain provisioner bootstrap binding policy differs")
+        expected_input_policy = {
+            "absolute_paths_required": True,
+            "regular_non_symlink_files_required": True,
+            "trusted_parent_chain_required": True,
+            "state_and_certificate_group_or_other_writable_allowed": False,
+            "private_key_owner_uid_exact": "effective_os_user",
+            "private_key_modes_exact": ["0400", "0600"],
+            "private_key_content_reads_exact": 0,
+            "private_key_digest_allowed": False,
+        }
+        if bootstrap.get("input_file_policy") != expected_input_policy:
+            errors.append("domain provisioner input file policy differs")
+        expected_environment_policy = {
+            "global_process_environment_mutation_allowed": False,
+            "effective_environment_mode": (
+                "copy_current_environment_then_apply_non_secret_bootstrap_overlay"
+            ),
+            "factory_receives_effective_environment_explicitly": True,
+            "overlay_variable_names_only_in_readiness": True,
+            "environment_values_in_readiness_or_evidence_allowed": False,
+        }
+        if bootstrap.get("environment_policy") != expected_environment_policy:
+            errors.append("domain provisioner environment policy differs")
+        expected_readiness = {
+            "status_values_exact": ["PASSED", "BLOCKED"],
+            "provider_requests_made_exact": 0,
+            "tenant_writes_started_exact": False,
+            "private_key_read_exact": False,
+            "tenant_id_emitted_exact": False,
+            "client_id_emitted_exact": False,
+            "credential_paths_emitted_exact": False,
+            "credential_values_emitted_exact": False,
+        }
+        if bootstrap.get("redacted_readiness") != expected_readiness:
+            errors.append("domain provisioner redacted readiness differs")
 
     consolidated_gate = domain.get("consolidated_owner_gate", {})
     expected_canonical_gate = {
@@ -1103,6 +1490,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
     expected_recovery = {
         "command": "nac m365 teams-sharepoint bff-azure-activation-recovery",
         "same_owner_binding_arguments_as_live_runner_required": True,
+        "provisioner_bootstrap_binding_sha256_required": True,
         "owner_approved_required": True,
         "read_only_inspection_default": True,
         "unlock_argument_exact": "--confirm-unlock",
@@ -1130,6 +1518,10 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "domain_contract_id": "m365.azure_bff_live_activation",
             "leading_issue": LEADING_ISSUE,
             "parent_issue": PARENT_ISSUE,
+            "provisioner_bootstrap_issue": PROVISIONER_BOOTSTRAP_ISSUE,
+            "provisioner_bootstrap_acceptance_ids": (
+                PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS
+            ),
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "azure_inventory_safety_rework_issue": (
                 AZURE_INVENTORY_SAFETY_REWORK_ISSUE
@@ -1160,6 +1552,10 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "missing_or_malformed_author_association_behavior"
         ) != "reject_with_APPROVAL_OWNER_MISMATCH":
             errors.append("verification malformed owner association behavior differs")
+    if verification.get("provisioner_bootstrap_verification") != (
+        PROVISIONER_BOOTSTRAP_VERIFICATION
+    ):
+        errors.append("verification provisioner bootstrap policy differs")
     if verification.get("thresholds") != THRESHOLDS:
         errors.append("verification thresholds must equal the exact Issue #632 thresholds")
     negative = verification.get("negative_tests")
