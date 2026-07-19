@@ -12,6 +12,7 @@ APPROVAL_KEYS = frozenset(
         "expected_activation_sha256",
         "approved_commit_sha",
         "approved_tree_sha",
+        "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256",
         "target_binding_sha256",
         "permission_boundary_sha256",
@@ -42,6 +43,7 @@ def build_owner_approval_payload(
     activation_hash: str,
     approved_commit: str,
     approved_tree: str,
+    provisioner_bootstrap_binding_sha256: str,
     toolchain_attestations_sha256: str,
     bindings: Mapping[str, Any],
     permission_boundary: Mapping[str, Any],
@@ -50,6 +52,10 @@ def build_owner_approval_payload(
     _require_digest(activation_hash, "activation_hash")
     _require_git_object(approved_commit, "approved_commit")
     _require_git_object(approved_tree, "approved_tree")
+    _require_digest(
+        provisioner_bootstrap_binding_sha256,
+        "provisioner_bootstrap_binding_sha256",
+    )
     _require_digest(
         toolchain_attestations_sha256,
         "toolchain_attestations_sha256",
@@ -68,6 +74,9 @@ def build_owner_approval_payload(
         "expected_activation_sha256": activation_hash,
         "approved_commit_sha": approved_commit,
         "approved_tree_sha": approved_tree,
+        "provisioner_bootstrap_binding_sha256": (
+            provisioner_bootstrap_binding_sha256
+        ),
         "toolchain_attestations_sha256": toolchain_attestations_sha256,
         "target_binding_sha256": approval_binding_sha256(bindings),
         "permission_boundary_sha256": approval_binding_sha256(

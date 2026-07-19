@@ -7,9 +7,13 @@ from io import StringIO
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from nac_bff.azure_activation import activation_step_ids
+from nac_bff.azure_activation import (
+    PROVISIONER_CLIENT_ID,
+    TENANT_ID,
+    activation_step_ids,
+)
 from nac_bff.azure_activation_approval import (
     approval_binding_sha256,
     build_owner_approval_payload,
@@ -34,6 +38,7 @@ ATTESTATION_VALUES = {
     for index, name in enumerate(TOOLCHAIN_ATTESTATION_FIELDS, start=1)
 }
 TOOLCHAIN_HASH = calculate_toolchain_attestations_sha256(ATTESTATION_VALUES)
+PROVISIONER_BOOTSTRAP_BINDING_HASH = "9" * 64
 
 
 class AzureBffActivationOwnerGateTests(unittest.TestCase):
@@ -52,6 +57,32 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
         )
         self.certificate = self.root / "public-cert.pem"
         self.certificate.write_text("public", encoding="utf-8")
+        self.private_key = self.root / "private-key.pem"
+        self.private_key.write_text("private-key-must-not-escape", encoding="utf-8")
+        self.private_key.chmod(0o600)
+        self.state = self.root / "privileged-apply-result.json"
+        self.state.write_text(
+            json.dumps(
+                {
+                    "status": "PASSED",
+                    "tenantId": TENANT_ID,
+                    "applications": {
+                        "m365_provisioning_app": {
+                            "displayName": "NaC M365 Provisioning",
+                            "clientId": PROVISIONER_CLIENT_ID,
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def _gate_kwargs(self) -> dict:
+        return {
+            "provisioner_state": self.state,
+            "provisioner_private_key": self.private_key,
+            "provisioner_env": {},
+        }
 
     @staticmethod
     def _plan() -> dict:
@@ -93,6 +124,9 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             activation_hash=ACTIVATION_HASH,
             approved_commit=COMMIT,
             approved_tree=TREE,
+            provisioner_bootstrap_binding_sha256=(
+                PROVISIONER_BOOTSTRAP_BINDING_HASH
+            ),
             toolchain_attestations_sha256=TOOLCHAIN_HASH,
             bindings={"workspace_id": "notary_team_01"},
             permission_boundary={"graph": ["Sites.Selected"]},
@@ -109,11 +143,16 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
         )
 
     def test_binding_or_permission_mutation_changes_approval_body_hash(self) -> None:
-        def payload(bindings: dict, permission_boundary: dict) -> dict:
+        def payload(
+            bindings: dict,
+            permission_boundary: dict,
+            bootstrap_binding: str = PROVISIONER_BOOTSTRAP_BINDING_HASH,
+        ) -> dict:
             return build_owner_approval_payload(
                 activation_hash=ACTIVATION_HASH,
                 approved_commit=COMMIT,
                 approved_tree=TREE,
+                provisioner_bootstrap_binding_sha256=bootstrap_binding,
                 toolchain_attestations_sha256=TOOLCHAIN_HASH,
                 bindings=bindings,
                 permission_boundary=permission_boundary,
@@ -132,6 +171,11 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             {"workspace_id": "notary_team_01"},
             {"graph": ["Sites.Read.All"]},
         )
+        changed_bootstrap_binding = payload(
+            {"workspace_id": "notary_team_01"},
+            {"graph": ["Sites.Selected"]},
+            "8" * 64,
+        )
 
         self.assertNotEqual(
             baseline["target_binding_sha256"],
@@ -141,10 +185,18 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             baseline["permission_boundary_sha256"],
             changed_permission["permission_boundary_sha256"],
         )
+        self.assertNotEqual(
+            baseline["provisioner_bootstrap_binding_sha256"],
+            changed_bootstrap_binding["provisioner_bootstrap_binding_sha256"],
+        )
         baseline_body_hash = owner_comment_body_sha256(
             canonical_owner_comment_body(baseline)
         )
-        for mutated in (changed_binding, changed_permission):
+        for mutated in (
+            changed_binding,
+            changed_permission,
+            changed_bootstrap_binding,
+        ):
             self.assertNotEqual(
                 baseline_body_hash,
                 owner_comment_body_sha256(
@@ -161,6 +213,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             result = build_activation_owner_gate(
                 self.root,
                 self.certificate,
+                **self._gate_kwargs(),
                 activation_plan_builder=lambda _root: self._plan(),
                 attestation_builder=lambda **_kwargs: self._attestations(),
             )
@@ -174,6 +227,56 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
         )
         self.assertEqual(result["boundaries"]["provider_requests_made"], 0)
         self.assertIs(result["boundaries"]["private_key_read"], False)
+        self.assertEqual(result["provisioner_bootstrap"]["status"], "PASSED")
+        binding_sha256 = result["provisioner_bootstrap_binding_sha256"]
+        self.assertEqual(
+            result["live_cli_arguments"][
+                "--provisioner-bootstrap-binding-sha256"
+            ],
+            binding_sha256,
+        )
+        self.assertEqual(
+            result["owner_approval_payload"][
+                "provisioner_bootstrap_binding_sha256"
+            ],
+            binding_sha256,
+        )
+        serialized = json.dumps(result)
+        self.assertNotIn(TENANT_ID, serialized)
+        self.assertNotIn(PROVISIONER_CLIENT_ID, serialized)
+        self.assertNotIn(str(self.root), serialized)
+        self.assertNotIn("private-key-must-not-escape", serialized)
+
+    def test_builder_stops_before_plan_on_provisioner_binding_mismatch(self) -> None:
+        plan_builder = Mock(
+            side_effect=AssertionError("plan must remain unreachable")
+        )
+        attestation_builder = Mock(
+            side_effect=AssertionError("attestations must remain unreachable")
+        )
+        kwargs = self._gate_kwargs()
+        kwargs["provisioner_env"] = {"M365_TENANT_ID": "wrong-tenant"}
+        with patch(
+            "nac_bff.azure_activation_owner_gate._git_snapshot",
+            return_value=(COMMIT, TREE, False),
+        ):
+            result = build_activation_owner_gate(
+                self.root,
+                self.certificate,
+                **kwargs,
+                activation_plan_builder=plan_builder,
+                attestation_builder=attestation_builder,
+            )
+
+        self.assertEqual(result["status"], "NOT_READY")
+        self.assertEqual(
+            result["error_code"], "PROVISIONER_ENV_BINDING_MISMATCH"
+        )
+        self.assertFalse(result["boundaries"]["private_key_read"])
+        self.assertEqual(result["boundaries"]["provider_requests_made"], 0)
+        self.assertNotIn("wrong-tenant", json.dumps(result))
+        plan_builder.assert_not_called()
+        attestation_builder.assert_not_called()
 
     def test_binding_hash_rejects_nonstandard_json_numbers(self) -> None:
         with self.assertRaises(ValueError):
@@ -185,6 +288,9 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 activation_hash=ACTIVATION_HASH,
                 approved_commit=COMMIT,
                 approved_tree=TREE,
+                provisioner_bootstrap_binding_sha256=(
+                    PROVISIONER_BOOTSTRAP_BINDING_HASH
+                ),
                 toolchain_attestations_sha256=TOOLCHAIN_HASH,
                 bindings={"workspace_id": "notary_team_01"},
                 permission_boundary={"graph": ["Sites.Selected"]},
@@ -201,6 +307,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             result = build_activation_owner_gate(
                 self.root,
                 self.certificate,
+                **self._gate_kwargs(),
                 activation_plan_builder=lambda _root: plan,
                 attestation_builder=lambda **_kwargs: self._attestations(),
             )
@@ -220,6 +327,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 result = build_activation_owner_gate(
                     self.root,
                     self.certificate,
+                    **self._gate_kwargs(),
                     activation_plan_builder=lambda _root: self._plan(),
                     attestation_builder=lambda **_kwargs: attestations,
                 )
@@ -230,7 +338,11 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
     def test_builder_redacts_repo_path_resolution_failure(self) -> None:
         loop = self.root / "loop"
         loop.symlink_to(loop)
-        result = build_activation_owner_gate(loop, self.certificate)
+        result = build_activation_owner_gate(
+            loop,
+            self.certificate,
+            **self._gate_kwargs(),
+        )
         self.assertEqual(result["status"], "NOT_READY")
         self.assertEqual(result["error_code"], "OWNER_GATE_GENERATION_FAILED")
         self.assertNotIn(str(self.root), json.dumps(result))
@@ -251,6 +363,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 result = build_activation_owner_gate(
                     self.root,
                     self.certificate,
+                    **self._gate_kwargs(),
                     activation_plan_builder=lambda _root: self._plan(),
                     attestation_builder=lambda **_kwargs: self._attestations(),
                 )
@@ -267,6 +380,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             result = build_activation_owner_gate(
                 self.root,
                 self.certificate,
+                **self._gate_kwargs(),
                 activation_plan_builder=lambda _root: (_ for _ in ()).throw(
                     OSError("/secret/local/path")
                 ),
@@ -286,6 +400,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             result = build_activation_owner_gate(
                 self.root,
                 self.certificate,
+                **self._gate_kwargs(),
                 activation_plan_builder=lambda _root: self._plan(),
                 attestation_builder=lambda **_kwargs: {"status": "NOT_READY"},
             )
@@ -297,7 +412,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
 
 
 class AzureBffActivationOwnerGateCliTests(unittest.TestCase):
-    def test_cli_requires_public_certificate_path(self) -> None:
+    def test_cli_requires_all_provisioner_bootstrap_inputs(self) -> None:
         output = StringIO()
         with redirect_stdout(output):
             result = nac_main(
@@ -315,8 +430,10 @@ class AzureBffActivationOwnerGateCliTests(unittest.TestCase):
         self.assertEqual(result, 2)
         self.assertEqual(payload["status"], "NOT_READY")
         self.assertEqual(
-            payload["error_code"], "PROVISIONER_CERTIFICATE_PATH_REQUIRED"
+            payload["error_code"], "PROVISIONER_BOOTSTRAP_INPUTS_REQUIRED"
         )
+        self.assertFalse(payload["boundaries"]["private_key_read"])
+        self.assertEqual(payload["boundaries"]["provider_requests_made"], 0)
 
     def test_cli_dispatches_ready_owner_gate(self) -> None:
         output = StringIO()
@@ -337,6 +454,10 @@ class AzureBffActivationOwnerGateCliTests(unittest.TestCase):
                     "bff-azure-activation-owner-gate",
                     "--bff-attestation-provisioner-certificate",
                     "/tmp/public-cert.pem",
+                    "--bff-provisioner-state",
+                    "/tmp/privileged-apply-result.json",
+                    "--bff-provisioner-private-key",
+                    "/tmp/private-key.pem",
                     "--format",
                     "json",
                 ]
@@ -344,6 +465,14 @@ class AzureBffActivationOwnerGateCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(json.loads(output.getvalue())["status"], "READY")
         builder.assert_called_once()
+        self.assertEqual(
+            builder.call_args.kwargs["provisioner_state"],
+            Path("/tmp/privileged-apply-result.json"),
+        )
+        self.assertEqual(
+            builder.call_args.kwargs["provisioner_private_key"],
+            Path("/tmp/private-key.pem"),
+        )
 
 
 if __name__ == "__main__":

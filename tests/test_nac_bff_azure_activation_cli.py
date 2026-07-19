@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import types
 import unittest
@@ -31,7 +32,11 @@ BUILD_NODE_HASH = "4" * 64
 BUILD_NPM_HASH = "5" * 64
 GH_CLI_HASH = "6" * 64
 PROVISIONER_CERTIFICATE_HASH = "7" * 64
+PROVISIONER_BOOTSTRAP_BINDING_HASH = "9" * 64
 APPROVAL_REFERENCE = "https://github.com/notariat8/NaC/issues/632#issuecomment-123456"
+PROVISIONER_STATE = Path("/tmp/privileged-apply-result.json")
+PROVISIONER_CERTIFICATE = Path("/tmp/provisioner.cert.pem")
+PROVISIONER_PRIVATE_KEY = Path("/tmp/provisioner.key.pem")
 
 
 @dataclass(frozen=True)
@@ -49,6 +54,7 @@ class _FakeRequest:
     build_npm_cli_sha256: str
     gh_cli_sha256: str
     provisioner_certificate_sha256: str
+    provisioner_bootstrap_binding_sha256: str
     reason: str
     correlation_id: str
     owner_approved: bool
@@ -92,6 +98,14 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
             GH_CLI_HASH,
             "--provisioner-certificate-sha256",
             PROVISIONER_CERTIFICATE_HASH,
+            "--provisioner-bootstrap-binding-sha256",
+            PROVISIONER_BOOTSTRAP_BINDING_HASH,
+            "--provisioner-state",
+            str(PROVISIONER_STATE),
+            "--provisioner-certificate-path",
+            str(PROVISIONER_CERTIFICATE),
+            "--provisioner-private-key-path",
+            str(PROVISIONER_PRIVATE_KEY),
             "--reason",
             "Owner approved the exact activation target.",
             "--correlation-id",
@@ -109,8 +123,17 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
         runner.DEFAULT_OUTPUT_ROOT = Path("out/default")
         runner.LiveActivationRequest = _FakeRequest
         runner.run_azure_bff_live_activation = run
+        bootstrap = types.ModuleType("nac_bff.azure_activation_provisioner_bootstrap")
+        bootstrap.build_activation_provisioner_bootstrap = Mock(
+            return_value=types.SimpleNamespace(
+                env_overlay={"M365_TENANT_ID": "bound-tenant"},
+                binding_sha256=PROVISIONER_BOOTSTRAP_BINDING_HASH,
+                readiness={"status": "PASSED"},
+            )
+        )
         return {
             "nac_bff.azure_activation_composition": composition,
+            "nac_bff.azure_activation_provisioner_bootstrap": bootstrap,
             "nac_bff.azure_activation_runner": runner,
         }, factory, run
 
@@ -129,6 +152,10 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
             "--build-npm-cli-sha256",
             "--gh-cli-sha256",
             "--provisioner-certificate-sha256",
+            "--provisioner-bootstrap-binding-sha256",
+            "--provisioner-state",
+            "--provisioner-certificate-path",
+            "--provisioner-private-key-path",
             "--reason",
             "--correlation-id",
         )
@@ -227,6 +254,79 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
                 self.assertFalse(payload["writes_started"])
                 self.assertNotIn(secret, stdout.getvalue())
 
+    def test_bootstrap_block_or_exception_stops_before_factory_and_write(self) -> None:
+        cases = (
+            ("blocked", "PROVISIONER_PRIVATE_KEY_FILE_UNTRUSTED"),
+            ("exception", "PROVISIONER_ENV_BOOTSTRAP_FAILED"),
+        )
+        for phase, expected_code in cases:
+            with self.subTest(phase=phase):
+                modules, factory, run = self._fake_modules()
+                bootstrap = modules[
+                    "nac_bff.azure_activation_provisioner_bootstrap"
+                ].build_activation_provisioner_bootstrap
+                if phase == "blocked":
+                    bootstrap.return_value = types.SimpleNamespace(
+                        env_overlay={},
+                        readiness={
+                            "status": "BLOCKED",
+                            "error_code": expected_code,
+                            "private_path": "/secret/key.pem",
+                        },
+                    )
+                else:
+                    bootstrap.side_effect = RuntimeError(
+                        "private-value-must-not-escape"
+                    )
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with (
+                    patch.dict(sys.modules, modules),
+                    redirect_stdout(stdout),
+                    redirect_stderr(stderr),
+                ):
+                    rc = nac_cli.main(self._argv("--format", "json"))
+
+                self.assertEqual(rc, 2)
+                self.assertEqual(stderr.getvalue(), "")
+                payload = json.loads(stdout.getvalue())
+                self.assertEqual(payload["error"]["code"], expected_code)
+                self.assertFalse(payload["writes_started"])
+                self.assertNotIn("secret", stdout.getvalue())
+                self.assertNotIn("private-value", stdout.getvalue())
+                factory.assert_not_called()
+                run.assert_not_called()
+
+    def test_bootstrap_binding_mismatch_stops_before_factory_and_write(self) -> None:
+        modules, factory, run = self._fake_modules()
+        bootstrap = modules[
+            "nac_bff.azure_activation_provisioner_bootstrap"
+        ].build_activation_provisioner_bootstrap
+        bootstrap.return_value = types.SimpleNamespace(
+            env_overlay={"M365_TENANT_ID": "bound-tenant"},
+            binding_sha256="0" * 64,
+            readiness={"status": "PASSED"},
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            patch.dict(sys.modules, modules),
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
+            rc = nac_cli.main(self._argv("--format", "json"))
+
+        self.assertEqual(rc, 2)
+        self.assertEqual(stderr.getvalue(), "")
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(
+            payload["error"]["code"],
+            "PROVISIONER_BOOTSTRAP_BINDING_MISMATCH",
+        )
+        self.assertFalse(payload["writes_started"])
+        factory.assert_not_called()
+        run.assert_not_called()
+
     def test_invalid_repo_config_is_redacted_without_traceback(self) -> None:
         modules, factory, _run = self._fake_modules()
         stdout = io.StringIO()
@@ -254,12 +354,34 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
     def test_arguments_are_forwarded_after_both_gates(self) -> None:
         modules, factory, run = self._fake_modules()
         stdout = io.StringIO()
-        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+        original_env = {"EXISTING_RUNTIME_VALUE": "preserved"}
+        with (
+            patch.dict(sys.modules, modules),
+            patch.dict(os.environ, original_env, clear=True),
+            redirect_stdout(stdout),
+        ):
             rc = nac_cli.main(self._argv("--format", "json"))
+            self.assertEqual(dict(os.environ), original_env)
 
         self.assertEqual(rc, 0)
         request = factory.call_args.args[1]
-        factory.assert_called_once_with(REPO_ROOT, request)
+        factory.assert_called_once_with(
+            REPO_ROOT,
+            request,
+            environ={
+                "EXISTING_RUNTIME_VALUE": "preserved",
+                "M365_TENANT_ID": "bound-tenant",
+            },
+        )
+        bootstrap = modules[
+            "nac_bff.azure_activation_provisioner_bootstrap"
+        ].build_activation_provisioner_bootstrap
+        bootstrap.assert_called_once_with(
+            PROVISIONER_STATE,
+            PROVISIONER_CERTIFICATE,
+            PROVISIONER_PRIVATE_KEY,
+            env=os.environ,
+        )
         kwargs = run.call_args.kwargs
         self.assertEqual(kwargs["repo_root"], REPO_ROOT)
         self.assertEqual(kwargs["output_root"], Path("out/default"))
@@ -280,6 +402,9 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
                 build_npm_cli_sha256=BUILD_NPM_HASH,
                 gh_cli_sha256=GH_CLI_HASH,
                 provisioner_certificate_sha256=PROVISIONER_CERTIFICATE_HASH,
+                provisioner_bootstrap_binding_sha256=(
+                    PROVISIONER_BOOTSTRAP_BINDING_HASH
+                ),
                 reason="Owner approved the exact activation target.",
                 correlation_id="nac-bff-live-20260714",
                 owner_approved=True,
@@ -398,6 +523,8 @@ class AzureBffLiveActivationRecoveryCliTests(unittest.TestCase):
             GH_CLI_HASH,
             "--provisioner-certificate-sha256",
             PROVISIONER_CERTIFICATE_HASH,
+            "--provisioner-bootstrap-binding-sha256",
+            PROVISIONER_BOOTSTRAP_BINDING_HASH,
             "--reason",
             "Owner approved finalization recovery inspection.",
             "--correlation-id",

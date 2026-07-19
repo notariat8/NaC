@@ -388,6 +388,9 @@ class GitHubApprovalVerifier:
                 activation_hash=context.activation_hash,
                 approved_commit=context.approved_commit,
                 approved_tree=context.approved_tree,
+                provisioner_bootstrap_binding_sha256=(
+                    request.provisioner_bootstrap_binding_sha256
+                ),
                 toolchain_attestations_sha256=(
                     request.toolchain_attestations_sha256
                 ),
@@ -2592,10 +2595,12 @@ def _bound_provisioner_token_provider(
 def build_live_activation_execution_port(
     repo_root: Path,
     request: LiveActivationRequest,
+    *,
+    environ: Mapping[str, str] | None = None,
 ) -> AzureBffLiveExecutionPort:
     """Create concrete dependencies only after the CLI has passed both live gates."""
 
-    values = dict(os.environ)
+    values = dict(os.environ if environ is None else environ)
     graph = GraphRestClient(
         _bound_provisioner_token_provider(
             values,

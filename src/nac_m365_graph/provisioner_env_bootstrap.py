@@ -40,7 +40,7 @@ def build_provisioner_env_bootstrap(
     env: Mapping[str, str] | None = None,
     now_utc: str | None = None,
 ) -> ProvisionerEnvBootstrap:
-    values = env or os.environ
+    values = os.environ if env is None else env
     applications = _dict(privileged_apply_state.get("applications"))
     provisioner = _dict(applications.get("m365_provisioning_app"))
     tenant_id = _text(privileged_apply_state.get("tenantId"))
