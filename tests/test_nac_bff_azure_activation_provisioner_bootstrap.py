@@ -8,7 +8,11 @@ import unittest
 from unittest.mock import patch
 from typing import Callable
 
-from nac_bff.azure_activation import PROVISIONER_CLIENT_ID, TENANT_ID
+from nac_bff.azure_activation import (
+    PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
+    TENANT_ID,
+)
 from nac_bff.azure_activation_provisioner_bootstrap import (
     build_activation_provisioner_bootstrap,
 )
@@ -45,6 +49,13 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
                 "m365_provisioning_app": {
                     "displayName": "NaC M365 Provisioning",
                     "clientId": PROVISIONER_CLIENT_ID,
+                    "appRoleAssignments": [
+                        {
+                            "permission": permission,
+                            "status": "existing",
+                        }
+                        for permission in PROVISIONER_GRAPH_APPLICATION_ROLES
+                    ],
                 }
             },
         }
@@ -79,6 +90,79 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
         self.assertNotIn(str(self.root), serialized)
         self.assertNotIn("private-key-must-never-be-read", serialized)
         self.assertFalse(result.readiness["boundaries"]["private_key_read"])
+        self.assertEqual(result.readiness["boundaries"]["provider_requests_made"], 0)
+        self.assertFalse(result.readiness["boundaries"]["tenant_writes_started"])
+
+    def test_missing_site_permission_admin_assignment_is_blocked(self) -> None:
+        payload = self._state_payload()
+        payload["applications"]["m365_provisioning_app"][
+            "appRoleAssignments"
+        ] = []
+        self.state.write_text(json.dumps(payload), encoding="utf-8")
+
+        result = self._build()
+
+        self.assertEqual(result.readiness["status"], "BLOCKED")
+        self.assertEqual(
+            result.readiness["error_code"],
+            "PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING",
+        )
+        self.assertEqual(result.readiness["boundaries"]["provider_requests_made"], 0)
+        self.assertFalse(result.readiness["boundaries"]["tenant_writes_started"])
+
+    def test_broader_provisioner_role_is_blocked_before_provider_access(self) -> None:
+        payload = self._state_payload()
+        payload["applications"]["m365_provisioning_app"][
+            "appRoleAssignments"
+        ].append(
+            {
+                "permission": "Directory.ReadWrite.All",
+                "status": "existing",
+            }
+        )
+        self.state.write_text(json.dumps(payload), encoding="utf-8")
+
+        result = self._build()
+
+        self.assertEqual(result.readiness["status"], "BLOCKED")
+        self.assertEqual(
+            result.readiness["error_code"],
+            "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+        )
+        self.assertEqual(result.readiness["boundaries"]["provider_requests_made"], 0)
+        self.assertFalse(result.readiness["boundaries"]["tenant_writes_started"])
+
+    def test_malformed_provisioner_role_is_blocked_without_crashing(self) -> None:
+        payload = self._state_payload()
+        payload["applications"]["m365_provisioning_app"][
+            "appRoleAssignments"
+        ][0]["permission"] = []
+        self.state.write_text(json.dumps(payload), encoding="utf-8")
+
+        result = self._build()
+
+        self.assertEqual(result.readiness["status"], "BLOCKED")
+        self.assertEqual(
+            result.readiness["error_code"],
+            "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+        )
+        self.assertEqual(result.readiness["boundaries"]["provider_requests_made"], 0)
+        self.assertFalse(result.readiness["boundaries"]["tenant_writes_started"])
+
+    def test_extra_malformed_assignment_row_is_not_ignored(self) -> None:
+        payload = self._state_payload()
+        payload["applications"]["m365_provisioning_app"][
+            "appRoleAssignments"
+        ].append([])
+        self.state.write_text(json.dumps(payload), encoding="utf-8")
+
+        result = self._build()
+
+        self.assertEqual(result.readiness["status"], "BLOCKED")
+        self.assertEqual(
+            result.readiness["error_code"],
+            "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+        )
         self.assertEqual(result.readiness["boundaries"]["provider_requests_made"], 0)
         self.assertFalse(result.readiness["boundaries"]["tenant_writes_started"])
 

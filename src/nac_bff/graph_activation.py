@@ -13,6 +13,8 @@ from nac_bff.azure_activation import (
     API_APP_URI,
     CLI_TEST_CLIENT_ID,
     DELEGATED_SCOPE,
+    PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
     REQUESTED_ACCESS_TOKEN_VERSION,
     SITE_ID,
 )
@@ -75,6 +77,21 @@ _ERROR_MESSAGES = {
     "INVALID_UAMI_APP_ID": "The managed identity application ID is invalid.",
     "INVALID_TARGET_SITE": "The requested site is outside the activation allowlist.",
     "GRAPH_REQUEST_FAILED": "A Microsoft Graph request failed.",
+    "PROVISIONER_SERVICE_PRINCIPAL_MISSING": (
+        "The provisioner service principal is missing."
+    ),
+    "PROVISIONER_SERVICE_PRINCIPAL_DUPLICATE": (
+        "The provisioner service principal lookup is not unique."
+    ),
+    "PROVISIONER_SERVICE_PRINCIPAL_MISMATCH": (
+        "The provisioner service principal does not match the required contract."
+    ),
+    "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH": (
+        "The provisioner Microsoft Graph application roles do not match the allowlist."
+    ),
+    "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE": (
+        "The provisioner cannot inspect target-site permissions."
+    ),
     "GRAPH_RESPONSE_INVALID": "Microsoft Graph returned an invalid response shape.",
     "GRAPH_PAGING_INVALID": "Microsoft Graph returned a non-v1.0 paging link.",
     "API_APPLICATION_DUPLICATE": "The API application lookup is not unique.",
@@ -317,6 +334,140 @@ def inspect_site_read_permission(
     return _site_access_result(
         "present" if exact_count else "absent", uami, site_id, exact_count
     )
+
+
+def inspect_provisioner_application_roles(
+    client: GraphActivationClient,
+) -> dict[str, Any]:
+    """Prove the effective provisioner Microsoft Graph roles read-only."""
+
+    provisioners = _lookup_service_principals(client, PROVISIONER_CLIENT_ID)
+    if not provisioners:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISSING")
+    if len(provisioners) > 1:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_DUPLICATE")
+    provisioner = provisioners[0]
+    try:
+        provisioner_id = _canonical_uuid(provisioner.get("id"))
+        provisioner_valid = (
+            _canonical_uuid(provisioner.get("appId")) == PROVISIONER_CLIENT_ID
+            and provisioner.get("displayName") == "NaC M365 Provisioning"
+            and provisioner.get("servicePrincipalType") == "Application"
+        )
+    except (TypeError, ValueError):
+        provisioner_valid = False
+        provisioner_id = ""
+    if not provisioner_valid:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISMATCH")
+
+    graph_principals = _lookup_service_principals(client, GRAPH_APP_ID)
+    if len(graph_principals) != 1:
+        raise GraphActivationError("PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH")
+    graph_principal = graph_principals[0]
+    try:
+        graph_principal_id = _canonical_uuid(graph_principal.get("id"))
+        graph_valid = (
+            _canonical_uuid(graph_principal.get("appId")) == GRAPH_APP_ID
+            and graph_principal.get("displayName") == "Microsoft Graph"
+            and graph_principal.get("servicePrincipalType") == "Application"
+        )
+    except (TypeError, ValueError):
+        graph_valid = False
+        graph_principal_id = ""
+    app_roles = graph_principal.get("appRoles")
+    if not graph_valid or not isinstance(app_roles, list):
+        raise GraphActivationError("PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH")
+
+    role_ids: dict[str, str] = {}
+    for role in app_roles:
+        if (
+            not isinstance(role, dict)
+            or role.get("value") not in PROVISIONER_GRAPH_APPLICATION_ROLES
+        ):
+            continue
+        try:
+            role_id = _canonical_uuid(role.get("id"))
+        except (TypeError, ValueError):
+            raise GraphActivationError(
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+            ) from None
+        if (
+            role.get("isEnabled") is not True
+            or role.get("allowedMemberTypes") != ["Application"]
+            or role["value"] in role_ids
+        ):
+            raise GraphActivationError(
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+            )
+        role_ids[role["value"]] = role_id
+    if set(role_ids) != set(PROVISIONER_GRAPH_APPLICATION_ROLES):
+        raise GraphActivationError("PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH")
+
+    assignments = _paged(
+        client,
+        f"/servicePrincipals/{provisioner_id}/appRoleAssignments?"
+        + urllib.parse.urlencode(
+            {"$select": "id,appRoleId,principalId,resourceId"}
+        ),
+    )
+    role_names_by_id = {role_id: name for name, role_id in role_ids.items()}
+    effective_roles: list[str] = []
+    for assignment in assignments:
+        try:
+            resource_id = _canonical_uuid(assignment.get("resourceId"))
+        except (TypeError, ValueError):
+            raise GraphActivationError(
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+            ) from None
+        if resource_id != graph_principal_id:
+            continue
+        try:
+            principal_id = _canonical_uuid(assignment.get("principalId"))
+            role_id = _canonical_uuid(assignment.get("appRoleId"))
+        except (TypeError, ValueError):
+            raise GraphActivationError(
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+            ) from None
+        if (
+            principal_id != provisioner_id
+            or role_id not in role_names_by_id
+        ):
+            raise GraphActivationError(
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+            )
+        effective_roles.append(role_names_by_id[role_id])
+    if (
+        len(effective_roles) != len(set(effective_roles))
+        or set(effective_roles) != set(PROVISIONER_GRAPH_APPLICATION_ROLES)
+    ):
+        raise GraphActivationError("PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH")
+    return {
+        "status": "present",
+        "application_roles": sorted(effective_roles),
+        "assignment_count": len(effective_roles),
+        "raw_ids_emitted": False,
+    }
+
+
+def inspect_site_permission_administration(
+    client: GraphActivationClient,
+    *,
+    site_id: str = TARGET_SITE_ID,
+) -> dict[str, Any]:
+    """Prove the provisioner's target-site permission-admin capability read-only."""
+
+    _require_target_site(site_id)
+    try:
+        permissions = _paged(client, _site_permissions_path(site_id))
+    except GraphActivationError as exc:
+        raise GraphActivationError(
+            "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE"
+        ) from exc
+    return {
+        "status": "available",
+        "site_ref": _hashed_ref(site_id),
+        "permission_count": len(permissions),
+    }
 
 
 def ensure_nac_bff_graph_activation(
@@ -963,6 +1114,8 @@ __all__ = [
     "ensure_site_read_permission",
     "ensure_uami_sites_selected",
     "inspect_entra_api_application",
+    "inspect_provisioner_application_roles",
+    "inspect_site_permission_administration",
     "inspect_site_read_permission",
     "inspect_uami_sites_selected",
 ]

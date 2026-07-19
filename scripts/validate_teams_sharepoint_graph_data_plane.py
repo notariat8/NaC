@@ -56,6 +56,7 @@ BATCH_APPROVAL_DE = REPO_ROOT / "docs" / "de" / "operations" / "m365-mcp-batch-a
 BATCH_APPROVAL_EN = REPO_ROOT / "docs" / "en" / "operations" / "m365-mcp-batch-approval.md"
 PROVISIONER_SCRIPT = REPO_ROOT / "scripts" / "provision_teams_sharepoint_graph.py"
 PACKAGE_ROOT = REPO_ROOT / "src" / "nac_m365_graph"
+PRIVILEGED_APPLY_SOURCE = PACKAGE_ROOT / "privileged_apply.py"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
 
 REQUIRED_LISTS = {
@@ -190,6 +191,7 @@ def validate() -> list[str]:
                 privileged_applied_state,
                 provisioned_state,
                 schema,
+                privileged_change_config,
             )
         )
     if runtime_metadata_state:
@@ -199,6 +201,7 @@ def validate() -> list[str]:
                 runtime_smoke_state,
                 provisioned_state,
                 schema,
+                privileged_change_config,
             )
         )
     errors.extend(_validate_docs())
@@ -364,12 +367,62 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     if not isinstance(permissions, dict):
         errors.append("permission_model must be an object")
     else:
-        bootstrap = set(_strings(permissions.get("bootstrap_application_permissions")))
-        for permission in ("Team.Create", "Sites.Manage.All"):
-            if permission not in bootstrap:
-                errors.append(f"permission_model.bootstrap_application_permissions missing {permission}")
-        if "Sites.Selected" not in set(_strings(permissions.get("runtime_target_permissions"))):
-            errors.append("permission_model.runtime_target_permissions must include Sites.Selected")
+        bootstrap = set(
+            _strings(permissions.get("bootstrap_application_permissions"))
+        )
+        expected_bootstrap = {
+            "Application.Read.All",
+            "Application.ReadWrite.OwnedBy",
+            "AppRoleAssignment.ReadWrite.All",
+            "Team.Create",
+            "Sites.Manage.All",
+            "Sites.FullControl.All",
+        }
+        if bootstrap != expected_bootstrap:
+            errors.append(
+                "permission_model.bootstrap_application_permissions must equal "
+                "the exact owner-gated provisioner allowlist"
+            )
+        expected_site_admin = {
+            "application_id": "m365_provisioning_app",
+            "required_application_permission": "Sites.FullControl.All",
+            "graph_methods_exact": ["GET", "POST"],
+            "graph_path_template_exact": "/sites/{siteId}/permissions",
+            "owner_gate_required": True,
+            "runtime_identity_allowed": False,
+        }
+        if (
+            permissions.get("provisioning_application_client_id_exact")
+            != "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+            or permissions.get("runtime_application_client_id_exact")
+            != "0d98b5a5-479b-452d-9b43-c3fbbcab9d24"
+            or permissions.get("bound_existing_applications_required") is not True
+        ):
+            errors.append(
+                "permission_model must bind both existing applications by exact client ID"
+            )
+        expected_execution_identity = {
+            "mode_exact": "delegated_technical_owner",
+            "proof_operation_exact": "GET /me",
+            "configured_owner_match_required": True,
+            "app_only_allowed": False,
+            "failure_behavior": "stop_before_first_write",
+        }
+        if (
+            permissions.get("privileged_apply_execution_identity")
+            != expected_execution_identity
+        ):
+            errors.append(
+                "permission_model.privileged_apply_execution_identity must "
+                "require delegated GET /me before the first write"
+            )
+        if permissions.get("site_permission_administration") != expected_site_admin:
+            errors.append(
+                "permission_model.site_permission_administration must bind "
+                "Sites.FullControl.All to the owner-gated provisioning app"
+            )
+        if set(_strings(permissions.get("runtime_target_permissions"))) != {"Sites.Selected"}:
+            errors.append("permission_model.runtime_target_permissions must equal Sites.Selected")
         if permissions.get("team_member_mutation_in_mvp") is not False:
             errors.append("permission_model.team_member_mutation_in_mvp must be false")
         if permissions.get("runtime_app_must_be_site_scoped_after_bootstrap") is not True:
@@ -845,10 +898,35 @@ def _validate_privileged_applied_state(
             continue
         for key in ("application_object_id", "client_id", "service_principal_id"):
             _require_nonempty_string(app, key, f"privileged applied {app_id}", errors)
+        if app.get("client_id") != config_app.get("expected_client_id"):
+            errors.append(
+                f"privileged applied {app_id}.client_id must match exact configured client ID"
+            )
         if app.get("display_name") != config_app.get("display_name"):
             errors.append(f"privileged applied {app_id}.display_name must match privileged config")
-        if set(_strings(app.get("application_permissions"))) != set(_strings(config_app.get("bootstrap_application_permissions"))):
-            errors.append(f"privileged applied {app_id}.application_permissions must match privileged config")
+        applied_permissions = set(_strings(app.get("application_permissions")))
+        configured_permissions = set(
+            _strings(config_app.get("bootstrap_application_permissions"))
+        )
+        if app_id == "m365_provisioning_app":
+            historical_pre_671_snapshot = (
+                state.get("captured_at_utc") == "2026-07-05T14:32:10Z"
+                and applied_permissions == {"Team.Create", "Sites.Manage.All"}
+            )
+            if (
+                applied_permissions != configured_permissions
+                and not historical_pre_671_snapshot
+            ):
+                errors.append(
+                    "privileged applied m365_provisioning_app.application_permissions "
+                    "must match current config; only the exact 2026-07-05 pre-#671 "
+                    "snapshot is retained as non-operative historical evidence"
+                )
+        elif applied_permissions != configured_permissions:
+            errors.append(
+                f"privileged applied {app_id}.application_permissions must match "
+                "privileged config"
+            )
         if app.get("runtime_allowed") is not bool(config_app.get("runtime_allowed")):
             errors.append(f"privileged applied {app_id}.runtime_allowed must match privileged config")
         if app.get("direct_technical_owner_user") != config_owner.get("user_principal_name"):
@@ -900,6 +978,7 @@ def _validate_runtime_smoke_state(
     privileged_state: dict[str, Any],
     provisioned_state: dict[str, Any],
     schema: dict[str, Any],
+    config: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
     if state.get("state_version") != "nac.m365-runtime-smoke/v0.1":
@@ -916,11 +995,19 @@ def _validate_runtime_smoke_state(
     runtime = state.get("runtime_application")
     privileged_apps = privileged_state.get("applications", {}) if isinstance(privileged_state, dict) else {}
     privileged_runtime = privileged_apps.get("m365_runtime_app") if isinstance(privileged_apps, dict) else {}
+    config_apps = {
+        app.get("id"): app
+        for app in config.get("applications", [])
+        if isinstance(app, dict) and isinstance(app.get("id"), str)
+    } if isinstance(config, dict) else {}
+    expected_runtime_client_id = config_apps.get("m365_runtime_app", {}).get("expected_client_id")
     if not isinstance(runtime, dict):
         errors.append("runtime smoke runtime_application must be an object")
     else:
         if runtime.get("client_id") != privileged_runtime.get("client_id"):
             errors.append("runtime smoke runtime application client_id must match privileged state")
+        if runtime.get("client_id") != expected_runtime_client_id:
+            errors.append("runtime smoke runtime application client_id must match exact configured client ID")
         if runtime.get("application_object_id") != privileged_runtime.get("application_object_id"):
             errors.append("runtime smoke runtime application object id must match privileged state")
         if runtime.get("authentication_mode") != "client_credentials_with_certificate":
@@ -974,6 +1061,7 @@ def _validate_runtime_metadata_state(
     runtime_smoke_state: dict[str, Any],
     provisioned_state: dict[str, Any],
     schema: dict[str, Any],
+    config: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
     if state.get("state_version") != "nac.m365-runtime-metadata/v0.1":
@@ -985,11 +1073,19 @@ def _validate_runtime_metadata_state(
 
     runtime = state.get("runtime_application")
     smoke_runtime = runtime_smoke_state.get("runtime_application", {}) if isinstance(runtime_smoke_state, dict) else {}
+    config_apps = {
+        app.get("id"): app
+        for app in config.get("applications", [])
+        if isinstance(app, dict) and isinstance(app.get("id"), str)
+    } if isinstance(config, dict) else {}
+    expected_runtime_client_id = config_apps.get("m365_runtime_app", {}).get("expected_client_id")
     if not isinstance(runtime, dict):
         errors.append("runtime metadata runtime_application must be an object")
     else:
         if runtime.get("client_id") != smoke_runtime.get("client_id"):
             errors.append("runtime metadata runtime application client_id must match runtime smoke")
+        if runtime.get("client_id") != expected_runtime_client_id:
+            errors.append("runtime metadata runtime application client_id must match exact configured client ID")
         if runtime.get("certificate_thumbprint_sha1") != smoke_runtime.get("certificate_thumbprint_sha1"):
             errors.append("runtime metadata certificate thumbprint must match runtime smoke")
         if runtime.get("authentication_mode") != "client_credentials_with_certificate":
@@ -1114,7 +1210,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_DE, "Microsoft-365-CLI-Admin-Beschleuniger"),
         (RUNBOOK_DE, "Pflicht-Handoff Vor Nutzeraktion"),
         (RUNBOOK_DE, "Bootstrap-Route A: CLI-App durch `m365 setup`"),
-        (RUNBOOK_DE, "Nach Login: NaC-App per CLI anlegen"),
+        (RUNBOOK_DE, "Nach Login: Bestehende Provisioning-App erweitern"),
         (RUNBOOK_DE, "Microsoft Entra Admin Center: Tenant Overview"),
         (RUNBOOK_DE, "Fehlerbild AADSTS7000218"),
         (RUNBOOK_DE, "https://microsoft.com/devicelogin"),
@@ -1125,7 +1221,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_EN, "Microsoft 365 CLI Admin Accelerator"),
         (RUNBOOK_EN, "Required Handoff Before User Action"),
         (RUNBOOK_EN, "Bootstrap Route A: CLI App Through `m365 setup`"),
-        (RUNBOOK_EN, "After Login: Create NaC App Through CLI"),
+        (RUNBOOK_EN, "After Login: Extend the Existing Provisioning App"),
         (RUNBOOK_EN, "Microsoft Entra Admin Center: Tenant Overview"),
         (RUNBOOK_EN, "AADSTS7000218 Failure"),
         (RUNBOOK_EN, "https://microsoft.com/devicelogin"),
@@ -1204,6 +1300,24 @@ def _validate_code_boundary() -> list[str]:
         for marker in FORBIDDEN_SOURCE_MARKERS:
             if marker in text:
                 errors.append(f"{path.relative_to(REPO_ROOT)} contains forbidden SDK/API marker: {marker}")
+    privileged_apply_text = (
+        PRIVILEGED_APPLY_SOURCE.read_text(encoding="utf-8")
+        if PRIVILEGED_APPLY_SOURCE.is_file()
+        else ""
+    )
+    for marker in (
+        "_resolve_delegated_actor",
+        "/me?$select=id,displayName,userPrincipalName",
+        "privileged apply requires delegated technical-owner authentication",
+        "_lookup_bound_application",
+        "expected_client_id",
+        "existing_application_required",
+    ):
+        if marker not in privileged_apply_text:
+            errors.append(
+                "privileged_apply must prove delegated technical-owner "
+                f"authentication before writes: missing {marker}"
+            )
     quality_text = QUALITY_GATE.read_text(encoding="utf-8") if QUALITY_GATE.is_file() else ""
     if "teams_sharepoint_graph_data_plane" not in quality_text:
         errors.append("quality_gate.py must include teams_sharepoint_graph_data_plane")

@@ -59,6 +59,15 @@ SPFX_WEB_PART_ID = "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21"
 SPFX_PAGE_NAME = "NaC-Testumgebung.aspx"
 CLI_TEST_CLIENT_ID = "c86dded6-9723-4b8d-91f2-e0fd70e25839"
 PROVISIONER_CLIENT_ID = "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+PROVISIONER_SITE_PERMISSION_GRAPH_ROLE = "Sites.FullControl.All"
+PROVISIONER_GRAPH_APPLICATION_ROLES = (
+    "Application.Read.All",
+    "Application.ReadWrite.OwnedBy",
+    "AppRoleAssignment.ReadWrite.All",
+    "Team.Create",
+    "Sites.Manage.All",
+    "Sites.FullControl.All",
+)
 M365_CLI_OWNER_UPN = "ofunk@funktion8.de"
 API_CLIENT_ID_BINDING = {
     "resolution": "unique_by_app_id_uri",
@@ -166,6 +175,9 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
             "spfx_page_name": SPFX_PAGE_NAME,
             "cli_test_client_id": CLI_TEST_CLIENT_ID,
             "provisioner_client_id": PROVISIONER_CLIENT_ID,
+            "provisioner_site_permission_graph_role": (
+                PROVISIONER_SITE_PERMISSION_GRAPH_ROLE
+            ),
             "m365_cli_owner_upn": M365_CLI_OWNER_UPN,
             "site_grant_role": "read",
             "managed_identity_graph_role": "Sites.Selected",
@@ -476,6 +488,9 @@ def _activation_contract_valid(root: Path) -> bool:
         "spfx_page_name": SPFX_PAGE_NAME,
         "cli_test_client_id": CLI_TEST_CLIENT_ID,
         "provisioner_client_id": PROVISIONER_CLIENT_ID,
+        "provisioner_site_permission_graph_role": (
+            PROVISIONER_SITE_PERMISSION_GRAPH_ROLE
+        ),
         "m365_cli_owner_upn": M365_CLI_OWNER_UPN,
         "site_grant_role": "read",
         "managed_identity_graph_role": "Sites.Selected",

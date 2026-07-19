@@ -16,6 +16,8 @@ from nac_bff.azure_activation import (
 from nac_bff.graph_activation import (
     GRAPH_APP_ID,
     MATTER_READ_SCOPE_ID,
+    PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
     TARGET_SITE_ID,
     GraphActivationError,
     ReadbackPolicy,
@@ -24,6 +26,8 @@ from nac_bff.graph_activation import (
     ensure_site_read_permission,
     ensure_uami_sites_selected,
     inspect_entra_api_application,
+    inspect_provisioner_application_roles,
+    inspect_site_permission_administration,
     inspect_site_read_permission,
     inspect_uami_sites_selected,
 )
@@ -38,6 +42,11 @@ GRAPH_PRINCIPAL_ID = "66666666-6666-4666-8666-666666666666"
 SITES_SELECTED_ROLE_ID = "77777777-7777-4777-8777-777777777777"
 BROADER_ROLE_ID = "88888888-8888-4888-8888-888888888888"
 OTHER_APP_ID = "99999999-9999-4999-8999-999999999999"
+PROVISIONER_PRINCIPAL_ID = "aaaaaaaa-1111-4111-8111-111111111111"
+PROVISIONER_ROLE_IDS = {
+    name: f"bbbbbbbb-2222-4222-8222-{index:012d}"
+    for index, name in enumerate(PROVISIONER_GRAPH_APPLICATION_ROLES, start=1)
+}
 
 
 class FakeGraphActivationClient:
@@ -62,7 +71,23 @@ class FakeGraphActivationClient:
                         "isEnabled": True,
                         "allowedMemberTypes": ["Application"],
                     },
+                    *[
+                        {
+                            "id": role_id,
+                            "value": name,
+                            "isEnabled": True,
+                            "allowedMemberTypes": ["Application"],
+                        }
+                        for name, role_id in PROVISIONER_ROLE_IDS.items()
+                    ],
                 ],
+            },
+            {
+                "id": PROVISIONER_PRINCIPAL_ID,
+                "appId": PROVISIONER_CLIENT_ID,
+                "displayName": "NaC M365 Provisioning",
+                "servicePrincipalType": "Application",
+                "appRoles": [],
             },
             {
                 "id": UAMI_PRINCIPAL_ID,
@@ -73,6 +98,18 @@ class FakeGraphActivationClient:
             },
         ]
         self.assignments: list[dict[str, Any]] = []
+        self.provisioner_assignments: list[dict[str, Any]] = [
+            {
+                "id": f"assignment-{index}",
+                "principalId": PROVISIONER_PRINCIPAL_ID,
+                "resourceId": GRAPH_PRINCIPAL_ID,
+                "appRoleId": PROVISIONER_ROLE_IDS[name],
+            }
+            for index, name in enumerate(
+                PROVISIONER_GRAPH_APPLICATION_ROLES,
+                start=1,
+            )
+        ]
         self.permissions: list[dict[str, Any]] = []
         self.gets: list[str] = []
         self.posts: list[tuple[str, dict[str, Any]]] = []
@@ -126,6 +163,10 @@ class FakeGraphActivationClient:
                 self.uami_lookup_delay -= 1
                 values = []
             return {"value": copy.deepcopy(values)}
+        if path.startswith(
+            f"/servicePrincipals/{PROVISIONER_PRINCIPAL_ID}/appRoleAssignments"
+        ):
+            return {"value": copy.deepcopy(self.provisioner_assignments)}
         if path.startswith(
             f"/servicePrincipals/{UAMI_PRINCIPAL_ID}/appRoleAssignments"
         ):
@@ -692,6 +733,85 @@ class NacBffGraphActivationTests(unittest.TestCase):
             [f"/servicePrincipals/{UAMI_PRINCIPAL_ID}/appRoleAssignments"],
         )
 
+    def test_provisioner_application_roles_are_exact_and_read_only(self) -> None:
+        client = FakeGraphActivationClient()
+
+        result = inspect_provisioner_application_roles(client)
+
+        self.assertEqual(result["status"], "present")
+        self.assertEqual(
+            set(result["application_roles"]),
+            set(PROVISIONER_GRAPH_APPLICATION_ROLES),
+        )
+        self.assertEqual(
+            result["assignment_count"],
+            len(PROVISIONER_GRAPH_APPLICATION_ROLES),
+        )
+        self.assertEqual(client.posts, [])
+
+    def test_provisioner_application_roles_block_broader_assignment(self) -> None:
+        client = FakeGraphActivationClient()
+        client.provisioner_assignments.append(
+            {
+                "id": "assignment-broader",
+                "principalId": PROVISIONER_PRINCIPAL_ID,
+                "resourceId": GRAPH_PRINCIPAL_ID,
+                "appRoleId": BROADER_ROLE_ID,
+            }
+        )
+
+        self._assert_error(
+            "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+            inspect_provisioner_application_roles,
+            client,
+        )
+
+    def test_site_permission_admin_capability_is_read_only_and_redacted(
+        self,
+    ) -> None:
+        client = FakeGraphActivationClient()
+        client.permissions = [client.exact_permission()]
+
+        result = inspect_site_permission_administration(client)
+
+        self.assertEqual(result["status"], "available")
+        self.assertEqual(result["permission_count"], 1)
+        self.assertNotIn(TARGET_SITE_ID, json.dumps(result))
+        self.assertEqual(client.posts, [])
+
+    def test_site_permission_admin_capability_maps_request_failure(self) -> None:
+        client = FakeGraphActivationClient()
+        client.request_error = PermissionError("forbidden")
+
+        self._assert_error(
+            "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
+            inspect_site_permission_administration,
+            client,
+        )
+
+    def test_site_permission_admin_capability_maps_invalid_shape(self) -> None:
+        client = FakeGraphActivationClient()
+        client.get = lambda _path: {"value": "invalid"}
+
+        self._assert_error(
+            "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
+            inspect_site_permission_administration,
+            client,
+        )
+
+    def test_site_permission_admin_capability_maps_invalid_paging(self) -> None:
+        client = FakeGraphActivationClient()
+        client.get = lambda _path: {
+            "value": [],
+            "@odata.nextLink": 42,
+        }
+
+        self._assert_error(
+            "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
+            inspect_site_permission_administration,
+            client,
+        )
+
     def test_site_permission_create_polls_delayed_visibility_once(self) -> None:
         client = FakeGraphActivationClient()
         client.permission_readback_delay = 2
@@ -869,7 +989,7 @@ class NacBffGraphActivationTests(unittest.TestCase):
 
     def test_uami_lookup_null_duplicate_and_mismatch_fail_closed(self) -> None:
         missing = FakeGraphActivationClient()
-        missing.service_principals = [missing.service_principals[0]]
+        missing.service_principals = missing.service_principals[:2]
         self._assert_error(
             "UAMI_SERVICE_PRINCIPAL_READBACK_TIMEOUT",
             ensure_uami_sites_selected,
@@ -880,7 +1000,7 @@ class NacBffGraphActivationTests(unittest.TestCase):
 
         duplicate = FakeGraphActivationClient()
         duplicate.service_principals.append(
-            copy.deepcopy(duplicate.service_principals[1])
+            copy.deepcopy(duplicate.service_principals[2])
         )
         self._assert_error(
             "UAMI_SERVICE_PRINCIPAL_DUPLICATE",
@@ -890,7 +1010,7 @@ class NacBffGraphActivationTests(unittest.TestCase):
         )
 
         mismatch = FakeGraphActivationClient()
-        mismatch.service_principals[1]["servicePrincipalType"] = "Application"
+        mismatch.service_principals[2]["servicePrincipalType"] = "Application"
         self._assert_error(
             "UAMI_SERVICE_PRINCIPAL_MISMATCH",
             ensure_uami_sites_selected,

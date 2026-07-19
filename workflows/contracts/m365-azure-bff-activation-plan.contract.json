@@ -42,6 +42,7 @@
     "spfx_page_name": "NaC-Testumgebung.aspx",
     "cli_test_client_id": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
     "provisioner_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+    "provisioner_site_permission_graph_role": "Sites.FullControl.All",
     "m365_cli_owner_upn": "ofunk@funktion8.de",
     "entra_api_contract": {
       "sign_in_audience": "AzureADMyOrg",

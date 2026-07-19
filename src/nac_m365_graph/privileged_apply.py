@@ -4,6 +4,7 @@ import urllib.parse
 from typing import Any, Protocol
 
 from .graph_client import GraphHttpError
+from .privileged_change import validate_privileged_change_config
 
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -26,10 +27,28 @@ def apply_privileged_change_path(
     config: dict[str, Any],
     provisioned_state: dict[str, Any],
 ) -> dict[str, Any]:
-    technical_owner = _resolve_technical_owner(client, config["technical_owner_user"]["user_principal_name"])
-    team_owner_checks = _verify_team_owners(client, provisioned_state, technical_owner["id"])
-    governance_group = _ensure_governance_group(client, config["governance_group"])
+    if validate_privileged_change_config(config):
+        raise RuntimeError("invalid privileged change config")
+    technical_owner_upn = config["technical_owner_user"]["user_principal_name"]
+    delegated_actor = _resolve_delegated_actor(client, technical_owner_upn)
+    technical_owner = _resolve_technical_owner(client, technical_owner_upn)
+    if technical_owner.get("id") != delegated_actor["id"]:
+        raise RuntimeError(
+            "privileged apply requires the configured delegated technical owner"
+        )
+    team_owner_checks = _verify_team_owners(
+        client,
+        provisioned_state,
+        technical_owner["id"],
+    )
     graph_sp, graph_roles = _get_graph_service_principal(client)
+    _inspect_existing_application_role_boundaries(
+        client,
+        config["applications"],
+        graph_sp,
+        graph_roles,
+    )
+    governance_group = _ensure_governance_group(client, config["governance_group"])
 
     applications: dict[str, Any] = {}
     runtime_app: dict[str, Any] | None = None
@@ -69,6 +88,30 @@ def apply_privileged_change_path(
         "applications": applications,
         "sitePermissions": site_permissions,
     }
+
+
+def _resolve_delegated_actor(
+    client: GraphWriteClient,
+    expected_user_principal_name: str,
+) -> dict[str, Any]:
+    try:
+        actor = client.get("/me?$select=id,displayName,userPrincipalName")
+    except GraphHttpError as exc:
+        raise RuntimeError(
+            "privileged apply requires delegated technical-owner authentication"
+        ) from exc
+    if (
+        not isinstance(actor, dict)
+        or not isinstance(actor.get("id"), str)
+        or not actor["id"].strip()
+        or not isinstance(actor.get("userPrincipalName"), str)
+        or actor["userPrincipalName"].strip().lower()
+        != expected_user_principal_name.strip().lower()
+    ):
+        raise RuntimeError(
+            "privileged apply requires the configured delegated technical owner"
+        )
+    return actor
 
 
 def _resolve_technical_owner(client: GraphWriteClient, user_principal_name: str) -> dict[str, Any]:
@@ -166,6 +209,121 @@ def _get_graph_service_principal(client: GraphWriteClient) -> tuple[dict[str, An
     return graph_sp, roles
 
 
+def _inspect_existing_application_role_boundaries(
+    client: GraphWriteClient,
+    applications: list[dict[str, Any]],
+    graph_sp: dict[str, Any],
+    graph_roles: dict[str, str],
+) -> None:
+    """Inventory every existing app role boundary before the first write."""
+
+    for app_def in applications:
+        permissions = _strings(app_def.get("bootstrap_application_permissions"))
+        desired_role_ids = {graph_roles[permission] for permission in permissions}
+        app = _lookup_bound_application(
+            client,
+            app_def,
+            select="id,appId,displayName",
+        )
+        if app is None:
+            continue
+        service_principals = _paged(
+            client,
+            "/servicePrincipals?"
+            + urllib.parse.urlencode(
+                {
+                    "$filter": f"appId eq '{app['appId']}'",
+                    "$select": "id,appId,displayName",
+                }
+            ),
+        )
+        if len(service_principals) > 1:
+            raise RuntimeError(
+                f"service principal lookup returned multiple results for "
+                f"{app_def['display_name']}"
+            )
+        if not service_principals:
+            continue
+        existing = _paged(
+            client,
+            f"/servicePrincipals/{service_principals[0]['id']}"
+            "/appRoleAssignments",
+        )
+        _validate_effective_graph_assignments(
+            existing,
+            graph_sp,
+            desired_role_ids,
+        )
+
+
+def _validate_effective_graph_assignments(
+    assignments: list[dict[str, Any]],
+    graph_sp: dict[str, Any],
+    desired_role_ids: set[str],
+) -> set[str]:
+    graph_assignments = [
+        item for item in assignments if item.get("resourceId") == graph_sp["id"]
+    ]
+    effective_role_ids = [item.get("appRoleId") for item in graph_assignments]
+    if any(role_id not in desired_role_ids for role_id in effective_role_ids):
+        raise RuntimeError(
+            "application has an unexpected Microsoft Graph application role"
+        )
+    if len(effective_role_ids) != len(set(effective_role_ids)):
+        raise RuntimeError(
+            "application has duplicate Microsoft Graph application role assignments"
+        )
+    return set(effective_role_ids)
+
+
+def _lookup_bound_application(
+    client: GraphWriteClient,
+    app_def: dict[str, Any],
+    *,
+    select: str,
+) -> dict[str, Any] | None:
+    expected_client_id = app_def.get("expected_client_id")
+    if isinstance(expected_client_id, str) and expected_client_id:
+        filter_expression = f"appId eq '{expected_client_id}'"
+    else:
+        filter_expression = f"displayName eq '{app_def['display_name']}'"
+    apps = _paged(
+        client,
+        "/applications?"
+        + urllib.parse.urlencode(
+            {
+                "$filter": filter_expression,
+                "$select": select,
+            }
+        ),
+    )
+    if len(apps) > 1:
+        raise RuntimeError(
+            f"application lookup returned multiple results for {app_def['id']}"
+        )
+    if not apps:
+        if app_def.get("existing_application_required") is True:
+            raise RuntimeError(
+                f"bound existing application is missing for {app_def['id']}"
+            )
+        return None
+    app = apps[0]
+    if (
+        not isinstance(app.get("id"), str)
+        or not app["id"]
+        or app.get("displayName") != app_def["display_name"]
+        or (
+            isinstance(expected_client_id, str)
+            and expected_client_id
+            and app.get("appId") != expected_client_id
+        )
+    ):
+        raise RuntimeError(
+            f"bound existing application mismatch for {app_def['id']}"
+        )
+    return app
+
+
 def _ensure_application(
     client: GraphWriteClient,
     app_def: dict[str, Any],
@@ -175,15 +333,10 @@ def _ensure_application(
     for permission in permissions:
         if permission not in graph_roles:
             raise RuntimeError(f"Microsoft Graph application role is not available: {permission}")
-    apps = _paged(
+    app = _lookup_bound_application(
         client,
-        "/applications?"
-        + urllib.parse.urlencode(
-            {
-                "$filter": f"displayName eq '{app_def['display_name']}'",
-                "$select": "id,appId,displayName,requiredResourceAccess",
-            }
-        ),
+        app_def,
+        select="id,appId,displayName,requiredResourceAccess",
     )
     required_resource_access = [
         {
@@ -194,11 +347,11 @@ def _ensure_application(
             ],
         }
     ]
-    if len(apps) > 1:
-        raise RuntimeError(f"application lookup returned multiple results for {app_def['display_name']}")
-    if apps:
-        app = apps[0]
-        client.patch(f"/applications/{app['id']}", {"requiredResourceAccess": required_resource_access})
+    if app is not None:
+        client.patch(
+            f"/applications/{app['id']}",
+            {"requiredResourceAccess": required_resource_access},
+        )
         return {**app, "_status": "existing"}
     created = client.post(
         "/applications",
@@ -256,8 +409,16 @@ def _ensure_app_role_assignments(
     graph_roles: dict[str, str],
     permissions: list[str],
 ) -> list[dict[str, Any]]:
-    existing = _paged(client, f"/servicePrincipals/{service_principal['id']}/appRoleAssignments")
-    existing_role_ids = {item.get("appRoleId") for item in existing if item.get("resourceId") == graph_sp["id"]}
+    existing = _paged(
+        client,
+        f"/servicePrincipals/{service_principal['id']}/appRoleAssignments",
+    )
+    desired_role_ids = {graph_roles[permission] for permission in permissions}
+    existing_role_ids = _validate_effective_graph_assignments(
+        existing,
+        graph_sp,
+        desired_role_ids,
+    )
     results: list[dict[str, Any]] = []
     for permission in permissions:
         role_id = graph_roles[permission]

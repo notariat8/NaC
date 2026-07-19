@@ -155,6 +155,8 @@ Erlaubte Graph-Endpunkte im MVP:
 - `GET /sites/{site-id}/lists/{list-id}/columns`
 - `POST /sites/{site-id}/lists/{list-id}/columns`
 - `GET /sites/{site-id}/drives`
+- `GET /sites/{site-id}/permissions` nur owner-gated über die Provisioning-App
+- `POST /sites/{site-id}/permissions` nur owner-gated über die Provisioning-App
 
 Der `filesFolder`-Aufruf ist wichtig, weil Microsoft dokumentiert, dass die
 SharePoint-Site des General Channels nach Team-Erstellung verzögert
@@ -171,21 +173,39 @@ SharePoint-Legacy-REST.
 
 ## Berechtigungen
 
-Für den Bootstrap reichen als Zielbild:
+Für die Provisioning-App gilt eine exakte Allowlist aus sechs Rollen:
 
-- `Team.Create`, wenn NaC Teams anlegen soll,
-- `Sites.Manage.All`, um Listen und Spalten in der verbundenen SharePoint-Site
-  zu provisionieren.
+- `Application.Read.All`,
+- `Application.ReadWrite.OwnedBy`,
+- `AppRoleAssignment.ReadWrite.All`,
+- `Team.Create`,
+- `Sites.Manage.All`,
+- `Sites.FullControl.All`.
 
-Optional können für Discovery `Group.Read.All` oder `Team.ReadBasic.All`
-erforderlich werden, wenn Teams nicht über bekannte IDs, sondern über Namen
-aufgelöst werden sollen.
+Die ersten drei Rollen dienen dem owner-gated Entra-Anwendungspfad,
+`Team.Create` dem Team-Bootstrap, `Sites.Manage.All` der Listen- und
+Spaltenprovisionierung und `Sites.FullControl.All` ausschließlich `GET` und
+`POST` auf `/sites/{site-id}/permissions`. Fehlende, doppelte oder
+zusätzliche effektive Graph-Anwendungsrollen stoppen vor dem ersten
+Provider-Write.
+
+`Sites.FullControl.All` ist tenantweit und hochprivilegiert. Es bleibt an die
+separate `NaC M365 Provisioning`-App und ein explizites Owner-Gate mit
+Admin-Consent gebunden. Es darf weder der Runtime-App noch der BFF-UAMI
+zugewiesen werden. Die BFF-UAMI bleibt exakt auf `Sites.Selected` und den
+Site-Grant `read` begrenzt. Vor dem ersten Provider-Write muss die Provisioning-App ihre effektive Fähigkeit durch einen read-only `GET /sites/{site-id}/permissions` nachweisen; fehlender oder entzogener Consent stoppt fail-closed.
+
+Namensbasierte Team-Discovery liegt außerhalb dieser Grenze. Das MVP nutzt
+gebundene IDs; deshalb dürfen weder `Group.Read.All` noch
+`Team.ReadBasic.All` dieser App hinzugefügt werden.
 
 Für die spätere Runtime ist `Sites.Selected` das Ziel. Das Bootstrap-Recht ist
 breit und darf nicht dauerhaft die Runtime-App sein. Nach dem Setup soll eine
 separate Runtime-App nur auf die freigegebenen Sites zugreifen.
 
 ## Privilegierte Änderungen Über App/API
+
+Der bestehende `privileged-apply`-Bootstrap, der Benutzer auflöst, Gruppen-Owner prüft und die Governance-Gruppe anlegt, ist ausdrücklich delegiert und weist den konfigurierten technischen Owner vor seinem ersten Write über `GET /me` nach. Er ist nicht der App-only-BFF-Aktivierungspfad und erweitert die Sechser-Allowlist der Provisioning-App nicht. Beide bestehenden Apps werden über ihre exakt gebundenen Client-IDs aufgelöst; eine reine Anzeigenamensuche oder das Anlegen einer Ersatz-App ist verboten.
 
 Nächste Iteration: Standardnutzer arbeiten ohne Microsoft-365-Adminrechte.
 Privilegierte Änderungen an Teams, SharePoint-Listen, Site-Permissions,

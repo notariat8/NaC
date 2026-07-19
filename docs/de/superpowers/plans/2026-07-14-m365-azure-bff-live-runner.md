@@ -3,6 +3,7 @@
 **Datum:** 14. Juli 2026
 **Aktivierungs-Issue:** [#632](https://github.com/notariat8/NaC/issues/632)
 **Parent-Kontext:** [#620](https://github.com/notariat8/NaC/issues/620)
+**Permission-Safety-Rework:** [#671](https://github.com/notariat8/NaC/issues/671), `AC-001` bis `AC-006`
 **AC-IDs:** `AC-632-01` bis `AC-632-08`
 **Delivery Mode:** Protected PR
 **Status:** `OFFLINE_READY`; Live-Runner und Live-Aktivierung sind noch nicht als `PASSED` nachgewiesen
@@ -32,6 +33,7 @@ Erfolgsnachweis.
 - `AC-632-03`: Ein hostweiter zielglobaler Lock blockiert konkurrierende Läufe aus allen Worktrees und Klonen auf dem einzelnen Ausführungshost unabhängig von Output-Pfad, Aktivierungs-Hash oder Correlation-ID; eine hostübergreifende Koordination ist nicht enthalten.
 - `AC-632-04`: Function-Paket, site-scoped SPFx-Paket und das reproduzierbar aus Bicep kompilierte ARM-JSON sind vor dem finalen Git-/Plan-Gate gebaut und hashgebunden; der auf die erzeugte oder wiederverwendete Entra-App-ID aufgelöste Parameter-Snapshot und das vollständige Manifest werden nach dem exakten Step-3-Readback und vor dem ARM-Deployment atomar gebunden. Eine Bicep-Kompilierung im Live-Lauf ist verboten.
 - `AC-632-05`: Entra, UAMI, `Sites.Selected`, Site-`read`, site-scoped SPFx und `Matter.Read` werden exakt angelegt oder wiederverwendet und zurückgelesen.
+- `AC-001` bis `AC-006` aus Issue #671: Die owner-gated Provisioning-App bindet `Sites.FullControl.All` nur für Site-Permission-GET/POST; lokaler State und Pre-Write-Readback müssen die exakte Sechser-Allowlist der Provisioning-App einschließlich genau einer FullControl-Zuweisung nachweisen, während BFF-UAMI und Site-Rolle exakt `Sites.Selected`/`read` bleiben. Der Rework ist offline und erlaubt keinen Consent oder Live-Retry.
 - `AC-632-06`: `healthz` läuft vor Auth, `readyz` erst nach authentifiziertem Read; Deny-/Manipulationsfälle schließen fail-closed und PASSED erfordert die verifizierte Wiederherstellung des synthetischen Ausgangszustands. Bei Prozessabbruch vor diesem Nachweis bleibt der Lauf ohne Erfolg und benötigt read-only Reconciliation plus manuelle Wiederherstellung; eine SIGKILL-Wiederherstellung wird nicht behauptet.
 - `AC-632-07`: Ledger und Evidence sind hashverkettet, redigiert und durch exakte Feld-Allowlists begrenzt.
 - `AC-632-08`: Der erste Teilfehler stoppt den Lauf; Resume bleibt für den MVP deaktiviert.

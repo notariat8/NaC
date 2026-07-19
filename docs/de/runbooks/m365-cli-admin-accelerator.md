@@ -85,16 +85,43 @@ zeigt dafür eine Microsoft-Device-Login-URL und einen einmaligen Code an.
 `<cli-entra-app-id>` ist die Entra-App, die die CLI selbst für interaktive
 Admin-Arbeit nutzt. Sie ist nicht identisch mit der späteren NaC-Runtime-App.
 
-### Nach Login: NaC-App per CLI anlegen
+### Nach Login: Bestehende Provisioning-App erweitern
 
-Nach erfolgreichem CLI-Login kann die CLI die eigentlichen NaC-App-
-Registrierungen anlegen:
+Issue #671 bezieht sich auf die bereits bestehende App `NaC M365
+Provisioning`. Vor einer Änderung wird sie anhand der festen Client-ID
+read-only aufgelöst und ihr aktueller Berechtigungsbestand geprüft:
 
 ```bash
-m365 entra app add --name "NaC Graph Bootstrap" --certificateFile "<public-certificate.cer>" --apisApplication "https://graph.microsoft.com/Team.Create,https://graph.microsoft.com/Sites.Manage.All" --grantAdminConsent
+m365 entra app get --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+m365 entra app permission list --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --type application
+```
+Die App muss über genau diese Client-ID aufgelöst werden. Eine reine
+Anzeigenamensübereinstimmung, eine fehlende gebundene App oder eine Ersatz-App
+stoppt vor jedem Write.
+
+Erst nach einem separaten Owner-Gate darf ausschließlich das fehlende Recht
+zur vorhandenen App ergänzt und der Admin-Consent erteilt werden:
+
+```bash
+m365 entra app permission add --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --applicationPermissions "https://graph.microsoft.com/Sites.FullControl.All" --grantAdminConsent
 ```
 
-Dieser Schritt ändert Tenant-Zustand und bleibt deshalb separat owner-gated.
+Der Befehl und seine Parameter sind in der
+[CLI-for-Microsoft-365-Referenz](https://pnp.github.io/cli-microsoft365/cmd/entra/app/app-permission-add/)
+dokumentiert. Er legt keine zweite App an. Dieser Schritt ändert Tenant-Zustand
+und bleibt deshalb separat owner-gated.
+Der effektive Graph-Anwendungsrollensatz muss danach exakt
+`Application.Read.All`, `Application.ReadWrite.OwnedBy`,
+`AppRoleAssignment.ReadWrite.All`, `Team.Create`, `Sites.Manage.All` und
+`Sites.FullControl.All` enthalten; jede zusätzliche oder doppelte Rolle
+blockiert den Live-Pfad vor dessen erstem Provider-Write.
+`Sites.FullControl.All` wird nur benötigt, weil Microsoft Graph v1.0 für
+`GET` und `POST /sites/{siteId}/permissions` dieses tenantweite
+Anwendungsrecht verlangt. Es bleibt ausschließlich auf der Provisioning-App;
+Runtime-App und BFF-UAMI bleiben auf `Sites.Selected` beziehungsweise den
+exakten Site-Grant `read` begrenzt. Zuweisung und Admin-Consent erfolgen erst
+nach einem neuen unveränderlichen Owner-Gate; dieser Offline-Schritt führt
+weder Consent noch einen Live-Retry aus.
 
 ## Pflicht-Handoff Vor Nutzeraktion
 
@@ -173,10 +200,10 @@ m365 request --url "@graph/organization" --method get --output json
 m365 request --url "@graph/groups" --method get --output json
 ```
 
-Für einen owner-gated Entra-App-Bootstrap ist außerdem zulässig:
+Für die owner-gated Erweiterung der bestehenden Provisioning-App ist außerdem der oben beschriebene, app-ID-gebundene Befehl zulässig:
 
 ```bash
-m365 entra app add --name "NaC Graph Bootstrap" --certificateFile "<public-certificate.cer>" --apisApplication "https://graph.microsoft.com/Team.Create,https://graph.microsoft.com/Sites.Manage.All" --grantAdminConsent
+m365 entra app permission add --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --applicationPermissions "https://graph.microsoft.com/Sites.FullControl.All" --grantAdminConsent
 ```
 
 Der private Schlüssel zum Zertifikat liegt niemals im Repo. Wenn eine Ausgabe
@@ -223,10 +250,14 @@ Owner-Freigabe:
 M365_GRAPH_ACCESS_TOKEN_FILE="<lokale-token-datei>" python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
 ```
 
-Alternativ kann später eine app-only Konfiguration mit `M365_TENANT_ID`,
-`M365_PROVISIONER_CLIENT_ID` und `M365_PROVISIONER_CLIENT_SECRET` genutzt
-werden. Tokens, Client Secrets, Zertifikate und private Schlüssel werden nicht
-in Chat, Shell-Ausgabe oder Repo-Artefakten abgelegt.
+`privileged-apply` ist ein getrennter delegierter Bootstrap-Pfad des
+technischen Owners. Vor jedem Write weist er den konfigurierten Owner read-only
+über `GET /me` nach und lehnt App-only-Authentisierung ab. Die
+zertifikatsbasierte Identität `NaC M365 Provisioning` mit ihrer
+Sechser-Allowlist gehört zum hashgebundenen BFF-Aktivierungspfad und wird nicht
+für die Benutzer- und Gruppenoperationen dieses Bootstrap-Befehls verwendet.
+Tokens, Client Secrets, Zertifikate und private Schlüssel werden nicht in Chat,
+Shell-Ausgabe oder Repo-Artefakten abgelegt.
 
 Ein weiterer Live-Apply bleibt owner-gated und darf erst nach Review des Plans,
 Bestätigung der Ziel-Teams, Drift-Snapshot und Admin Consent ausgeführt werden.
