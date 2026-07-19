@@ -23,6 +23,8 @@ VERIFICATION_PATH = Path(
 ACTIVATION_PLAN_PATH = Path("src/nac_bff/azure_activation.py")
 RUNNER_PATH = Path("src/nac_bff/azure_activation_runner.py")
 COMPOSITION_PATH = Path("src/nac_bff/azure_activation_composition.py")
+GRAPH_ACTIVATION_PATH = Path("src/nac_bff/graph_activation.py")
+GRAPH_ACTIVATION_TEST_PATH = Path("tests/test_nac_bff_graph_activation.py")
 ATTESTATION_PATH = Path("src/nac_bff/azure_activation_attestations.py")
 APPROVAL_PATH = Path("src/nac_bff/azure_activation_approval.py")
 OWNER_GATE_PATH = Path("src/nac_bff/azure_activation_owner_gate.py")
@@ -52,6 +54,50 @@ QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
 LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
 PROVISIONER_BOOTSTRAP_ISSUE = "https://github.com/notariat8/NaC/issues/666"
+SITE_PERMISSION_BOUNDARY_ISSUE = "https://github.com/notariat8/NaC/issues/671"
+SITE_PERMISSION_BOUNDARY_ACCEPTANCE_IDS = [
+    f"AC-{index:03d}" for index in range(1, 7)
+]
+PROVISIONER_GRAPH_APPLICATION_ROLES = [
+    "Application.Read.All",
+    "Application.ReadWrite.OwnedBy",
+    "AppRoleAssignment.ReadWrite.All",
+    "Team.Create",
+    "Sites.Manage.All",
+    "Sites.FullControl.All",
+]
+PROVISIONER_GRAPH_APPLICATION_ROLE_INVENTORY = {
+    "application_client_id_exact": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+    "roles_exact": PROVISIONER_GRAPH_APPLICATION_ROLES,
+    "phase_exact": "after_target_site_identity_check_before_any_provider_write",
+    "provider_writes_before_inventory_exact": 0,
+    "missing_or_broader_or_duplicate_behavior_exact": (
+        "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+    ),
+    "raw_graph_identifiers_emitted_allowed": False,
+}
+SITE_PERMISSION_ADMINISTRATION = {
+    "provisioner_display_name_exact": "NaC M365 Provisioning",
+    "required_application_permission_exact": "Sites.FullControl.All",
+    "graph_methods_exact": ["GET", "POST"],
+    "graph_path_template_exact": "/sites/{siteId}/permissions",
+    "owner_gate_required": True,
+    "runtime_identity_allowed": False,
+    "missing_permission_behavior": "stop_before_live_retry",
+}
+SITE_PERMISSION_ADMIN_CAPABILITY = {
+    "identity_exact": "NaC M365 Provisioning",
+    "operation_exact": "GET /sites/{siteId}/permissions",
+    "site_id_exact": (
+        "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,"
+        "56fc9349-e123-4252-ae2a-05d5d61c9b38"
+    ),
+    "phase_exact": "after_target_site_identity_check_before_any_provider_write",
+    "provider_writes_before_probe_exact": 0,
+    "required_result_exact": "available",
+    "failure_code_exact": "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
+    "raw_graph_error_or_identifier_emission_allowed": False,
+}
 PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS = [
     f"AC-666-{index:02d}" for index in range(1, 7)
 ]
@@ -78,6 +124,22 @@ PROVISIONER_BOOTSTRAP_VERIFICATION = {
     ],
     "all_paths_absolute_and_metadata_trusted": True,
     "state_tenant_and_provisioner_app_binding_exact": True,
+    "state_site_permission_assignment_exact": {
+        "permission": "Sites.FullControl.All",
+        "status_values_allowed": ["created", "existing"],
+        "assignment_count_exact": 1,
+        "missing_behavior": (
+            "PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING_before_live_"
+            "factory_provider_access_or_tenant_write"
+        ),
+        "all_provisioner_permissions_exact": PROVISIONER_GRAPH_APPLICATION_ROLES,
+        "all_assignment_status_values_allowed": ["created", "existing"],
+        "all_assignment_count_exact": 6,
+        "broader_or_duplicate_behavior": (
+            "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH_before_live_factory_"
+            "provider_access_or_tenant_write"
+        ),
+    },
     "binding_field_exact": "provisioner_bootstrap_binding_sha256",
     "binding_pattern": "^[0-9a-f]{64}$",
     "state_read_mode_exact": (
@@ -592,6 +654,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
     COMPOSITION_PATH: (
         "prepared-inputs.redacted.json", "bicep_parameters_snapshot_sha256",
         "inspect_uami_sites_selected", "inspect_site_read_permission",
+        "inspect_provisioner_application_roles",
+        "inspect_site_permission_administration",
+        "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
         "/healthz", "/readyz", "restore_assigned",
         "toolchain_attestations_sha256", "sealed_toolchain",
         "_APPROVED_OWNER_ASSOCIATIONS",
@@ -642,6 +707,12 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "state_path_sha256",
         "certificate_path_sha256",
         "private_key_path_sha256",
+    ),
+    GRAPH_ACTIVATION_PATH: (
+        "inspect_provisioner_application_roles",
+        "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+        "inspect_site_permission_administration",
+        "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
     ),
     PROVISIONER_ENV_BOOTSTRAP_PATH: (
         "build_provisioner_env_bootstrap",
@@ -775,6 +846,14 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_missing_untrusted_or_symlink_inputs_are_blocked",
         "test_each_symlink_input_is_rejected",
         "test_private_key_content_is_never_read",
+        "test_broader_provisioner_role_is_blocked_before_provider_access",
+    ),
+    GRAPH_ACTIVATION_TEST_PATH: (
+        "test_provisioner_application_roles_are_exact_and_read_only",
+        "test_provisioner_application_roles_block_broader_assignment",
+        "test_site_permission_admin_capability_maps_request_failure",
+        "test_site_permission_admin_capability_maps_invalid_shape",
+        "test_site_permission_admin_capability_maps_invalid_paging",
     ),
     Path("tests/test_nac_bff_azure_activation_owner_gate.py"): (
         "test_binding_hash_has_no_toolchain_trailing_newline",
@@ -991,6 +1070,10 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "provisioner_bootstrap_acceptance_ids": (
                 PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS
             ),
+            "site_permission_boundary_issue": SITE_PERMISSION_BOUNDARY_ISSUE,
+            "site_permission_boundary_acceptance_ids": (
+                SITE_PERMISSION_BOUNDARY_ACCEPTANCE_IDS
+            ),
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "safety_rework_acceptance_ids": SAFETY_REWORK_ACCEPTANCE_IDS,
             "owner_gate_safety_rework_issue": OWNER_GATE_SAFETY_REWORK_ISSUE,
@@ -1048,6 +1131,18 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         ) is not True:
             errors.append(
                 "domain Azure inventory logical snapshot requirement differs"
+            )
+        if inventory.get(
+            "site_permission_administration_capability_probe_exact"
+        ) != SITE_PERMISSION_ADMIN_CAPABILITY:
+            errors.append(
+                "domain site-permission administration capability probe differs"
+            )
+        if inventory.get(
+            "provisioner_graph_application_role_inventory_exact"
+        ) != PROVISIONER_GRAPH_APPLICATION_ROLE_INVENTORY:
+            errors.append(
+                "domain provisioner Graph application-role inventory differs"
             )
 
     exclusive_lock = domain.get("exclusive_lock")
@@ -1315,6 +1410,43 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         ):
             errors.append("domain provider artifact handoff mode differs")
 
+    permission_boundary = domain.get("permission_boundary")
+    if not isinstance(permission_boundary, dict):
+        errors.append("domain permission_boundary must be an object")
+    else:
+        if permission_boundary.get(
+            "provisioner_site_permission_administration"
+        ) != SITE_PERMISSION_ADMINISTRATION:
+            errors.append(
+                "domain provisioner site-permission administration boundary differs"
+            )
+        if permission_boundary.get(
+            "provisioner_graph_application_roles_exact"
+        ) != PROVISIONER_GRAPH_APPLICATION_ROLES:
+            errors.append(
+                "domain provisioner Graph application roles must match the exact allowlist"
+            )
+        if permission_boundary.get(
+            "provisioner_additional_graph_roles_allowed"
+        ) is not False:
+            errors.append(
+                "domain provisioner additional Graph roles must remain blocked"
+            )
+        if permission_boundary.get(
+            "managed_identity_graph_application_roles_exact"
+        ) != ["Sites.Selected"]:
+            errors.append(
+                "domain managed identity Graph role must remain exactly Sites.Selected"
+            )
+        if permission_boundary.get(
+            "managed_identity_additional_graph_roles_allowed"
+        ) is not False:
+            errors.append(
+                "domain managed identity additional Graph roles must remain blocked"
+            )
+        if permission_boundary.get("site_permission_roles_exact") != ["read"]:
+            errors.append("domain managed identity site role must remain exactly read")
+
     target = domain.get("exact_target")
     if not isinstance(target, dict):
         errors.append("domain exact_target must be an object")
@@ -1433,6 +1565,28 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "application_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
         }:
             errors.append("domain provisioner state binding differs")
+        expected_state_site_permission_assignment = {
+            "permission": "Sites.FullControl.All",
+            "status_values_allowed": ["created", "existing"],
+            "assignment_count_exact": 1,
+            "missing_behavior": (
+                "PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING_before_live_"
+                "factory_provider_access_or_tenant_write"
+            ),
+            "all_provisioner_permissions_exact": PROVISIONER_GRAPH_APPLICATION_ROLES,
+            "all_assignment_status_values_allowed": ["created", "existing"],
+            "all_assignment_count_exact": 6,
+            "broader_or_duplicate_behavior": (
+                "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH_before_live_factory_"
+                "provider_access_or_tenant_write"
+            ),
+        }
+        if bootstrap.get("state_site_permission_assignment_exact") != (
+            expected_state_site_permission_assignment
+        ):
+            errors.append(
+                "domain provisioner site-permission assignment binding differs"
+            )
         expected_binding_policy = {
             "field_exact": "provisioner_bootstrap_binding_sha256",
             "pattern": "^[0-9a-f]{64}$",
@@ -1555,6 +1709,10 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "provisioner_bootstrap_acceptance_ids": (
                 PROVISIONER_BOOTSTRAP_ACCEPTANCE_IDS
             ),
+            "site_permission_boundary_issue": SITE_PERMISSION_BOUNDARY_ISSUE,
+            "site_permission_boundary_acceptance_ids": (
+                SITE_PERMISSION_BOUNDARY_ACCEPTANCE_IDS
+            ),
             "safety_rework_issue": SAFETY_REWORK_ISSUE,
             "azure_inventory_safety_rework_issue": (
                 AZURE_INVENTORY_SAFETY_REWORK_ISSUE
@@ -1589,6 +1747,18 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         PROVISIONER_BOOTSTRAP_VERIFICATION
     ):
         errors.append("verification provisioner bootstrap policy differs")
+    if verification.get(
+        "provisioner_graph_application_role_inventory_verification"
+    ) != PROVISIONER_GRAPH_APPLICATION_ROLE_INVENTORY:
+        errors.append(
+            "verification provisioner Graph application-role inventory differs"
+        )
+    if verification.get(
+        "site_permission_administration_capability_verification"
+    ) != SITE_PERMISSION_ADMIN_CAPABILITY:
+        errors.append(
+            "verification site-permission administration capability probe differs"
+        )
     if verification.get("thresholds") != THRESHOLDS:
         errors.append("verification thresholds must equal the exact Issue #632 thresholds")
     negative = verification.get("negative_tests")
@@ -1727,6 +1897,14 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
         for marker in markers:
             if marker not in text:
                 errors.append(f"missing source marker {marker!r} in {relative.as_posix()}")
+        if (
+            relative == COMPOSITION_PATH
+            and "SITE_PERMISSION_ADMIN_CAPABILITY_INVALID" in text
+        ):
+            errors.append(
+                "composition must map every site-permission capability failure "
+                "to SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE"
+            )
     try:
         composition_tree = ast.parse(
             (repo_root / COMPOSITION_PATH).read_text(encoding="utf-8")

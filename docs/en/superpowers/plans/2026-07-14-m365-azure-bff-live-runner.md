@@ -3,6 +3,7 @@
 **Date:** 14 July 2026
 **Activation Issue:** [#632](https://github.com/notariat8/NaC/issues/632)
 **Parent Context:** [#620](https://github.com/notariat8/NaC/issues/620)
+**Permission Safety Rework:** [#671](https://github.com/notariat8/NaC/issues/671), `AC-001` through `AC-006`
 **AC IDs:** `AC-632-01` through `AC-632-08`
 **Delivery Mode:** Protected PR
 **Status:** `OFFLINE_READY`; neither the live runner nor live activation has been proven `PASSED`
@@ -31,6 +32,7 @@ plan is not live approval or proof of success.
 - `AC-632-03`: One host-wide target-global lock blocks concurrent runs from all worktrees and clones on the single execution host regardless of output path, activation hash, or correlation ID; cross-host coordination is not provided.
 - `AC-632-04`: The Function package, site-scoped SPFx package, and ARM JSON reproducibly compiled from Bicep are built and hash-bound before the final Git/plan gate; the parameter snapshot resolved against the created or reused Entra app ID and the full manifest are atomically bound after exact step-3 readback and before the ARM deployment. Bicep compilation during the live run is forbidden.
 - `AC-632-05`: Entra, UAMI, `Sites.Selected`, site `read`, site-scoped SPFx, and `Matter.Read` are created or exactly reused and read back.
+- `AC-001` through `AC-006` from Issue #671: The owner-gated provisioning app binds `Sites.FullControl.All` only for site-permission GET/POST; its local state and pre-write readback must prove the exact six-role provisioning allowlist, including exactly one FullControl assignment, while the BFF UAMI and site role remain exactly `Sites.Selected`/`read`. The rework is offline and permits neither consent nor a live retry.
 - `AC-632-06`: `healthz` runs before auth and `readyz` only after an authenticated read; denied/manipulated cases fail closed and PASSED requires verified restoration of the synthetic baseline. A process termination before that proof remains non-success and requires read-only reconciliation plus manual recovery; SIGKILL restoration is not claimed.
 - `AC-632-07`: Ledger and evidence are hash-chained, redacted, and constrained by exact field allowlists.
 - `AC-632-08`: The first partial failure stops the run; resume remains disabled for the MVP.

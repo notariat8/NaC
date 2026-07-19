@@ -16,6 +16,7 @@ from nac_bff.azure_activation import (
     DELEGATED_SCOPE,
     LOCATION,
     PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
     RESOURCE_GROUP,
     SITE_ID,
     SITE_URL,
@@ -56,7 +57,10 @@ from nac_bff.azure_activation_runner import (
     run_azure_bff_live_activation,
 )
 from nac_bff.azure_live_commands import _validated_command
-from nac_bff.graph_activation import ApiApplicationBinding
+from nac_bff.graph_activation import (
+    GRAPH_APP_ID,
+    ApiApplicationBinding,
+)
 from nac_m365_graph.auth import (
     CertificateClientCredentialsTokenProvider,
     GraphConfigError,
@@ -78,6 +82,12 @@ ACTOR_ID = "44444444-4444-4444-8444-444444444444"
 PERMISSION_REQUEST_ID = "55555555-5555-4555-8555-555555555555"
 APP_CATALOG_ID = "66666666-6666-4666-8666-666666666666"
 TEAMS_CATALOG_ID = "77777777-7777-4777-8777-777777777777"
+PROVISIONER_SP_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+GRAPH_SP_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+PROVISIONER_ROLE_IDS = {
+    name: f"cccccccc-cccc-4ccc-8ccc-{index:012d}"
+    for index, name in enumerate(PROVISIONER_GRAPH_APPLICATION_ROLES, start=1)
+}
 WEB_PART_ID = "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21"
 AZURE_CLI_TOOLCHAIN_SHA256 = "1" * 64
 M365_CLI_SHA256 = "2" * 64
@@ -771,12 +781,66 @@ class _FakeGraph:
     def __init__(self) -> None:
         self.target_site = {"id": SITE_ID}
         self.error: Exception | None = None
+        self.site_permissions_error: Exception | None = None
+        self.provisioner_assignments = [
+            {
+                "id": f"assignment-{index}",
+                "principalId": PROVISIONER_SP_ID,
+                "resourceId": GRAPH_SP_ID,
+                "appRoleId": PROVISIONER_ROLE_IDS[name],
+            }
+            for index, name in enumerate(
+                PROVISIONER_GRAPH_APPLICATION_ROLES,
+                start=1,
+            )
+        ]
         self.calls: list[str] = []
 
     def get(self, path):
         self.calls.append(path)
         if self.error is not None:
             raise self.error
+        if path == f"/sites/{SITE_ID}/permissions":
+            if self.site_permissions_error is not None:
+                raise self.site_permissions_error
+            return {"value": []}
+        if path.startswith("/servicePrincipals?"):
+            if PROVISIONER_CLIENT_ID in path:
+                return {
+                    "value": [
+                        {
+                            "id": PROVISIONER_SP_ID,
+                            "appId": PROVISIONER_CLIENT_ID,
+                            "displayName": "NaC M365 Provisioning",
+                            "servicePrincipalType": "Application",
+                            "appRoles": [],
+                        }
+                    ]
+                }
+            if GRAPH_APP_ID in path:
+                return {
+                    "value": [
+                        {
+                            "id": GRAPH_SP_ID,
+                            "appId": GRAPH_APP_ID,
+                            "displayName": "Microsoft Graph",
+                            "servicePrincipalType": "Application",
+                            "appRoles": [
+                                {
+                                    "id": role_id,
+                                    "value": name,
+                                    "isEnabled": True,
+                                    "allowedMemberTypes": ["Application"],
+                                }
+                                for name, role_id in PROVISIONER_ROLE_IDS.items()
+                            ],
+                        }
+                    ]
+                }
+        if path.startswith(
+            f"/servicePrincipals/{PROVISIONER_SP_ID}/appRoleAssignments"
+        ):
+            return {"value": list(self.provisioner_assignments)}
         return self.target_site
 
 
@@ -1629,7 +1693,65 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "prebuilt_inputs_verified": True,
             },
         )
-        self.assertEqual(self.graph.calls, [f"/sites/{SITE_ID}?$select=id"])
+        self.assertEqual(self.graph.calls[0], f"/sites/{SITE_ID}?$select=id")
+        self.assertEqual(
+            self.graph.calls[-1],
+            f"/sites/{SITE_ID}/permissions",
+        )
+        self.assertEqual(len(self.graph.calls), 5)
+
+    def test_prewrite_blocks_broader_effective_provisioner_role_before_writes(
+        self,
+    ) -> None:
+        self.graph.provisioner_assignments.append(
+            {
+                "id": "assignment-broader",
+                "principalId": PROVISIONER_SP_ID,
+                "resourceId": GRAPH_SP_ID,
+                "appRoleId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            }
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"], "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+        )
+        self.assertEqual(self.azure.commands, [])
+        self.assertNotIn(f"/sites/{SITE_ID}/permissions", self.graph.calls)
+
+    def test_prewrite_blocks_when_site_permission_admin_capability_is_unavailable(
+        self,
+    ) -> None:
+        self.graph.site_permissions_error = PermissionError("forbidden")
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"], "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE"
+        )
+        self.assertEqual(self.azure.commands, [])
+        self.assertEqual(self.graph.calls[0], f"/sites/{SITE_ID}?$select=id")
+        self.assertEqual(
+            self.graph.calls[-1],
+            f"/sites/{SITE_ID}/permissions",
+        )
+        self.assertEqual(len(self.graph.calls), 5)
+
+    def test_prewrite_maps_malformed_capability_result_to_stable_code(
+        self,
+    ) -> None:
+        with patch(
+            "nac_bff.azure_activation_composition._graph_activation."
+            "inspect_site_permission_administration",
+            return_value={"status": "unknown"},
+        ):
+            result = self._prewrite()
+
+        self.assertEqual(
+            result["code"], "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE"
+        )
+        self.assertEqual(self.azure.commands, [])
 
     def test_prewrite_rejects_malformed_target_site_response(self) -> None:
         self.graph.target_site = {"value": [{"id": SITE_ID}]}

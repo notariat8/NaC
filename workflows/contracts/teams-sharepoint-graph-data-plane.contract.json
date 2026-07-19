@@ -44,6 +44,8 @@
       "POST /sites/{site-id}/lists",
       "GET /sites/{site-id}/lists/{list-id}/columns",
       "POST /sites/{site-id}/lists/{list-id}/columns",
+      "GET /sites/{site-id}/permissions",
+      "POST /sites/{site-id}/permissions",
       "GET /sites/{site-id}/drives"
     ],
     "forbidden_api_families": [
@@ -111,8 +113,12 @@
   },
   "permission_model": {
     "bootstrap_application_permissions": [
+      "Application.Read.All",
+      "Application.ReadWrite.OwnedBy",
+      "AppRoleAssignment.ReadWrite.All",
       "Team.Create",
-      "Sites.Manage.All"
+      "Sites.Manage.All",
+      "Sites.FullControl.All"
     ],
     "optional_discovery_permissions": [
       "Group.Read.All",
@@ -139,7 +145,28 @@
     "licensed_human_team_owner_required": true,
     "technical_owner_must_not_hold_m365_admin_roles": true,
     "technical_owner_use_requires_license_terms_review": true,
-    "privileged_change_audit_required": true
+    "privileged_change_audit_required": true,
+    "site_permission_administration": {
+      "application_id": "m365_provisioning_app",
+      "required_application_permission": "Sites.FullControl.All",
+      "graph_methods_exact": [
+        "GET",
+        "POST"
+      ],
+      "graph_path_template_exact": "/sites/{siteId}/permissions",
+      "owner_gate_required": true,
+      "runtime_identity_allowed": false
+    },
+    "privileged_apply_execution_identity": {
+      "mode_exact": "delegated_technical_owner",
+      "proof_operation_exact": "GET /me",
+      "configured_owner_match_required": true,
+      "app_only_allowed": false,
+      "failure_behavior": "stop_before_first_write"
+    },
+    "provisioning_application_client_id_exact": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+    "runtime_application_client_id_exact": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+    "bound_existing_applications_required": true
   },
   "next_iteration_roadmap": [
     {

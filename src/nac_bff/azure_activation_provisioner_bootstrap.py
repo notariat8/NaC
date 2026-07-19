@@ -13,7 +13,11 @@ from nac_m365_graph.provisioner_env_bootstrap import (
     build_provisioner_env_bootstrap,
 )
 
-from .azure_activation import PROVISIONER_CLIENT_ID, TENANT_ID
+from .azure_activation import (
+    PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
+    TENANT_ID,
+)
 
 
 SCHEMA_VERSION = "nac.m365-azure-bff-provisioner-bootstrap/v1"
@@ -29,7 +33,9 @@ PROVISIONER_BOOTSTRAP_ERROR_CODES = frozenset(
         "PROVISIONER_ENV_BINDING_MISMATCH",
         "PROVISIONER_ENV_BOOTSTRAP_NOT_READY",
         "PROVISIONER_GRAPH_BASE_URL_INVALID",
+        "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
         "PROVISIONER_PRIVATE_KEY_FILE_UNTRUSTED",
+        "PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING",
         "PROVISIONER_STATE_BINDING_MISMATCH",
         "PROVISIONER_STATE_FILE_UNTRUSTED",
         "PROVISIONER_STATE_INVALID",
@@ -83,6 +89,39 @@ def build_activation_provisioner_bootstrap(
         != PROVISIONER_CLIENT_ID
     ):
         return _blocked("PROVISIONER_STATE_BINDING_MISMATCH")
+
+    assignments = provisioner.get("appRoleAssignments")
+    assignment_rows = (
+        [item for item in assignments if isinstance(item, dict)]
+        if isinstance(assignments, list)
+        else []
+    )
+    site_permission_assignments = [
+        item
+        for item in assignment_rows
+        if item.get("permission") == "Sites.FullControl.All"
+        and item.get("status") in {"created", "existing"}
+    ]
+    if len(site_permission_assignments) != 1:
+        return _blocked("PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING")
+    permissions = [
+        item.get("permission")
+        for item in assignment_rows
+        if isinstance(item.get("permission"), str)
+        and item["permission"]
+    ]
+    if (
+        not isinstance(assignments, list)
+        or len(assignments) != len(assignment_rows)
+        or len(assignment_rows) != len(PROVISIONER_GRAPH_APPLICATION_ROLES)
+        or len(permissions) != len(set(permissions))
+        or set(permissions) != set(PROVISIONER_GRAPH_APPLICATION_ROLES)
+        or any(
+            item.get("status") not in {"created", "existing"}
+            for item in assignment_rows
+        )
+    ):
+        return _blocked("PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH")
 
     if any(str(values.get(name, "")).strip() for name in PROVISIONER_SECRET_KEYS):
         return _blocked("PROVISIONER_CERTIFICATE_MODE_REQUIRED")
@@ -145,6 +184,7 @@ def build_activation_provisioner_bootstrap(
             "status": "PASSED",
             "summary": {
                 "state_binding_verified": True,
+                "site_permission_graph_role_verified": True,
                 "certificate_mode_verified": True,
                 "certificate_metadata_trusted": True,
                 "private_key_metadata_trusted": True,

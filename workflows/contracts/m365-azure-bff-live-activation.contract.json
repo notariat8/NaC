@@ -14,6 +14,15 @@
     "AC-666-05",
     "AC-666-06"
   ],
+  "site_permission_boundary_issue": "https://github.com/notariat8/NaC/issues/671",
+  "site_permission_boundary_acceptance_ids": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006"
+  ],
   "safety_rework_issue": "https://github.com/notariat8/NaC/issues/658",
   "safety_rework_acceptance_ids": [
     "AC-001",
@@ -193,7 +202,30 @@
       "credential_paths_emitted_exact": false,
       "credential_values_emitted_exact": false
     },
-    "failure_behavior": "stable_PROVISIONER_error_before_live_factory_provider_access_or_tenant_write"
+    "failure_behavior": "stable_PROVISIONER_error_before_live_factory_provider_access_or_tenant_write",
+    "state_site_permission_assignment_exact": {
+      "permission": "Sites.FullControl.All",
+      "status_values_allowed": [
+        "created",
+        "existing"
+      ],
+      "assignment_count_exact": 1,
+      "missing_behavior": "PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING_before_live_factory_provider_access_or_tenant_write",
+      "all_provisioner_permissions_exact": [
+        "Application.Read.All",
+        "Application.ReadWrite.OwnedBy",
+        "AppRoleAssignment.ReadWrite.All",
+        "Team.Create",
+        "Sites.Manage.All",
+        "Sites.FullControl.All"
+      ],
+      "all_assignment_status_values_allowed": [
+        "created",
+        "existing"
+      ],
+      "all_assignment_count_exact": 6,
+      "broader_or_duplicate_behavior": "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH_before_live_factory_provider_access_or_tenant_write"
+    }
   },
   "consolidated_owner_gate": {
     "gate_count_exact": 1,
@@ -474,7 +506,28 @@
       "Matter.Read"
     ],
     "client_secret_or_certificate_creation_allowed": false,
-    "broader_existing_permission_on_target_identity_is_blocking": true
+    "broader_existing_permission_on_target_identity_is_blocking": true,
+    "provisioner_site_permission_administration": {
+      "provisioner_display_name_exact": "NaC M365 Provisioning",
+      "required_application_permission_exact": "Sites.FullControl.All",
+      "graph_methods_exact": [
+        "GET",
+        "POST"
+      ],
+      "graph_path_template_exact": "/sites/{siteId}/permissions",
+      "owner_gate_required": true,
+      "runtime_identity_allowed": false,
+      "missing_permission_behavior": "stop_before_live_retry"
+    },
+    "provisioner_graph_application_roles_exact": [
+      "Application.Read.All",
+      "Application.ReadWrite.OwnedBy",
+      "AppRoleAssignment.ReadWrite.All",
+      "Team.Create",
+      "Sites.Manage.All",
+      "Sites.FullControl.All"
+    ],
+    "provisioner_additional_graph_roles_allowed": false
   },
   "prewrite_inventory": {
     "must_complete_before_any_provider_write": true,
@@ -538,7 +591,32 @@
       1
     ],
     "duplicate_or_broader_result_behavior": "stop_before_first_write",
-    "single_logical_read_only_snapshot_required": true
+    "single_logical_read_only_snapshot_required": true,
+    "site_permission_administration_capability_probe_exact": {
+      "identity_exact": "NaC M365 Provisioning",
+      "operation_exact": "GET /sites/{siteId}/permissions",
+      "site_id_exact": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "phase_exact": "after_target_site_identity_check_before_any_provider_write",
+      "provider_writes_before_probe_exact": 0,
+      "required_result_exact": "available",
+      "failure_code_exact": "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE",
+      "raw_graph_error_or_identifier_emission_allowed": false
+    },
+    "provisioner_graph_application_role_inventory_exact": {
+      "application_client_id_exact": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+      "roles_exact": [
+        "Application.Read.All",
+        "Application.ReadWrite.OwnedBy",
+        "AppRoleAssignment.ReadWrite.All",
+        "Team.Create",
+        "Sites.Manage.All",
+        "Sites.FullControl.All"
+      ],
+      "phase_exact": "after_target_site_identity_check_before_any_provider_write",
+      "provider_writes_before_inventory_exact": 0,
+      "missing_or_broader_or_duplicate_behavior_exact": "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH",
+      "raw_graph_identifiers_emitted_allowed": false
+    }
   },
   "state_machine": {
     "states_exact": [

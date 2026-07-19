@@ -13,6 +13,14 @@ provisioner_bootstrap_acceptance_ids:
   - AC-666-04
   - AC-666-05
   - AC-666-06
+site_permission_boundary_issue: https://github.com/notariat8/NaC/issues/671
+site_permission_boundary_acceptance_ids:
+  - AC-001
+  - AC-002
+  - AC-003
+  - AC-004
+  - AC-005
+  - AC-006
 safety_rework_issue: https://github.com/notariat8/NaC/issues/658
 azure_inventory_safety_rework_issue: https://github.com/notariat8/NaC/issues/662
 owner_gate_safety_rework_issue: https://github.com/notariat8/NaC/issues/664
@@ -67,6 +75,8 @@ applies_when:
     - tests/test_m365_mvp_test_environment_deploy.py
     - workflows/contracts/m365-azure-bff-activation-plan.contract.json
     - workflows/contracts/m365-azure-bff-live-activation.contract.json
+    - workflows/contracts/teams-sharepoint-graph-data-plane.contract.json
+    - deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json
     - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
     - docs/de/superpowers/plans/2026-07-14-m365-azure-bff-live-runner.md
     - docs/en/superpowers/plans/2026-07-14-m365-azure-bff-live-runner.md
@@ -78,6 +88,7 @@ required_context:
   always_on:
     - AGENTS.md
     - Issue #632 acceptance criteria and stop conditions; Issue #620 as parent MVP context
+    - Issue #671 owner-gated Sites.FullControl.All boundary and offline-only stop condition
   scoped:
     - workflows/contracts/AGENTS.md
     - workflows/contracts/README.md
@@ -123,6 +134,25 @@ provisioner_bootstrap_verification:
     - --provisioner-bootstrap-binding-sha256
   all_paths_absolute_and_metadata_trusted: true
   state_tenant_and_provisioner_app_binding_exact: true
+  state_site_permission_assignment_exact:
+    permission: Sites.FullControl.All
+    status_values_allowed:
+      - created
+      - existing
+    assignment_count_exact: 1
+    missing_behavior: PROVISIONER_SITE_PERMISSION_GRAPH_ROLE_MISSING_before_live_factory_provider_access_or_tenant_write
+    all_provisioner_permissions_exact:
+      - Application.Read.All
+      - Application.ReadWrite.OwnedBy
+      - AppRoleAssignment.ReadWrite.All
+      - Team.Create
+      - Sites.Manage.All
+      - Sites.FullControl.All
+    all_assignment_status_values_allowed:
+      - created
+      - existing
+    all_assignment_count_exact: 6
+    broader_or_duplicate_behavior: PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH_before_live_factory_provider_access_or_tenant_write
   binding_field_exact: provisioner_bootstrap_binding_sha256
   binding_pattern: "^[0-9a-f]{64}$"
   state_read_mode_exact: single_O_NOFOLLOW_CLOEXEC_descriptor_with_pre_open_and_post_read_fstat_snapshot
@@ -152,6 +182,30 @@ provisioner_bootstrap_verification:
     - credential_values_emitted
   readiness_redacted_field_values_exact: false
   blocked_error_prefix_exact: PROVISIONER_
+
+provisioner_graph_application_role_inventory_verification:
+  application_client_id_exact: 6845f6c3-896c-4e44-a50f-2a5086a13fac
+  roles_exact:
+    - Application.Read.All
+    - Application.ReadWrite.OwnedBy
+    - AppRoleAssignment.ReadWrite.All
+    - Team.Create
+    - Sites.Manage.All
+    - Sites.FullControl.All
+  phase_exact: after_target_site_identity_check_before_any_provider_write
+  provider_writes_before_inventory_exact: 0
+  missing_or_broader_or_duplicate_behavior_exact: PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH
+  raw_graph_identifiers_emitted_allowed: false
+
+site_permission_administration_capability_verification:
+  identity_exact: NaC M365 Provisioning
+  operation_exact: GET /sites/{siteId}/permissions
+  site_id_exact: funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38
+  phase_exact: after_target_site_identity_check_before_any_provider_write
+  provider_writes_before_probe_exact: 0
+  required_result_exact: available
+  failure_code_exact: SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE
+  raw_graph_error_or_identifier_emission_allowed: false
 
 exact_bindings:
   expected_activation_sha256:
@@ -227,6 +281,7 @@ invariants:
   - Execution stops on the first error; an error after a write yields FAILED_PARTIAL and no later step runs.
   - Automatic rollback, deletion, uninstall, retract, remove and purge operations are forbidden, including after failure.
   - Microsoft Graph access uses raw REST at https://graph.microsoft.com/v1.0 only; Graph beta, SDKs, PnP and legacy SharePoint APIs are forbidden.
+  - The owner-gated NaC M365 Provisioning app proves the exact six-role Graph application allowlist in bound local state and live pre-write readback, including exactly one Sites.FullControl.All assignment required for Graph v1.0 site-permission GET and POST; missing, duplicate or broader roles stop before any provider write, and FullControl remains forbidden on the runtime identity.
   - The managed identity has exactly Sites.Selected and no additional Microsoft Graph application role; its exact target-site permission has roles exactly [read] with no duplicate grant.
   - SPFx has no Microsoft Graph permission and requests only NaC M365 BFF/Matter.Read; tenant-wide SPFx activation is forbidden.
   - Tenant, subscription, workspace, site URL and ID, team, all four BFF list IDs, App Catalog solution ProductId, SPFx solution, page, webpart and synthetic matter match exact_bindings.

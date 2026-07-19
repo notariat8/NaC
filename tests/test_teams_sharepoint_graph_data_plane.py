@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -54,6 +55,14 @@ APPLIED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.pr
 RUNTIME_SMOKE_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-smoke.f8.json"
 RUNTIME_METADATA_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-metadata.f8.json"
 GRAPH_APP_ID = "00000003-0000-0000-c000-000000000000"
+VALIDATOR_SPEC = importlib.util.spec_from_file_location(
+    "validate_teams_sharepoint_graph_data_plane",
+    REPO_ROOT / "scripts" / "validate_teams_sharepoint_graph_data_plane.py",
+)
+if VALIDATOR_SPEC is None or VALIDATOR_SPEC.loader is None:
+    raise RuntimeError("could not load Teams/SharePoint data-plane validator")
+TEAMS_SHAREPOINT_VALIDATOR = importlib.util.module_from_spec(VALIDATOR_SPEC)
+VALIDATOR_SPEC.loader.exec_module(TEAMS_SHAREPOINT_VALIDATOR)
 
 
 class FakeGraphWriteClient:
@@ -62,13 +71,44 @@ class FakeGraphWriteClient:
         self.posts: list[tuple[str, dict]] = []
         self.patches: list[tuple[str, dict]] = []
         self.group: dict | None = None
-        self.applications_by_display_name: dict[str, dict] = {}
-        self.service_principals_by_app_id: dict[str, dict] = {}
+        self.applications_by_display_name: dict[str, dict] = {
+            "NaC M365 Provisioning": {
+                "id": "provisioning-application-object",
+                "appId": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+                "displayName": "NaC M365 Provisioning",
+                "requiredResourceAccess": [],
+            },
+            "NaC M365 Runtime": {
+                "id": "runtime-application-object",
+                "appId": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+                "displayName": "NaC M365 Runtime",
+                "requiredResourceAccess": [],
+            },
+        }
+        self.service_principals_by_app_id: dict[str, dict] = {
+            "6845f6c3-896c-4e44-a50f-2a5086a13fac": {
+                "id": "provisioning-service-principal",
+                "appId": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+                "displayName": "NaC M365 Provisioning",
+            },
+            "0d98b5a5-479b-452d-9b43-c3fbbcab9d24": {
+                "id": "runtime-service-principal",
+                "appId": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+                "displayName": "NaC M365 Runtime",
+            },
+        }
         self.owners_by_application_id: dict[str, list[dict]] = {}
         self.assignments_by_service_principal_id: dict[str, list[dict]] = {}
         self.site_permissions_by_site_id: dict[str, list[dict]] = {}
+        self.delegated_actor: dict = {
+            "id": "technical-owner",
+            "displayName": "funktion8",
+            "userPrincipalName": "funktion8@funktion8.de",
+        }
 
     def get(self, path: str) -> dict:
+        if path.startswith("/me?"):
+            return dict(self.delegated_actor)
         if path.startswith("/users?"):
             return {
                 "value": [
@@ -104,6 +144,21 @@ class FakeGraphWriteClient:
                             "displayName": "Microsoft Graph",
                             "appRoles": [
                                 {
+                                    "id": "role-application-read-all",
+                                    "value": "Application.Read.All",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
+                                    "id": "role-application-readwrite-ownedby",
+                                    "value": "Application.ReadWrite.OwnedBy",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
+                                    "id": "role-approleassignment-readwrite-all",
+                                    "value": "AppRoleAssignment.ReadWrite.All",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
                                     "id": "role-team-create",
                                     "value": "Team.Create",
                                     "allowedMemberTypes": ["Application"],
@@ -111,6 +166,11 @@ class FakeGraphWriteClient:
                                 {
                                     "id": "role-sites-manage-all",
                                     "value": "Sites.Manage.All",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
+                                    "id": "role-sites-fullcontrol-all",
+                                    "value": "Sites.FullControl.All",
                                     "allowedMemberTypes": ["Application"],
                                 },
                                 {
@@ -125,7 +185,20 @@ class FakeGraphWriteClient:
             service_principal = self.service_principals_by_app_id.get(app_id)
             return {"value": [] if service_principal is None else [service_principal]}
         if path.startswith("/applications?"):
-            app = self.applications_by_display_name.get(self._filter_value(path, "displayName"))
+            expected_app_id = self._filter_value(path, "appId")
+            if expected_app_id:
+                app = next(
+                    (
+                        item
+                        for item in self.applications_by_display_name.values()
+                        if item.get("appId") == expected_app_id
+                    ),
+                    None,
+                )
+            else:
+                app = self.applications_by_display_name.get(
+                    self._filter_value(path, "displayName")
+                )
             return {"value": [] if app is None else [app]}
         if path.startswith("/applications/") and path.endswith("/owners?$select=id,displayName"):
             app_id = path.split("/")[2]
@@ -269,12 +342,45 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertFalse(payload["graph_policy"]["sdk_usage_allowed"])
         self.assertFalse(payload["graph_policy"]["legacy_sharepoint_api_allowed"])
         self.assertEqual(payload["target_decision"]["workspace_model"], "team_per_notary_team")
-        self.assertIn("Sites.Selected", payload["permission_model"]["runtime_target_permissions"])
+        self.assertEqual(
+            payload["permission_model"]["runtime_target_permissions"],
+            ["Sites.Selected"],
+        )
+        self.assertEqual(
+            payload["permission_model"]["site_permission_administration"],
+            {
+                "application_id": "m365_provisioning_app",
+                "required_application_permission": "Sites.FullControl.All",
+                "graph_methods_exact": ["GET", "POST"],
+                "graph_path_template_exact": "/sites/{siteId}/permissions",
+                "owner_gate_required": True,
+                "runtime_identity_allowed": False,
+            },
+        )
 
     def test_contract_captures_application_owned_privileged_change_path(self) -> None:
         payload = json.loads(CONTRACT.read_text(encoding="utf-8"))
         permission_model = payload["permission_model"]
 
+        self.assertEqual(
+            permission_model["provisioning_application_client_id_exact"],
+            "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+        )
+        self.assertEqual(
+            permission_model["runtime_application_client_id_exact"],
+            "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+        )
+        self.assertTrue(permission_model["bound_existing_applications_required"])
+        self.assertEqual(
+            permission_model["privileged_apply_execution_identity"],
+            {
+                "mode_exact": "delegated_technical_owner",
+                "proof_operation_exact": "GET /me",
+                "configured_owner_match_required": True,
+                "app_only_allowed": False,
+                "failure_behavior": "stop_before_first_write",
+            },
+        )
         self.assertTrue(permission_model["standard_users_must_not_hold_m365_admin_permissions"])
         self.assertTrue(permission_model["privileged_m365_changes_must_run_through_app_or_api"])
         self.assertTrue(permission_model["application_governance_group_required"])
@@ -293,6 +399,150 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
 
         roadmap_ids = {item["id"] for item in payload["next_iteration_roadmap"]}
         self.assertIn("m365-application-owned-privileged-change-path", roadmap_ids)
+
+    def test_privileged_config_requires_exact_existing_client_ids(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["applications"][0]["expected_client_id"] = (
+            "11111111-1111-4111-8111-111111111111"
+        )
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("exact existing client ID" in error for error in errors)
+        )
+
+    def test_privileged_config_requires_delegated_owner_bootstrap(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["execution_identity"]["app_only_allowed"] = True
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("delegated technical owner" in error for error in errors)
+        )
+
+    def test_privileged_config_rejects_broader_provisioner_role(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        provisioner = next(
+            app
+            for app in config["applications"]
+            if app["id"] == "m365_provisioning_app"
+        )
+        provisioner["bootstrap_application_permissions"].append(
+            "Directory.ReadWrite.All"
+        )
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("exact owner-gated allowlist" in error for error in errors)
+        )
+
+    def test_privileged_config_and_apply_reject_third_unbound_application(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["applications"].append(
+            {
+                "id": "unbound_privileged_app",
+                "display_name": "Unbound Privileged App",
+                "direct_owner": "technical_owner_user",
+                "bootstrap_application_permissions": ["Directory.ReadWrite.All"],
+                "runtime_allowed": False,
+            }
+        )
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertIn(
+            "applications must contain exactly m365_provisioning_app and "
+            "m365_runtime_app once each",
+            errors,
+        )
+        with self.assertRaisesRegex(RuntimeError, "invalid privileged change config"):
+            apply_privileged_change_path(client, config, state)
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_privileged_config_rejects_duplicate_application_id(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["applications"][1]["id"] = "m365_provisioning_app"
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("must contain exactly" in error for error in errors),
+            errors,
+        )
+
+    def test_privileged_config_rejects_malformed_id_without_crashing(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["applications"][0]["id"] = []
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(any("must contain exactly" in error for error in errors), errors)
+        with self.assertRaisesRegex(RuntimeError, "invalid privileged change config"):
+            apply_privileged_change_path(client, config, state)
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_privileged_config_rejects_malformed_permission_without_crashing(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        config["applications"][0]["bootstrap_application_permissions"].append([])
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("must define bootstrap_application_permissions" in error for error in errors),
+            errors,
+        )
+        with self.assertRaisesRegex(RuntimeError, "invalid privileged change config"):
+            apply_privileged_change_path(client, config, state)
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_privileged_config_rejects_duplicate_provisioner_role(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        provisioner = next(
+            app
+            for app in config["applications"]
+            if app["id"] == "m365_provisioning_app"
+        )
+        provisioner["bootstrap_application_permissions"].append(
+            "Sites.FullControl.All"
+        )
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("exact owner-gated allowlist" in error for error in errors)
+        )
+
+    def test_privileged_config_rejects_missing_site_permission_admin_role(
+        self,
+    ) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        provisioner = next(
+            app
+            for app in config["applications"]
+            if app["id"] == "m365_provisioning_app"
+        )
+        provisioner["bootstrap_application_permissions"].remove(
+            "Sites.FullControl.All"
+        )
+
+        errors = validate_privileged_change_config(config)
+
+        self.assertTrue(
+            any("exact owner-gated allowlist" in error for error in errors),
+            errors,
+        )
 
     def test_schema_validates_and_contains_required_lists(self) -> None:
         schema = load_schema(DEFAULT_SCHEMA)
@@ -358,7 +608,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         serialized = json.dumps(readiness)
         checks = {check["id"]: check for check in readiness["checks"]}
 
-        self.assertEqual(readiness["status"], "PASSED")
+        self.assertEqual(readiness["status"], "FAILED")
         self.assertFalse(readiness["summary"]["executes_graph_requests"])
         self.assertFalse(readiness["summary"]["executes_graph_writes"])
         self.assertFalse(readiness["summary"]["mandate_data_allowed"])
@@ -372,14 +622,48 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertTrue(readiness["summary"]["technical_owner_license_terms_review_required"])
         self.assertEqual(readiness["summary"]["provisioning_app_count"], 1)
         self.assertEqual(readiness["summary"]["runtime_app_count"], 1)
+        self.assertTrue(
+            readiness["summary"]["provisioner_site_permission_admin_required"]
+        )
+        self.assertFalse(
+            readiness["summary"]["provisioner_site_permission_admin_applied"]
+        )
         self.assertTrue(readiness["summary"]["runtime_sites_selected_required"])
         self.assertEqual(readiness["summary"]["runtime_site_permissions_recorded"], 2)
         self.assertFalse(readiness["summary"]["secret_material_stored"])
         self.assertEqual(checks["technical_owner_license_terms_review"]["status"], "REVIEW_REQUIRED")
+        self.assertEqual(
+            checks["site_permission_administration_contract"]["status"],
+            "PASSED",
+        )
+        self.assertEqual(
+            checks["site_permission_administration_applied"]["status"],
+            "FAILED",
+        )
+        self.assertFalse(
+            readiness["summary"]["historical_applied_state_operationally_accepted"]
+        )
         self.assertEqual(checks["secret_material_not_stored"]["status"], "PASSED")
         self.assertNotIn("870c862b-56f7-4c9b-b0d9-f1f7d32c835c", serialized)
         self.assertNotIn("6845f6c3-896c-4e44-a50f-2a5086a13fac", serialized)
         self.assertNotIn("funktion8.sharepoint.com,31324d31", serialized)
+
+    def test_application_owner_readiness_rejects_malformed_applied_permissions(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        applied_state = load_privileged_applied_state(APPLIED_STATE)
+        applied_state["applications"]["m365_provisioning_app"][
+            "application_permissions"
+        ] = [[]]
+
+        readiness = build_application_owner_readiness(config, applied_state)
+
+        self.assertEqual(readiness["status"], "FAILED")
+        self.assertFalse(
+            readiness["summary"]["provisioner_site_permission_admin_applied"]
+        )
+        self.assertFalse(
+            readiness["summary"]["historical_applied_state_operationally_accepted"]
+        )
 
     def test_privileged_apply_is_idempotent_with_graph_rest_client_boundary(self) -> None:
         config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
@@ -425,7 +709,67 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             if path.startswith("/servicePrincipals/") and path.endswith("/appRoleAssignments")
         ]
         self.assertEqual(len(site_permission_posts), 2)
-        self.assertEqual(len(assignment_posts), 3)
+        self.assertEqual(len(assignment_posts), 7)
+
+    def test_privileged_apply_blocks_unexpected_effective_graph_role(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+        first = apply_privileged_change_path(client, config, state)
+        provisioner = first["applications"]["m365_provisioning_app"]
+        client.assignments_by_service_principal_id[
+            provisioner["servicePrincipalId"]
+        ].append(
+            {
+                "principalId": provisioner["servicePrincipalId"],
+                "resourceId": "graph-service-principal",
+                "appRoleId": "role-sites-selected",
+            }
+        )
+
+        post_count_before_retry = len(client.posts)
+        patch_count_before_retry = len(client.patches)
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "unexpected Microsoft Graph application role",
+        ):
+            apply_privileged_change_path(client, config, state)
+        self.assertEqual(len(client.posts), post_count_before_retry)
+        self.assertEqual(len(client.patches), patch_count_before_retry)
+
+    def test_privileged_apply_rejects_same_name_wrong_client_id_before_write(
+        self,
+    ) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+        client.applications_by_display_name["NaC M365 Provisioning"][
+            "appId"
+        ] = "11111111-1111-4111-8111-111111111111"
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "bound existing application is missing",
+        ):
+            apply_privileged_change_path(client, config, state)
+
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_privileged_apply_rejects_app_only_context_before_any_write(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        state = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        client = FakeGraphWriteClient(state)
+        client.delegated_actor = {}
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "configured delegated technical owner",
+        ):
+            apply_privileged_change_path(client, config, state)
+
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
 
     def test_runtime_site_smoke_reads_expected_lists_with_runtime_boundary(self) -> None:
         state = {
@@ -622,6 +966,58 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         for owner_check in state["team_owner_checks"]:
             self.assertGreaterEqual(owner_check["licensed_human_owner_count"], 1)
 
+    def test_stored_app_ids_cannot_jointly_replace_configured_runtime_identity(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        provisioned = load_provisioned_state(DEFAULT_PROVISIONED_STATE)
+        schema = load_schema(DEFAULT_SCHEMA)
+        applied = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
+        smoke = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
+        metadata = json.loads(RUNTIME_METADATA_STATE.read_text(encoding="utf-8"))
+        replacement_client_id = "11111111-1111-4111-8111-111111111111"
+
+        applied["applications"]["m365_runtime_app"]["client_id"] = replacement_client_id
+        for permission in applied["runtime_site_permissions"]:
+            permission["application_client_id"] = replacement_client_id
+        smoke["runtime_application"]["client_id"] = replacement_client_id
+        metadata["runtime_application"]["client_id"] = replacement_client_id
+
+        errors = TEAMS_SHAREPOINT_VALIDATOR._validate_privileged_applied_state(
+            applied,
+            config,
+            provisioned,
+        )
+        errors.extend(
+            TEAMS_SHAREPOINT_VALIDATOR._validate_runtime_smoke_state(
+                smoke,
+                applied,
+                provisioned,
+                schema,
+                config,
+            )
+        )
+        errors.extend(
+            TEAMS_SHAREPOINT_VALIDATOR._validate_runtime_metadata_state(
+                metadata,
+                smoke,
+                provisioned,
+                schema,
+                config,
+            )
+        )
+
+        self.assertIn(
+            "privileged applied m365_runtime_app.client_id must match exact configured client ID",
+            errors,
+        )
+        self.assertIn(
+            "runtime smoke runtime application client_id must match exact configured client ID",
+            errors,
+        )
+        self.assertIn(
+            "runtime metadata runtime application client_id must match exact configured client ID",
+            errors,
+        )
+
     def test_runtime_smoke_state_captures_site_readiness(self) -> None:
         privileged = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
         state = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
@@ -803,12 +1199,46 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertFalse(
+            payload["summary"]["historical_applied_state_operationally_accepted"]
+        )
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertEqual(payload["summary"]["governance_group"], "nac_platform_admins")
         self.assertEqual(payload["summary"]["technical_owner_user"], "funktion8@funktion8.de")
+
+    def test_cli_application_owner_readiness_rejects_malformed_applied_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied_path = Path(tmp) / "malformed-applied-state.json"
+            applied_state = load_privileged_applied_state(APPLIED_STATE)
+            applied_state["applications"]["m365_provisioning_app"][
+                "application_permissions"
+            ] = [[]]
+            applied_path.write_text(json.dumps(applied_state), encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/provision_teams_sharepoint_graph.py",
+                    "--privileged-applied-state",
+                    str(applied_path),
+                    "application-owner-readiness",
+                    "--json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertFalse(
+            payload["summary"]["historical_applied_state_operationally_accepted"]
+        )
 
     def test_cli_runtime_certificate_readiness_runs_without_credentials(self) -> None:
         result = subprocess.run(
@@ -938,9 +1368,12 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertFalse(
+            payload["summary"]["historical_applied_state_operationally_accepted"]
+        )
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertTrue(payload["summary"]["owner_gate_required_for_live_apply"])
 

@@ -75,6 +75,69 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         self.assertTrue(any("leading_issue" in error for error in errors))
         self.assertTrue(any("acceptance_ids" in error for error in errors))
 
+    def test_site_permission_boundary_mutations_fail(self) -> None:
+        payload = self._domain()
+        payload["permission_boundary"][
+            "provisioner_site_permission_administration"
+        ]["required_application_permission_exact"] = "Sites.Manage.All"
+        payload["permission_boundary"][
+            "provisioner_graph_application_roles_exact"
+        ].append("Directory.ReadWrite.All")
+        payload["permission_boundary"][
+            "provisioner_additional_graph_roles_allowed"
+        ] = True
+        payload["permission_boundary"][
+            "managed_identity_graph_application_roles_exact"
+        ] = ["Sites.Selected", "Sites.FullControl.All"]
+        payload["permission_boundary"]["site_permission_roles_exact"] = ["write"]
+        self._write_domain(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "domain provisioner site-permission administration boundary differs",
+            errors,
+        )
+        self.assertIn(
+            "domain provisioner Graph application roles must match the exact allowlist",
+            errors,
+        )
+        self.assertIn(
+            "domain provisioner additional Graph roles must remain blocked",
+            errors,
+        )
+        self.assertIn(
+            "domain managed identity Graph role must remain exactly Sites.Selected",
+            errors,
+        )
+        self.assertIn(
+            "domain managed identity site role must remain exactly read",
+            errors,
+        )
+
+    def test_site_permission_capability_probe_mutations_fail(self) -> None:
+        payload = self._domain()
+        payload["prewrite_inventory"][
+            "site_permission_administration_capability_probe_exact"
+        ]["failure_code_exact"] = "GRAPH_REQUEST_FAILED"
+        self._write_domain(payload)
+        verification = self._verification()
+        verification[
+            "site_permission_administration_capability_verification"
+        ]["provider_writes_before_probe_exact"] = 1
+        self._write_verification(verification)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "domain site-permission administration capability probe differs",
+            errors,
+        )
+        self.assertIn(
+            "verification site-permission administration capability probe differs",
+            errors,
+        )
+
     def test_azure_smart_detection_companion_policy_mutations_fail(self) -> None:
         payload = self._domain()
         payload["prewrite_inventory"][

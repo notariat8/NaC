@@ -83,16 +83,42 @@ Microsoft device login URL and a one-time code for that step.
 `<cli-entra-app-id>` is the Entra app used by the CLI itself for interactive
 admin work. It is not the same as the later NaC runtime app.
 
-### After Login: Create NaC App Through CLI
+### After Login: Extend the Existing Provisioning App
 
-After successful CLI login, the CLI can create the actual NaC app
-registrations:
+Issue #671 targets the existing `NaC M365 Provisioning` app. Before any
+change, resolve it by its fixed client ID and inspect its current permission
+inventory read-only:
 
 ```bash
-m365 entra app add --name "NaC Graph Bootstrap" --certificateFile "<public-certificate.cer>" --apisApplication "https://graph.microsoft.com/Team.Create,https://graph.microsoft.com/Sites.Manage.All" --grantAdminConsent
+m365 entra app get --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+m365 entra app permission list --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --type application
+```
+The app must be resolved by this exact client ID. A display-name-only match,
+a missing bound app, or a replacement app stops before any write.
+
+Only after a separate owner gate may the missing permission be added to the
+existing app and admin consent granted:
+
+```bash
+m365 entra app permission add --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --applicationPermissions "https://graph.microsoft.com/Sites.FullControl.All" --grantAdminConsent
 ```
 
-This step changes tenant state and therefore remains separately owner-gated.
+The command and parameters are documented in the
+[CLI for Microsoft 365 reference](https://pnp.github.io/cli-microsoft365/cmd/entra/app/app-permission-add/).
+It does not create a second app. This step changes tenant state and therefore
+remains separately owner-gated.
+The resulting effective Graph application-role set must remain exactly
+`Application.Read.All`, `Application.ReadWrite.OwnedBy`,
+`AppRoleAssignment.ReadWrite.All`, `Team.Create`, `Sites.Manage.All`, and
+`Sites.FullControl.All`; any additional or duplicate role blocks the live
+lane before its first provider write.
+`Sites.FullControl.All` is needed only because Microsoft Graph v1.0
+requires that tenant-wide application permission for `GET` and `POST
+/sites/{siteId}/permissions`. It remains exclusive to the provisioning app;
+the runtime app and BFF UAMI remain limited to `Sites.Selected` and the
+exact site grant `read`, respectively. Assignment and admin consent happen
+only after a new immutable owner gate; this offline step performs neither
+consent nor a live retry.
 
 ## Required Handoff Before User Action
 
@@ -169,10 +195,10 @@ m365 request --url "@graph/organization" --method get --output json
 m365 request --url "@graph/groups" --method get --output json
 ```
 
-For an owner-gated Entra app bootstrap, this is also allowed:
+For the owner-gated extension of the existing provisioning app, the app-ID-bound command described above is also allowed:
 
 ```bash
-m365 entra app add --name "NaC Graph Bootstrap" --certificateFile "<public-certificate.cer>" --apisApplication "https://graph.microsoft.com/Team.Create,https://graph.microsoft.com/Sites.Manage.All" --grantAdminConsent
+m365 entra app permission add --appId "6845f6c3-896c-4e44-a50f-2a5086a13fac" --applicationPermissions "https://graph.microsoft.com/Sites.FullControl.All" --grantAdminConsent
 ```
 
 The private certificate key never lives in the repository. If command output
@@ -218,10 +244,13 @@ It is not a standard-user path and needs explicit owner approval:
 M365_GRAPH_ACCESS_TOKEN_FILE="<local-token-file>" python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
 ```
 
-Later, an app-only configuration with `M365_TENANT_ID`,
-`M365_PROVISIONER_CLIENT_ID` and `M365_PROVISIONER_CLIENT_SECRET` can be used
-instead. Tokens, client secrets, certificates and private keys are not stored
-in chat, shell output or repository artifacts.
+`privileged-apply` is a separate delegated technical-owner bootstrap lane.
+It proves the configured owner with read-only `GET /me` before any write and
+rejects app-only authentication. The six-role `NaC M365 Provisioning`
+certificate identity is used by the hash-bound BFF activation lane, not for the
+user and group operations in this bootstrap command. Tokens, client secrets,
+certificates and private keys are not stored in chat, shell output or repository
+artifacts.
 
 Any further live apply remains owner-gated and may only run after plan review,
 target team confirmation, drift snapshot and admin consent.

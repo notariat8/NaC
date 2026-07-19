@@ -991,6 +991,34 @@ class AzureBffLiveExecutionPort:
         ):
             return {"status": "FAILED", "code": "GRAPH_TARGET_SITE_MISMATCH"}
         try:
+            provisioner_roles = (
+                _graph_activation.inspect_provisioner_application_roles(
+                    self._graph
+                )
+            )
+            if (
+                provisioner_roles.get("status") != "present"
+                or provisioner_roles.get("assignment_count")
+                != len(_graph_activation.PROVISIONER_GRAPH_APPLICATION_ROLES)
+                or set(provisioner_roles.get("application_roles", []))
+                != set(_graph_activation.PROVISIONER_GRAPH_APPLICATION_ROLES)
+            ):
+                raise ActivationStepError(
+                    "PROVISIONER_GRAPH_ROLE_BOUNDARY_MISMATCH"
+                )
+            site_permission_capability = (
+                _graph_activation.inspect_site_permission_administration(
+                    self._graph, site_id=SITE_ID
+                )
+            )
+            if (
+                site_permission_capability.get("status") != "available"
+                or type(site_permission_capability.get("permission_count")) is not int
+                or site_permission_capability["permission_count"] < 0
+            ):
+                raise ActivationStepError(
+                    "SITE_PERMISSION_ADMIN_CAPABILITY_UNAVAILABLE"
+                )
             self._api = inspect_entra_api_application_prewrite(self._graph)
             self._inspect_azure_prewrite(context)
             self._inspect_existing_graph_prewrite(require_complete=False)

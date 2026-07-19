@@ -22,6 +22,7 @@ from nac_bff.azure_activation import (
     MATTER_ID,
     M365_CLI_OWNER_UPN,
     PROVISIONER_CLIENT_ID,
+    PROVISIONER_SITE_PERMISSION_GRAPH_ROLE,
     REQUESTED_ACCESS_TOKEN_VERSION,
     SITE_ID,
     SUBSCRIPTION_ID,
@@ -63,6 +64,10 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         self.assertEqual(first["bindings"]["delegated_scope"], DELEGATED_SCOPE)
         self.assertEqual(
             first["bindings"]["provisioner_client_id"], PROVISIONER_CLIENT_ID
+        )
+        self.assertEqual(
+            first["bindings"]["provisioner_site_permission_graph_role"],
+            PROVISIONER_SITE_PERMISSION_GRAPH_ROLE,
         )
         self.assertEqual(
             first["bindings"]["m365_cli_owner_upn"], M365_CLI_OWNER_UPN

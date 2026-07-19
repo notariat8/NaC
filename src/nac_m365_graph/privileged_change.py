@@ -50,8 +50,8 @@ def load_privileged_applied_state(path: Path = DEFAULT_PRIVILEGED_APPLIED_STATE)
 
 def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if config.get("schema_version") != "nac.m365-privileged-change-path/v0.1":
-        errors.append("schema_version must be nac.m365-privileged-change-path/v0.1")
+    if config.get("schema_version") != "nac.m365-privileged-change-path/v0.2":
+        errors.append("schema_version must be nac.m365-privileged-change-path/v0.2")
 
     graph = config.get("graph")
     if not isinstance(graph, dict):
@@ -65,6 +65,19 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
             errors.append("graph.sdk_allowed must be false")
         if graph.get("legacy_sharepoint_api_allowed") is not False:
             errors.append("graph.legacy_sharepoint_api_allowed must be false")
+
+    expected_execution_identity = {
+        "mode_exact": "delegated_technical_owner",
+        "proof_operation_exact": "GET /me",
+        "configured_owner_match_required": True,
+        "app_only_allowed": False,
+        "failure_behavior": "stop_before_first_write",
+    }
+    if config.get("execution_identity") != expected_execution_identity:
+        errors.append(
+            "execution_identity must require the delegated technical owner "
+            "through GET /me before the first write"
+        )
 
     governance = config.get("governance")
     if not isinstance(governance, dict):
@@ -115,10 +128,27 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
     if not isinstance(applications, list) or not applications:
         errors.append("applications must be a non-empty list")
     else:
-        application_ids = {item.get("id") for item in applications if isinstance(item, dict)}
-        for required in ("m365_provisioning_app", "m365_runtime_app"):
-            if required not in application_ids:
-                errors.append(f"applications missing {required}")
+        expected_client_ids = {
+            "m365_provisioning_app": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+            "m365_runtime_app": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+        }
+        application_id_values = [
+            item.get("id") for item in applications if isinstance(item, dict)
+        ]
+        normalized_application_ids = [
+            item for item in application_id_values if isinstance(item, str) and item
+        ]
+        if (
+            len(applications) != len(expected_client_ids)
+            or len(normalized_application_ids) != len(expected_client_ids)
+            or set(normalized_application_ids) != set(expected_client_ids)
+            or len(normalized_application_ids)
+            != len(set(normalized_application_ids))
+        ):
+            errors.append(
+                "applications must contain exactly m365_provisioning_app and "
+                "m365_runtime_app once each"
+            )
         for application in applications:
             if not isinstance(application, dict):
                 errors.append("applications entries must be objects")
@@ -126,13 +156,80 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
             if application.get("direct_owner") != "technical_owner_user":
                 errors.append(f"application {application.get('id')} direct_owner must be technical_owner_user")
             permissions = application.get("bootstrap_application_permissions")
-            if not isinstance(permissions, list) or not permissions:
+            permission_values = (
+                [item for item in permissions if isinstance(item, str) and item]
+                if isinstance(permissions, list)
+                else []
+            )
+            if (
+                not isinstance(permissions, list)
+                or not permissions
+                or len(permission_values) != len(permissions)
+            ):
                 errors.append(f"application {application.get('id')} must define bootstrap_application_permissions")
-            if application.get("id") == "m365_runtime_app":
-                if "Sites.Selected" not in permissions:
-                    errors.append("m365_runtime_app must request Sites.Selected")
+            application_id = application.get("id")
+            permission_set = set(permission_values)
+            permission_count = len(permission_values)
+            if (
+                isinstance(application_id, str)
+                and application_id in expected_client_ids
+                and (
+                    application.get("expected_client_id")
+                    != expected_client_ids[application_id]
+                    or application.get("existing_application_required") is not True
+                )
+            ):
+                errors.append(
+                    f"{application_id} must bind the exact existing client ID"
+                )
+            if application_id == "m365_provisioning_app":
+                required_permissions = {
+                    "Application.Read.All",
+                    "Application.ReadWrite.OwnedBy",
+                    "AppRoleAssignment.ReadWrite.All",
+                    "Team.Create",
+                    "Sites.Manage.All",
+                    "Sites.FullControl.All",
+                }
+                if (
+                    permission_set != required_permissions
+                    or permission_count != len(required_permissions)
+                ):
+                    errors.append(
+                        "m365_provisioning_app.bootstrap_application_permissions "
+                        "must equal the exact owner-gated allowlist"
+                    )
+                expected_site_admin = {
+                    "required_application_permission": "Sites.FullControl.All",
+                    "graph_methods_exact": ["GET", "POST"],
+                    "graph_path_template_exact": "/sites/{siteId}/permissions",
+                    "owner_gate_required": True,
+                    "runtime_identity_allowed": False,
+                }
+                if application.get("site_permission_administration") != expected_site_admin:
+                    errors.append(
+                        "m365_provisioning_app.site_permission_administration "
+                        "must bind owner-gated Sites.FullControl.All to exact "
+                        "GET/POST /sites/{siteId}/permissions"
+                    )
+                if application.get("runtime_allowed") is not False:
+                    errors.append("m365_provisioning_app.runtime_allowed must be false")
+            if application_id == "m365_runtime_app":
+                if (
+                    permission_set != {"Sites.Selected"}
+                    or permission_count != 1
+                ):
+                    errors.append(
+                        "m365_runtime_app must request exactly Sites.Selected"
+                    )
+                if application.get("site_permission_administration") is not None:
+                    errors.append(
+                        "m365_runtime_app.site_permission_administration must be null"
+                    )
                 if application.get("sites_selected_grants") is not True:
                     errors.append("m365_runtime_app.sites_selected_grants must be true")
+                if application.get("runtime_allowed") is not True:
+                    errors.append("m365_runtime_app.runtime_allowed must be true")
 
     team_owner_policy = config.get("team_owner_policy")
     if not isinstance(team_owner_policy, dict):
@@ -344,6 +441,42 @@ def build_application_owner_readiness(
     runtime_apps = [application for application in applications if application.get("runtime_allowed") is True]
     provisioning_apps = [application for application in applications if application.get("runtime_allowed") is False]
     runtime_app = runtime_apps[0] if runtime_apps else {}
+    provisioning_app = provisioning_apps[0] if provisioning_apps else {}
+    required_site_admin_permission = "Sites.FullControl.All"
+    expected_provisioner_permissions = {
+        "Application.Read.All",
+        "Application.ReadWrite.OwnedBy",
+        "AppRoleAssignment.ReadWrite.All",
+        "Team.Create",
+        "Sites.Manage.All",
+        "Sites.FullControl.All",
+    }
+    raw_applied_provisioner_permissions = applied_applications.get(
+        "m365_provisioning_app", {}
+    ).get("application_permissions", [])
+    applied_provisioner_permission_values = (
+        [
+            item
+            for item in raw_applied_provisioner_permissions
+            if isinstance(item, str) and item
+        ]
+        if isinstance(raw_applied_provisioner_permissions, list)
+        else []
+    )
+    applied_provisioner_permissions_valid = (
+        isinstance(raw_applied_provisioner_permissions, list)
+        and len(applied_provisioner_permission_values)
+        == len(raw_applied_provisioner_permissions)
+        and len(applied_provisioner_permission_values)
+        == len(set(applied_provisioner_permission_values))
+    )
+    applied_provisioner_permissions = set(applied_provisioner_permission_values)
+    site_admin_permission_recorded = (
+        applied_provisioner_permissions_valid
+        and len(applied_provisioner_permissions)
+        == len(expected_provisioner_permissions)
+        and applied_provisioner_permissions == expected_provisioner_permissions
+    )
     technical_owner_license_count = _technical_owner_license_count(applied_state)
     technical_owner_license_review_required = technical_owner_license_count in (None, 0)
 
@@ -376,6 +509,31 @@ def build_application_owner_readiness(
             "provisioning_and_runtime_apps_separated",
             "PASSED",
             "Provisioning permissions and runtime Sites.Selected access are separated.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "site_permission_administration_contract",
+            "PASSED",
+            "Owner-gated site-permission administration requires Sites.FullControl.All.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "site_permission_administration_applied",
+            (
+                "PASSED"
+                if applied_state and site_admin_permission_recorded
+                else ("FAILED" if applied_state else "REVIEW_REQUIRED")
+            ),
+            (
+                "Applied-state evidence records the exact six-role provisioning allowlist."
+                if site_admin_permission_recorded
+                else (
+                    "Historical applied-state evidence is retained for audit but is "
+                    "not operationally ready without the exact six-role provisioning allowlist."
+                    if applied_state
+                    else "No applied-state evidence proves the exact six-role provisioning allowlist."
+                )
+            ),
             owner_gate_required=True,
         ),
         _readiness_check(
@@ -466,8 +624,20 @@ def build_application_owner_readiness(
             ],
             "provisioning_app_count": len(provisioning_apps),
             "runtime_app_count": len(runtime_apps),
-            "runtime_sites_selected_required": "Sites.Selected"
-            in runtime_app.get("bootstrap_application_permissions", []),
+            "provisioner_site_permission_admin_required": (
+                required_site_admin_permission
+                in provisioning_app.get("bootstrap_application_permissions", [])
+            ),
+            "provisioner_site_permission_admin_applied": (
+                site_admin_permission_recorded
+            ),
+            "historical_applied_state_operationally_accepted": (
+                not applied_state or site_admin_permission_recorded
+            ),
+            "runtime_sites_selected_required": (
+                set(runtime_app.get("bootstrap_application_permissions", []))
+                == {"Sites.Selected"}
+            ),
             "applied_state_attached": applied_state is not None,
             "applied_applications_recorded": len(applied_applications),
             "team_owner_checks_recorded": len(applied_team_owner_checks),

@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 
 from nac_bff.azure_activation import (
     PROVISIONER_CLIENT_ID,
+    PROVISIONER_GRAPH_APPLICATION_ROLES,
     TENANT_ID,
     activation_step_ids,
 )
@@ -70,6 +71,13 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                         "m365_provisioning_app": {
                             "displayName": "NaC M365 Provisioning",
                             "clientId": PROVISIONER_CLIENT_ID,
+                            "appRoleAssignments": [
+                                {
+                                    "permission": permission,
+                                    "status": "existing",
+                                }
+                                for permission in PROVISIONER_GRAPH_APPLICATION_ROLES
+                            ],
                         }
                     },
                 }
