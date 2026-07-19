@@ -231,6 +231,15 @@ The twelve steps remain in the offline plan order:
 11. check `healthz` before auth, execute authenticated allow/deny/manipulated-input readbacks, deterministically restore the captured assigned synthetic baseline, read again with authentication, and only then check `readyz`,
 12. finalize read-only convergence, duplicate absence, causal deployment-input binding, ledger, and evidence; replaying provider writes is not claimed.
 
+Step 7 runs Azure CLI status tracking with an explicit inner timeout of `900`
+seconds. Only this artifact-bound write receives an outer subprocess timeout
+of `1020` seconds; all other Azure commands retain their existing boundaries.
+Success requires the CLI to complete for the sealed ZIP bytes followed by the
+`healthz` readback. Any further timeout or ambiguous completion remains
+fail-closed and skips `healthz` and every later step.
+The target, historical, and historical-host locks remain held as persistent
+quarantine.
+
 Microsoft Graph access uses raw REST requests only against
 `https://graph.microsoft.com/v1.0`. Graph beta, SDKs, PnP, and legacy
 SharePoint APIs remain blocked. Azure Resource Manager and the already

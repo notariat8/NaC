@@ -908,6 +908,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                     'LEGACY_HOST_ROOT = "_LEGACY_HOST_LOCK_ROOT"',
                     'LEGACY_HOST_LOCK = "LEGACY_HOST_ACTIVATION_LOCK_HELD"',
                     'ARM_AMBIGUOUS = "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"',
+                    (
+                        'FUNCTION_AMBIGUOUS = '
+                        '"AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"'
+                    ),
                     'QUARANTINE = "preserve_quarantine"',
                     'LEGACY_HASH = "legacy_target_binding_sha256"',
                     'HOST_RESOLUTION = "pwd.getpwuid(os.geteuid()).pw_dir"',

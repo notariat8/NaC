@@ -22,6 +22,8 @@ from nac_bff.azure_live_commands import (
     EXPECTED_CLOUD_NAME,
     EXPECTED_SUBSCRIPTION_ID,
     EXPECTED_TENANT_ID,
+    FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
+    FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
     AzureCliAdapter,
     build_azure_cli_env,
     calculate_azure_cli_toolchain_sha256,
@@ -748,6 +750,13 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 "--src", "/tmp/app.zip",
                 "--build-remote", "true",
             ],
+            [
+                "functionapp", "deployment", "source", "config-zip",
+                "--resource-group", "rg-nac-bff-test",
+                "--name", "func-nac-bff-test-funktion8",
+                "--src", "/tmp/app.zip",
+                "--build-remote", "true",
+            ],
             [],
             "account show",
         )
@@ -760,6 +769,52 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     {"AZURE_CLI_ARGV_INVALID", "AZURE_CLI_COMMAND_BLOCKED"},
                 )
         process.assert_not_called()
+
+    def test_function_deploy_timeout_must_be_exact_and_single(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "nac-bff.zip"
+            artifact.write_bytes(b"package")
+            base = [
+                "functionapp",
+                "deployment",
+                "source",
+                "config-zip",
+                "--resource-group",
+                "rg-nac-bff-test",
+                "--name",
+                "func-nac-bff-test-funktion8",
+                "--src",
+                str(artifact),
+                "--build-remote",
+                "true",
+            ]
+            blocked = (
+                [*base, "--timeout", "899"],
+                [
+                    *base,
+                    "--timeout",
+                    str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
+                    "--timeout",
+                    str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
+                ],
+            )
+            with patch(
+                "nac_bff.azure_live_commands.subprocess.run"
+            ) as process:
+                for argv in blocked:
+                    with self.subTest(argv=argv):
+                        result = run_azure_cli(
+                            argv, binary="/does/not/matter"
+                        )
+                        self.assertFalse(result["ok"])
+                        self.assertIn(
+                            result["code"],
+                            {
+                                "AZURE_CLI_ARGV_INVALID",
+                                "AZURE_CLI_COMMAND_BLOCKED",
+                            },
+                        )
+            process.assert_not_called()
 
     def test_exact_command_schemas_accept_only_bounded_shapes(self) -> None:
         valid = (
@@ -836,6 +891,8 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 "/tmp/prepared/function/nac-bff.zip",
                 "--build-remote",
                 "true",
+                "--timeout",
+                str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
             ],
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -1217,6 +1274,8 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 "--name", "func-nac-bff-test-funktion8",
                 "--src", str(artifact),
                 "--build-remote", "true",
+                "--timeout",
+                str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
             ]
             with patch("nac_bff.azure_live_commands.subprocess.run") as process:
                 result = run_azure_cli(
@@ -2134,6 +2193,48 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
 
         self.assertEqual(result, expected)
         self.assertEqual(run.call_args.kwargs["timeout_seconds"], 17.5)
+
+    def test_adapter_forwards_bound_artifacts_with_per_call_timeout(self) -> None:
+        adapter = AzureCliAdapter(
+            binary="/trusted/azure/az",
+            expected_binary_sha256="a" * 64,
+            environ={},
+        )
+        artifact = Path("/tmp/prepared/function/nac-bff.zip")
+        bindings = {str(artifact): (artifact, "b" * 64)}
+        expected = {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": {}}
+
+        with patch(
+            "nac_bff.azure_live_commands.run_azure_cli",
+            return_value=expected,
+        ) as run:
+            result = adapter.run_bound_with_timeout(
+                [
+                    "functionapp",
+                    "deployment",
+                    "source",
+                    "config-zip",
+                    "--resource-group",
+                    "rg-nac-bff-test",
+                    "--name",
+                    "func-nac-bff-test-funktion8",
+                    "--src",
+                    str(artifact),
+                    "--build-remote",
+                    "true",
+                    "--timeout",
+                    str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
+                ],
+                bindings,
+                timeout_seconds=FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
+            )
+
+        self.assertEqual(result, expected)
+        self.assertEqual(
+            run.call_args.kwargs["timeout_seconds"],
+            FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
+        )
+        self.assertEqual(run.call_args.kwargs["bound_artifacts"], bindings)
 
 
 def _fake_binary(root: Path) -> Path:

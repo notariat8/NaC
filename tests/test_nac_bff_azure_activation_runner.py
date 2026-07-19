@@ -484,6 +484,42 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             self.assertTrue(_lock_path(root).exists())
             self.assertTrue(_legacy_lock_path(root).exists())
 
+    def test_ambiguous_function_state_retains_cross_version_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self._run(
+                _Port(
+                    fail_at="deploy_function_package",
+                    fail_code="AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+                ),
+                repo_root=root,
+            )
+
+            self.assertEqual(first["status"], "FAILED_PARTIAL")
+            self.assertEqual(
+                first["step_results"][-1]["stable_error_code"],
+                "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+            )
+            self.assertTrue(_lock_path(root).exists())
+            self.assertTrue(_legacy_lock_path(root).exists())
+            self.assertTrue(_legacy_host_lock_path(root).exists())
+
+            other_hash = "9" * 64
+            retry_port = _Port()
+            second = self._run(
+                retry_port,
+                request=_request(expected_activation_hash=other_hash),
+                plans=[_plan(activation_hash=other_hash)],
+                repo_root=root,
+            )
+
+            self.assertEqual(
+                second["error"]["code"],
+                "LEGACY_HOST_ACTIVATION_LOCK_HELD",
+            )
+            self.assertEqual(retry_port.prewrite_calls, 0)
+            self.assertEqual(retry_port.calls, [])
+
     def test_dirty_tree_blocks_before_plan_or_execution(self) -> None:
         port = _Port()
         ordering: list[str] = []
