@@ -186,6 +186,26 @@ def _deployment_parameters(app_id: str = API_APP_ID) -> dict:
     }
 
 
+def _deployment_parameters_with_arm_metadata(
+    app_id: str = API_APP_ID,
+) -> dict:
+    parameter_types = {
+        "location": "String",
+        "environmentName": "String",
+        "m365TenantId": "String",
+        "bffApiAudience": "String",
+        "bffRequiredDelegatedScope": "String",
+        "functionAppName": "String",
+        "maximumInstanceCount": "Int",
+        "httpPerInstanceConcurrency": "Int",
+        "tags": "Object",
+    }
+    return {
+        key: {"type": parameter_types[key], "value": wrapper["value"]}
+        for key, wrapper in _deployment_parameters(app_id).items()
+    }
+
+
 def _deployment_payload(
     outputs: dict,
     *,
@@ -406,6 +426,7 @@ class _FakeAzure:
         self.resource_show_exception: Exception | None = None
         self.deployment: dict | None = None
         self.deployment_show_results: list[dict] = []
+        self.deployment_create_returns_arm_metadata = False
         self.bound_artifacts = []
         self.bound_result: dict | None = None
         self.failure: dict | None = None
@@ -532,7 +553,11 @@ class _FakeAzure:
             self.deployment["properties"]["correlationId"] = (
                 UPDATED_DEPLOYMENT_CORRELATION_ID
             )
-            self.deployment["properties"]["parameters"] = parameters
+            self.deployment["properties"]["parameters"] = (
+                _deployment_parameters_with_arm_metadata()
+                if self.deployment_create_returns_arm_metadata
+                else parameters
+            )
             return {
                 "ok": True,
                 "code": "AZURE_CLI_COMMAND_PASSED",
@@ -1994,6 +2019,102 @@ class AzureBffCompositionTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "PASSED")
         self.assertFalse(self.port._deployment_preexisting)
+
+    def test_prewrite_accepts_arm_parameter_metadata_for_failed_baseline(
+        self,
+    ) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+        self.azure.deployment["properties"]["parameters"] = (
+            _deployment_parameters_with_arm_metadata()
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertFalse(self.port._deployment_preexisting)
+
+    def test_prewrite_accepts_arm_parameter_metadata_for_succeeded_baseline(
+        self,
+    ) -> None:
+        self.azure.resources = _azure_resources()
+        current_template_hash = json.loads(
+            (
+                self.repo_root
+                / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+            ).read_text(encoding="utf-8")
+        )["metadata"]["_generator"]["templateHash"]
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            template_hash=current_template_hash,
+        )
+        self.azure.deployment["properties"]["parameters"] = (
+            _deployment_parameters_with_arm_metadata()
+        )
+
+        with (
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_uami_sites_selected",
+                return_value={"status": "absent", "assignment_count": 0},
+            ),
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_site_read_permission",
+                return_value={"status": "absent", "permission_count": 0},
+            ),
+        ):
+            result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED", result)
+        self.assertTrue(self.port._deployment_preexisting)
+
+    def test_prewrite_rejects_foreign_arm_parameter_type(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+        parameters = _deployment_parameters_with_arm_metadata()
+        parameters["bffApiAudience"]["type"] = "SecureString"
+        self.azure.deployment["properties"]["parameters"] = parameters
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+
+    def test_prewrite_rejects_arm_parameter_value_type_mismatch(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+        parameters = _deployment_parameters_with_arm_metadata()
+        parameters["maximumInstanceCount"]["value"] = "4"
+        self.azure.deployment["properties"]["parameters"] = parameters
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+
+    def test_prewrite_rejects_extra_arm_parameter_metadata(self) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            provisioning_state="Failed",
+            template_hash="14963684813925800234",
+        )
+        parameters = _deployment_parameters_with_arm_metadata()
+        parameters["location"]["metadata"] = {}
+        self.azure.deployment["properties"]["parameters"] = parameters
+
+        result = self._prewrite()
+
+        self.assertEqual(result["code"], "AZURE_DEPLOYMENT_PARAMETERS_INVALID")
 
     def test_prewrite_rejects_unapproved_failed_baseline_template(self) -> None:
         self.azure.resources = _azure_resources()
@@ -3557,7 +3678,24 @@ class AzureBffCompositionTests(unittest.TestCase):
             self.port.execute_step(STEPS[11], self.context)
         self.assertEqual(raised.exception.code, "DEPLOYED_INPUT_BINDING_MISSING")
 
-    def test_all_twelve_handlers_execute_in_contract_order_with_fakes(self) -> None:
+    def test_deployment_hash_accepts_value_only_create_typed_readback(
+        self,
+    ) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        result = self.port.execute_step(STEPS[3], self.context)
+        self.assertEqual(result["status"], "PASSED", STEPS[3])
+        self.azure.deployment["properties"]["parameters"] = (
+            _deployment_parameters_with_arm_metadata()
+        )
+
+        self.port._validate_deployment_readback(
+            self.azure.deployment, require_current_binding=True
+        )
+
+    def test_all_twelve_handlers_accept_typed_create_value_only_readback(
+        self,
+    ) -> None:
+        self.azure.deployment_create_returns_arm_metadata = True
         self.assertEqual(self._prewrite()["status"], "PASSED")
         self.m365.pending = [
             {
@@ -3615,6 +3753,10 @@ class AzureBffCompositionTests(unittest.TestCase):
             ) as deploy_spfx_mock,
         ):
             for step in STEPS:
+                if step == STEPS[11]:
+                    self.azure.deployment["properties"]["parameters"] = (
+                        _deployment_parameters()
+                    )
                 result = self.port.execute_step(step, self.context)
                 self.assertEqual(result["status"], "PASSED", step)
                 completed.append(step)

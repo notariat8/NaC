@@ -410,6 +410,13 @@ negative_tests:
       reconciled_template_hash_exact: true
       failed_baseline_missing_entra_rejected: true
       failed_baseline_entra_and_parameters_exact: true
+      arm_value_only_wrapper_accepted: true
+      arm_type_and_value_wrapper_accepted: true
+      arm_parameter_types_exact: true
+      arm_parameter_value_types_exact: true
+      arm_unknown_wrapper_fields_rejected: true
+      canonical_parameter_comparison_value_only: true
+      canonical_parameter_hash_value_only: true
       failed_baseline_template_hash_owner_bound: true
   - id: lock_journal_torn_release
     arrange: Tear the append of a RELEASED JSON-lines record once at each primary, legacy and legacy-host marker after committed state and receipt exist.

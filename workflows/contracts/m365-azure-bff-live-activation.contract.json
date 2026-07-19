@@ -809,6 +809,25 @@
         "entra_binding_resolved_before_azure_read": true,
         "missing_entra_binding_rejected": true,
         "parameter_binding_exact": true,
+        "readback_wrapper_shapes_allowed_exact": [
+          "value_only",
+          "azure_type_and_value"
+        ],
+        "azure_parameter_types_exact": {
+          "location": "String",
+          "environmentName": "String",
+          "m365TenantId": "String",
+          "bffApiAudience": "String",
+          "bffRequiredDelegatedScope": "String",
+          "functionAppName": "String",
+          "maximumInstanceCount": "Int",
+          "httpPerInstanceConcurrency": "Int",
+          "tags": "Object"
+        },
+        "canonical_comparison_shape": "value_only",
+        "canonical_hash_shape": "value_only",
+        "unknown_wrapper_fields_rejected": true,
+        "parameter_value_types_exact": true,
         "current_owner_bound_template_hash_allowed": true,
         "approved_legacy_template_hashes": [
           "14963684813925800234"

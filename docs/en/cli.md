@@ -399,7 +399,10 @@ first provider write with `APPROVAL_OWNER_MISMATCH`. Before the first provider
 write, the
 complete duplicate and broader-permission inventory, target-global lock, and
 prebuilt hash-bound Function/SPFx packages and Bicep/parameter snapshots must
-pass. Step 11 checks `healthz` before auth, authenticated reads and deny cases,
+pass. Azure deployment readbacks accept only exact `value` wrappers or the
+exact ARM-provided `type`/`value` shape. Each parameter must match both its
+ARM type and value type; comparison and hashing use the canonical `value`
+shape, and any additional wrapper field fails closed. Step 11 checks `healthz` before auth, authenticated reads and deny cases,
 deterministically restores the assigned synthetic baseline, and checks
 `readyz` only after another authenticated read. Evidence, including `summary`,
 follows exact field allowlists.
