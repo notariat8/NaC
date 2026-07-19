@@ -117,6 +117,17 @@ from .live_synthetic_workspace import (
 _LIVE_CONTRACT = Path("workflows/contracts/m365-azure-bff-live-activation.contract.json")
 _BICEP_TEMPLATE = Path("deploy/runtime/azure/nac-bff/infra/compiled/main.json")
 _APPROVED_FAILED_BASELINE_TEMPLATE_HASHES = ("14963684813925800234",)
+_ARM_DEPLOYMENT_PARAMETER_TYPES = {
+    "location": "String",
+    "environmentName": "String",
+    "m365TenantId": "String",
+    "bffApiAudience": "String",
+    "bffRequiredDelegatedScope": "String",
+    "functionAppName": "String",
+    "maximumInstanceCount": "Int",
+    "httpPerInstanceConcurrency": "Int",
+    "tags": "Object",
+}
 _DEPLOYMENT_RECONCILIATION_ATTEMPTS = 5
 _DEPLOYMENT_RECONCILIATION_DELAY_SECONDS = 2.0
 _FUNCTION_BUILD = Path("deploy/runtime/azure/nac-bff/build_package.py")
@@ -1177,13 +1188,12 @@ class AzureBffLiveExecutionPort:
         deployment: Mapping[str, Any],
         *,
         require_current_binding: bool,
-    ) -> None:
+    ) -> dict[str, Any]:
         properties = deployment.get("properties")
         if not isinstance(properties, dict):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
-        self._validate_deployment_operation_identity(deployment)
+        parameters = self._validate_deployment_operation_identity(deployment)
         template_hash = properties.get("templateHash")
-        parameters = properties.get("parameters")
         if (
             properties.get("provisioningState") != "Succeeded"
         ):
@@ -1206,10 +1216,11 @@ class AzureBffLiveExecutionPort:
                 != self._deployed_prepared_inputs_sha256
             ):
                 raise ActivationStepError("AZURE_DEPLOYMENT_INPUT_DRIFT")
+        return parameters
 
     def _validate_deployment_operation_identity(
         self, deployment: Mapping[str, Any]
-    ) -> None:
+    ) -> dict[str, Any]:
         properties = deployment.get("properties")
         if not isinstance(properties, dict):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
@@ -1224,7 +1235,7 @@ class AzureBffLiveExecutionPort:
             or not _UUID_RE.fullmatch(correlation_id)
         ):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
-        _validate_deployment_parameters(parameters, self._api)
+        return _validate_deployment_parameters(parameters, self._api)
 
     def _approved_failed_baseline_template_hashes(self) -> frozenset[str]:
         bicep = (self._repo_root / _BICEP_TEMPLATE).resolve()
@@ -1849,10 +1860,12 @@ class AzureBffLiveExecutionPort:
         result = bound_result.get("data")
         if not isinstance(result, dict):
             raise ActivationStepError("AZURE_CLI_COMMAND_FAILED")
-        self._validate_deployment_readback(result, require_current_binding=False)
+        canonical_parameters = self._validate_deployment_readback(
+            result, require_current_binding=False
+        )
         properties = result["properties"]
         self._deployed_template_hash = str(properties["templateHash"])
-        self._deployed_parameters_sha256 = _sha256_json(properties["parameters"])
+        self._deployed_parameters_sha256 = _sha256_json(canonical_parameters)
         self._deployed_prepared_inputs_sha256 = self._prepared_inputs_sha256
         outcome = _outcome(
             "reused" if self._deployment_preexisting else "updated",
@@ -2791,23 +2804,56 @@ def _trusted_credential_parent_chain(path: Path) -> bool:
 def _validate_deployment_parameters(
     parameters: Mapping[str, Any],
     api: ApiApplicationBinding | None,
-) -> None:
-    placeholder_app_id = api.app_id if api is not None else "00000000-0000-4000-8000-000000000001"
+) -> dict[str, Any]:
+    placeholder_app_id = (
+        api.app_id if api is not None else "00000000-0000-4000-8000-000000000001"
+    )
     expected = _bicep_parameters(placeholder_app_id)["parameters"]
-    actual_audience = parameters.get("bffApiAudience")
-    if (
-        set(parameters) != set(expected)
-        or not isinstance(actual_audience, dict)
-        or set(actual_audience) != {"value"}
-        or not isinstance(actual_audience.get("value"), str)
-        or not _UUID_RE.fullmatch(actual_audience["value"])
-    ):
+    if set(parameters) != set(expected):
+        raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+
+    canonical: dict[str, Any] = {}
+    for key in expected:
+        actual_wrapper = parameters.get(key)
+        if not isinstance(actual_wrapper, dict):
+            raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+        wrapper_keys = set(actual_wrapper)
+        if wrapper_keys == {"value"}:
+            pass
+        elif (
+            wrapper_keys == {"type", "value"}
+            and actual_wrapper.get("type") == _ARM_DEPLOYMENT_PARAMETER_TYPES[key]
+        ):
+            pass
+        else:
+            raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+        actual_value = actual_wrapper.get("value")
+        if not _arm_parameter_value_matches_type(
+            actual_value,
+            _ARM_DEPLOYMENT_PARAMETER_TYPES[key],
+        ):
+            raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+        canonical[key] = {"value": actual_value}
+
+    actual_audience = canonical["bffApiAudience"]
+    if not _UUID_RE.fullmatch(actual_audience["value"]):
         raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
     if api is not None and actual_audience != expected["bffApiAudience"]:
         raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
     for key, value in expected.items():
-        if key != "bffApiAudience" and parameters.get(key) != value:
+        if key != "bffApiAudience" and canonical.get(key) != value:
             raise ActivationStepError("AZURE_DEPLOYMENT_PARAMETERS_INVALID")
+    return canonical
+
+
+def _arm_parameter_value_matches_type(value: Any, arm_type: str) -> bool:
+    if arm_type == "String":
+        return isinstance(value, str)
+    if arm_type == "Int":
+        return type(value) is int
+    if arm_type == "Object":
+        return isinstance(value, dict)
+    return False
 
 
 def _deployment_name(_context: ActivationContext) -> str:

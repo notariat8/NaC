@@ -403,7 +403,11 @@ Werte stoppen vor dem ersten Provider-Write mit `APPROVAL_OWNER_MISMATCH`.
 Vor dem ersten Provider-Write müssen die vollständige Duplikat- und
 Breitrechteinventur, der zielglobale Lock sowie die vorgebauten und
 hashgebundenen Function-/SPFx-Pakete und Bicep-/Parameter-Snapshots bestanden
-sein. Schritt 11 prüft `healthz` vor Auth, authentifizierte Reads und Deny-
+sein. Azure-Deployment-Readbacks akzeptieren ausschließlich exakte `value`-
+Wrapper oder die von ARM gelieferte exakte `type`-/`value`-Form. ARM-Typ und
+Werttyp müssen je Parameter stimmen; vor Vergleich und Hashbildung wird auf
+die kanonische `value`-Form normalisiert, weitere Wrapper-Felder stoppen
+fail-closed. Schritt 11 prüft `healthz` vor Auth, authentifizierte Reads und Deny-
 Fälle, stellt den synthetischen Assigned-Ausgangszustand deterministisch
 wieder her und prüft `readyz` erst nach einem weiteren authentifizierten Read.
 Die Evidence einschließlich `summary` folgt exakten Feld-Allowlists.
