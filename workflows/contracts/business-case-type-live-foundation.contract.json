@@ -1,0 +1,146 @@
+{
+  "schema_version": "nac.business-case-type-live-foundation-contract/v0.1",
+  "contract_id": "m365.business_case_type_live_foundation",
+  "title": "BusinessCaseType Live Foundation for notary_team_01",
+  "status": "implemented_offline_runner_contract",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/678",
+  "scope": {
+    "workspace_id_exact": "notary_team_01",
+    "other_workspaces_allowed": false,
+    "additive_only": true,
+    "migration_allowed": false,
+    "deletes_allowed": false,
+    "rollbacks_allowed": false,
+    "live_execution_composed": false
+  },
+  "binding": {
+    "foundation_manifest": "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json",
+    "provisioned_state": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
+    "workspace_site_and_akten_list_must_match": true,
+    "workspace_mismatch_behavior": "stop_before_graph_call",
+    "schema_drift_behavior": "stop_before_first_write",
+    "plan_sha256_required_by_owner_gate": true,
+    "plan_hash_includes_provisioner_permission_binding": true,
+    "generic_list_system_column_baseline": "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
+    "plan_hash_includes_system_column_baseline": true
+  },
+  "schema_contract": {
+    "registry_list": "Vorgangsartenregister",
+    "registry_custom_columns_exact": [
+      "BusinessCaseTypeId",
+      "LifecycleStatus",
+      "Selectable",
+      "CatalogVersion"
+    ],
+    "built_in_title_role": "Label",
+    "akten_additive_column": "VorgangstypId",
+    "legacy_akten_column": "Vorgangstyp",
+    "legacy_akten_column_mutation_allowed": false,
+    "generic_list_system_column_count_exact": 85,
+    "generic_list_system_column_shape_fields_exact": [
+      "name",
+      "hidden",
+      "readOnly"
+    ],
+    "unexpected_read_only_or_hidden_custom_columns_allowed": false
+  },
+  "registry_contract": {
+    "canonical_row_count_exact": 20,
+    "alias_row_count_exact": 0,
+    "catalog_version_exact": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0",
+    "lifecycle_status_exact": "active",
+    "selectable_exact": true,
+    "row_fields_exact": [
+      "Title",
+      "BusinessCaseTypeId",
+      "LifecycleStatus",
+      "Selectable",
+      "CatalogVersion"
+    ]
+  },
+  "graph_boundary": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "allowed_methods": [
+      "GET",
+      "POST"
+    ],
+    "forbidden_methods": [
+      "PATCH",
+      "DELETE"
+    ],
+    "graph_sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "application_permission": "Sites.FullControl.All",
+    "provisioner_binding": {
+      "application_display_name_exact": "NaC M365 Provisioning",
+      "source_contract": "workflows/contracts/m365-azure-bff-live-activation.contract.json",
+      "existing_permission_required": true,
+      "permission_change_required": false,
+      "permission_mutation_allowed": false,
+      "credential_or_consent_change_allowed": false
+    },
+    "maximum_first_run_mutations": 22,
+    "second_converged_run_mutations": 0
+  },
+  "runner_contract": {
+    "module": "src/nac_m365_graph/business_case_type_live_foundation.py",
+    "graph_port_injected": true,
+    "owner_approved_required": true,
+    "execute_live_foundation_required": true,
+    "approval_reference_required": true,
+    "reason_required": true,
+    "preflight_all_existing_target_shapes_before_write": true,
+    "readback_after_create": true,
+    "automatic_rollback_allowed": false,
+    "cli_live_graph_factory_available": false
+  },
+  "cli": {
+    "plan_command": "nac m365 teams-sharepoint business-case-type-live-foundation-plan",
+    "apply_gate_command": "nac m365 teams-sharepoint business-case-type-live-foundation-apply",
+    "plan_executes_graph_requests": false,
+    "apply_gate_executes_graph_requests": false,
+    "credentials_accepted_or_loaded": false
+  },
+  "evidence_policy": {
+    "redacted_only": true,
+    "raw_graph_payloads_allowed": false,
+    "tokens_or_auth_headers_allowed": false,
+    "approval_reference_stored_raw": false,
+    "reason_stored_raw": false,
+    "stable_error_codes_only": true
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-678-01",
+      "requirement": "The foundation is bound exactly to notary_team_01 and rejects every other workspace before any Graph call."
+    },
+    {
+      "id": "AC-678-02",
+      "requirement": "The plan uses Microsoft Graph REST v1.0 GET and POST only and never plans migration, PATCH, DELETE or rollback."
+    },
+    {
+      "id": "AC-678-03",
+      "requirement": "Vorgangsartenregister has exactly four bounded NaC custom columns in addition to the hash-bound 85-column tenant genericList system baseline, uses Title as Label, adds Akten.VorgangstypId and leaves legacy Akten.Vorgangstyp unchanged."
+    },
+    {
+      "id": "AC-678-04",
+      "requirement": "The registry contains exactly 20 active selectable canonical rows, no aliases and the exact shared catalog version."
+    },
+    {
+      "id": "AC-678-05",
+      "requirement": "Existing workspace, list, column or registry-row drift stops before the first Graph write."
+    },
+    {
+      "id": "AC-678-06",
+      "requirement": "A second simulated run over the converged state produces zero mutations."
+    },
+    {
+      "id": "AC-678-07",
+      "requirement": "The injected runner requires the exact plan hash and complete owner gate, reuses the existing NaC M365 Provisioning Sites.FullControl.All contract without permission changes and the central CLI composes no live Graph execution."
+    },
+    {
+      "id": "AC-678-08",
+      "requirement": "Tests make no Graph calls and evidence contains no raw payloads, tokens, auth headers, approval text or reason text."
+    }
+  ]
+}

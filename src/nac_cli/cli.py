@@ -57,6 +57,13 @@ from nac_m365_graph.business_case_type_read_plan import (
     build_business_case_type_read_plan,
     format_business_case_type_read_plan,
 )
+from nac_m365_graph.business_case_type_live_foundation import (
+    FoundationApplyRequest,
+    WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
+    build_business_case_type_live_foundation_apply_boundary,
+    build_business_case_type_live_foundation_plan,
+    format_business_case_type_live_foundation_plan,
+)
 from nac_m365_graph.mcp_smoke_leftover_cleanup import DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT
 from nac_m365_graph.mcp_smoke_suite import DEFAULT_MCP_SMOKE_SUITE_OUTPUT
 from nac_m365_graph.matter_access_apply_readiness import DEFAULT_MATTER_ACCESS_APPLY_READINESS_OUTPUT
@@ -700,6 +707,8 @@ def build_parser() -> argparse.ArgumentParser:
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
+            "business-case-type-live-foundation-plan",
+            "business-case-type-live-foundation-apply",
             "bpmn-viewer-plan",
             "matter-access-plan",
             "matter-access-decision-replay",
@@ -7718,6 +7727,20 @@ def main(argv: list[str] | None = None) -> int:
     command_index = _business_case_type_read_plan_command_index(effective_argv)
     if command_index is not None:
         return _run_business_case_type_read_plan_command(effective_argv, command_index)
+    foundation_plan_index = _business_case_type_live_foundation_plan_command_index(
+        effective_argv
+    )
+    if foundation_plan_index is not None:
+        return _run_business_case_type_live_foundation_plan_command(
+            effective_argv, foundation_plan_index
+        )
+    foundation_apply_index = _business_case_type_live_foundation_apply_command_index(
+        effective_argv
+    )
+    if foundation_apply_index is not None:
+        return _run_business_case_type_live_foundation_apply_command(
+            effective_argv, foundation_apply_index
+        )
     args = build_parser().parse_args(effective_argv)
     return args.func(args)
 
@@ -8114,3 +8137,103 @@ def _run_business_case_type_read_plan_command(argv: list[str], command_index: in
     args.m365_command = "teams-sharepoint"
     args.teams_sharepoint_command = "business-case-type-read-plan"
     return command_m365(args)
+
+
+def _business_case_type_live_foundation_plan_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "business-case-type-live-foundation-plan",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _business_case_type_live_foundation_apply_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "business-case-type-live-foundation-apply",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_business_case_type_live_foundation_plan_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint business-case-type-live-foundation-plan",
+        description=(
+            "Erzeugt den additiven Offline-Plan fuer das Vorgangsartenregister "
+            "ausschliesslich in notary_team_01."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--workspace-id",
+        default=BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    payload = build_business_case_type_live_foundation_plan(
+        resolve_repo_root(args.repo_root), workspace_id=args.workspace_id
+    )
+    if args.format == "json":
+        print_json(payload)
+    else:
+        print(format_business_case_type_live_foundation_plan(payload).rstrip())
+    return 0 if payload.get("status") == "PASSED" else 2
+
+
+def _run_business_case_type_live_foundation_apply_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint business-case-type-live-foundation-apply",
+        description=(
+            "Prueft das hashgebundene Owner-Gate fuer den injizierten additiven Runner; "
+            "Issue #678 komponiert keinen Live-Graph-Client."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--workspace-id",
+        default=BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
+    )
+    parser.add_argument("--expected-plan-sha256", required=True)
+    parser.add_argument("--approval-reference", required=True)
+    parser.add_argument("--reason", required=True)
+    parser.add_argument("--owner-approved", action="store_true")
+    parser.add_argument("--execute-live-foundation", action="store_true")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    request = FoundationApplyRequest(
+        workspace_id=args.workspace_id,
+        expected_plan_sha256=args.expected_plan_sha256,
+        approval_reference=args.approval_reference,
+        reason=args.reason,
+        owner_approved=args.owner_approved,
+        execute_live_foundation=args.execute_live_foundation,
+    )
+    payload = build_business_case_type_live_foundation_apply_boundary(
+        resolve_repo_root(args.repo_root), request
+    )
+    if args.format == "json":
+        print_json(payload)
+    else:
+        print(f"STATUS: {payload['status']}")
+        print(f"Plan SHA-256: {payload['plan_sha256']}")
+        for error_code in payload["error_codes"]:
+            print(f"ERROR: {error_code}")
+    return 0 if payload.get("status") == "READY_FOR_INJECTED_RUNNER" else 2

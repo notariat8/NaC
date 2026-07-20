@@ -1,0 +1,282 @@
+{
+  "schema_version": "nac.business-case-type-live-foundation/v0.1",
+  "contract_id": "m365.business_case_type_live_foundation",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/678",
+  "mode": "notary_team_01_additive_graph_rest_v1_0",
+  "target": {
+    "workspace_id": "notary_team_01",
+    "team_display_name": "NaC-Notar-01",
+    "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+    "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+    "akten_list_id": "588d4a41-f538-4f37-acfb-63ff283e0910",
+    "provisioned_state": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json"
+  },
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "api_version": "v1.0",
+    "rest_only": true,
+    "graph_sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "allowed_methods": [
+      "GET",
+      "POST"
+    ],
+    "forbidden_methods": [
+      "PATCH",
+      "DELETE"
+    ],
+    "application_permission": "Sites.FullControl.All",
+    "provisioner_binding": {
+      "application_display_name": "NaC M365 Provisioning",
+      "source_contract": "workflows/contracts/m365-azure-bff-live-activation.contract.json",
+      "existing_permission_required": true,
+      "permission_change_required": false,
+      "permission_mutation_allowed": false,
+      "credential_or_consent_change_allowed": false
+    },
+    "system_column_baseline": {
+      "source_path": "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
+      "workspace_id": "notary_team_01",
+      "list_template": "genericList",
+      "source_list_display_name": "Akten",
+      "read_only_capture": true
+    }
+  },
+  "schema": {
+    "registry_list": {
+      "display_name": "Vorgangsartenregister",
+      "template": "genericList",
+      "description": "Kanonisches Vorgangsartenregister für den gebundenen Notariatsarbeitsraum.",
+      "title_field_role": "Label",
+      "columns": [
+        {
+          "name": "BusinessCaseTypeId",
+          "displayName": "BusinessCaseTypeId",
+          "required": true,
+          "indexed": true,
+          "enforceUniqueValues": true,
+          "text": {
+            "allowMultipleLines": false,
+            "maxLength": 128
+          }
+        },
+        {
+          "name": "LifecycleStatus",
+          "displayName": "LifecycleStatus",
+          "required": true,
+          "indexed": false,
+          "choice": {
+            "allowTextEntry": false,
+            "displayAs": "dropDownMenu",
+            "choices": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          }
+        },
+        {
+          "name": "Selectable",
+          "displayName": "Selectable",
+          "required": true,
+          "indexed": false,
+          "boolean": {}
+        },
+        {
+          "name": "CatalogVersion",
+          "displayName": "CatalogVersion",
+          "required": true,
+          "indexed": false,
+          "text": {
+            "allowMultipleLines": false,
+            "maxLength": 64
+          }
+        }
+      ]
+    },
+    "akten_additive_column": {
+      "name": "VorgangstypId",
+      "displayName": "VorgangstypId",
+      "required": false,
+      "indexed": true,
+      "enforceUniqueValues": false,
+      "text": {
+        "allowMultipleLines": false,
+        "maxLength": 128
+      }
+    },
+    "legacy_akten_column": {
+      "name": "Vorgangstyp",
+      "required": true,
+      "type": "choice",
+      "allowTextEntry": false,
+      "choices": [
+        "immobilienkaufvertrag",
+        "unterschriftsbeglaubigung",
+        "online-gmbh-gruendung",
+        "handelsregisteranmeldung"
+      ],
+      "baseline_fingerprint_sha256": "471a8b1702a8636ac831dd93cf123a587ea14a16fddfe2ccde1d5d66f75f1eeb",
+      "mutation_allowed": false
+    }
+  },
+  "registry": {
+    "catalog_version": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0",
+    "canonical_row_count": 20,
+    "alias_row_count": 0,
+    "rows": [
+      {
+        "Title": "Adoption / familienrechtliche Erklärungen",
+        "BusinessCaseTypeId": "adoption-familienrechtliche-erklaerungen",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Bauträgervertrag",
+        "BusinessCaseTypeId": "bautraegervertrag",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Ehevertrag / Scheidungsfolgenvereinbarung",
+        "BusinessCaseTypeId": "ehevertrag-scheidungsfolgenvereinbarung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Erbausschlagung",
+        "BusinessCaseTypeId": "erbausschlagung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Erbscheinsantrag / Nachlassangelegenheiten",
+        "BusinessCaseTypeId": "erbscheinsantrag-nachlass",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Geschäftsanteilsübertragung GmbH",
+        "BusinessCaseTypeId": "geschaeftsanteilsuebertragung-gmbh",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Gesellschafterbeschluss bei GmbH/UG",
+        "BusinessCaseTypeId": "gesellschafterbeschluss-gmbh-ug",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Grundschuld / Hypothekenbestellung",
+        "BusinessCaseTypeId": "grundschuld-hypothekenbestellung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Handelsregisteranmeldung",
+        "BusinessCaseTypeId": "handelsregisteranmeldung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Immobilienkaufvertrag",
+        "BusinessCaseTypeId": "immobilienkaufvertrag",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Löschungsbewilligung / Grundbuchlöschung",
+        "BusinessCaseTypeId": "loeschungsbewilligung-grundbuchloeschung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "GmbH-Gründung / UG-Gründung",
+        "BusinessCaseTypeId": "online-gmbh-gruendung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Pflichtteilsverzicht / Erbverzicht",
+        "BusinessCaseTypeId": "pflichtteilsverzicht-erbverzicht",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Schenkungsvertrag / Übertragungsvertrag",
+        "BusinessCaseTypeId": "schenkungsvertrag-uebertragungsvertrag",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Teilungserklärung nach WEG",
+        "BusinessCaseTypeId": "teilungserklaerung-weg",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Testament / Erbvertrag",
+        "BusinessCaseTypeId": "testament-erbvertrag",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Beglaubigung von Unterschriften",
+        "BusinessCaseTypeId": "unterschriftsbeglaubigung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Vereinsregisteranmeldung",
+        "BusinessCaseTypeId": "vereinsregisteranmeldung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Vollmacht für Immobilien- oder Gesellschaftsgeschäfte",
+        "BusinessCaseTypeId": "vollmacht-immobilien-gesellschaftsgeschaefte",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      },
+      {
+        "Title": "Vorsorgevollmacht und Patientenverfügung",
+        "BusinessCaseTypeId": "vorsorgevollmacht-patientenverfuegung",
+        "LifecycleStatus": "active",
+        "Selectable": true,
+        "CatalogVersion": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+      }
+    ]
+  },
+  "apply_boundary": {
+    "owner_gate_required": true,
+    "plan_hash_required": true,
+    "additive_only": true,
+    "migration_allowed": false,
+    "deletes_allowed": false,
+    "rollback_allowed": false,
+    "other_workspaces_allowed": false,
+    "live_execution_in_issue_678_allowed": false,
+    "raw_graph_payload_evidence_allowed": false,
+    "tokens_or_auth_headers_in_evidence_allowed": false
+  }
+}

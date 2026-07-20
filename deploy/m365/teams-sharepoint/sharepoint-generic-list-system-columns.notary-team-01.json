@@ -1,0 +1,454 @@
+{
+  "schema_version": "nac.sharepoint-generic-list-system-columns/v0.1",
+  "contract_id": "m365.sharepoint_generic_list_system_columns",
+  "workspace_id": "notary_team_01",
+  "list_template": "genericList",
+  "source_list_display_name": "Akten",
+  "source_capture_date": "2026-07-20",
+  "source_api": "Microsoft Graph REST v1.0",
+  "source_request_method": "GET",
+  "source_writes": 0,
+  "excluded_repo_custom_column_names": [
+    "Aktenzeichen",
+    "FederfuehrenderNotar",
+    "FristNaechsteAktion",
+    "KgVersion",
+    "NacCaseId",
+    "NacWorkflowVersion",
+    "NotarTeam",
+    "Sachbearbeitung",
+    "Status",
+    "Vertraulichkeitsstufe",
+    "Vorgangstyp"
+  ],
+  "excluded_repo_custom_columns_sha256": "c00d801866975f325684106b380b71d11ab9bf746970e84c3291eb04b50d77b8",
+  "system_column_count": 85,
+  "system_columns_sha256": "dd5d5c00632c3974ef909dcf628bb565e3511953f8ec46097d70dabff0487586",
+  "columns": [
+    {
+      "name": "AccessPolicy",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "AppAuthor",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "AppEditor",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "Attachments",
+      "hidden": false,
+      "readOnly": false
+    },
+    {
+      "name": "Author",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "BaseName",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ComplianceAssetId",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "ContentType",
+      "hidden": false,
+      "readOnly": false
+    },
+    {
+      "name": "ContentTypeId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ContentVersion",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "Created",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "Created_x0020_Date",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "DocIcon",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "Edit",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "Editor",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "EncodedAbsUrl",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "FSObjType",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "FileDirRef",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "FileLeafRef",
+      "hidden": true,
+      "readOnly": false
+    },
+    {
+      "name": "FileRef",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "File_x0020_Type",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "FolderChildCount",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "GUID",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "HTML_x0020_File_x0020_Type",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ID",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "InstanceID",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ItemChildCount",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "Last_x0020_Modified",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "LinkFilename",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "LinkFilename2",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "LinkFilenameNoMenu",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "LinkTitle",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "LinkTitle2",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "LinkTitleNoMenu",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "MainLinkSettings",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "MetaInfo",
+      "hidden": true,
+      "readOnly": false
+    },
+    {
+      "name": "Modified",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "NoExecute",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "Order",
+      "hidden": true,
+      "readOnly": false
+    },
+    {
+      "name": "OriginatorId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ParentUniqueId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "PermMask",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "PrincipalCount",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ProgId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "Restricted",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SMLastModifiedDate",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SMTotalFileCount",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SMTotalFileStreamSize",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SMTotalSize",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ScopeId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SelectTitle",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "ServerUrl",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SortBehavior",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "SyncClientId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "Title",
+      "hidden": false,
+      "readOnly": false
+    },
+    {
+      "name": "UniqueId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "WorkflowInstanceID",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "WorkflowVersion",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_ColorHex",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_ColorTag",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_CommentCount",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_CommentFlags",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_ComplianceFlags",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_ComplianceTag",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_ComplianceTagUserId",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_ComplianceTagWrittenTime",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_CopySource",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_DraftOwnerId",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_EditMenuTableEnd",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_EditMenuTableStart",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_EditMenuTableStart2",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_Emoji",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_HasCopyDestinations",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_IsCurrentVersion",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_IsRecord",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_Level",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_ModerationComments",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_ModerationStatus",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_RansomwareAnomalyMetaInfo",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_UIVersion",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_UIVersionString",
+      "hidden": false,
+      "readOnly": true
+    },
+    {
+      "name": "_VirusInfo",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_VirusStatus",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "_VirusVendorID",
+      "hidden": true,
+      "readOnly": true
+    },
+    {
+      "name": "owshiddenversion",
+      "hidden": true,
+      "readOnly": true
+    }
+  ]
+}
