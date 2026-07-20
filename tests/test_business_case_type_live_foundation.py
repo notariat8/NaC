@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import urllib.parse
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +15,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+import nac_m365_graph.business_case_type_live_foundation as foundation_module  # noqa: E402
 from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     CATALOG_VERSION,
     FoundationApplyRequest,
@@ -184,6 +186,16 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertNotIn("migrate", rendered.lower())
         self.assertNotIn("Vorgangstyp/columns", rendered)
 
+    def test_provisioner_source_digest_changes_plan_hash(self) -> None:
+        with mock.patch.object(
+            foundation_module, "_sha256_file", return_value="0" * 64
+        ):
+            changed = build_business_case_type_live_foundation_plan(REPO_ROOT)
+        self.assertEqual(
+            changed["binding"]["provisioner_source_contract_sha256"], "0" * 64
+        )
+        self.assertNotEqual(changed["plan_sha256"], self.plan["plan_sha256"])
+
     def test_provisioner_source_contract_drift_is_rejected(self) -> None:
         graph = copy.deepcopy(self.manifest["graph"])
         with tempfile.TemporaryDirectory() as directory:
@@ -249,6 +261,24 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
                     if field == "approval_reference"
                     else "REASON_MISSING",
                     result["error_code"],
+                )
+                self.assertEqual(client.calls, [])
+
+    def test_non_string_approval_fields_stop_with_stable_code(self) -> None:
+        for field in ("approval_reference", "reason"):
+            with self.subTest(field=field):
+                client = FakeFoundationGraph(self.manifest)
+                result = run_business_case_type_live_foundation(
+                    client,
+                    REPO_ROOT,
+                    owner_request(self.plan["plan_sha256"], **{field: None}),
+                )
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertEqual(
+                    result["error_code"],
+                    "APPROVAL_REFERENCE_MISSING"
+                    if field == "approval_reference"
+                    else "REASON_MISSING",
                 )
                 self.assertEqual(client.calls, [])
 
@@ -318,6 +348,29 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertEqual(result["error_code"], "REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
         self.assertEqual(client.post_count, post_count)
 
+    def test_read_only_hidden_extra_registry_column_stops_before_write(self) -> None:
+        client = FakeFoundationGraph(self.manifest)
+        request = owner_request(self.plan["plan_sha256"])
+        self.assertEqual(
+            run_business_case_type_live_foundation(client, REPO_ROOT, request)["status"],
+            "PASSED",
+        )
+        client.columns[client.registry_id].append(
+            {
+                "name": "UnexpectedHiddenCustom",
+                "displayName": "UnexpectedHiddenCustom",
+                "required": False,
+                "hidden": True,
+                "readOnly": True,
+                "text": {"allowMultipleLines": False, "maxLength": 64},
+            }
+        )
+        post_count = client.post_count
+        result = run_business_case_type_live_foundation(client, REPO_ROOT, request)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["error_code"], "REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
+        self.assertEqual(client.post_count, post_count)
+
     def test_hidden_registry_column_stops_before_write(self) -> None:
         client = FakeFoundationGraph(self.manifest)
         request = owner_request(self.plan["plan_sha256"])
@@ -352,6 +405,38 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
 
                 with self.assertRaisesRegex(_SafetyStop, "GRAPH_PAGING_INVALID"):
                     _get_collection(PagingClient(), path, {"reads": 0})
+
+    def test_paging_accepts_preserved_query_and_rotating_skiptoken(self) -> None:
+        path = "/sites/site/lists?$select=id&$top=1"
+
+        class PagingClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def get(self, current: str) -> dict:
+                self.calls.append(current)
+                if len(self.calls) == 1:
+                    return {
+                        "value": [{"id": "1"}],
+                        "@odata.nextLink": (
+                            "https://graph.microsoft.com/v1.0/sites/site/lists?"
+                            "$select=id&$top=1&$skiptoken=first"
+                        ),
+                    }
+                if len(self.calls) == 2:
+                    return {
+                        "value": [{"id": "2"}],
+                        "@odata.nextLink": (
+                            "https://graph.microsoft.com/v1.0/sites/site/lists?"
+                            "$select=id&$top=1&$skiptoken=second"
+                        ),
+                    }
+                return {"value": [{"id": "3"}]}
+
+        client = PagingClient()
+        items = _get_collection(client, path, {"reads": 0})
+        self.assertEqual([item["id"] for item in items], ["1", "2", "3"])
+        self.assertEqual(len(client.calls), 3)
 
     def test_existing_registry_row_drift_stops_before_write(self) -> None:
         client = FakeFoundationGraph(self.manifest)

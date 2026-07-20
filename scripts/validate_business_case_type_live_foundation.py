@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -16,6 +17,7 @@ sys.path.insert(0, str(SRC))
 from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     CATALOG_VERSION,
     FOUNDATION_PATH,
+    SOURCE_PROVISIONER_CONTRACT_PATH,
     WORKSPACE_ID,
     build_business_case_type_live_foundation_plan,
     load_business_case_type_live_foundation,
@@ -62,9 +64,14 @@ def validate() -> list[str]:
     plan_sha256 = plan.get("plan_sha256")
     if not isinstance(plan_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", plan_sha256) is None:
         errors.append("foundation plan must expose a stable SHA-256")
-    graph_sha256 = plan.get("binding", {}).get("graph_sha256")
-    if not isinstance(graph_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", graph_sha256) is None:
-        errors.append("foundation plan must hash-bind the provisioner permission boundary")
+    provisioner_sha256 = plan.get("binding", {}).get(
+        "provisioner_source_contract_sha256"
+    )
+    expected_provisioner_sha256 = hashlib.sha256(
+        (ROOT / SOURCE_PROVISIONER_CONTRACT_PATH).read_bytes()
+    ).hexdigest()
+    if provisioner_sha256 != expected_provisioner_sha256:
+        errors.append("foundation plan must hash-bind the provisioner source contract")
     summary = plan.get("summary", {})
     if summary.get("maximum_mutation_count") != 22:
         errors.append("foundation plan must contain at most 22 additive mutations")

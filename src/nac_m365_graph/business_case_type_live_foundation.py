@@ -321,8 +321,8 @@ def build_business_case_type_live_foundation_apply_boundary(
         reasons.append("OWNER_GATE_CLOSED")
     if request.execute_live_foundation is not True:
         reasons.append("EXECUTION_GATE_CLOSED")
-    approval_reference = request.approval_reference.strip()
-    reason = request.reason.strip()
+    approval_reference = _gate_text(request.approval_reference)
+    reason = _gate_text(request.reason)
     if not approval_reference:
         reasons.append("APPROVAL_REFERENCE_MISSING")
     if not reason:
@@ -523,12 +523,8 @@ def _inspect_foundation_state(
     expected_custom_names = {
         item["name"] for item in manifest["schema"]["registry_list"]["columns"]
     }
-    actual_mutable_names = {
-        item.get("name")
-        for item in registry_columns
-        if item.get("name") != "Title" and item.get("readOnly") is False
-    }
-    if actual_mutable_names != expected_custom_names:
+    actual_column_names = {item.get("name") for item in registry_columns}
+    if actual_column_names != expected_custom_names | {"Title"}:
         raise _SafetyStop("REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
     for expected in manifest["schema"]["registry_list"]["columns"]:
         matches = [
@@ -736,6 +732,10 @@ def _unique_query(query: str) -> dict[str, str]:
             raise _SafetyStop("GRAPH_PAGING_INVALID")
         result[key] = value
     return result
+
+
+def _gate_text(value: object) -> str:
+    return value.strip() if isinstance(value, str) else ""
 
 
 def _validate_registry_rows_against_repo(
