@@ -37,6 +37,7 @@ REQUIRED_PROCESS_SELECTION_CHECKS = {
 }
 REQUIRED_DOM_MARKERS = {
     "component": 'data-nac-component="test-workspace"',
+    "current_step": "data-nac-current-step",
     "synthetic_data": "Synthetische Testdaten",
     "no_matter_data": "Keine Mandatsdaten",
 }

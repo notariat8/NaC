@@ -27,7 +27,7 @@ npm ci
 npm run build
 ```
 
-`npm run build` führt den Heft-Produktionsbuild und `heft package-solution --production` aus. Das erzeugte Paket liegt unter `sharepoint/solution/nac-bpmn-viewer.sppkg`.
+`npm run build` führt zuerst den TypeScript-Compiler-AST-Vertrag `scripts/validate-current-step-contract.cjs` mit Manipulations-Selbsttests, danach den Heft-Produktionsbuild und `heft package-solution --production` aus. Das erzeugte Paket liegt unter `sharepoint/solution/nac-bpmn-viewer.sppkg`.
 
 `node_modules`, `lib`, `dist`, `temp` und `sharepoint/solution` bleiben ignoriert und untracked. Rekursive Source-Scans betreten diese Pfade nicht.
 
@@ -40,6 +40,9 @@ Die Paketdefinition enthält genau eine Web-API-Anforderung: `NaC M365 BFF` / `M
 ## UI- und DOM-Vertrag
 
 - `data-nac-component="test-workspace"` kennzeichnet die Testoberfläche.
+- `matter.tasks[0].stepCode` ist die einzige Quelle für den aktuellen Prozessschritt; eine Browser-Mappingtabelle ist nicht erlaubt.
+- Das exakt aufgelöste BPMN-Element trägt `nac-current-step`, und der bereite Canvas veröffentlicht denselben Wert über `data-nac-current-step`.
+- Ein fehlender Task, eine unbekannte Element-ID oder ein fehlender bpmn-js-Service führt geschlossen in den Render-Fehlerzustand.
 - `Synthetische Testdaten` kennzeichnet die Datenklasse sichtbar.
 - `Keine Mandatsdaten` bestätigt die Laufzeitgrenze.
 - Ein abweichender `workspaceId` schlägt geschlossen mit `Workspace nicht freigegeben.` fehl.

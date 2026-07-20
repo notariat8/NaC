@@ -11,6 +11,7 @@ export const nacBpmnViewerStyles: Record<string, string> = {
   tasks: 'nacBpmnViewer__tasks',
   sectionHeading: 'nacBpmnViewer__sectionHeading',
   fixtureBadge: 'nacBpmnViewer__fixtureBadge',
+  canvasScroller: 'nacBpmnViewer__canvasScroller',
   canvas: 'nacBpmnViewer__canvas',
   taskOpen: 'nacBpmnViewer__taskOpen',
   taskPrepared: 'nacBpmnViewer__taskPrepared',
@@ -26,6 +27,8 @@ export const nacBpmnViewerStyleSheet = `
   --text: #17202a;
   --muted: #5f6b76;
   --accent: #005a9e;
+  --current-step-fill: #fff4ce;
+  --current-step-stroke: #8a0c12;
   --success-bg: #e7f4ea;
   --success-text: #176b35;
   background: var(--surface);
@@ -40,6 +43,8 @@ export const nacBpmnViewerStyleSheet = `
   --border: #45484d;
   --text: #f4f5f6;
   --muted: #c0c5ca;
+  --current-step-fill: #ffe08a;
+  --current-step-stroke: #5c2100;
   --success-bg: #183d28;
   --success-text: #a9e9bd;
 }
@@ -139,11 +144,24 @@ export const nacBpmnViewerStyleSheet = `
 .nacBpmnViewer__sectionHeading h2 {
   font-size: 17px;
 }
+.nacBpmnViewer__canvasScroller {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+}
 .nacBpmnViewer__canvas {
   background: #ffffff;
   border: 1px solid var(--border);
+  box-sizing: border-box;
   height: 340px;
   overflow: hidden;
+  width: 100%;
+}
+.nacBpmnViewer__workspace .djs-element.nac-current-step .djs-visual > :first-child {
+  fill: var(--current-step-fill) !important;
+  stroke: var(--current-step-stroke) !important;
+  stroke-width: 4px !important;
 }
 .nacBpmnViewer__tasks ul {
   list-style: none;
@@ -204,6 +222,9 @@ export const nacBpmnViewerStyleSheet = `
   .nacBpmnViewer__tasks {
     border-left: 0;
     border-top: 1px solid var(--border);
+  }
+  .nacBpmnViewer__canvas {
+    min-width: 720px;
   }
 }
 `;

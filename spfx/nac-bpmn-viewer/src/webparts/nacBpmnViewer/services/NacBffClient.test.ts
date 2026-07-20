@@ -46,7 +46,7 @@ const workspace: NacBffWorkspace = {
       {
         taskId: 'NAC-SYN-TASK-001',
         title: 'Entwurf prüfen',
-        stepCode: 'draft_review',
+        stepCode: 'Task_EntwurfAbstimmen',
         status: 'Offen',
         requiresNotaryApproval: true,
         dueAt: '2026-08-31T16:00:00Z'

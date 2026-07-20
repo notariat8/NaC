@@ -34,6 +34,10 @@ BPMN_VIEWER_RUNTIME_READINESS = (
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "m365-sharepoint-bpmn-viewer-adapter.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "m365-sharepoint-bpmn-viewer-adapter.md"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
+SPFX_PACKAGE_JSON = REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "package.json"
+CURRENT_STEP_AST_VALIDATOR = (
+    REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "validate-current-step-contract.cjs"
+)
 GENERATED_PATHS = {
     "node_modules",
     "lib",
@@ -96,6 +100,7 @@ def validate() -> list[str]:
         errors.extend(_validate_bpmn_viewer_runtime_readiness(readiness, skeleton))
     errors.extend(_validate_docs())
     errors.extend(_validate_quality_gate())
+    errors.extend(_validate_spfx_ast_gate())
     return errors
 
 
@@ -209,11 +214,14 @@ def _validate_contract(
             "package_solution": "spfx/nac-bpmn-viewer/config/package-solution.json",
             "install_command": "npm ci",
             "build_command": "npm run build",
+            "current_step_ast_validator": "spfx/nac-bpmn-viewer/scripts/validate-current-step-contract.cjs",
             "package_output": "sharepoint/solution/nac-bpmn-viewer.sppkg",
         }
         for key, value in expected.items():
             if packaging.get(key) != value:
                 errors.append(f"packaging_contract.{key} must be {value}")
+        if packaging.get("current_step_ast_tamper_self_tests_required") is not True:
+            errors.append("packaging_contract.current_step_ast_tamper_self_tests_required must be true")
         if set(_as_list(packaging.get("generated_paths_ignored_untracked"))) != GENERATED_PATHS:
             errors.append("packaging_contract.generated_paths_ignored_untracked is invalid")
         if packaging.get("generated_paths_excluded_from_recursive_source_scans") is not True:
@@ -290,6 +298,19 @@ def _validate_contract(
         privacy = render.get("privacy_guards")
         if not isinstance(privacy, dict) or any(value is not False for value in privacy.values()):
             errors.append("package_render_contract.privacy_guards must all be false")
+
+    current_step = payload.get("current_step_binding")
+    expected_current_step = {
+        "source_exact": "matter.tasks[0].stepCode",
+        "marker_class_exact": "nac-current-step",
+        "dom_attribute_exact": "data-nac-current-step",
+        "marker_count_exact": 1,
+        "missing_task_behavior_exact": "render_failed",
+        "missing_element_behavior_exact": "render_failed",
+        "browser_mapping_table_allowed": False,
+    }
+    if current_step != expected_current_step:
+        errors.append("current_step_binding must match the fail-closed package UI")
 
     package_link = payload.get("spfx_package")
     if not isinstance(package_link, dict):
@@ -434,6 +455,9 @@ def _validate_docs() -> list[str]:
             "MSGraphClient",
             "AadHttpClient",
             "Keine Mandatsdaten",
+            "data-nac-current-step",
+            "nac-current-step",
+            "matter.tasks[0].stepCode",
         ],
         DOC_EN: [
             "SPFx 1.23.2",
@@ -451,6 +475,9 @@ def _validate_docs() -> list[str]:
             "MSGraphClient",
             "AadHttpClient",
             "No real matter data",
+            "data-nac-current-step",
+            "nac-current-step",
+            "matter.tasks[0].stepCode",
         ],
     }
     errors: list[str] = []
@@ -475,6 +502,27 @@ def _validate_quality_gate() -> list[str]:
         "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
     )
     return [f"quality gate missing marker {marker!r}" for marker in required if marker not in text]
+
+
+def _validate_spfx_ast_gate() -> list[str]:
+    errors: list[str] = []
+    package = _read_json(SPFX_PACKAGE_JSON, errors)
+    if package:
+        scripts = package.get("scripts")
+        if not isinstance(scripts, dict):
+            errors.append("SPFx package scripts must be an object")
+        else:
+            validator_command = "node scripts/validate-current-step-contract.cjs"
+            if scripts.get("validate:current-step") != validator_command:
+                errors.append("SPFx validate:current-step script must invoke the canonical AST validator")
+            build = scripts.get("build")
+            if not isinstance(build, str) or not build.startswith("npm run validate:current-step && "):
+                errors.append("SPFx build must run validate:current-step first")
+    if not CURRENT_STEP_AST_VALIDATOR.is_file():
+        errors.append(
+            f"missing AST validator: {CURRENT_STEP_AST_VALIDATOR.relative_to(REPO_ROOT)}"
+        )
+    return errors
 
 
 def _as_list(value: Any) -> list[Any]:

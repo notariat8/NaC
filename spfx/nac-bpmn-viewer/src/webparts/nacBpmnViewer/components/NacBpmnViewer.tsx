@@ -1,5 +1,6 @@
 import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
+import 'bpmn-js/dist/assets/diagram-js.css';
 import {
   classifyNacBffFailure,
   NAC_BFF_WORKSPACE_ID,
@@ -83,6 +84,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     let disposed = false;
     let destroyed = false;
     let finished = false;
+    let resizeObserver: ResizeObserver | undefined;
     const destroyViewer = (): void => {
       if (!destroyed) {
         viewer.destroy();
@@ -99,8 +101,44 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
 
     viewer.importXML(bpmnXml).then(() => {
       if (!disposed && !finished) {
-        const canvas = viewer.get('canvas') as { zoom: (mode: string) => void };
-        canvas.zoom('fit-viewport');
+        const currentTask = workspace.matter.tasks[0];
+        if (currentTask === undefined) {
+          throw new Error('Current BPMN task is missing.');
+        }
+
+        const elementRegistry = viewer.get('elementRegistry') as {
+          get: (elementId: string) => unknown;
+        };
+        const canvas = viewer.get('canvas') as {
+          addMarker: (elementId: string, marker: string) => void;
+          resized: () => void;
+          zoom: (mode: string) => void;
+        };
+        const currentElement = elementRegistry.get(currentTask.stepCode);
+        if (currentElement === undefined || currentElement === null) {
+          throw new Error('Current BPMN element is missing.');
+        }
+
+        canvas.addMarker(currentTask.stepCode, 'nac-current-step');
+        const fitViewport = (): void => {
+          canvas.resized();
+          canvas.zoom('fit-viewport');
+        };
+        fitViewport();
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current !== null) {
+          resizeObserver = new ResizeObserver(() => {
+            if (!disposed && !destroyed) {
+              try {
+                fitViewport();
+              } catch {
+                resizeObserver?.disconnect();
+                destroyViewer();
+                setState({ kind: 'renderFailed' });
+              }
+            }
+          });
+          resizeObserver.observe(containerRef.current);
+        }
         finished = true;
         window.clearTimeout(timeoutId);
         setState({ kind: 'ready', workspace });
@@ -117,6 +155,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     return () => {
       disposed = true;
       window.clearTimeout(timeoutId);
+      resizeObserver?.disconnect();
       destroyViewer();
     };
   }, [bpmnXml, workspace]);
@@ -138,7 +177,8 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   }
 
   const matter = state.kind === 'ready' ? state.workspace.matter : null;
-  const stageLabel = matter?.tasks[0]?.title ?? 'Keine offene Aufgabe';
+  const currentTask = matter?.tasks[0] ?? null;
+  const stageLabel = currentTask?.title ?? 'Keine offene Aufgabe';
   const accessMode = matter?.accessMode === 'deputy'
     ? 'Vertretung (deputy)'
     : 'Zugeordnet (assigned)';
@@ -179,7 +219,14 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
             </div>
             <span className={styles.fixtureBadge}>Synthetische Testdaten</span>
           </div>
-          <div className={styles.canvas} ref={containerRef} aria-label="BPMN-Prozessdiagramm" />
+          <div className={styles.canvasScroller}>
+            <div
+              className={styles.canvas}
+              ref={containerRef}
+              aria-label="BPMN-Prozessdiagramm"
+              data-nac-current-step={currentTask?.stepCode}
+            />
+          </div>
         </section>
 
         {matter !== null && (
