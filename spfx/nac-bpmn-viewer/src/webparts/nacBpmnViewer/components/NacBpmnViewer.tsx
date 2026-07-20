@@ -1,7 +1,10 @@
 import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
-import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
-import { NacBffWorkspace, verifyBpmnAsset } from '../services/NacBffClient';
+import {
+  classifyNacBffFailure,
+  NAC_BFF_WORKSPACE_ID,
+  NacBffWorkspace
+} from '../services/NacBffClient';
 import { nacBpmnViewerStyles as styles, nacBpmnViewerStyleSheet } from './NacBpmnViewer.styles';
 
 const LOAD_TIMEOUT_MS = 10_000;
@@ -14,33 +17,45 @@ export interface NacBpmnViewerProps {
   loadWorkspace: (signal: AbortSignal) => Promise<NacBffWorkspace>;
 }
 
+type ViewerState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'accessDenied' }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'invalidAsset' }
+  | { readonly kind: 'renderFailed' }
+  | { readonly kind: 'ready'; readonly workspace: NacBffWorkspace };
+
 export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const fixture = syntheticWorkspaceFixture;
-  const [workspace, setWorkspace] = React.useState<NacBffWorkspace | null>(null);
-  const [loadFailed, setLoadFailed] = React.useState(false);
-  const [renderFailed, setRenderFailed] = React.useState(false);
+  const [state, setState] = React.useState<ViewerState>({ kind: 'loading' });
 
   React.useEffect(() => {
+    if (props.workspaceId !== NAC_BFF_WORKSPACE_ID) {
+      setState({ kind: 'accessDenied' });
+      return undefined;
+    }
+
     const controller = new AbortController();
     let disposed = false;
+    let finished = false;
     const timeoutId = window.setTimeout(() => {
+      finished = true;
       controller.abort();
       if (!disposed) {
-        setLoadFailed(true);
+        setState({ kind: 'unavailable' });
       }
     }, LOAD_TIMEOUT_MS);
-    setWorkspace(null);
-    setLoadFailed(false);
-    setRenderFailed(false);
-    props.loadWorkspace(controller.signal).then(async value => {
-      await verifyBpmnAsset(value, fixture.bpmnXml, fixture.bpmnSha256);
-      if (!disposed) {
-        setWorkspace(value);
+
+    setState({ kind: 'loading' });
+    props.loadWorkspace(controller.signal).then(value => {
+      if (!disposed && !finished) {
+        finished = true;
+        setState({ kind: 'ready', workspace: value });
       }
-    }).catch(() => {
-      if (!disposed) {
-        setLoadFailed(true);
+    }).catch(error => {
+      if (!disposed && !finished) {
+        finished = true;
+        setState({ kind: classifyNacBffFailure(error) });
       }
     }).finally(() => window.clearTimeout(timeoutId));
 
@@ -49,10 +64,13 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [props.loadWorkspace]);
+  }, [props.loadWorkspace, props.workspaceId]);
+
+  const workspace = state.kind === 'ready' ? state.workspace : null;
+  const bpmnXml = workspace?.matter.bpmn.xml;
 
   React.useEffect(() => {
-    if (!containerRef.current || props.workspaceId !== fixture.workspaceId || workspace === null) {
+    if (!containerRef.current || workspace === null || bpmnXml === undefined) {
       return;
     }
 
@@ -66,8 +84,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       }
     };
 
-    setRenderFailed(false);
-    viewer.importXML(fixture.bpmnXml).then(() => {
+    viewer.importXML(bpmnXml).then(() => {
       if (!disposed) {
         const canvas = viewer.get('canvas') as { zoom: (mode: string) => void };
         canvas.zoom('fit-viewport');
@@ -75,7 +92,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     }).catch(() => {
       if (!disposed) {
         destroyViewer();
-        setRenderFailed(true);
+        setState({ kind: 'renderFailed' });
       }
     });
 
@@ -83,24 +100,26 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       disposed = true;
       destroyViewer();
     };
-  }, [fixture.bpmnXml, props.workspaceId, workspace]);
+  }, [bpmnXml, workspace]);
 
-  if (props.workspaceId !== fixture.workspaceId) {
-    return <ViewerError message="Workspace nicht freigegeben." />;
+  if (state.kind === 'loading') {
+    return <ViewerMessage message="Vorgangsdaten werden geladen." />;
   }
-  if (loadFailed) {
-    return <ViewerError message="Vorgangsdaten sind derzeit nicht verfügbar." />;
+  if (state.kind === 'accessDenied') {
+    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." />;
   }
-  if (workspace === null) {
-    return <ViewerError message="Vorgangsdaten werden geladen." />;
+  if (state.kind === 'unavailable') {
+    return <ViewerMessage message="Vorgangsdaten sind derzeit nicht verfügbar." />;
   }
-  if (renderFailed) {
-    return <ViewerError message="Prozessmodell ist derzeit nicht verfügbar." />;
+  if (state.kind === 'invalidAsset' || state.kind === 'renderFailed') {
+    return <ViewerMessage message="Prozessmodell ist derzeit nicht verfügbar." />;
   }
 
-  const matter = workspace.matter;
+  const matter = state.workspace.matter;
   const stageLabel = matter.tasks[0]?.title ?? 'Keine offene Aufgabe';
-  const assignedRole = matter.accessMode === 'deputy' ? 'Aktive Vertretung' : 'Zugeordnete Fachkraft';
+  const accessMode = matter.accessMode === 'deputy'
+    ? 'Vertretung (deputy)'
+    : 'Zugeordnet (assigned)';
   const deadlineLabel = formatTimestamp(matter.deadline);
 
   return (
@@ -110,7 +129,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
         <div>
           <span className={styles.eyebrow}>NaC Testnotariat</span>
           <h1>{matter.displayName}</h1>
-          <p>{fixture.businessCaseType}</p>
+          <p>Immobilienkaufvertrag</p>
         </div>
         <div className={styles.headerMeta}>
           <span className={styles.status}>{matter.status}</span>
@@ -121,7 +140,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       <section className={styles.summary} aria-label="Vorgangsstatus">
         <div><span>Aktueller Schritt</span><strong>{stageLabel}</strong></div>
         <div><span>Nächste Frist</span><strong>{deadlineLabel}</strong></div>
-        <div><span>Zuständig</span><strong>{assignedRole}</strong></div>
+        <div><span>Zugriffsmodus</span><strong>{accessMode}</strong></div>
         <div><span>Angemeldet</span><strong>{props.userDisplayName}</strong></div>
       </section>
 
@@ -157,14 +176,14 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       </div>
 
       <footer className={styles.footer}>
-        <span>Workspace {workspace.workspaceId}</span>
+        <span>Workspace {state.workspace.workspaceId}</span>
         <span>Keine Mandatsdaten</span>
       </footer>
     </main>
   );
 }
 
-function ViewerError(props: { message: string }): JSX.Element {
+function ViewerMessage(props: { message: string }): JSX.Element {
   return (
     <>
       <style>{nacBpmnViewerStyleSheet}</style>

@@ -8,11 +8,14 @@ export const NAC_BFF_WORKSPACE_ID = 'notary_team_01';
 export const NAC_BFF_MATTER_ID = 'NAC-SYN-MATTER-001';
 export const NAC_BFF_PURPOSE = 'view_synthetic_matter_workspace';
 
-const EXPECTED_SCHEMA_VERSION = 'nac.m365-test-environment-workspace/v0.1';
-const EXPECTED_BPMN_MODEL_KEY = 'NAC_SYN_MATTER_001';
-const EXPECTED_BPMN_SHA256 = '1dd7203a515d434949ef9300d5738cf7318d842119ec689aaa7ba1f9a7a6d167';
+const EXPECTED_SCHEMA_VERSION = 'nac.m365-test-environment-workspace/v0.2';
+const EXPECTED_BPMN_MODEL_KEY = 'Process_immobilienkaufvertrag';
+const EXPECTED_BPMN_MIME_TYPE = 'application/xml';
+const EXPECTED_BPMN_SHA256 =
+  '02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0';
 const EXPECTED_BUSINESS_CASE_TYPE_ID = 'immobilienkaufvertrag';
 const MAX_RESPONSE_BYTES = 64 * 1024;
+const MAX_BPMN_BYTES = 48 * 1024;
 
 const ROOT_KEYS = ['matter', 'schemaVersion', 'workspaceId'];
 const MATTER_KEYS = [
@@ -25,7 +28,7 @@ const MATTER_KEYS = [
   'status',
   'tasks'
 ];
-const BPMN_KEYS = ['modelKey', 'sha256'];
+const BPMN_KEYS = ['mimeType', 'modelKey', 'sha256', 'xml'];
 const TASK_KEYS = [
   'dueAt',
   'requiresNotaryApproval',
@@ -58,11 +61,15 @@ export interface NacBffWorkspace {
     readonly tasks: readonly NacBffTask[];
     readonly bpmn: {
       readonly modelKey: typeof EXPECTED_BPMN_MODEL_KEY;
-      readonly sha256: typeof EXPECTED_BPMN_SHA256;
+      readonly mimeType: typeof EXPECTED_BPMN_MIME_TYPE;
+      readonly sha256: string;
+      readonly xml: string;
     };
     readonly accessMode: 'assigned' | 'deputy';
   };
 }
+
+export type NacBffFailureKind = 'accessDenied' | 'invalidAsset' | 'unavailable';
 
 export async function loadNacBffWorkspace(
   clientFactory: AadHttpClientFactory,
@@ -85,7 +92,10 @@ export async function parseWorkspaceResponse(
   response: HttpClientResponse
 ): Promise<NacBffWorkspace> {
   if (!response.ok) {
-    throw new Error('NAC_BFF_REQUEST_REJECTED');
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('NAC_BFF_ACCESS_DENIED');
+    }
+    throw new Error('NAC_BFF_UNAVAILABLE');
   }
   const contentLength = response.headers.get('content-length');
   if (
@@ -101,10 +111,9 @@ export async function parseWorkspaceResponse(
   } catch {
     throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
-  if (!isWorkspace(value)) {
-    throw new Error('NAC_BFF_RESPONSE_INVALID');
-  }
-  return value;
+  const workspace = parseWorkspaceValue(value);
+  await verifyBpmnAsset(workspace);
+  return workspace;
 }
 
 async function readBoundedResponseText(response: HttpClientResponse): Promise<string> {
@@ -151,40 +160,55 @@ async function readBoundedResponseText(response: HttpClientResponse): Promise<st
   }
 }
 
-export async function verifyBpmnAsset(
-  workspace: NacBffWorkspace,
-  bpmnXml: string,
-  declaredSha256: string
-): Promise<void> {
+export async function verifyBpmnAsset(workspace: NacBffWorkspace): Promise<void> {
+  const bpmn = workspace.matter.bpmn;
+  const bytes = new TextEncoder().encode(bpmn.xml);
   if (
-    declaredSha256 !== EXPECTED_BPMN_SHA256 ||
-    workspace.matter.bpmn.sha256 !== declaredSha256 ||
+    bpmn.modelKey !== EXPECTED_BPMN_MODEL_KEY ||
+    bpmn.mimeType !== EXPECTED_BPMN_MIME_TYPE ||
+    bpmn.sha256 !== EXPECTED_BPMN_SHA256 ||
+    bytes.byteLength === 0 ||
+    bytes.byteLength > MAX_BPMN_BYTES ||
     !globalThis.crypto?.subtle
   ) {
     throw new Error('NAC_BPMN_ASSET_INVALID');
   }
-  const bytes = new TextEncoder().encode(bpmnXml);
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   const actual = Array.from(new Uint8Array(digest))
     .map(value => ("0" + value.toString(16)).slice(-2))
     .join('');
-  if (actual !== declaredSha256) {
+  if (actual !== EXPECTED_BPMN_SHA256) {
     throw new Error('NAC_BPMN_ASSET_INVALID');
   }
 }
 
-function isWorkspace(value: unknown): value is NacBffWorkspace {
+export function classifyNacBffFailure(error: unknown): NacBffFailureKind {
+  if (error instanceof Error && error.message === 'NAC_BFF_ACCESS_DENIED') {
+    return 'accessDenied';
+  }
+  if (error instanceof Error && error.message === 'NAC_BPMN_ASSET_INVALID') {
+    return 'invalidAsset';
+  }
+  return 'unavailable';
+}
+
+function parseWorkspaceValue(value: unknown): NacBffWorkspace {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ROOT_KEYS) ||
     value.schemaVersion !== EXPECTED_SCHEMA_VERSION ||
     value.workspaceId !== NAC_BFF_WORKSPACE_ID
   ) {
-    return false;
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
   const matter = value.matter;
+  if (!isRecord(matter)) {
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
+  }
+  if (!Object.prototype.hasOwnProperty.call(matter, 'bpmn')) {
+    throw new Error('NAC_BPMN_ASSET_INVALID');
+  }
   if (
-    !isRecord(matter) ||
     !hasExactKeys(matter, MATTER_KEYS) ||
     matter.matterId !== NAC_BFF_MATTER_ID ||
     matter.businessCaseTypeId !== EXPECTED_BUSINESS_CASE_TYPE_ID ||
@@ -196,15 +220,20 @@ function isWorkspace(value: unknown): value is NacBffWorkspace {
     matter.tasks.length > 16 ||
     !matter.tasks.every(isTask)
   ) {
-    return false;
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
   const bpmn = matter.bpmn;
-  return (
-    isRecord(bpmn) &&
-    hasExactKeys(bpmn, BPMN_KEYS) &&
-    bpmn.modelKey === EXPECTED_BPMN_MODEL_KEY &&
-    bpmn.sha256 === EXPECTED_BPMN_SHA256
-  );
+  if (
+    !isRecord(bpmn) ||
+    !hasExactKeys(bpmn, BPMN_KEYS) ||
+    typeof bpmn.modelKey !== 'string' ||
+    typeof bpmn.mimeType !== 'string' ||
+    typeof bpmn.sha256 !== 'string' ||
+    typeof bpmn.xml !== 'string'
+  ) {
+    throw new Error('NAC_BPMN_ASSET_INVALID');
+  }
+  return value as unknown as NacBffWorkspace;
 }
 
 function isTask(value: unknown): value is NacBffTask {
