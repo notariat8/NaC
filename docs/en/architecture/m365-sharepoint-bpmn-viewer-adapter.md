@@ -42,6 +42,9 @@ The package declares exactly one Web API request: `NaC M365 BFF` / `Matter.Read`
 - `data-nac-component="test-workspace"` identifies the test surface.
 - `matter.tasks[0].stepCode` is the only current-process-step source; a browser mapping table is forbidden.
 - The exactly resolved BPMN element carries `nac-current-step`, and the ready canvas publishes the same value through `data-nac-current-step`.
+- Before the ready state, every task is resolved through unique `taskId` and `stepCode` values to canonical BPMN task elements; duplicate or unknown bindings fail closed before matter metadata is shown.
+- Native task buttons carry `data-nac-task-id` and `aria-pressed`; pointer, Enter, and Space move exactly one separate `nac-selected-step` without moving the current process step.
+- The detail view shows DTO fields only: title, status, an own due date or `Keine eigene Frist`, and the notarial approval requirement. It invents no assignees and exposes no deputy-grant details.
 - A missing task, unknown element ID, or missing bpmn-js service fails closed into the render-error state.
 - `Synthetische Testdaten` visibly identifies the data class.
 - `Keine Mandatsdaten` confirms the runtime boundary.

@@ -10,6 +10,7 @@ import { nacBpmnViewerStyles as styles, nacBpmnViewerStyleSheet } from './NacBpm
 
 const LOAD_TIMEOUT_MS = 10_000;
 const RENDER_TIMEOUT_MS = 10_000;
+let nextTaskDetailsId = 0;
 
 export interface NacBpmnViewerProps {
   workspaceId: string;
@@ -26,10 +27,35 @@ type ViewerState =
   | { readonly kind: 'invalidAsset' }
   | { readonly kind: 'renderFailed' }
   | { readonly kind: 'rendering'; readonly workspace: NacBffWorkspace }
-  | { readonly kind: 'ready'; readonly workspace: NacBffWorkspace };
+  | {
+    readonly kind: 'ready';
+    readonly workspace: NacBffWorkspace;
+    readonly selectedTaskId: string;
+  };
+
+interface ViewerCanvas {
+  addMarker: (elementId: string, marker: string) => void;
+  removeMarker: (elementId: string, marker: string) => void;
+  resized: () => void;
+  zoom: (mode: string) => void;
+}
+
+interface ViewerRuntime {
+  readonly canvas: ViewerCanvas;
+  selectedStepCode: string;
+  failClosed: () => void;
+}
 
 export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const viewerRuntimeRef = React.useRef<ViewerRuntime | null>(null);
+  const taskDetailsIdRef = React.useRef<string | null>(null);
+  if (taskDetailsIdRef.current === null) {
+    nextTaskDetailsId += 1;
+    taskDetailsIdRef.current = 'nac-selected-task-details-' + nextTaskDetailsId;
+  }
+  const taskDetailsId = taskDetailsIdRef.current;
+  const taskDetailsHeadingId = taskDetailsId + '-heading';
   const [state, setState] = React.useState<ViewerState>({ kind: 'loading' });
   const isApprovedWorkspace = props.workspaceId === NAC_BFF_WORKSPACE_ID;
 
@@ -106,23 +132,48 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
           throw new Error('Current BPMN task is missing.');
         }
 
+        const taskIds = new Set<string>();
+        const stepCodes = new Set<string>();
+        for (const task of workspace.matter.tasks) {
+          if (taskIds.has(task.taskId)) {
+            throw new Error('Duplicate taskId is not allowed.');
+          }
+          if (stepCodes.has(task.stepCode)) {
+            throw new Error('Duplicate stepCode is not allowed.');
+          }
+          taskIds.add(task.taskId);
+          stepCodes.add(task.stepCode);
+        }
+
         const elementRegistry = viewer.get('elementRegistry') as {
           get: (elementId: string) => unknown;
         };
-        const canvas = viewer.get('canvas') as {
-          addMarker: (elementId: string, marker: string) => void;
-          resized: () => void;
-          zoom: (mode: string) => void;
-        };
+        const canvas = viewer.get('canvas') as ViewerCanvas;
         const currentElement = elementRegistry.get(currentTask.stepCode);
-        if (currentElement === undefined || currentElement === null) {
+        if (!isCanonicalBpmnTask(currentElement, currentTask.stepCode)) {
           throw new Error('Current BPMN element is missing.');
+        }
+        for (const task of workspace.matter.tasks.slice(1)) {
+          const taskElement = elementRegistry.get(task.stepCode);
+          if (!isCanonicalBpmnTask(taskElement, task.stepCode)) {
+            throw new Error('Task BPMN element is missing.');
+          }
         }
 
         canvas.addMarker(currentTask.stepCode, 'nac-current-step');
+        canvas.addMarker(currentTask.stepCode, 'nac-selected-step');
         const fitViewport = (): void => {
           canvas.resized();
           canvas.zoom('fit-viewport');
+        };
+        const failClosed = (): void => {
+          if (!disposed) {
+            resizeObserver?.disconnect();
+            resizeObserver = undefined;
+            destroyViewer();
+            viewerRuntimeRef.current = null;
+            setState({ kind: 'renderFailed' });
+          }
         };
         fitViewport();
         if (typeof ResizeObserver !== 'undefined' && containerRef.current !== null) {
@@ -131,17 +182,20 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
               try {
                 fitViewport();
               } catch {
-                resizeObserver?.disconnect();
-                destroyViewer();
-                setState({ kind: 'renderFailed' });
+                failClosed();
               }
             }
           });
           resizeObserver.observe(containerRef.current);
         }
+        viewerRuntimeRef.current = {
+          canvas,
+          selectedStepCode: currentTask.stepCode,
+          failClosed
+        };
         finished = true;
         window.clearTimeout(timeoutId);
-        setState({ kind: 'ready', workspace });
+        setState({ kind: 'ready', workspace, selectedTaskId: currentTask.taskId });
       }
     }).catch(() => {
       if (!disposed && !finished) {
@@ -156,9 +210,29 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       disposed = true;
       window.clearTimeout(timeoutId);
       resizeObserver?.disconnect();
+      viewerRuntimeRef.current = null;
       destroyViewer();
     };
   }, [bpmnXml, workspace]);
+
+  const selectTask = React.useCallback((taskId: string): void => {
+    if (state.kind !== 'ready') {
+      return;
+    }
+    const runtime = viewerRuntimeRef.current;
+    const task = state.workspace.matter.tasks.find(candidate => candidate.taskId === taskId);
+    if (runtime === null || task === undefined || runtime.selectedStepCode === task.stepCode) {
+      return;
+    }
+    try {
+      runtime.canvas.removeMarker(runtime.selectedStepCode, 'nac-selected-step');
+      runtime.canvas.addMarker(task.stepCode, 'nac-selected-step');
+      runtime.selectedStepCode = task.stepCode;
+      setState({ ...state, selectedTaskId: task.taskId });
+    } catch {
+      runtime.failClosed();
+    }
+  }, [state]);
 
   if (!isApprovedWorkspace) {
     return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." />;
@@ -178,6 +252,10 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
 
   const matter = state.kind === 'ready' ? state.workspace.matter : null;
   const currentTask = matter?.tasks[0] ?? null;
+  const selectedTaskId = state.kind === 'ready' ? state.selectedTaskId : null;
+  const selectedTask = state.kind === 'ready'
+    ? state.workspace.matter.tasks.find(task => task.taskId === state.selectedTaskId) ?? null
+    : null;
   const stageLabel = currentTask?.title ?? 'Keine offene Aufgabe';
   const accessMode = matter?.accessMode === 'deputy'
     ? 'Vertretung (deputy)'
@@ -225,6 +303,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
               ref={containerRef}
               aria-label="BPMN-Prozessdiagramm"
               data-nac-current-step={currentTask?.stepCode}
+              data-nac-selected-step={selectedTask?.stepCode}
             />
           </div>
         </section>
@@ -241,11 +320,46 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
             <ul>
               {matter.tasks.map(task => (
                 <li key={task.taskId}>
-                  <div><strong>{task.title}</strong><span>{task.taskId} · {task.stepCode}</span><span>{task.dueAt ? formatTimestamp(task.dueAt) : 'Vor Fristablauf'}</span></div>
-                  <span className={styles.taskOpen}>{task.status}</span>
+                  <button
+                    type="button"
+                    className={styles.taskButton}
+                    data-nac-task-id={task.taskId}
+                    aria-pressed={task.taskId === selectedTaskId}
+                    aria-controls={taskDetailsId}
+                    onClick={() => selectTask(task.taskId)}
+                  >
+                    <span className={styles.taskCopy}>
+                      <strong>{task.title}</strong>
+                      <span>{task.taskId} · {task.stepCode}</span>
+                    </span>
+                    <span className={styles.taskOpen}>{task.status}</span>
+                  </button>
                 </li>
               ))}
             </ul>
+            {selectedTask !== null && (
+              <section
+                id={taskDetailsId}
+                className={styles.taskDetails}
+                aria-labelledby={taskDetailsHeadingId}
+              >
+                <span>Ausgewählte Aufgabe</span>
+                <h3 id={taskDetailsHeadingId}>{selectedTask.title}</h3>
+                <dl>
+                  <div><dt>Status</dt><dd>{selectedTask.status}</dd></div>
+                  <div>
+                    <dt>Eigene Frist</dt>
+                    <dd>{selectedTask.dueAt ? formatTimestamp(selectedTask.dueAt) : 'Keine eigene Frist'}</dd>
+                  </div>
+                  <div>
+                    <dt>Freigabe</dt>
+                    <dd>{selectedTask.requiresNotaryApproval
+                      ? 'Notarielle Freigabe erforderlich'
+                      : 'Keine notarielle Freigabe erforderlich'}</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
           </aside>
         )}
       </div>
@@ -258,6 +372,20 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       )}
     </main>
   );
+}
+
+function isCanonicalBpmnTask(value: unknown, expectedStepCode: string): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const element = value as {
+    id?: unknown;
+    businessObject?: { $instanceOf?: (bpmnType: string) => boolean };
+  };
+  const businessObject = element.businessObject;
+  return element.id === expectedStepCode &&
+    typeof businessObject?.$instanceOf === 'function' &&
+    businessObject.$instanceOf('bpmn:Task') === true;
 }
 
 function ViewerMessage(props: { message: string }): JSX.Element {

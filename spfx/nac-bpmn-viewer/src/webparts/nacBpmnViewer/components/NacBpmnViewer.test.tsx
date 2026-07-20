@@ -41,6 +41,13 @@ const workspace: NacBffWorkspace = {
       stepCode: 'Task_EntwurfAbstimmen',
       status: 'Offen',
       requiresNotaryApproval: true,
+      dueAt: null
+    }, {
+      taskId: 'NAC-SYN-DEADLINE-001',
+      title: 'Abschlussfrist überwachen',
+      stepCode: 'Task_NachweiseNachhalten',
+      status: 'Offen',
+      requiresNotaryApproval: false,
       dueAt: '2026-08-31T16:00:00Z'
     }],
     bpmn: {
@@ -53,12 +60,29 @@ const workspace: NacBffWorkspace = {
   }
 };
 
+function createBpmnUserTaskElement(elementId: string): {
+  readonly id: string;
+  readonly type: 'bpmn:UserTask';
+  readonly businessObject: { readonly $instanceOf: jest.Mock };
+} {
+  return {
+    id: elementId,
+    type: 'bpmn:UserTask',
+    businessObject: {
+      $instanceOf: jest.fn((bpmnType: string) =>
+        bpmnType === 'bpmn:Task' || bpmnType === 'bpmn:UserTask'
+      )
+    }
+  };
+}
+
 describe('NaC BPMN viewer runtime boundary', () => {
   let root: HTMLDivElement;
   let importXml: jest.Mock;
   let destroy: jest.Mock;
   let elementRegistryGet: jest.Mock;
   let addMarker: jest.Mock;
+  let removeMarker: jest.Mock;
   let resized: jest.Mock;
   let zoom: jest.Mock;
   let resizeObserverCallback: ResizeObserverCallback;
@@ -66,15 +90,23 @@ describe('NaC BPMN viewer runtime boundary', () => {
   let resizeObserverDisconnect: jest.Mock;
   let resizeObserverInstance: ResizeObserver;
   let getService: jest.Mock;
-  const currentElement = { id: 'Task_EntwurfAbstimmen' };
+  const currentElement = createBpmnUserTaskElement('Task_EntwurfAbstimmen');
+  const deadlineElement = createBpmnUserTaskElement(
+    'Task_NachweiseNachhalten'
+  );
 
   beforeEach(() => {
     root = document.createElement('div');
     document.body.appendChild(root);
     importXml = jest.fn().mockResolvedValue(undefined);
     destroy = jest.fn();
-    elementRegistryGet = jest.fn().mockReturnValue(currentElement);
+    elementRegistryGet = jest.fn().mockImplementation((stepCode: string) => {
+      if (stepCode === currentElement.id) return currentElement;
+      if (stepCode === deadlineElement.id) return deadlineElement;
+      return undefined;
+    });
     addMarker = jest.fn();
+    removeMarker = jest.fn();
     resized = jest.fn();
     zoom = jest.fn();
     resizeObserverObserve = jest.fn();
@@ -97,7 +129,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
         return { get: elementRegistryGet };
       }
       if (serviceName === 'canvas') {
-        return { addMarker, resized, zoom };
+        return { addMarker, removeMarker, resized, zoom };
       }
       throw new Error('Unknown viewer service: ' + serviceName);
     });
@@ -216,25 +248,139 @@ describe('NaC BPMN viewer runtime boundary', () => {
     await renderAndFlush(async () => workspace);
 
     expect(importXml).toHaveBeenCalledWith(bpmnXml);
-    expect(elementRegistryGet).toHaveBeenCalledTimes(1);
+    expect(elementRegistryGet).toHaveBeenCalledTimes(2);
     expect(elementRegistryGet).toHaveBeenCalledWith('Task_EntwurfAbstimmen');
-    expect(addMarker).toHaveBeenCalledTimes(1);
-    expect(addMarker).toHaveBeenCalledWith('Task_EntwurfAbstimmen', 'nac-current-step');
-    expect(addMarker.mock.invocationCallOrder[0]).toBeLessThan(zoom.mock.invocationCallOrder[0]);
+    expect(elementRegistryGet).toHaveBeenCalledWith('Task_NachweiseNachhalten');
+    expect(currentElement.businessObject.$instanceOf).toHaveBeenCalledWith('bpmn:Task');
+    expect(deadlineElement.businessObject.$instanceOf).toHaveBeenCalledWith('bpmn:Task');
+    expect(addMarker).toHaveBeenCalledTimes(2);
+    expect(addMarker).toHaveBeenNthCalledWith(1, 'Task_EntwurfAbstimmen', 'nac-current-step');
+    expect(addMarker).toHaveBeenNthCalledWith(2, 'Task_EntwurfAbstimmen', 'nac-selected-step');
+    expect(addMarker.mock.invocationCallOrder[1]).toBeLessThan(zoom.mock.invocationCallOrder[0]);
     expect(root.textContent).toContain(workspace.matter.displayName);
     expect(root.textContent).toContain('Entwurf prüfen');
     expect(root.textContent).toContain('31.08.2026');
+    expect(root.textContent).toContain('Keine eigene Frist');
     expect(root.textContent).toContain('Entwurf');
+    expect(root.textContent).toContain('Notarielle Freigabe erforderlich');
     expect(root.textContent).toContain('Zugeordnet (assigned)');
-    expect(root.textContent).toContain('Aufgaben1');
+    expect(root.textContent).toContain('Aufgaben2');
     expect(root.querySelector('main')?.hasAttribute('data-nac-current-step')).toBe(false);
     expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
       .toBe('Task_EntwurfAbstimmen');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-selected-step'))
+      .toBe('Task_EntwurfAbstimmen');
+    const currentButton = root.querySelector('[data-nac-task-id="NAC-SYN-TASK-001"]');
+    expect(currentButton?.tagName).toBe('BUTTON');
+    expect(currentButton?.getAttribute('type')).toBe('button');
+    expect(currentButton?.getAttribute('aria-pressed')).toBe('true');
+    const taskDetailsId = currentButton?.getAttribute('aria-controls');
+    expect(taskDetailsId).toMatch(/^nac-selected-task-details-[0-9]+$/);
+    expect(root.querySelector('[id="' + taskDetailsId + '"]')).not.toBeNull();
     expect(resized).toHaveBeenCalledTimes(1);
     expect(zoom).toHaveBeenCalledTimes(1);
     expect(resizeObserverObserve).toHaveBeenCalledWith(
       root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')
     );
+  });
+
+  it('assigns stable unique task detail ids to each component instance', async () => {
+    const loadWorkspace = jest.fn().mockResolvedValue(workspace);
+    let userDisplayName = 'Test User';
+    const renderPair = async (): Promise<void> => {
+      await act(async () => {
+        ReactDom.render(
+          <>
+            <NacBpmnViewer
+              key="first"
+              workspaceId="notary_team_01"
+              userDisplayName={userDisplayName}
+              hostName="SharePoint"
+              isDarkTheme={false}
+              loadWorkspace={loadWorkspace}
+            />
+            <NacBpmnViewer
+              key="second"
+              workspaceId="notary_team_01"
+              userDisplayName={userDisplayName}
+              hostName="SharePoint"
+              isDarkTheme={false}
+              loadWorkspace={loadWorkspace}
+            />
+          </>,
+          root
+        );
+      });
+      await flushPromises();
+    };
+
+    await renderPair();
+
+    const viewers = root.querySelectorAll<HTMLElement>('[data-nac-component="test-workspace"]');
+    expect(viewers).toHaveLength(2);
+    const firstDetails = viewers[0].querySelector<HTMLElement>('[id^="nac-selected-task-details-"]') as HTMLElement;
+    const secondDetails = viewers[1].querySelector<HTMLElement>('[id^="nac-selected-task-details-"]') as HTMLElement;
+    const firstId = firstDetails.id;
+    const secondId = secondDetails.id;
+    expect(new Set([firstId, secondId]).size).toBe(2);
+    const firstControls = Array.from(viewers[0].querySelectorAll('[data-nac-task-id]'))
+      .map(button => button.getAttribute('aria-controls'));
+    const secondControls = Array.from(viewers[1].querySelectorAll('[data-nac-task-id]'))
+      .map(button => button.getAttribute('aria-controls'));
+    expect(firstControls).toEqual([firstId, firstId]);
+    expect(secondControls).toEqual([secondId, secondId]);
+
+    userDisplayName = 'Updated User';
+    await renderPair();
+
+    const rerenderedIds = Array.from(root.querySelectorAll<HTMLElement>(
+      '[id^="nac-selected-task-details-"][aria-labelledby]'
+    )).map(details => details.id);
+    expect(rerenderedIds).toEqual([firstId, secondId]);
+  });
+
+  it('selects another task by pointer without moving the current marker', async () => {
+    await renderAndFlush(async () => workspace);
+
+    const deadlineButton = root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]') as HTMLButtonElement;
+    expect(deadlineButton).not.toBeNull();
+
+    act(() => {
+      deadlineButton.click();
+    });
+
+    expect(removeMarker).toHaveBeenCalledWith('Task_EntwurfAbstimmen', 'nac-selected-step');
+    expect(addMarker).toHaveBeenCalledWith('Task_NachweiseNachhalten', 'nac-selected-step');
+    expect(addMarker.mock.calls.filter(call => call[1] === 'nac-current-step')).toHaveLength(1);
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
+      .toBe('Task_EntwurfAbstimmen');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-selected-step'))
+      .toBe('Task_NachweiseNachhalten');
+    expect(root.querySelector('[data-nac-task-id="NAC-SYN-TASK-001"]')?.getAttribute('aria-pressed')).toBe('false');
+    expect(deadlineButton.getAttribute('aria-pressed')).toBe('true');
+    expect(root.textContent).toContain('Abschlussfrist überwachen');
+    expect(root.textContent).toContain('31.08.2026');
+    expect(root.textContent).toContain('Keine notarielle Freigabe erforderlich');
+  });
+
+  it('exposes native button semantics used by Enter activation', async () => {
+    await renderAndFlush(async () => workspace);
+
+    const deadlineButton = root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]') as HTMLButtonElement;
+
+    expect(deadlineButton.tagName).toBe('BUTTON');
+    expect(deadlineButton.getAttribute('type')).toBe('button');
+    expect(deadlineButton.onkeydown).toBeNull();
+  });
+
+  it('exposes native button semantics used by Space activation', async () => {
+    await renderAndFlush(async () => workspace);
+
+    const deadlineButton = root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]') as HTMLButtonElement;
+
+    expect(deadlineButton.tagName).toBe('BUTTON');
+    expect(deadlineButton.getAttribute('type')).toBe('button');
+    expect(deadlineButton.onkeydown).toBeNull();
   });
 
   it('refits the same viewer instance after its container resizes', async () => {
@@ -246,7 +392,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
 
     expect(BpmnViewer).toHaveBeenCalledTimes(1);
     expect(importXml).toHaveBeenCalledTimes(1);
-    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(addMarker).toHaveBeenCalledTimes(2);
     expect(resized).toHaveBeenCalledTimes(2);
     expect(zoom).toHaveBeenCalledTimes(2);
   });
@@ -266,6 +412,83 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
     expect(root.querySelector('[data-nac-current-step]')).toBeNull();
   });
+
+  it('fails closed before metadata for duplicate task ids', async () => {
+    const duplicateTaskIdWorkspace: NacBffWorkspace = {
+      ...workspace,
+      matter: {
+        ...workspace.matter,
+        tasks: [
+          workspace.matter.tasks[0],
+          { ...workspace.matter.tasks[1], taskId: workspace.matter.tasks[0].taskId }
+        ]
+      }
+    };
+
+    await renderAndFlush(async () => duplicateTaskIdWorkspace);
+
+    expect(getService).not.toHaveBeenCalled();
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+  it('fails closed before metadata for duplicate step codes', async () => {
+    const duplicateStepCodeWorkspace: NacBffWorkspace = {
+      ...workspace,
+      matter: {
+        ...workspace.matter,
+        tasks: [
+          workspace.matter.tasks[0],
+          { ...workspace.matter.tasks[1], stepCode: workspace.matter.tasks[0].stepCode }
+        ]
+      }
+    };
+
+    await renderAndFlush(async () => duplicateStepCodeWorkspace);
+
+    expect(getService).not.toHaveBeenCalled();
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+  it('fails closed before metadata for an unknown non-current task binding', async () => {
+    elementRegistryGet.mockImplementation((stepCode: string) =>
+      stepCode === currentElement.id ? currentElement : undefined
+    );
+
+    await renderAndFlush(async () => workspace);
+
+    expect(elementRegistryGet).toHaveBeenCalledTimes(2);
+    expect(elementRegistryGet).toHaveBeenCalledWith('Task_NachweiseNachhalten');
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed before metadata for a fake task type without bpmn:Task inheritance', async () => {
+    const fakeTaskElement = {
+      id: deadlineElement.id,
+      type: 'bpmn:AnythingTask',
+      businessObject: {
+        $instanceOf: jest.fn().mockReturnValue(false)
+      }
+    };
+    elementRegistryGet.mockImplementation((stepCode: string) =>
+      stepCode === currentElement.id ? currentElement : fakeTaskElement
+    );
+
+    await renderAndFlush(async () => workspace);
+
+    expect(fakeTaskElement.businessObject.$instanceOf).toHaveBeenCalledWith('bpmn:Task');
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
 
   it('fails closed and destroys the viewer for an unknown current BPMN element', async () => {
     elementRegistryGet.mockReturnValue(undefined);
@@ -322,6 +545,58 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
     expect(root.querySelector('[data-nac-current-step]')).toBeNull();
     expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the initial selection marker cannot be added', async () => {
+    addMarker.mockImplementationOnce(() => undefined).mockImplementationOnce(() => {
+      throw new Error('selection marker failed');
+    });
+
+    await renderAndFlush(async () => workspace);
+
+    expect(addMarker).toHaveBeenCalledTimes(2);
+    expect(zoom).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+  it('fails closed when removing the previous selection marker fails', async () => {
+    await renderAndFlush(async () => workspace);
+    removeMarker.mockImplementation(() => {
+      throw new Error('remove marker failed');
+    });
+
+    const deadlineButton = root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]') as HTMLButtonElement;
+    act(() => {
+      deadlineButton.click();
+    });
+
+    expect(removeMarker).toHaveBeenCalledTimes(1);
+    expect(addMarker).toHaveBeenCalledTimes(2);
+    expect(resizeObserverDisconnect).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+  });
+  it('fails closed when adding the next selection marker fails', async () => {
+    await renderAndFlush(async () => workspace);
+    addMarker.mockImplementation((stepCode: string, marker: string) => {
+      if (stepCode === deadlineElement.id && marker === 'nac-selected-step') {
+        throw new Error('add marker failed');
+      }
+    });
+
+    const deadlineButton = root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]') as HTMLButtonElement;
+    act(() => {
+      deadlineButton.click();
+    });
+
+    expect(removeMarker).toHaveBeenCalledTimes(1);
+    expect(addMarker).toHaveBeenCalledTimes(3);
+    expect(resizeObserverDisconnect).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
   });
 
   it('shows deputy access mode in the ready state', async () => {

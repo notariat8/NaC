@@ -13,6 +13,9 @@ export const nacBpmnViewerStyles: Record<string, string> = {
   fixtureBadge: 'nacBpmnViewer__fixtureBadge',
   canvasScroller: 'nacBpmnViewer__canvasScroller',
   canvas: 'nacBpmnViewer__canvas',
+  taskButton: 'nacBpmnViewer__taskButton',
+  taskCopy: 'nacBpmnViewer__taskCopy',
+  taskDetails: 'nacBpmnViewer__taskDetails',
   taskOpen: 'nacBpmnViewer__taskOpen',
   taskPrepared: 'nacBpmnViewer__taskPrepared',
   footer: 'nacBpmnViewer__footer',
@@ -29,6 +32,8 @@ export const nacBpmnViewerStyleSheet = `
   --accent: #005a9e;
   --current-step-fill: #fff4ce;
   --current-step-stroke: #8a0c12;
+  --selected-step-stroke: #0078d4;
+  --selected-task-bg: #eef6fc;
   --success-bg: #e7f4ea;
   --success-text: #176b35;
   background: var(--surface);
@@ -45,6 +50,8 @@ export const nacBpmnViewerStyleSheet = `
   --muted: #c0c5ca;
   --current-step-fill: #ffe08a;
   --current-step-stroke: #5c2100;
+  --selected-step-stroke: #6cb8f6;
+  --selected-task-bg: #25394a;
   --success-bg: #183d28;
   --success-text: #a9e9bd;
 }
@@ -163,33 +170,89 @@ export const nacBpmnViewerStyleSheet = `
   stroke: var(--current-step-stroke) !important;
   stroke-width: 4px !important;
 }
+.nacBpmnViewer__workspace .djs-element.nac-selected-step .djs-visual > :first-child {
+  filter: drop-shadow(0 0 4px var(--selected-step-stroke));
+}
+.nacBpmnViewer__workspace .djs-element.nac-selected-step:not(.nac-current-step) .djs-visual > :first-child {
+  stroke: var(--selected-step-stroke) !important;
+  stroke-width: 3px !important;
+}
 .nacBpmnViewer__tasks ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .nacBpmnViewer__tasks li {
-  align-items: center;
   border-top: 1px solid var(--border);
+}
+.nacBpmnViewer__taskButton {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
   display: flex;
+  font: inherit;
   gap: 12px;
   justify-content: space-between;
   min-height: 58px;
   padding: 10px 0;
+  text-align: left;
+  width: 100%;
 }
-.nacBpmnViewer__tasks li div {
+.nacBpmnViewer__taskButton[aria-pressed="true"] {
+  background: var(--selected-task-bg);
+  box-shadow: inset 3px 0 0 var(--selected-step-stroke);
+  padding-left: 10px;
+  padding-right: 8px;
+}
+.nacBpmnViewer__taskButton:focus-visible {
+  outline: 2px solid var(--selected-step-stroke);
+  outline-offset: 2px;
+}
+.nacBpmnViewer__taskCopy {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
 }
-.nacBpmnViewer__tasks li strong {
+.nacBpmnViewer__taskButton strong {
   font-size: 14px;
   overflow-wrap: anywhere;
 }
 .nacBpmnViewer__taskOpen {
   background: #fff2cc;
   color: #6f5300 !important;
+}
+.nacBpmnViewer__taskDetails {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 18px;
+}
+.nacBpmnViewer__taskDetails > span,
+.nacBpmnViewer__taskDetails dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.nacBpmnViewer__taskDetails h3 {
+  font-size: 16px;
+  margin: 4px 0 14px;
+  overflow-wrap: anywhere;
+}
+.nacBpmnViewer__taskDetails dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.nacBpmnViewer__taskDetails dl div {
+  display: grid;
+  gap: 3px;
+}
+.nacBpmnViewer__taskDetails dd {
+  font-size: 14px;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 .nacBpmnViewer__footer {
   border-top: 1px solid var(--border);

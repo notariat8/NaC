@@ -38,8 +38,21 @@ REQUIRED_PROCESS_SELECTION_CHECKS = {
 REQUIRED_DOM_MARKERS = {
     "component": 'data-nac-component="test-workspace"',
     "current_step": "data-nac-current-step",
+    "selected_step": "data-nac-selected-step",
+    "task_id": "data-nac-task-id",
     "synthetic_data": "Synthetische Testdaten",
     "no_matter_data": "Keine Mandatsdaten",
+}
+REQUIRED_TASK_NAVIGATION = {
+    "source": "matter.tasks",
+    "initial_selection": "matter.tasks[0]",
+    "current_marker_class": "nac-current-step",
+    "selected_marker_class": "nac-selected-step",
+    "native_button_required": True,
+    "pointer_enter_space_required": True,
+    "all_bindings_resolved_before_ready": True,
+    "binding_failure_state": "render_failed_before_matter_metadata",
+    "writes_allowed": False,
 }
 ALLOWED_BPMN_XML_MIME_TYPES = {"application/xml", "text/xml"}
 REDACTED_OVERLAY_FORBIDDEN_MARKERS = {
@@ -237,6 +250,8 @@ def validate_spfx_bpmn_viewer_skeleton(
             for key, value in REQUIRED_DOM_MARKERS.items():
                 if dom_markers.get(key) != value:
                     errors.append(f"SPFx BPMN viewer skeleton render_contract.dom_markers.{key} must be {value}")
+        if render.get("task_navigation") != REQUIRED_TASK_NAVIGATION:
+            errors.append("SPFx BPMN viewer skeleton render_contract.task_navigation is invalid")
         privacy = render.get("privacy_guards")
         if not isinstance(privacy, dict):
             errors.append("SPFx BPMN viewer skeleton render_contract.privacy_guards must be an object")
@@ -653,6 +668,7 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "liveTenantAccess": False,
             "appCatalogDeployOwnerApproved": False,
             "domMarkers": skeleton["render_contract"]["dom_markers"],
+            "taskNavigation": skeleton["render_contract"]["task_navigation"],
             "privacyGuards": skeleton["render_contract"]["privacy_guards"],
             "expectedRenderState": render_fixture["expected_render_state"],
             "cases": render_case_results,

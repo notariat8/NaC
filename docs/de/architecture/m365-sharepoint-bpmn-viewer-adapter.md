@@ -42,6 +42,9 @@ Die Paketdefinition enthält genau eine Web-API-Anforderung: `NaC M365 BFF` / `M
 - `data-nac-component="test-workspace"` kennzeichnet die Testoberfläche.
 - `matter.tasks[0].stepCode` ist die einzige Quelle für den aktuellen Prozessschritt; eine Browser-Mappingtabelle ist nicht erlaubt.
 - Das exakt aufgelöste BPMN-Element trägt `nac-current-step`, und der bereite Canvas veröffentlicht denselben Wert über `data-nac-current-step`.
+- Alle Aufgaben werden vor dem Ready-State über eindeutige `taskId`- und `stepCode`-Werte gegen kanonische BPMN-Tasks aufgelöst; doppelte oder unbekannte Bindungen schlagen vor der Anzeige von Vorgangsmetadaten geschlossen fehl.
+- Native Aufgaben-Schaltflächen tragen `data-nac-task-id` und `aria-pressed`; Pointer, Enter und Leertaste wählen genau einen getrennten `nac-selected-step`, ohne den aktuellen Prozessschritt zu verschieben.
+- Die Detailansicht zeigt ausschließlich DTO-Felder: Titel, Status, eigene Frist oder `Keine eigene Frist` sowie die notarielle Freigabepflicht. Sie erfindet keine Assignees und zeigt keine Vertretungsfreigabe-Details.
 - Ein fehlender Task, eine unbekannte Element-ID oder ein fehlender bpmn-js-Service führt geschlossen in den Render-Fehlerzustand.
 - `Synthetische Testdaten` kennzeichnet die Datenklasse sichtbar.
 - `Keine Mandatsdaten` bestätigt die Laufzeitgrenze.
