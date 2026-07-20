@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, ContextManager, Mapping, Protocol
 
 from .bpmn_asset import BpmnAsset
 from nac_mvp_test_environment import (
+    BPMN_PROFILE_VERSION,
     BUSINESS_CASE_TYPE_ID,
     DEADLINE,
     MATTER_ID,
@@ -270,7 +272,9 @@ def _build_redacted_dto(
 ) -> dict[str, Any]:
     if not isinstance(raw, Mapping):
         raise _ProjectionError("projection must be an object")
-    if raw.get("status") != MATTER_STATUS or raw.get("deadline") != DEADLINE:
+    if not _exact_value(raw.get("status"), MATTER_STATUS) or not _exact_value(
+        raw.get("deadline"), DEADLINE
+    ):
         raise _ProjectionError("synthetic matter projection diverged")
 
     tasks_value = raw.get("tasks")
@@ -292,9 +296,13 @@ def _build_redacted_dto(
             "requiresNotaryApproval": expected["requires_notary_approval"],
             "dueAt": expected["due_at"],
         }
-        if any(task.get(key) != value for key, value in canonical.items()):
+        if any(
+            not _exact_value(task.get(key), value)
+            for key, value in canonical.items()
+        ):
             raise _ProjectionError("synthetic task projection diverged")
         tasks.append(canonical)
+    _validate_task_bpmn_bindings(bpmn_asset, tasks)
     return {
         "schemaVersion": _SCHEMA_VERSION,
         "workspaceId": ALLOWED_WORKSPACE_ID,
@@ -309,6 +317,46 @@ def _build_redacted_dto(
             "accessMode": access_mode,
         },
     }
+
+
+def _exact_value(actual: Any, expected: Any) -> bool:
+    return type(actual) is type(expected) and actual == expected
+
+
+def _validate_task_bpmn_bindings(
+    bpmn_asset: BpmnAsset,
+    tasks: list[dict[str, Any]],
+) -> None:
+    namespace = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
+    root = ET.fromstring(bpmn_asset.xml)
+    processes = root.findall(f"{namespace}process")
+    if len(processes) != 1 or processes[0].get("id") != bpmn_asset.model_key:
+        raise _ProjectionError("canonical BPMN process diverged")
+    allowed_task_tags = {
+        f"{namespace}businessRuleTask",
+        f"{namespace}manualTask",
+        f"{namespace}receiveTask",
+        f"{namespace}scriptTask",
+        f"{namespace}sendTask",
+        f"{namespace}serviceTask",
+        f"{namespace}task",
+        f"{namespace}userTask",
+    }
+    nac_namespace = "{https://github.com/notariat8/NaC/bpmn/nac}"
+    if processes[0].get(f"{nac_namespace}profile") != BPMN_PROFILE_VERSION:
+        raise _ProjectionError("canonical BPMN profile diverged")
+    for task in tasks:
+        matches = [
+            element
+            for element in processes[0].iter()
+            if element.get("id") == task["stepCode"]
+        ]
+        if (
+            len(matches) != 1
+            or matches[0].tag not in allowed_task_tags
+            or matches[0].get(f"{nac_namespace}kgRef") != BUSINESS_CASE_TYPE_ID
+        ):
+            raise _ProjectionError("synthetic task BPMN binding diverged")
 
 
 def _error(status_code: int, code: str) -> BffResponse:

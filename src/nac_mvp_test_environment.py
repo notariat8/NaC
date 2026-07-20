@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from hashlib import sha256
 from typing import Any, Mapping
-
 
 WORKSPACE_ID = "notary_team_01"
 MATTER_ID = "NAC-SYN-MATTER-001"
@@ -12,12 +10,21 @@ BUSINESS_CASE_TYPE_ID = "immobilienkaufvertrag"
 MATTER_STATUS = "Entwurf"
 DEADLINE = "2026-08-31T16:00:00Z"
 POLICY_REFERENCE_TIME = "2026-07-13T12:00:00Z"
+WORKFLOW_VERSION = "mvp-test-environment-v0.1"
+BPMN_PROFILE_VERSION = "nac-bpmn/v0.1"
+BPMN_SOURCE_PATH = "bpmn/immobilienkaufvertrag.bpmn"
+BPMN_PROCESS_KEY = "Process_immobilienkaufvertrag"
+BPMN_SHA256 = "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
+KG_SOURCE_PATH = "usecases/immobilienkaufvertrag/knowledge-graph.graph.json"
+KG_GRAPH_ID = "usecase.immobilienkaufvertrag"
+KG_SCHEMA_VERSION = "nac.knowledge-graph/v0.1"
+KG_SHA256 = "3bd379066a3c9656046e930efca8d3c7690cdcbe5a7279f7aec12109e777e019"
 
 TASKS: tuple[dict[str, Any], ...] = (
     {
         "task_id": "NAC-SYN-TASK-001",
         "title": "Vertragsentwurf prüfen",
-        "step_code": "synthetic_contract_review",
+        "step_code": "Task_EntwurfAbstimmen",
         "status": "Offen",
         "requires_notary_approval": True,
         "due_at": None,
@@ -25,60 +32,12 @@ TASKS: tuple[dict[str, Any], ...] = (
     {
         "task_id": "NAC-SYN-DEADLINE-001",
         "title": "Abschlussfrist überwachen",
-        "step_code": "synthetic_completion_deadline",
+        "step_code": "Task_NachweiseNachhalten",
         "status": "Offen",
         "requires_notary_approval": False,
         "due_at": DEADLINE,
     },
 )
-
-BPMN_PROCESS_KEY = "NAC_SYN_MATTER_001"
-BPMN_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  id="Definitions_NacSyntheticMatter"
-  targetNamespace="https://notariat8.de/nac/synthetic">
-  <bpmn:process id="NAC_SYN_MATTER_001" isExecutable="false">
-    <bpmn:startEvent id="StartEvent_Synthetic"/>
-    <bpmn:userTask id="synthetic_contract_review" name="Vertragsentwurf prüfen"/>
-    <bpmn:userTask id="synthetic_completion_deadline" name="Abschlussfrist überwachen"/>
-    <bpmn:endEvent id="EndEvent_Synthetic"/>
-    <bpmn:sequenceFlow id="Flow_Start_Review" sourceRef="StartEvent_Synthetic" targetRef="synthetic_contract_review"/>
-    <bpmn:sequenceFlow id="Flow_Review_Deadline" sourceRef="synthetic_contract_review" targetRef="synthetic_completion_deadline"/>
-    <bpmn:sequenceFlow id="Flow_Deadline_End" sourceRef="synthetic_completion_deadline" targetRef="EndEvent_Synthetic"/>
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_NacSyntheticMatter">
-    <bpmndi:BPMNPlane id="BPMNPlane_NacSyntheticMatter" bpmnElement="NAC_SYN_MATTER_001">
-      <bpmndi:BPMNShape id="StartEvent_Synthetic_di" bpmnElement="StartEvent_Synthetic">
-        <dc:Bounds x="120" y="122" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="synthetic_contract_review_di" bpmnElement="synthetic_contract_review">
-        <dc:Bounds x="220" y="100" width="140" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="synthetic_completion_deadline_di" bpmnElement="synthetic_completion_deadline">
-        <dc:Bounds x="430" y="100" width="150" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_Synthetic_di" bpmnElement="EndEvent_Synthetic">
-        <dc:Bounds x="650" y="122" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_Start_Review_di" bpmnElement="Flow_Start_Review">
-        <di:waypoint x="156" y="140"/>
-        <di:waypoint x="220" y="140"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Review_Deadline_di" bpmnElement="Flow_Review_Deadline">
-        <di:waypoint x="360" y="140"/>
-        <di:waypoint x="430" y="140"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Deadline_End_di" bpmnElement="Flow_Deadline_End">
-        <di:waypoint x="580" y="140"/>
-        <di:waypoint x="650" y="140"/>
-      </bpmndi:BPMNEdge>
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>"""
-BPMN_SHA256 = sha256(BPMN_XML.encode("utf-8")).hexdigest()
 
 SYNTHETIC_POLICY_STATE: dict[str, Any] = {
     "matter": {
