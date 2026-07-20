@@ -26,7 +26,8 @@ REQUIRED_SOURCE_ARTIFACTS = {
     "package_lock": "spfx/nac-bpmn-viewer/package-lock.json",
     "package_solution": "spfx/nac-bpmn-viewer/config/package-solution.json",
     "manifest": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
-    "synthetic_fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "canonical_bpmn": "bpmn/immobilienkaufvertrag.bpmn",
+    "bff_asset_loader": "src/nac_bff/bpmn_asset.py",
 }
 REQUIRED_BLOCKED_OPERATIONS = {
     "tenant_wide_deploy",
@@ -73,7 +74,7 @@ def validate_bpmn_viewer_runtime_readiness(
 ) -> list[str]:
     del provisioning, mcp_contract
     errors: list[str] = []
-    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.3":
+    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.4":
         errors.append("SPFx BPMN viewer runtime readiness schema_version is invalid")
     if readiness.get("status") != "bff_read_site_scoped_package_ready_activation_deferred":
         errors.append("SPFx BPMN viewer runtime readiness status must be bff_read_site_scoped_package_ready_activation_deferred")

@@ -206,6 +206,30 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps matter hidden and fails closed when BPMN rendering times out', async () => {
+    jest.useFakeTimers();
+    importXml.mockReturnValue(new Promise<void>(() => undefined));
+
+    try {
+      await renderAndFlush(async () => workspace);
+
+      expect(root.textContent).toContain('Prozessmodell wird geladen.');
+      expect(root.textContent).not.toContain(workspace.matter.displayName);
+      expect(root.textContent).not.toContain(workspace.matter.tasks[0].title);
+      expect(root.textContent).not.toContain('31.08.2026');
+
+      act(() => {
+        jest.advanceTimersByTime(10_000);
+      });
+
+      expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+      expect(root.textContent).not.toContain(workspace.matter.displayName);
+      expect(destroy).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('fails the load after ten seconds even when the loader ignores abort', async () => {
     jest.useFakeTimers();
     let observedSignal: AbortSignal | undefined;

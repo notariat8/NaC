@@ -8,6 +8,7 @@ import {
 import { nacBpmnViewerStyles as styles, nacBpmnViewerStyleSheet } from './NacBpmnViewer.styles';
 
 const LOAD_TIMEOUT_MS = 10_000;
+const RENDER_TIMEOUT_MS = 10_000;
 
 export interface NacBpmnViewerProps {
   workspaceId: string;
@@ -23,6 +24,7 @@ type ViewerState =
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'invalidAsset' }
   | { readonly kind: 'renderFailed' }
+  | { readonly kind: 'rendering'; readonly workspace: NacBffWorkspace }
   | { readonly kind: 'ready'; readonly workspace: NacBffWorkspace };
 
 export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
@@ -51,7 +53,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     props.loadWorkspace(controller.signal).then(value => {
       if (!disposed && !finished) {
         finished = true;
-        setState({ kind: 'ready', workspace: value });
+        setState({ kind: 'rendering', workspace: value });
       }
     }).catch(error => {
       if (!disposed && !finished) {
@@ -67,7 +69,9 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     };
   }, [isApprovedWorkspace, props.loadWorkspace]);
 
-  const workspace = isApprovedWorkspace && state.kind === 'ready' ? state.workspace : null;
+  const workspace = isApprovedWorkspace && (state.kind === 'rendering' || state.kind === 'ready')
+    ? state.workspace
+    : null;
   const bpmnXml = workspace?.matter.bpmn.xml;
 
   React.useEffect(() => {
@@ -78,20 +82,33 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     const viewer = new BpmnViewer({ container: containerRef.current });
     let disposed = false;
     let destroyed = false;
+    let finished = false;
     const destroyViewer = (): void => {
       if (!destroyed) {
         viewer.destroy();
         destroyed = true;
       }
     };
+    const timeoutId = window.setTimeout(() => {
+      if (!disposed && !finished) {
+        finished = true;
+        destroyViewer();
+        setState({ kind: 'renderFailed' });
+      }
+    }, RENDER_TIMEOUT_MS);
 
     viewer.importXML(bpmnXml).then(() => {
-      if (!disposed) {
+      if (!disposed && !finished) {
         const canvas = viewer.get('canvas') as { zoom: (mode: string) => void };
         canvas.zoom('fit-viewport');
+        finished = true;
+        window.clearTimeout(timeoutId);
+        setState({ kind: 'ready', workspace });
       }
     }).catch(() => {
-      if (!disposed) {
+      if (!disposed && !finished) {
+        finished = true;
+        window.clearTimeout(timeoutId);
         destroyViewer();
         setState({ kind: 'renderFailed' });
       }
@@ -99,6 +116,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
 
     return () => {
       disposed = true;
+      window.clearTimeout(timeoutId);
       destroyViewer();
     };
   }, [bpmnXml, workspace]);
@@ -119,12 +137,12 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     return <ViewerMessage message="Prozessmodell ist derzeit nicht verfügbar." />;
   }
 
-  const matter = state.workspace.matter;
-  const stageLabel = matter.tasks[0]?.title ?? 'Keine offene Aufgabe';
-  const accessMode = matter.accessMode === 'deputy'
+  const matter = state.kind === 'ready' ? state.workspace.matter : null;
+  const stageLabel = matter?.tasks[0]?.title ?? 'Keine offene Aufgabe';
+  const accessMode = matter?.accessMode === 'deputy'
     ? 'Vertretung (deputy)'
     : 'Zugeordnet (assigned)';
-  const deadlineLabel = formatTimestamp(matter.deadline);
+  const deadlineLabel = matter === null ? '' : formatTimestamp(matter.deadline);
 
   return (
     <main className={styles.workspace + (props.isDarkTheme ? ' ' + styles.dark : '')} data-nac-component="test-workspace">
@@ -132,21 +150,25 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>NaC Testnotariat</span>
-          <h1>{matter.displayName}</h1>
+          <h1>{matter === null ? 'Prozessmodell wird geladen.' : matter.displayName}</h1>
           <p>Immobilienkaufvertrag</p>
         </div>
-        <div className={styles.headerMeta}>
-          <span className={styles.status}>{matter.status}</span>
-          <span>{props.hostName}</span>
-        </div>
+        {matter !== null && (
+          <div className={styles.headerMeta}>
+            <span className={styles.status}>{matter.status}</span>
+            <span>{props.hostName}</span>
+          </div>
+        )}
       </header>
 
-      <section className={styles.summary} aria-label="Vorgangsstatus">
-        <div><span>Aktueller Schritt</span><strong>{stageLabel}</strong></div>
-        <div><span>Nächste Frist</span><strong>{deadlineLabel}</strong></div>
-        <div><span>Zugriffsmodus</span><strong>{accessMode}</strong></div>
-        <div><span>Angemeldet</span><strong>{props.userDisplayName}</strong></div>
-      </section>
+      {matter !== null && (
+        <section className={styles.summary} aria-label="Vorgangsstatus">
+          <div><span>Aktueller Schritt</span><strong>{stageLabel}</strong></div>
+          <div><span>Nächste Frist</span><strong>{deadlineLabel}</strong></div>
+          <div><span>Zugriffsmodus</span><strong>{accessMode}</strong></div>
+          <div><span>Angemeldet</span><strong>{props.userDisplayName}</strong></div>
+        </section>
+      )}
 
       <div className={styles.contentGrid}>
         <section className={styles.process} aria-labelledby="process-heading">
@@ -160,29 +182,33 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
           <div className={styles.canvas} ref={containerRef} aria-label="BPMN-Prozessdiagramm" />
         </section>
 
-        <aside className={styles.tasks} aria-labelledby="tasks-heading">
-          <div className={styles.sectionHeading}>
-            <div>
-              <span>Arbeitsvorrat</span>
-              <h2 id="tasks-heading">Aufgaben</h2>
+        {matter !== null && (
+          <aside className={styles.tasks} aria-labelledby="tasks-heading">
+            <div className={styles.sectionHeading}>
+              <div>
+                <span>Arbeitsvorrat</span>
+                <h2 id="tasks-heading">Aufgaben</h2>
+              </div>
+              <strong>{matter.tasks.length}</strong>
             </div>
-            <strong>{matter.tasks.length}</strong>
-          </div>
-          <ul>
-            {matter.tasks.map(task => (
-              <li key={task.taskId}>
-                <div><strong>{task.title}</strong><span>{task.taskId} · {task.stepCode}</span><span>{task.dueAt ? formatTimestamp(task.dueAt) : 'Vor Fristablauf'}</span></div>
-                <span className={styles.taskOpen}>{task.status}</span>
-              </li>
-            ))}
-          </ul>
-        </aside>
+            <ul>
+              {matter.tasks.map(task => (
+                <li key={task.taskId}>
+                  <div><strong>{task.title}</strong><span>{task.taskId} · {task.stepCode}</span><span>{task.dueAt ? formatTimestamp(task.dueAt) : 'Vor Fristablauf'}</span></div>
+                  <span className={styles.taskOpen}>{task.status}</span>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
       </div>
 
-      <footer className={styles.footer}>
-        <span>Workspace {state.workspace.workspaceId}</span>
-        <span>Keine Mandatsdaten</span>
-      </footer>
+      {matter !== null && (
+        <footer className={styles.footer}>
+          <span>Workspace {state.workspace.workspaceId}</span>
+          <span>Keine Mandatsdaten</span>
+        </footer>
+      )}
     </main>
   );
 }

@@ -124,7 +124,7 @@ def _validate_contract(
     del provisioning, data_mcp_contract
     errors: list[str] = []
     expected = {
-        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4",
+        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5",
         "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
         "status": "bff_read_site_scoped_package_ready_activation_deferred",
     }
@@ -136,7 +136,7 @@ def _validate_contract(
     if not isinstance(source, dict):
         errors.append("source_of_truth must be an object")
     else:
-        for flag in ("git_remains_template_source_of_truth", "nac_bff_redacted_dto_is_runtime_source", "package_bpmn_asset_is_model_source"):
+        for flag in ("git_remains_template_source_of_truth", "nac_bff_redacted_dto_is_runtime_source", "bff_canonical_bpmn_asset_is_model_source"):
             if source.get(flag) is not True:
                 errors.append(f"source_of_truth.{flag} must be true")
         for flag in ("sharepoint_content_reads_allowed", "real_matter_data_allowed"):
@@ -226,8 +226,9 @@ def _validate_contract(
         expected = {
             "workspace_id": APPROVED_WORKSPACE_ID,
             "source": "nac_bff_redacted_dto",
-            "fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
-            "bpmn_fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
+            "workspace_contract_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+            "bpmn_source": "bpmn/immobilienkaufvertrag.bpmn",
+            "bpmn_runtime_delivery": "nac_bff_embedded_dto",
         }
         for key, value in expected.items():
             if synthetic.get(key) != value:

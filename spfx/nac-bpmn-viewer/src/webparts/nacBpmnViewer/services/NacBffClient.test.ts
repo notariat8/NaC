@@ -8,6 +8,8 @@ jest.mock('@microsoft/sp-http', () => ({
 }));
 
 import { createHash } from 'crypto';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { TextDecoder, TextEncoder } from 'util';
 import { AadHttpClient } from '@microsoft/sp-http';
 import type { AadHttpClientFactory, HttpClientResponse } from '@microsoft/sp-http';
@@ -22,12 +24,14 @@ import {
 
 const canonicalBpmnSha256 =
   '02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0';
-const bpmnXml = [
-  '<?xml version="1.0" encoding="UTF-8"?>',
-  '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">',
-  '<bpmn:process id="Process_immobilienkaufvertrag" isExecutable="false"/>',
-  '</bpmn:definitions>'
-].join('');
+const bpmnXml = readFileSync(
+  resolve(process.cwd(), '../../bpmn/immobilienkaufvertrag.bpmn'),
+  'utf8'
+);
+const noncanonicalBpmnXml = bpmnXml.replace(
+  'Process_immobilienkaufvertrag',
+  'Process_noncanonical'
+);
 
 const workspace: NacBffWorkspace = {
   schemaVersion: 'nac.m365-test-environment-workspace/v0.2',
@@ -107,8 +111,7 @@ describe('NaC BFF client boundary', () => {
       const bytes = data instanceof ArrayBuffer
         ? new Uint8Array(data)
         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const text = new TextDecoder().decode(bytes);
-      const digestHex = text === bpmnXml ? canonicalBpmnSha256 : '0'.repeat(64);
+      const digestHex = createHash('sha256').update(bytes).digest('hex');
       return Uint8Array.from(Buffer.from(digestHex, 'hex')).buffer;
     });
     Object.defineProperty(globalThis, 'crypto', {
@@ -227,7 +230,8 @@ describe('NaC BFF client boundary', () => {
       'self-consistent noncanonical SHA-256',
       {
         ...workspace.matter.bpmn,
-        sha256: createHash('sha256').update(bpmnXml, 'utf8').digest('hex')
+        sha256: createHash('sha256').update(noncanonicalBpmnXml, 'utf8').digest('hex'),
+        xml: noncanonicalBpmnXml
       }
     ],
     ['XML digest', { ...workspace.matter.bpmn, xml: bpmnXml + '<!-- changed -->' }],
