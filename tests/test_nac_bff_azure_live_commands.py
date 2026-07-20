@@ -370,7 +370,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                         )
                         + "\n"
                     )
-                print(json.dumps(valid), flush=True)
+                os.write(1, (json.dumps(valid) + "\n").encode("utf-8"))
 
             with (
                 patch.dict(
@@ -464,9 +464,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     try:
                         os.fstat(inherited_fd)
                     except OSError:
-                        print(json.dumps(valid), flush=True)
+                        os.write(1, (json.dumps(valid) + "\n").encode("utf-8"))
                     else:
-                        print("{}", flush=True)
+                        os.write(1, b"{}\n")
 
                 with patch.object(
                     namespace["runpy"],
@@ -506,7 +506,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     str(descendant_pid),
                     encoding="ascii",
                 )
-                print(json.dumps(valid), flush=True)
+                os.write(1, (json.dumps(valid) + "\n").encode("utf-8"))
 
             with patch.object(
                 namespace["runpy"],
