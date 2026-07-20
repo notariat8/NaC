@@ -882,6 +882,51 @@ class HttpReadinessAdapter:
         raise ActivationStepError("FUNCTION_HEALTH_NOT_READY")
 
 
+_SPFX_FAILURE_CODE_BY_CATEGORY = {
+    "app_catalog_add_readback_timeout": "SPFX_CATALOG_READBACK_TIMEOUT",
+    "app_catalog_deploy_readback_timeout": "SPFX_CATALOG_READBACK_TIMEOUT",
+    "command_runner_exception": "SPFX_CONTROL_PLANE_RUNNER_FAILED",
+    "control_plane_command_failed": "SPFX_CONTROL_PLANE_COMMAND_FAILED",
+    "invalid_control_plane_response": "SPFX_CONTROL_PLANE_RESPONSE_INVALID",
+    "invalid_plan": "SPFX_DEPLOYMENT_PLAN_INVALID",
+    "package_hash_mismatch": "SPFX_PACKAGE_HASH_MISMATCH",
+    "page_canvas_readback_timeout": "SPFX_PAGE_READBACK_TIMEOUT",
+    "page_create_readback_timeout": "SPFX_PAGE_READBACK_TIMEOUT",
+    "page_publish_readback_timeout": "SPFX_PAGE_READBACK_TIMEOUT",
+    "page_update_readback_timeout": "SPFX_PAGE_READBACK_TIMEOUT",
+    "readback_sleep_failed": "SPFX_READBACK_RUNNER_FAILED",
+    "sealed_artifact_runner_required": "SPFX_SEALED_RUNNER_REQUIRED",
+    "site_app_install_readback_timeout": "SPFX_SITE_APP_READBACK_TIMEOUT",
+    "site_app_upgrade_readback_timeout": "SPFX_SITE_APP_READBACK_TIMEOUT",
+    "teams_app_install_readback_timeout": "SPFX_TEAMS_APP_READBACK_TIMEOUT",
+    "teams_catalog_publish_readback_timeout": "SPFX_TEAMS_CATALOG_TIMEOUT",
+    "teams_catalog_review_pending": "SPFX_TEAMS_CATALOG_REVIEW_PENDING",
+    "teams_catalog_update_readback_timeout": "SPFX_TEAMS_CATALOG_TIMEOUT",
+    "teams_package_path_not_replaceable": "SPFX_TEAMS_PACKAGE_PATH_INVALID",
+    "unsafe_control_plane_response": "SPFX_CONTROL_PLANE_RESPONSE_UNSAFE",
+    "web_part_add_readback_timeout": "SPFX_WEB_PART_READBACK_TIMEOUT",
+}
+
+
+def _spfx_deployment_failure_code(evidence: Mapping[str, Any]) -> str:
+    steps = evidence.get("steps")
+    if not isinstance(steps, list) or not steps:
+        return "SPFX_DEPLOYMENT_FAILED"
+    failed = steps[-1]
+    if not isinstance(failed, dict) or failed.get("status") != "FAILED":
+        return "SPFX_DEPLOYMENT_FAILED"
+    error = failed.get("error")
+    if not isinstance(error, dict):
+        return "SPFX_DEPLOYMENT_FAILED"
+    category = error.get("category")
+    if not isinstance(category, str):
+        return "SPFX_DEPLOYMENT_FAILED"
+    return _SPFX_FAILURE_CODE_BY_CATEGORY.get(
+        category,
+        "SPFX_DEPLOYMENT_FAILED",
+    )
+
+
 class AzureBffLiveExecutionPort:
     """Concrete twelve-step owner-gated activation composition."""
 
@@ -2044,6 +2089,8 @@ class AzureBffLiveExecutionPort:
             or not isinstance(package_evidence, dict)
             or package_evidence.get("sha256") != self._spfx_package_sha256
         ):
+            if evidence.get("status") != "PASSED":
+                raise ActivationStepError(_spfx_deployment_failure_code(evidence))
             raise ActivationStepError("SPFX_DEPLOYMENT_FAILED")
         self._spfx_deployment_input_sha256 = self._spfx_package_sha256
         self._spfx_control_plane_evidence_verified = True

@@ -1998,9 +1998,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             "SkipDeploymentFeature": False,
             "ContainsTenantWideExtension": False,
             "Deployed": True,
-            "AadPermissions": [
-                {"Resource": "NaC M365 BFF", "Scope": "Matter.Read"}
-            ],
+            "AadPermissions": "NaC M365 BFF, Matter.Read",
         }
 
     def _create_handler(self, command: tuple[str, ...]) -> FakeResult:
