@@ -38,8 +38,6 @@ from nac_bff.test_environment import (  # noqa: E402
     ValidatedClaims,
 )
 from nac_mvp_test_environment import (  # noqa: E402
-    BPMN_PROCESS_KEY,
-    BPMN_SHA256,
     BUSINESS_CASE_TYPE_ID,
     DEADLINE,
     MATTER_STATUS,
@@ -286,6 +284,7 @@ class RawGraphV1ClientTests(unittest.TestCase):
             expected_tenant_id="synthetic-tenant",
             access_decision_port=_Access(),
             graph_rest_port=_Workspace(),
+            bpmn_asset_port=object(),
             request_budget_factory=client.request_budget,
         )
         response = bff.get_workspace(
@@ -355,9 +354,9 @@ class SyntheticWorkspaceGraphRestAdapterTests(unittest.TestCase):
                     }
                     for task in TASKS
                 ],
-                "bpmn": {"modelKey": BPMN_PROCESS_KEY, "sha256": BPMN_SHA256},
             },
         )
+        self.assertNotIn("bpmn", result)
         self.assertEqual(len(client.paths), 2)
         self.assertIn("/lists/588d4a41-f538-4f37-acfb-63ff283e0910/items?", client.paths[0])
         self.assertIn("$expand=fields($select=NacCaseId,Vorgangstyp,Status,FristNaechsteAktion)", client.paths[0])

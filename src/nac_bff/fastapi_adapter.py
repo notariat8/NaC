@@ -171,6 +171,10 @@ def create_unconfigured_app() -> Any:
         def read_synthetic_workspace(self, **_: str) -> None:
             return None
 
+    class _UnavailableBpmnAsset:
+        def read_canonical_bpmn(self) -> None:
+            return None
+
     async def _no_validated_claims() -> object:
         return None
 
@@ -178,6 +182,7 @@ def create_unconfigured_app() -> Any:
         expected_tenant_id="unconfigured",
         access_decision_port=_DenyAllAccess(),
         graph_rest_port=_UnavailableGraph(),
+        bpmn_asset_port=_UnavailableBpmnAsset(),
     )
     return create_fastapi_app(
         bff=bff,

@@ -1,9 +1,9 @@
 {
-  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.3",
+  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.4",
   "name": "nac-spfx-bpmn-viewer",
   "status": "bff_read_site_scoped_package",
-  "last_update": "2026-07-14",
-  "purpose": "Packageable site-scoped SPFx BPMN viewer for notary_team_01 using a delegated NaC BFF read and a hash-bound package BPMN asset.",
+  "last_update": "2026-07-20",
+  "purpose": "Packageable site-scoped SPFx BPMN viewer for notary_team_01 using a delegated NaC BFF read and a hash-bound canonical BPMN asset delivered by the BFF.",
   "spfx": {
     "framework": "SharePoint Framework",
     "framework_version": "1.23.2",
@@ -100,7 +100,8 @@
   },
   "test_fixtures": {
     "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
-    "package_workspace": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "canonical_bpmn": "bpmn/immobilienkaufvertrag.bpmn",
+    "bff_workspace_contract": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
     "bff_client_security": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
   },
   "blocked_operations": [

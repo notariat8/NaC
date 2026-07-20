@@ -101,9 +101,10 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         self.assertGreater(spfx_manifest["file_count"], 10)
         spfx_paths = {entry["path"] for entry in spfx_manifest["entries"]}
         self.assertIn(
-            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
             spfx_paths,
         )
+        self.assertFalse(any("/fixtures/" in path for path in spfx_paths))
         self.assertIn(
             "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
             spfx_paths,

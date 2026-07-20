@@ -1,8 +1,8 @@
 {
-  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4",
+  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5",
   "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
   "status": "bff_read_site_scoped_package_ready_activation_deferred",
-  "last_update": "2026-07-14",
+  "last_update": "2026-07-20",
   "purpose": "Defines the site-scoped viewer-only SPFx adapter for the synthetic notary_team_01 test environment through the delegated NaC BFF read boundary.",
   "source_of_truth": {
     "approved_bpmn_templates": [
@@ -13,7 +13,7 @@
     "sharepoint_content_reads_allowed": false,
     "real_matter_data_allowed": false,
     "nac_bff_redacted_dto_is_runtime_source": true,
-    "package_bpmn_asset_is_model_source": true
+    "bff_canonical_bpmn_asset_is_model_source": true
   },
   "spfx_surface": {
     "delivery": "SharePoint Framework Web Part",
@@ -75,8 +75,9 @@
   "synthetic_data_boundary": {
     "workspace_id": "notary_team_01",
     "source": "nac_bff_redacted_dto",
-    "fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
-    "bpmn_fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
+    "workspace_contract_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+    "bpmn_source": "bpmn/immobilienkaufvertrag.bpmn",
+    "bpmn_runtime_delivery": "nac_bff_embedded_dto",
     "synthetic_data_only": true,
     "contains_real_matter_data": false,
     "reads_sharepoint_content": false,

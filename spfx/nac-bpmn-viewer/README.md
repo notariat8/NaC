@@ -1,6 +1,6 @@
 # NaC BPMN Viewer SPFx Skeleton
 
-Status: offline source skeleton only.
+Status: packageable, site-scoped, viewer-only SPFx source.
 
 This directory defines the future SharePoint Framework web part shape for a
 read-only NaC BPMN Viewer. It is not a deployable package in this slice.
@@ -8,27 +8,26 @@ read-only NaC BPMN Viewer. It is not a deployable package in this slice.
 ## Boundary
 
 - Uses `bpmn-js/lib/Viewer`, not the modeler.
-- Renders only approved BPMN XML fixtures or future approved BPMN content after
-  a separate owner gate.
-- Mirrors `teams-sharepoint-data-mcp` request-plan shapes only.
-- Does not execute Microsoft Graph requests.
+- Loads a redacted synthetic workspace DTO through the delegated NaC BFF
+  `Matter.Read` boundary.
+- Renders only the canonical `bpmn/immobilienkaufvertrag.bpmn` XML delivered by
+  the BFF after exact-shape, size and SHA-256 verification in the browser.
+- Does not execute Microsoft Graph requests in the browser.
 - Does not write BPMN XML, SharePoint list items, documents, Teams settings or
   process instances.
-- Does not include an SPFx package, lockfile, build output or app-catalog
-  deployment artifact.
+- Includes the pinned lockfile and package definition; generated build and
+  app-catalog artifacts remain ignored and untracked.
 
 ## Current Files
 
-- `package.json`: dependency metadata for the future SPFx package, not an
-  installed Node workspace.
-- `config/package-solution.json`: solution identity skeleton with deployment
-  disabled.
+- `package.json` and `package-lock.json`: pinned SPFx 1.23.2 build inputs.
+- `config/package-solution.json`: site-scoped solution with only the delegated
+  NaC BFF `Matter.Read` request.
 - `src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts`: web part shell.
 - `src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx`: viewer-only
-  render component.
-- `src/webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts`: MCP
-  request-plan boundary.
-- `src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts`: synthetic BPMN fixture.
+  render component with fail-closed load and render timeouts.
+- `src/webparts/nacBpmnViewer/services/NacBffClient.ts`: bounded delegated BFF
+  client and canonical BPMN digest verification.
 
 ## Validation
 

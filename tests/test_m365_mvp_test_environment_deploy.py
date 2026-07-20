@@ -32,6 +32,10 @@ from nac_m365_graph.mvp_test_environment_deploy import (
 )
 from nac_m365_graph.privileged_change import DEFAULT_PROVISIONED_STATE
 from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
+from nac_bff.bpmn_asset import (
+    CANONICAL_BPMN_MODEL_KEY,
+    CANONICAL_BPMN_SHA256,
+)
 
 
 PASSED_ROLE_CHECKS = [
@@ -277,7 +281,7 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             "requires_new_delegated_scope_and_public_https_endpoint",
         )
 
-    def test_ui_graph_smoke_and_bff_share_the_canonical_synthetic_fixture(self) -> None:
+    def test_ui_graph_smoke_and_bff_bind_their_declared_bpmn_sources(self) -> None:
         fixture_path = (
             Path(__file__).resolve().parents[1]
             / "tests/fixtures/m365/mvp-test-environment/synthetic-bpmn.fixture.json"
@@ -318,35 +322,24 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         )
 
         spfx_root = Path(__file__).resolve().parents[1] / "spfx/nac-bpmn-viewer"
-        sample_source = (
-            spfx_root / "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts"
-        ).read_text(encoding="utf-8")
-        self.assertEqual(sample_source.split(chr(96), 2)[1], BPMN_XML)
-        ui_fixture = (
-            spfx_root / "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
-        ).read_text(encoding="utf-8")
+        canonical_bpmn = (
+            Path(__file__).resolve().parents[1] / "bpmn/immobilienkaufvertrag.bpmn"
+        ).read_bytes()
+        self.assertEqual(hashlib.sha256(canonical_bpmn).hexdigest(), CANONICAL_BPMN_SHA256)
         bff_client = (
             spfx_root / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
         ).read_text(encoding="utf-8")
-        for value in (WORKSPACE_ID, BPMN_PROCESS_KEY, BPMN_SHA256):
-            self.assertIn(value, ui_fixture)
-        for value in (
-            MATTER_ID,
-            MATTER_STATUS,
-            DEADLINE,
-            *(str(task[key]) for task in TASKS for key in ("task_id", "title", "step_code", "status")),
-        ):
-            self.assertNotIn(value, ui_fixture)
         for value in (
             WORKSPACE_ID,
             MATTER_ID,
-            BPMN_PROCESS_KEY,
-            BPMN_SHA256,
+            CANONICAL_BPMN_MODEL_KEY,
+            CANONICAL_BPMN_SHA256,
             "api://funktion8.de/nac-bff",
             "Matter.Read",
             "https://func-nac-bff-test-funktion8.azurewebsites.net",
         ):
             self.assertIn(value, bff_client)
+        self.assertNotIn(BPMN_XML, bff_client)
 
     def test_writer_creates_redacted_json_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

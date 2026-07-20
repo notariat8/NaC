@@ -21,6 +21,10 @@ AZURE_HOST_ROOT = REPO_ROOT / "deploy/runtime/azure/nac-bff"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_bff.bpmn_asset import (  # noqa: E402
+    CANONICAL_BPMN_MODEL_KEY,
+    CANONICAL_BPMN_SHA256,
+)
 from nac_bff.composition import (  # noqa: E402
     BffSettings,
     CompositionError,
@@ -40,8 +44,6 @@ from nac_bff.test_environment import (  # noqa: E402
     ValidatedClaims,
 )
 from nac_mvp_test_environment import (  # noqa: E402
-    BPMN_PROCESS_KEY,
-    BPMN_SHA256,
     DEADLINE,
     MATTER_STATUS,
     TASKS,
@@ -76,7 +78,6 @@ def _projection() -> dict:
             }
             for task in TASKS
         ],
-        "bpmn": {"modelKey": BPMN_PROCESS_KEY, "sha256": BPMN_SHA256},
     }
 
 
@@ -433,6 +434,16 @@ class AzureFunctionHostFilesTests(unittest.TestCase):
                 first_package.read_bytes(),
                 second_package.read_bytes(),
             )
+            builder_spec = importlib.util.spec_from_file_location(
+                "nac_bff_build_package_test", builder
+            )
+            self.assertIsNotNone(builder_spec)
+            assert builder_spec is not None and builder_spec.loader is not None
+            builder_module = importlib.util.module_from_spec(builder_spec)
+            builder_spec.loader.exec_module(builder_module)
+            self.assertEqual(
+                builder_module.validate_package(first_package.read_bytes()), []
+            )
 
             with zipfile.ZipFile(first_package) as package:
                 names = set(package.namelist())
@@ -448,6 +459,13 @@ class AzureFunctionHostFilesTests(unittest.TestCase):
             self.assertIn("nac_bff/composition.py", names)
             self.assertIn("nac_m365_graph/auth.py", names)
             self.assertIn("nac_mvp_test_environment.py", names)
+            self.assertIn("bpmn/immobilienkaufvertrag.bpmn", names)
+            self.assertEqual(
+                hashlib.sha256(
+                    packaged_files["bpmn/immobilienkaufvertrag.bpmn"]
+                ).hexdigest(),
+                CANONICAL_BPMN_SHA256,
+            )
             self.assertEqual(
                 manifest["deployment"],
                 {
@@ -491,9 +509,14 @@ sys.path.insert(0, str(package_root))
 
 import nac_bff
 import nac_bff.composition as composition
+from nac_bff.bpmn_asset import CanonicalBpmnAssetFilePort
 import nac_m365_graph
 import nac_m365_graph.auth
 import nac_mvp_test_environment
+
+asset = CanonicalBpmnAssetFilePort().read_canonical_bpmn()
+assert asset.model_key == "Process_immobilienkaufvertrag"
+assert asset.sha256 == "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
 
 for module in (
     nac_bff,

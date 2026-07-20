@@ -37,7 +37,7 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         fixture = load_spfx_bpmn_viewer_render_fixture(DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE)
 
         self.assertEqual(validate_spfx_bpmn_viewer_skeleton(skeleton, render_fixture=fixture), [])
-        self.assertEqual(skeleton["schema_version"], "nac.m365-spfx-bpmn-viewer-skeleton/v0.3")
+        self.assertEqual(skeleton["schema_version"], "nac.m365-spfx-bpmn-viewer-skeleton/v0.4")
         self.assertEqual(skeleton["status"], "bff_read_site_scoped_package")
         self.assertEqual(skeleton["spfx"]["framework_version"], "1.23.2")
         self.assertEqual(skeleton["spfx"]["build_tool"], "Heft")
@@ -114,9 +114,6 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         webpart = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts"
         ).read_text(encoding="utf-8")
-        fixture = (
-            SPFX_ROOT / "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
-        ).read_text(encoding="utf-8")
         bff_client = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
         ).read_text(encoding="utf-8")
@@ -129,27 +126,21 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
 
         for marker in REQUIRED_DOM_MARKERS.values():
             self.assertIn(marker, component)
-        self.assertIn("Workspace nicht freigegeben.", component)
+        self.assertIn("Kein Zugriff auf diesen Vorgang.", component)
         self.assertIn("Vorgangsdaten sind derzeit nicht verfügbar.", component)
         self.assertIn("loadNacBffWorkspace(this.context.aadHttpClientFactory, signal)", webpart)
-        self.assertIn("source: 'package_bpmn_fixture'", fixture)
-        self.assertIn("containsMatterData: false", fixture)
-        self.assertIn("bpmnXml: sampleApprovedBpmnXml", fixture)
-        self.assertNotIn("NAC-SYN-TASK-001", fixture)
-        self.assertNotIn("deadlineLabel", fixture)
-
         self.assertIn("AadHttpClientFactory", bff_client)
         self.assertIn("api://funktion8.de/nac-bff", bff_client)
         self.assertIn("Matter.Read", bff_client)
         self.assertIn("func-nac-bff-test-funktion8.azurewebsites.net", bff_client)
         self.assertIn("MAX_RESPONSE_BYTES", bff_client)
-        self.assertIn("isWorkspace", bff_client)
+        self.assertIn("parseWorkspaceValue", bff_client)
         self.assertIn("hasExactKeys", bff_client)
         self.assertIn("verifyBpmnAsset", bff_client)
         self.assertIn("crypto.subtle.digest", bff_client)
-        self.assertIn("verifyBpmnAsset", component)
+        self.assertIn("workspace?.matter.bpmn.xml", component)
         self.assertIn("rejects extra %s fields", bff_client_test)
-        self.assertIn("cryptographically binds packaged BPMN XML", bff_client_test)
+        self.assertIn("cryptographically binds the BFF XML to the canonical declared digest", bff_client_test)
         self.assertIn("fails closed and destroys the viewer when BPMN import fails", component_test)
         self.assertIn("aborts an outstanding BFF request when the component unmounts", component_test)
         self.assertIn(

@@ -1,9 +1,9 @@
 {
-  "schema_version": "nac.m365-bpmn-viewer-runtime-readiness/v0.3",
+  "schema_version": "nac.m365-bpmn-viewer-runtime-readiness/v0.4",
   "name": "nac-bpmn-viewer-runtime-readiness",
   "status": "bff_read_site_scoped_package_ready_activation_deferred",
-  "last_update": "2026-07-14",
-  "purpose": "Readiness contract for the site-scoped SPFx package, delegated NaC BFF read and hash-bound package BPMN asset.",
+  "last_update": "2026-07-20",
+  "purpose": "Readiness contract for the site-scoped SPFx package, delegated NaC BFF read and hash-bound canonical BPMN asset delivered by the BFF.",
   "source_artifacts": {
     "viewer_contract": "workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json",
     "spfx_skeleton": "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
@@ -12,7 +12,8 @@
     "package_lock": "spfx/nac-bpmn-viewer/package-lock.json",
     "package_solution": "spfx/nac-bpmn-viewer/config/package-solution.json",
     "manifest": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
-    "synthetic_fixture": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
+    "canonical_bpmn": "bpmn/immobilienkaufvertrag.bpmn",
+    "bff_asset_loader": "src/nac_bff/bpmn_asset.py"
   },
   "spfx_packaging_boundary": {
     "package_root": "spfx/nac-bpmn-viewer",

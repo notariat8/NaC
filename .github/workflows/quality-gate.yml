@@ -19,6 +19,7 @@ on:
       - "workflows/**"
       - "usecases/**"
       - "roadmap/**"
+      - "spfx/**"
       - ".codex/agents/**"
       - ".github/workflows/*.yml"
       - "AGENTS.md"
@@ -42,6 +43,7 @@ on:
       - "workflows/**"
       - "usecases/**"
       - "roadmap/**"
+      - "spfx/**"
       - ".codex/agents/**"
       - ".github/workflows/*.yml"
       - "AGENTS.md"
@@ -50,7 +52,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  spfx-bpmn-viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: spfx/nac-bpmn-viewer/package-lock.json
+
+      - name: Install pinned SPFx dependencies
+        working-directory: spfx/nac-bpmn-viewer
+        run: npm ci --ignore-scripts
+
+      - name: Test, build and package BPMN viewer
+        working-directory: spfx/nac-bpmn-viewer
+        run: npm run build
+
   quality-gate:
+    needs: spfx-bpmn-viewer
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -86,8 +86,6 @@ SPFX_SKELETON_REQUIRED_FILES = {
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
     "src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
     "src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx",
-    "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
-    "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
     "src/webparts/nacBpmnViewer/services/NacBffClient.ts",
     "src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
     "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_color.png",
@@ -138,7 +136,7 @@ def validate_spfx_bpmn_viewer_skeleton(
 ) -> list[str]:
     del mcp_contract
     errors: list[str] = []
-    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.3":
+    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.4":
         errors.append("SPFx BPMN viewer skeleton schema_version is invalid")
     if skeleton.get("status") != "bff_read_site_scoped_package":
         errors.append("SPFx BPMN viewer skeleton status must be bff_read_site_scoped_package")
@@ -364,7 +362,7 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "NAC_BFF_MATTER_ID = 'NAC-SYN-MATTER-001'",
             "NAC_BFF_PURPOSE = 'view_synthetic_matter_workspace'",
             "MAX_RESPONSE_BYTES",
-            "isWorkspace",
+            "parseWorkspaceValue",
             "hasExactKeys",
             "verifyBpmnAsset",
             "crypto.subtle.digest",
@@ -386,7 +384,7 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "parseWorkspaceResponse",
             "verifyBpmnAsset",
             "rejects extra %s fields",
-            "cryptographically binds packaged BPMN XML",
+            "cryptographically binds the BFF XML to the canonical declared digest",
             "uses the fixed AadHttpClient resource, route, purpose and correlation boundary",
         ):
             if required not in test_text:
@@ -397,9 +395,9 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         source_text = component.read_text(encoding="utf-8")
         for required in (
             "bpmn-js/lib/Viewer",
-            "syntheticWorkspaceFixture",
             "loadWorkspace",
-            "verifyBpmnAsset",
+            "workspace?.matter.bpmn.xml",
+            "isApprovedWorkspace",
             "AbortController",
             "Prozessmodell ist derzeit nicht verfügbar.",
             *REQUIRED_DOM_MARKERS.values(),
@@ -417,23 +415,13 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         component_test_text = component_test.read_text(encoding="utf-8")
         for required in (
             "fails closed and destroys the viewer when BPMN import fails",
+            "keeps matter hidden and fails closed when BPMN rendering times out",
             "aborts an outstanding BFF request when the component unmounts",
             "fails the load after ten seconds even when the loader ignores abort",
         ):
             if required not in component_test_text:
                 errors.append(f"SPFx BPMN viewer component test missing {required!r}")
 
-    fixture = root / "src" / "webparts" / "nacBpmnViewer" / "fixtures" / "syntheticWorkspace.ts"
-    if fixture.is_file():
-        fixture_text = fixture.read_text(encoding="utf-8")
-        for required in (
-            "workspaceId: 'notary_team_01'",
-            "containsMatterData: false",
-            "source: 'package_bpmn_fixture'",
-            "bpmnXml: sampleApprovedBpmnXml",
-        ):
-            if required not in fixture_text:
-                errors.append(f"SPFx BPMN viewer synthetic fixture missing {required!r}")
     return errors
 
 

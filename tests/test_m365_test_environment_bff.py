@@ -13,6 +13,13 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_bff.bpmn_asset import (  # noqa: E402
+    BpmnAsset,
+    CANONICAL_BPMN_MIME_TYPE,
+    CANONICAL_BPMN_MODEL_KEY,
+    CANONICAL_BPMN_SHA256,
+    CanonicalBpmnAssetFilePort,
+)
 from nac_bff.test_environment import (  # noqa: E402
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -23,8 +30,6 @@ from nac_bff.test_environment import (  # noqa: E402
     ValidatedClaims,
 )
 from nac_mvp_test_environment import (  # noqa: E402
-    BPMN_PROCESS_KEY,
-    BPMN_SHA256,
     DEADLINE,
     MATTER_STATUS,
     SYNTHETIC_POLICY_STATE,
@@ -79,15 +84,32 @@ def _projection() -> dict:
             }
             for task in TASKS
         ],
-        "bpmn": {
-            "modelKey": BPMN_PROCESS_KEY,
-            "sha256": BPMN_SHA256,
-            "graphDownloadUrl": "DO_NOT_EXPOSE_DOWNLOAD_URL",
-        },
         "siteId": "DO_NOT_EXPOSE_SITE_ID",
         "listId": "DO_NOT_EXPOSE_LIST_ID",
         "rawFields": {"Mandant": "DO_NOT_EXPOSE_MATTER_DATA"},
     }
+
+
+_CANONICAL_ASSET = CanonicalBpmnAssetFilePort(
+    REPO_ROOT / "bpmn/immobilienkaufvertrag.bpmn"
+).read_canonical_bpmn()
+
+
+class _BpmnPort:
+    def __init__(
+        self,
+        payload: BpmnAsset = _CANONICAL_ASSET,
+        error: Exception | None = None,
+    ) -> None:
+        self.payload = payload
+        self.error = error
+        self.calls = 0
+
+    def read_canonical_bpmn(self) -> BpmnAsset:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.payload
 
 
 class M365TestEnvironmentBffTests(unittest.TestCase):
@@ -104,14 +126,18 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         decision: AccessDecision = AccessDecision.assigned(),
         projection: dict | None = None,
         graph_error: Exception | None = None,
+        bpmn_error: Exception | None = None,
     ) -> tuple[TestEnvironmentBff, _AccessPort, _GraphPort]:
         access = _AccessPort(decision)
         graph = _GraphPort(_projection() if projection is None else projection, graph_error)
+        bpmn = _BpmnPort(error=bpmn_error)
+        self.last_bpmn_port = bpmn
         return (
             TestEnvironmentBff(
                 expected_tenant_id="synthetic-tenant",
                 access_decision_port=access,
                 graph_rest_port=graph,
+                bpmn_asset_port=bpmn,
             ),
             access,
             graph,
@@ -124,12 +150,15 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         policy_state: dict | None = None,
     ) -> tuple[object, _GraphPort]:
         graph = _GraphPort(_projection())
+        bpmn = _BpmnPort()
+        self.last_bpmn_port = bpmn
         bff = TestEnvironmentBff(
             expected_tenant_id="synthetic-tenant",
             access_decision_port=DeterministicSyntheticAccessDecisionPort(
                 policy_state=SYNTHETIC_POLICY_STATE if policy_state is None else policy_state
             ),
             graph_rest_port=graph,
+            bpmn_asset_port=bpmn,
         )
         response = bff.get_workspace(
             claims=ValidatedClaims(
@@ -159,11 +188,20 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.body["schemaVersion"], "nac.m365-test-environment-workspace/v0.1")
+        self.assertEqual(response.body["schemaVersion"], "nac.m365-test-environment-workspace/v0.2")
         self.assertEqual(response.body["workspaceId"], ALLOWED_WORKSPACE_ID)
         self.assertEqual(response.body["matter"]["matterId"], ALLOWED_MATTER_ID)
         self.assertEqual(response.body["matter"]["businessCaseTypeId"], "immobilienkaufvertrag")
         self.assertEqual(response.body["matter"]["accessMode"], "assigned")
+        self.assertEqual(
+            response.body["matter"]["bpmn"],
+            {
+                "modelKey": CANONICAL_BPMN_MODEL_KEY,
+                "mimeType": CANONICAL_BPMN_MIME_TYPE,
+                "sha256": CANONICAL_BPMN_SHA256,
+                "xml": _CANONICAL_ASSET.xml,
+            },
+        )
         self.assertEqual(
             response.body["matter"]["tasks"],
             [
@@ -193,6 +231,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(len(access.calls), 1)
         self.assertEqual(access.calls[0]["actor_id"], "synthetic-assigned-user")
         self.assertEqual(graph.calls, [{"workspace_id": ALLOWED_WORKSPACE_ID, "matter_id": ALLOWED_MATTER_ID}])
+        self.assertEqual(self.last_bpmn_port.calls, 1)
 
     def test_canonical_policy_allows_assignment_and_valid_deputy_but_denies_unassigned(self) -> None:
         assigned, assigned_graph = self._policy_response("nac-synthetic-assigned")
@@ -231,6 +270,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 403)
                 self.assertEqual(response.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
                 self.assertEqual(graph.calls, [])
+                self.assertEqual(self.last_bpmn_port.calls, 0)
 
     def test_deputy_decision_is_visible_only_as_access_mode(self) -> None:
         bff, _, _ = self._bff(decision=AccessDecision.deputy())
@@ -244,6 +284,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.body["matter"]["accessMode"], "deputy")
+        self.assertEqual(self.last_bpmn_port.calls, 1)
 
     def test_denied_user_gets_generic_forbidden_without_graph_read(self) -> None:
         bff, _, graph = self._bff(decision=AccessDecision.deny())
@@ -258,6 +299,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
         self.assertEqual(graph.calls, [])
+        self.assertEqual(self.last_bpmn_port.calls, 0)
 
     def test_unauthorized_and_manipulated_inputs_are_externally_indistinguishable(self) -> None:
         denied_bff, denied_access, denied_graph = self._bff(
@@ -301,6 +343,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
                 )
                 self.assertEqual(access.calls, [])
                 self.assertEqual(graph.calls, [])
+                self.assertEqual(self.last_bpmn_port.calls, 0)
 
     def test_fastapi_query_shape_rejects_filters_duplicates_and_missing_purpose(self) -> None:
         from nac_bff.fastapi_adapter import _parse_workspace_query
@@ -336,6 +379,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
             expected_tenant_id="synthetic-tenant",
             access_decision_port=access,
             graph_rest_port=graph,
+            bpmn_asset_port=_BpmnPort(),
         )
 
         async def validated_claims() -> ValidatedClaims:
@@ -411,6 +455,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(missing.body, {"status": 404, "error": {"code": "RESOURCE_NOT_FOUND"}})
+        self.assertEqual(self.last_bpmn_port.calls, 0)
 
         failed_bff, _, _ = self._bff(graph_error=RuntimeError("SENSITIVE GRAPH ERROR"))
         failed = failed_bff.get_workspace(
@@ -422,6 +467,27 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(failed.status_code, 503)
         self.assertEqual(failed.body, {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
         self.assertNotIn("SENSITIVE", json.dumps(failed.body))
+        self.assertEqual(self.last_bpmn_port.calls, 0)
+
+    def test_bpmn_asset_failure_is_generic_after_authorization_and_graph_read(self) -> None:
+        bff, _, graph = self._bff(
+            bpmn_error=RuntimeError("SENSITIVE BPMN ASSET ERROR")
+        )
+
+        response = bff.get_workspace(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+
+        self.assertEqual(
+            (response.status_code, response.body),
+            (503, {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}}),
+        )
+        self.assertEqual(len(graph.calls), 1)
+        self.assertEqual(self.last_bpmn_port.calls, 1)
+        self.assertNotIn("SENSITIVE", json.dumps(response.body))
 
     def test_malformed_graph_projection_fails_closed_without_raw_values(self) -> None:
         malformed = _projection()

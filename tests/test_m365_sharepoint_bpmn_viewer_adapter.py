@@ -19,7 +19,7 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
     def test_contract_defines_packageable_viewer_only_spfx(self) -> None:
-        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4")
+        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5")
         self.assertEqual(self.contract["status"], "bff_read_site_scoped_package_ready_activation_deferred")
         spfx = self.contract["spfx_surface"]
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
@@ -102,10 +102,12 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         errors = _validate_contract(invalid, {}, {}, {}, {})
         self.assertIn("graph_free_boundary.delegated_scope must be Matter.Read", errors)
 
-    def test_contract_uses_bff_redacted_synthetic_data_and_package_bpmn(self) -> None:
+    def test_contract_uses_bff_redacted_synthetic_data_and_canonical_bpmn(self) -> None:
         synthetic = self.contract["synthetic_data_boundary"]
         self.assertEqual(synthetic["workspace_id"], "notary_team_01")
         self.assertEqual(synthetic["source"], "nac_bff_redacted_dto")
+        self.assertEqual(synthetic["bpmn_source"], "bpmn/immobilienkaufvertrag.bpmn")
+        self.assertEqual(synthetic["bpmn_runtime_delivery"], "nac_bff_embedded_dto")
         self.assertFalse(synthetic["browser_reads_sharepoint_content"])
         self.assertTrue(synthetic["bff_reads_sharepoint_metadata"])
         self.assertTrue(synthetic["synthetic_data_only"])
