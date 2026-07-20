@@ -28,6 +28,8 @@ from nac_m365_graph.sealed_toolchain import (
 EXPECTED_TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
 EXPECTED_SUBSCRIPTION_ID = "37cd9645-6cb9-4278-88ee-e80377cd951c"
 EXPECTED_CLOUD_NAME = "AzureCloud"
+FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS = 900
+FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS = 1020
 AZURE_CLI_TOOLCHAIN_SHA256_ENV = "NAC_AZURE_CLI_EXPECTED_TOOLCHAIN_SHA256"
 # Compatibility symbol for callers importing the former constant. The value now
 # names the full toolchain attestation, never a wrapper-only digest.
@@ -136,6 +138,22 @@ class AzureCliAdapter:
             expected_binary_sha256=self._expected_binary_sha256,
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
+            bound_artifacts=bound_artifacts,
+        )
+
+    def run_bound_with_timeout(
+        self,
+        argv: object,
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+        *,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        return run_azure_cli(
+            argv,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=timeout_seconds,
             bound_artifacts=bound_artifacts,
         )
 
@@ -711,13 +729,22 @@ _COMMAND_SCHEMAS = {
     ),
     ("functionapp", "deployment", "source", "config-zip"): _CommandSchema(
         ("functionapp", "deployment", "source", "config-zip"),
-        required=frozenset({"--resource-group", "--name", "--src", "--build-remote"}),
+        required=frozenset(
+            {
+                "--resource-group",
+                "--name",
+                "--src",
+                "--build-remote",
+                "--timeout",
+            }
+        ),
         optional=_COMMON_OPTIONAL,
         validators={
             "--resource-group": _single_exact(RESOURCE_GROUP),
             "--name": _single_exact(FUNCTION_APP),
             "--src": _absolute_file(".zip"),
             "--build-remote": _single_exact("true"),
+            "--timeout": _single_exact(str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS)),
             **_COMMON_VALIDATORS,
         },
     ),

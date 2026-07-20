@@ -400,7 +400,8 @@ class _FakeApproval:
 
 
 class _FakeAzure:
-    def __init__(self) -> None:
+    def __init__(self, events: list[tuple] | None = None) -> None:
+        self.events = events if events is not None else []
         self.ready = {"status": "READY", "code": "AZURE_CLI_READY"}
         self.commands: list[tuple[str, ...]] = []
         self.providers = {
@@ -451,7 +452,19 @@ class _FakeAzure:
         if self.bound_result is not None:
             self.commands.append(tuple(argv))
             return dict(self.bound_result)
+
         return self.run(argv)
+    def run_bound_with_timeout(self, argv, bound_artifacts, *, timeout_seconds):
+        command = tuple(argv)
+        self.bound_artifacts.append(dict(bound_artifacts))
+        self.bounded_calls.append((command, timeout_seconds))
+        if self.bound_result is not None:
+            self.commands.append(command)
+            result = dict(self.bound_result)
+        else:
+            result = self.run(argv)
+        self.events.append(("azure_bound_complete", command))
+        return result
 
     def run_with_timeout(self, argv, *, timeout_seconds):
         command = tuple(argv)
@@ -574,7 +587,11 @@ class _FakeAzure:
                 "data": self.deployment,
             }
         if command[:4] == ("functionapp", "deployment", "source", "config-zip"):
-            return {"ok": True, "code": "AZURE_CLI_COMMAND_PASSED", "data": {}}
+            return {
+                "ok": True,
+                "code": "AZURE_CLI_COMMAND_PASSED",
+                "data": "Deployment was successful.",
+            }
         raise AssertionError(f"unexpected Azure command: {command}")
 
 
@@ -741,10 +758,12 @@ class _FakeBuild:
 
 
 class _FakeHttpReadiness:
-    def __init__(self) -> None:
+    def __init__(self, events: list[tuple] | None = None) -> None:
+        self.events = events if events is not None else []
         self.calls: list[tuple[str, int]] = []
 
     def wait_for_status(self, url, expected_status):
+        self.events.append(("http_status", url, expected_status))
         self.calls.append((url, expected_status))
 
 
@@ -1598,12 +1617,13 @@ class AzureBffCompositionTests(unittest.TestCase):
         config.write_text("{}\n")
         self.context = _context(self.repo_root, self.run_dir)
         self.approval = _FakeApproval()
-        self.azure = _FakeAzure()
+        self.events: list[tuple] = []
+        self.azure = _FakeAzure(self.events)
         self.graph = _FakeGraph()
         self.synthetic = _FakeSynthetic()
         self.m365 = _FakeM365(self.synthetic)
         self.build = _FakeBuild()
-        self.http_readiness = _FakeHttpReadiness()
+        self.http_readiness = _FakeHttpReadiness(self.events)
         self.port = AzureBffLiveExecutionPort(
             repo_root=self.repo_root,
             azure=self.azure,
@@ -2633,9 +2653,31 @@ class AzureBffCompositionTests(unittest.TestCase):
         build_call_count = len(self.build.calls)
         self.port.execute_step(STEPS[6], self.context)
         self.assertEqual(len(self.build.calls), build_call_count)
+        function_deploy = next(
+            call
+            for call in self.azure.bounded_calls
+            if call[0][:4]
+            == ("functionapp", "deployment", "source", "config-zip")
+        )
+        self.assertEqual(function_deploy[1], 1020)
+        self.assertEqual(
+            function_deploy[0][function_deploy[0].index("--timeout") + 1],
+            "900",
+        )
         self.assertEqual(
             self.http_readiness.calls,
             [("https://func-nac-bff-test-funktion8.azurewebsites.net/healthz", 200)],
+        )
+        self.assertEqual(
+            self.events,
+            [
+                ("azure_bound_complete", function_deploy[0]),
+                (
+                    "http_status",
+                    "https://func-nac-bff-test-funktion8.azurewebsites.net/healthz",
+                    200,
+                ),
+            ],
         )
 
         self.port._spfx_package_path.chmod(0o600)
@@ -2643,6 +2685,46 @@ class AzureBffCompositionTests(unittest.TestCase):
         with self.assertRaises(ActivationStepError) as raised:
             self.port.execute_step(STEPS[7], self.context)
         self.assertEqual(raised.exception.code, "PREPARED_ARTIFACT_HASH_MISMATCH")
+
+    def test_function_deploy_timeout_is_ambiguous_and_skips_health(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": False,
+            "code": "AZURE_CLI_TIMEOUT",
+            "data": None,
+        }
+        self.http_readiness.calls.clear()
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[6], self.context)
+
+        self.assertEqual(
+            raised.exception.code,
+            "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+        )
+        self.assertFalse(self.port._function_health_readback_passed)
+        self.assertEqual(self.http_readiness.calls, [])
+        self.assertIsNone(self.port._function_deployment_input_sha256)
+
+    def test_function_deploy_rejects_unexpected_success_shape(self) -> None:
+        self.assertEqual(self._prewrite()["status"], "PASSED")
+        self.azure.bound_result = {
+            "ok": True,
+            "code": "AZURE_CLI_COMMAND_PASSED",
+            "data": {},
+        }
+        self.http_readiness.calls.clear()
+
+        with self.assertRaises(ActivationStepError) as raised:
+            self.port.execute_step(STEPS[6], self.context)
+
+        self.assertEqual(
+            raised.exception.code,
+            "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+        )
+        self.assertFalse(self.port._function_health_readback_passed)
+        self.assertEqual(self.http_readiness.calls, [])
+        self.assertIsNone(self.port._function_deployment_input_sha256)
 
     def test_bicep_deploy_rejects_mutated_parameter_snapshot_before_write(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")

@@ -473,6 +473,19 @@ negative_tests:
       canonical_parameter_comparison_value_only: true
       canonical_parameter_hash_value_only: true
       failed_baseline_template_hash_owner_bound: true
+  - id: function_deployment_timeout_quarantine
+    arrange: Make the exact hash-bound Function config-zip invocation time out or return any shape other than the exact pinned CLI success string.
+    assert:
+      state: FAILED_PARTIAL
+      later_steps_run: false
+      stable_error_code: AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS
+      cli_success_payload_exact: Deployment was successful.
+      health_readback_calls_exact: 0
+      unresolved_target_lock_retained: true
+      cross_version_legacy_lock_namespace_held: true
+      legacy_host_lock_namespace_held: true
+      automatic_rollbacks_exact: 0
+      automatic_deletions_exact: 0
   - id: lock_journal_torn_release
     arrange: Tear the append of a RELEASED JSON-lines record once at each primary, legacy and legacy-host marker after committed state and receipt exist.
     assert:

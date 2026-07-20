@@ -245,6 +245,16 @@ Die zwölf Schritte bleiben in der Reihenfolge des Offline-Plans:
 11. `healthz` vor Auth prüfen, authentifizierte Allow-/Deny-/Manipulations-Readbacks ausführen, den erfassten synthetischen Assigned-Ausgangszustand deterministisch wiederherstellen, erneut authentifiziert lesen und erst danach `readyz` prüfen,
 12. read-only Konvergenz, Duplikatfreiheit, kausale Deployment-Input-Bindung, Ledger und Evidence abschließen; ein erneutes Abspielen der Provider-Writes wird nicht behauptet.
 
+Schritt 7 führt die Azure-CLI-Statusverfolgung mit einer expliziten inneren
+Frist von `900` Sekunden aus. Nur dieser artefaktgebundene Write erhält eine
+äußere Subprozessfrist von `1020` Sekunden; alle anderen Azure-Befehle behalten
+ihre bisherigen Grenzen. Erfolg setzt den erfolgreichen CLI-Abschluss für die
+versiegelten ZIP-Bytes und den anschließenden `healthz`-Readback voraus. Jeder
+weitere Timeout oder mehrdeutige Abschluss bleibt fail-closed und überspringt
+`healthz` sowie alle späteren Schritte.
+Dabei bleiben Ziel-, historischer und historischer Host-Lock als persistente
+Quarantäne erhalten.
+
 Microsoft-Graph-Zugriffe verwenden ausschließlich rohe REST-Aufrufe gegen
 `https://graph.microsoft.com/v1.0`. Graph beta, SDKs, PnP und alte
 SharePoint-APIs bleiben gesperrt. Azure Resource Manager und die bereits

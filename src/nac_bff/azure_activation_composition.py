@@ -95,7 +95,11 @@ from .azure_activation_attestations import (
     M365_CLI_EXECUTION_PATH,
     M365_NODE_EXECUTION_PATH,
 )
-from .azure_live_commands import AzureCliAdapter
+from .azure_live_commands import (
+    FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
+    FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
+    AzureCliAdapter,
+)
 from . import graph_activation as _graph_activation
 from .graph_activation import (
     ApiApplicationBinding,
@@ -161,6 +165,10 @@ _PREPARED_SPFX_BUILD_ROOT = _PREPARED_ROOT / "spfx-build"
 _PREPARED_SPFX_REPRO_BUILD_ROOT = _PREPARED_ROOT / "spfx-build-repro"
 _APPROVED_TREE_ROOT = _PREPARED_ROOT / "approved-tree"
 _FUNCTION_URL = f"https://{FUNCTION_APP}.azurewebsites.net"
+_FUNCTION_DEPLOYMENT_SUCCESS = "Deployment was successful."
+_FUNCTION_DEPLOYMENT_AMBIGUOUS_ERROR = (
+    "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
+)
 _BFF_URL = (
     f"{_FUNCTION_URL}/v1/workspaces/{WORKSPACE_ID}/matters/NAC-SYN-MATTER-001"
     "?purpose=view_synthetic_matter_workspace"
@@ -1966,7 +1974,7 @@ class AzureBffLiveExecutionPort:
             self._function_package_sha256,
             "FUNCTION_PACKAGE_NOT_PREPARED",
         )
-        self._azure_json_bound(
+        self._azure_function_deploy_bound(
             [
                 "functionapp",
                 "deployment",
@@ -1980,6 +1988,8 @@ class AzureBffLiveExecutionPort:
                 str(package),
                 "--build-remote",
                 "true",
+                "--timeout",
+                str(FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS),
             ],
             {
                 str(package): (
@@ -1987,6 +1997,7 @@ class AzureBffLiveExecutionPort:
                     str(self._function_package_sha256),
                 )
             },
+            timeout_seconds=FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
         )
         self._http_readiness.wait_for_status(f"{_FUNCTION_URL}/healthz", 200)
         self._function_deployment_input_sha256 = self._function_package_sha256
@@ -2515,6 +2526,33 @@ class AzureBffLiveExecutionPort:
                 str(result.get("code") or "AZURE_CLI_COMMAND_FAILED")
             )
         return data
+
+    def _azure_function_deploy_bound(
+        self,
+        argv: list[str],
+        bound_artifacts: Mapping[str, tuple[Path, str]],
+        *,
+        timeout_seconds: float,
+    ) -> None:
+        run_bound_with_timeout = getattr(
+            self._azure, "run_bound_with_timeout", None
+        )
+        if not callable(run_bound_with_timeout):
+            raise ActivationStepError(
+                _FUNCTION_DEPLOYMENT_AMBIGUOUS_ERROR
+            )
+        result = run_bound_with_timeout(
+            argv,
+            bound_artifacts,
+            timeout_seconds=timeout_seconds,
+        )
+        if (
+            result.get("ok") is not True
+            or result.get("data") != _FUNCTION_DEPLOYMENT_SUCCESS
+        ):
+            raise ActivationStepError(
+                _FUNCTION_DEPLOYMENT_AMBIGUOUS_ERROR
+            )
 
     def _m365_json(self, argv: tuple[str, ...]) -> Any:
         result = self._m365_run(argv)

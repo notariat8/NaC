@@ -224,7 +224,7 @@ SMART_DETECTION_PREWRITE_AST_SHA256 = (
     "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
-    "24ac4fc68d396ba39858e4494d281aa2c9b5e2c89ec95408300f2b9553032d17"
+    "6744d3273b552c19a04c6f2999f3b7f990d8b44e4df303747692f598b8af1b30"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
@@ -443,6 +443,7 @@ NEGATIVE_TEST_IDS = [
     "race", "secret_sentinel", "prepared_input_drift",
     "health_auth_ready_order", "synthetic_restoration_failure",
     "first_error_after_write", "arm_deployment_timeout_reconciliation",
+    "function_deployment_timeout_quarantine",
     "lock_journal_torn_release",
     "lock_recovery_retry_after_torn_release",
     "invalid_existing_lock_journal", "recovery_marker_completeness",
@@ -572,6 +573,18 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
             "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
         ]
     },
+    "function_deployment_timeout_quarantine": {
+        "state": "FAILED_PARTIAL",
+        "later_steps_run": False,
+        "stable_error_code": "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+        "cli_success_payload_exact": "Deployment was successful.",
+        "health_readback_calls_exact": 0,
+        "unresolved_target_lock_retained": True,
+        "cross_version_legacy_lock_namespace_held": True,
+        "legacy_host_lock_namespace_held": True,
+        "automatic_rollbacks_exact": 0,
+        "automatic_deletions_exact": 0,
+    },
     "toolchain_attestation_tamper": {
         "stable_error_codes": [
             "TOOLCHAIN_ATTESTATION_INVALID",
@@ -644,6 +657,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "RESUME_DISABLED_FOR_MVP", "reconcile_azure_bff_live_activation_lock",
         "FINALIZATION_LOCK_RECONCILED",
         "LEGACY_ACTIVATION_LOCK_HELD",
+        "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
         "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
         "preserve_quarantine", "legacy_target_binding_sha256",
         "_HOST_STATE_RELATIVE_PATH", "_LEGACY_HOST_LOCK_ROOT",
@@ -681,6 +695,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
         "_SMART_DETECTION_ACTION_GROUP_NAME",
         "_SMART_DETECTION_ARM_ROLE_RECEIVERS",
+        "_FUNCTION_DEPLOYMENT_SUCCESS",
+        "_FUNCTION_DEPLOYMENT_AMBIGUOUS_ERROR",
+        "_azure_function_deploy_bound",
         "AZURE_SMART_DETECTION_READBACK_FAILED",
         "build_owner_approval_payload",
         "canonical_owner_comment_body",
@@ -880,6 +897,8 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_bicep_timeout_rejects_foreign_template_hash_as_ambiguous",
         "test_bicep_timeout_rejects_malformed_template_hash_as_ambiguous",
         "test_bicep_timeout_maps_malformed_succeeded_outputs_to_ambiguous",
+        "test_function_deploy_timeout_is_ambiguous_and_skips_health",
+        "test_function_deploy_rejects_unexpected_success_shape",
         "test_bicep_timeout_maps_readback_adapter_exception_to_ambiguous",
         "test_prewrite_accepts_exact_failed_incremental_baseline_for_new_run",
         "test_prewrite_accepts_current_owner_bound_failed_baseline",
@@ -909,6 +928,7 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_old_host_lock_namespace_blocks_new_runner",
         "test_ambiguous_arm_state_retains_cross_version_quarantine",
         "test_default_host_state_root_is_persistent_user_state",
+        "test_ambiguous_function_state_retains_cross_version_quarantine",
         "test_persistent_lock_markers_are_released_after_verified_receipt",
         "test_released_marker_accepts_new_activation_and_held_blocks",
         "test_prewrite_failure_releases_markers_and_new_approval_hash_can_retry",
@@ -1254,6 +1274,21 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "azure_cli_account_assertion_state_exact": "Enabled",
                 "azure_cli_account_assertion_max_bytes": 16384,
                 "azure_cli_account_assertion_timeout_seconds": 30.0,
+                "azure_cli_function_deployment_cli_timeout_seconds_exact": 900,
+                "azure_cli_function_deployment_process_timeout_seconds_exact": 1020,
+                "azure_cli_function_deployment_timeout_relation": (
+                    "process_timeout_gt_cli_timeout"
+                ),
+                "azure_cli_function_deployment_timeout_behavior": (
+                    "fail_closed_without_health_or_later_steps"
+                ),
+                "azure_cli_function_deployment_success_payload_exact": (
+                    "Deployment was successful."
+                ),
+                "azure_cli_function_deployment_ambiguous_error_exact": (
+                    "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
+                ),
+                "azure_cli_function_deployment_ambiguous_quarantine_retained": True,
                 "azure_cli_account_assertion_duplicate_keys_allowed": False,
                 "azure_cli_account_assertion_stdout_evidence_allowed": False,
                 "azure_cli_account_assertion_stderr_mode": "discard_to_devnull",
@@ -1343,6 +1378,42 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 errors.append(
                     "domain sealed toolchain runtime binding differs"
                 )
+
+    function_deploy_step = next(
+        (
+            item for item in domain.get("steps", [])
+            if isinstance(item, dict)
+            and item.get("id") == "deploy_function_package"
+        ),
+        {},
+    )
+    if (
+        function_deploy_step.get("deployment_cli_timeout_seconds_exact") != 900
+        or function_deploy_step.get("provider_process_timeout_seconds_exact")
+        != 1020
+        or function_deploy_step.get("timeout_behavior")
+        != "fail_closed_without_health_or_later_steps"
+        or function_deploy_step.get("cli_success_payload_exact")
+        != "Deployment was successful."
+        or function_deploy_step.get("ambiguous_error_exact")
+        != "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
+        or function_deploy_step.get("ambiguous_target_lock_retained") is not True
+        or function_deploy_step.get(
+            "ambiguous_cross_version_legacy_lock_namespace_held"
+        )
+        is not True
+        or function_deploy_step.get("ambiguous_legacy_host_lock_namespace_held")
+        is not True
+        or domain.get("failure_behavior", {}).get("first_error_after_any_write")
+        != (
+            "append_FAILED_event_set_FAILED_PARTIAL_mark_lock_RELEASED_and_stop_"
+            "except_when_finalization_integrity_cannot_be_proved_or_ARM_or_"
+            "Function_deployment_state_is_ambiguous"
+        )
+        or function_deploy_step.get("health_readback_may_reconcile_timeout")
+        is not False
+    ):
+        errors.append("domain Step 7 deployment timeout boundary differs")
 
     access_step = next(
         (

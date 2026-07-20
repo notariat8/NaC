@@ -109,6 +109,13 @@ _STEP_11_ACCESS_SIGNAL_KEYS = (
 )
 _STEP_11_SIGNAL_KEYS = _STEP_11_ACCESS_SIGNAL_KEYS + _STEP_11_SUMMARY_SIGNAL_KEYS
 
+_QUARANTINED_AMBIGUOUS_CODES = frozenset(
+    {
+        "AZURE_DEPLOYMENT_STATE_AMBIGUOUS",
+        "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+    }
+)
+
 
 class ActivationExecutionPort(Protocol):
     def verify_prewrite(
@@ -2298,7 +2305,7 @@ def _fail_partial(
         outcome={"stable_error_code": safe_code}, now=now
     )
     _atomic_json_write(state_path, state)
-    preserve_quarantine = safe_code == "AZURE_DEPLOYMENT_STATE_AMBIGUOUS"
+    preserve_quarantine = safe_code in _QUARANTINED_AMBIGUOUS_CODES
     if not preserve_quarantine:
         _record_lock_release(ledger_dir, state, state_path, now)
     if not _terminal_chain_is_valid(state, ledger_dir):
