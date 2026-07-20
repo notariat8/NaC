@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -21,6 +22,9 @@ from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     load_business_case_type_live_foundation,
     run_business_case_type_live_foundation,
     validate_business_case_type_live_foundation,
+    _SafetyStop,
+    _get_collection,
+    _validate_provisioner_source_contract,
 )
 
 
@@ -99,15 +103,22 @@ class FakeFoundationGraph:
                     "name": "Title",
                     "displayName": "Title",
                     "required": False,
+                    "hidden": False,
+                    "readOnly": False,
                     "text": {},
                 },
-                *copy.deepcopy(payload["columns"]),
+                *(
+                    {**copy.deepcopy(column), "hidden": False, "readOnly": False}
+                    for column in payload["columns"]
+                ),
             ]
             self.items[self.registry_id] = []
             return {"id": self.registry_id}
         akten_id = urllib.parse.quote(target["akten_list_id"], safe="")
         if path == f"{prefix}/lists/{akten_id}/columns":
-            self.columns[target["akten_list_id"]].append(copy.deepcopy(payload))
+            self.columns[target["akten_list_id"]].append(
+                {**copy.deepcopy(payload), "hidden": False, "readOnly": False}
+            )
             return {"id": "akten-vorgangstyp-id"}
         registry_id = urllib.parse.quote(self.registry_id, safe="")
         if path == f"{prefix}/lists/{registry_id}/items":
@@ -147,6 +158,9 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertEqual(self.plan["summary"]["canonical_registry_row_count"], 20)
         self.assertEqual(self.plan["summary"]["alias_registry_row_count"], 0)
         self.assertEqual(len(self.plan["binding"]["graph_sha256"]), 64)
+        self.assertEqual(
+            len(self.plan["binding"]["provisioner_source_contract_sha256"]), 64
+        )
         self.assertEqual(self.manifest["registry"]["catalog_version"], CATALOG_VERSION)
         self.assertEqual(self.manifest["graph"]["application_permission"], "Sites.FullControl.All")
         self.assertEqual(
@@ -170,6 +184,34 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertNotIn("migrate", rendered.lower())
         self.assertNotIn("Vorgangstyp/columns", rendered)
 
+    def test_provisioner_source_contract_drift_is_rejected(self) -> None:
+        graph = copy.deepcopy(self.manifest["graph"])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / graph["provisioner_binding"]["source_contract"]
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        "permission_boundary": {
+                            "provisioner_site_permission_administration": {
+                                "provisioner_display_name_exact": "NaC M365 Provisioning",
+                                "required_application_permission_exact": "Sites.Manage.All",
+                            },
+                            "provisioner_graph_application_roles_exact": [
+                                "Sites.Manage.All"
+                            ],
+                            "provisioner_additional_graph_roles_allowed": False,
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            errors = _validate_provisioner_source_contract(root, graph)
+        self.assertEqual(
+            errors, ["provisioner source contract permission boundary drift"]
+        )
+
     def test_wrong_workspace_stops_before_graph_call(self) -> None:
         client = FakeFoundationGraph(self.manifest)
         result = run_business_case_type_live_foundation(
@@ -191,6 +233,24 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["error_code"], "OWNER_GATE_CLOSED")
         self.assertEqual(client.calls, [])
+
+    def test_whitespace_approval_fields_stop_before_graph_call(self) -> None:
+        for field in ("approval_reference", "reason"):
+            with self.subTest(field=field):
+                client = FakeFoundationGraph(self.manifest)
+                result = run_business_case_type_live_foundation(
+                    client,
+                    REPO_ROOT,
+                    owner_request(self.plan["plan_sha256"], **{field: "  \t  "}),
+                )
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertIn(
+                    "APPROVAL_REFERENCE_MISSING"
+                    if field == "approval_reference"
+                    else "REASON_MISSING",
+                    result["error_code"],
+                )
+                self.assertEqual(client.calls, [])
 
     def test_legacy_schema_drift_stops_before_write(self) -> None:
         client = FakeFoundationGraph(self.manifest)
@@ -234,6 +294,64 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertNotIn("Bearer", evidence)
         self.assertEqual(first["summary"]["delete_count"], 0)
         self.assertEqual(first["summary"]["rollback_count"], 0)
+
+    def test_extra_mutable_registry_column_stops_before_write(self) -> None:
+        client = FakeFoundationGraph(self.manifest)
+        request = owner_request(self.plan["plan_sha256"])
+        self.assertEqual(
+            run_business_case_type_live_foundation(client, REPO_ROOT, request)["status"],
+            "PASSED",
+        )
+        client.columns[client.registry_id].append(
+            {
+                "name": "UnexpectedCustom",
+                "displayName": "UnexpectedCustom",
+                "required": False,
+                "hidden": False,
+                "readOnly": False,
+                "text": {"allowMultipleLines": False, "maxLength": 64},
+            }
+        )
+        post_count = client.post_count
+        result = run_business_case_type_live_foundation(client, REPO_ROOT, request)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["error_code"], "REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
+        self.assertEqual(client.post_count, post_count)
+
+    def test_hidden_registry_column_stops_before_write(self) -> None:
+        client = FakeFoundationGraph(self.manifest)
+        request = owner_request(self.plan["plan_sha256"])
+        self.assertEqual(
+            run_business_case_type_live_foundation(client, REPO_ROOT, request)["status"],
+            "PASSED",
+        )
+        column = next(
+            item
+            for item in client.columns[client.registry_id]
+            if item["name"] == "BusinessCaseTypeId"
+        )
+        column["hidden"] = True
+        post_count = client.post_count
+        result = run_business_case_type_live_foundation(client, REPO_ROOT, request)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["error_code"], "REGISTRY_COLUMN_SCHEMA_DRIFT")
+        self.assertEqual(client.post_count, post_count)
+
+    def test_paging_rejects_query_changes_duplicates_and_fragments(self) -> None:
+        path = "/sites/site/lists?$select=id&$top=1"
+        next_links = (
+            "https://graph.microsoft.com/v1.0/sites/site/lists?$select=displayName&$top=1&$skiptoken=x",
+            "https://graph.microsoft.com/v1.0/sites/site/lists?$select=id&$select=displayName&$top=1&$skiptoken=x",
+            "https://graph.microsoft.com/v1.0/sites/site/lists?$select=id&$top=1&$skiptoken=x#fragment",
+        )
+        for next_link in next_links:
+            with self.subTest(next_link=next_link):
+                class PagingClient:
+                    def get(self, _path: str) -> dict:
+                        return {"value": [], "@odata.nextLink": next_link}
+
+                with self.assertRaisesRegex(_SafetyStop, "GRAPH_PAGING_INVALID"):
+                    _get_collection(PagingClient(), path, {"reads": 0})
 
     def test_existing_registry_row_drift_stops_before_write(self) -> None:
         client = FakeFoundationGraph(self.manifest)

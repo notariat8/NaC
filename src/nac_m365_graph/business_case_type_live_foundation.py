@@ -16,6 +16,9 @@ FOUNDATION_PATH = Path(
     "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json"
 )
 SOURCE_SCHEMA_PATH = Path("deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json")
+SOURCE_PROVISIONER_CONTRACT_PATH = Path(
+    "workflows/contracts/m365-azure-bff-live-activation.contract.json"
+)
 CATALOG_VERSION = "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
 WORKSPACE_ID = "notary_team_01"
 REGISTRY_NAME = "Vorgangsartenregister"
@@ -145,6 +148,7 @@ def validate_business_case_type_live_foundation(
         },
     }:
         errors.append("foundation Graph REST v1.0 additive boundary mismatch")
+    errors.extend(_validate_provisioner_source_contract(repo_root, graph))
 
     schema = _object(manifest.get("schema"))
     registry_list = _object(schema.get("registry_list"))
@@ -258,6 +262,9 @@ def build_business_case_type_live_foundation_plan(
         "schema_sha256": _sha256_json(manifest["schema"]),
         "registry_sha256": _sha256_json(registry),
         "graph_sha256": _sha256_json(manifest["graph"]),
+        "provisioner_source_contract_sha256": _sha256_file(
+            repo_root / SOURCE_PROVISIONER_CONTRACT_PATH
+        ),
         "catalog_version": CATALOG_VERSION,
     }
     plan_core = {
@@ -314,9 +321,11 @@ def build_business_case_type_live_foundation_apply_boundary(
         reasons.append("OWNER_GATE_CLOSED")
     if request.execute_live_foundation is not True:
         reasons.append("EXECUTION_GATE_CLOSED")
-    if not request.approval_reference:
+    approval_reference = request.approval_reference.strip()
+    reason = request.reason.strip()
+    if not approval_reference:
         reasons.append("APPROVAL_REFERENCE_MISSING")
-    if not request.reason:
+    if not reason:
         reasons.append("REASON_MISSING")
     ready = not reasons
     return {
@@ -324,8 +333,8 @@ def build_business_case_type_live_foundation_apply_boundary(
         "status": "READY_FOR_INJECTED_RUNNER" if ready else "BLOCKED",
         "error_codes": reasons,
         "plan_sha256": plan.get("plan_sha256", ""),
-        "approval_reference_sha256": _sha256_text(request.approval_reference),
-        "reason_sha256": _sha256_text(request.reason),
+        "approval_reference_sha256": _sha256_text(approval_reference),
+        "reason_sha256": _sha256_text(reason),
         "summary": {
             "owner_gate_satisfied": ready,
             "workspace_id_exact": request.workspace_id == WORKSPACE_ID,
@@ -468,7 +477,11 @@ def _inspect_foundation_state(
     akten_id = _segment(target["akten_list_id"])
     akten_columns = _get_collection(
         client,
-        f"/sites/{site_segment}/lists/{akten_id}/columns?$top=200",
+        (
+            f"/sites/{site_segment}/lists/{akten_id}/columns?"
+            "$select=name,displayName,required,indexed,enforceUniqueValues,hidden,readOnly,"
+            "text,choice,boolean&$top=200"
+        ),
         metrics,
     )
     legacy_matches = [item for item in akten_columns if item.get("name") == LEGACY_COLUMN_NAME]
@@ -492,12 +505,31 @@ def _inspect_foundation_state(
     registry_segment = _segment(registry_id)
     registry_columns = _get_collection(
         client,
-        f"/sites/{site_segment}/lists/{registry_segment}/columns?$top=200",
+        (
+            f"/sites/{site_segment}/lists/{registry_segment}/columns?"
+            "$select=name,displayName,required,indexed,enforceUniqueValues,hidden,readOnly,"
+            "text,choice,boolean&$top=200"
+        ),
         metrics,
     )
     title_matches = [item for item in registry_columns if item.get("name") == "Title"]
-    if len(title_matches) != 1 or not isinstance(title_matches[0].get("text"), dict):
+    if (
+        len(title_matches) != 1
+        or not isinstance(title_matches[0].get("text"), dict)
+        or title_matches[0].get("hidden") is not False
+        or title_matches[0].get("readOnly") is not False
+    ):
         raise _SafetyStop("REGISTRY_TITLE_SCHEMA_DRIFT")
+    expected_custom_names = {
+        item["name"] for item in manifest["schema"]["registry_list"]["columns"]
+    }
+    actual_mutable_names = {
+        item.get("name")
+        for item in registry_columns
+        if item.get("name") != "Title" and item.get("readOnly") is False
+    }
+    if actual_mutable_names != expected_custom_names:
+        raise _SafetyStop("REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
     for expected in manifest["schema"]["registry_list"]["columns"]:
         matches = [
             item for item in registry_columns if item.get("name") == expected["name"]
@@ -552,7 +584,9 @@ def _get_collection(
 ) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     current = path
-    collection_path = urllib.parse.urlsplit(path).path
+    initial = urllib.parse.urlsplit(path)
+    collection_path = initial.path
+    original_query = _unique_query(initial.query)
     visited: set[str] = set()
     for _page in range(MAX_COLLECTION_PAGES):
         if current in visited:
@@ -569,10 +603,24 @@ def _get_collection(
         if not isinstance(next_link, str):
             raise _SafetyStop("GRAPH_PAGING_INVALID")
         parsed = urllib.parse.urlsplit(next_link)
-        if parsed.scheme != "https" or parsed.netloc != "graph.microsoft.com":
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "graph.microsoft.com"
+            or parsed.fragment
+        ):
             raise _SafetyStop("GRAPH_PAGING_INVALID")
         prefix = "/v1.0"
         if not parsed.path.startswith(prefix) or parsed.path[len(prefix) :] != collection_path:
+            raise _SafetyStop("GRAPH_PAGING_INVALID")
+        next_query = _unique_query(parsed.query)
+        paging_keys = {"$skiptoken", "$skip"}
+        present_paging_keys = set(next_query) & paging_keys
+        if (
+            any(next_query.get(key) != value for key, value in original_query.items())
+            or set(next_query) - set(original_query) - paging_keys
+            or len(present_paging_keys) != 1
+            or not next_query.get(next(iter(present_paging_keys)), "")
+        ):
             raise _SafetyStop("GRAPH_PAGING_INVALID")
         current = parsed.path[len(prefix) :] + (f"?{parsed.query}" if parsed.query else "")
     raise _SafetyStop("GRAPH_PAGING_LIMIT")
@@ -591,6 +639,8 @@ def _post(
 
 
 def _column_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    if actual.get("hidden") is not False or actual.get("readOnly") is not False:
+        return False
     for key in ("name", "displayName", "required", "indexed", "enforceUniqueValues"):
         expected_value = expected.get(key, False if key in {"indexed", "enforceUniqueValues"} else None)
         actual_value = actual.get(key, False if key in {"indexed", "enforceUniqueValues"} else None)
@@ -642,6 +692,50 @@ def _validate_legacy_source(repo_root: Path, expected: dict[str, Any]) -> list[s
     ):
         errors.append("legacy Akten.Vorgangstyp source shape drift")
     return errors
+
+
+def _validate_provisioner_source_contract(
+    repo_root: Path, graph: dict[str, Any]
+) -> list[str]:
+    binding = _object(graph.get("provisioner_binding"))
+    if binding.get("source_contract") != SOURCE_PROVISIONER_CONTRACT_PATH.as_posix():
+        return ["provisioner source contract path mismatch"]
+    try:
+        contract = json.loads(
+            (repo_root / SOURCE_PROVISIONER_CONTRACT_PATH).read_text(encoding="utf-8")
+        )
+        permission_boundary = _object(contract.get("permission_boundary"))
+        provisioner = _object(
+            permission_boundary.get("provisioner_site_permission_administration")
+        )
+        roles = permission_boundary.get("provisioner_graph_application_roles_exact")
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return ["provisioner source contract is unavailable or invalid"]
+    if (
+        provisioner.get("provisioner_display_name_exact") != "NaC M365 Provisioning"
+        or provisioner.get("required_application_permission_exact")
+        != "Sites.FullControl.All"
+        or not isinstance(roles, list)
+        or "Sites.FullControl.All" not in roles
+        or permission_boundary.get("provisioner_additional_graph_roles_allowed") is not False
+    ):
+        return ["provisioner source contract permission boundary drift"]
+    return []
+
+
+def _unique_query(query: str) -> dict[str, str]:
+    try:
+        pairs = urllib.parse.parse_qsl(
+            query, keep_blank_values=True, strict_parsing=True
+        )
+    except ValueError as exc:
+        raise _SafetyStop("GRAPH_PAGING_INVALID") from exc
+    result: dict[str, str] = {}
+    for key, value in pairs:
+        if not key or key in result:
+            raise _SafetyStop("GRAPH_PAGING_INVALID")
+        result[key] = value
+    return result
 
 
 def _validate_registry_rows_against_repo(
@@ -779,3 +873,7 @@ def _sha256_json(value: object) -> str:
 
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
