@@ -124,6 +124,31 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(loadWorkspace).not.toHaveBeenCalled();
   });
 
+  it('hides ready matter data synchronously when rerendered for an unapproved workspace', async () => {
+    const loadWorkspace = jest.fn().mockResolvedValue(workspace);
+    await renderAndFlush(loadWorkspace);
+    expect(root.textContent).toContain(workspace.matter.displayName);
+
+    await act(async () => {
+      ReactDom.render(
+        <NacBpmnViewer
+          workspaceId="another_workspace"
+          userDisplayName="Test User"
+          hostName="Microsoft Teams"
+          isDarkTheme={false}
+          loadWorkspace={loadWorkspace}
+        />,
+        root
+      );
+    });
+
+    expect(root.textContent).toContain('Kein Zugriff auf diesen Vorgang.');
+    expect(root.textContent).not.toContain(workspace.matter.displayName);
+    expect(root.textContent).not.toContain(workspace.matter.tasks[0].title);
+    expect(root.textContent).not.toContain('31.08.2026');
+    expect(loadWorkspace).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ['network error', new TypeError('network detail')],
     ['404', new Error('NAC_BFF_UNAVAILABLE')],

@@ -28,9 +28,10 @@ type ViewerState =
 export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const [state, setState] = React.useState<ViewerState>({ kind: 'loading' });
+  const isApprovedWorkspace = props.workspaceId === NAC_BFF_WORKSPACE_ID;
 
   React.useEffect(() => {
-    if (props.workspaceId !== NAC_BFF_WORKSPACE_ID) {
+    if (!isApprovedWorkspace) {
       setState({ kind: 'accessDenied' });
       return undefined;
     }
@@ -64,9 +65,9 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [props.loadWorkspace, props.workspaceId]);
+  }, [isApprovedWorkspace, props.loadWorkspace]);
 
-  const workspace = state.kind === 'ready' ? state.workspace : null;
+  const workspace = isApprovedWorkspace && state.kind === 'ready' ? state.workspace : null;
   const bpmnXml = workspace?.matter.bpmn.xml;
 
   React.useEffect(() => {
@@ -102,6 +103,9 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     };
   }, [bpmnXml, workspace]);
 
+  if (!isApprovedWorkspace) {
+    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." />;
+  }
   if (state.kind === 'loading') {
     return <ViewerMessage message="Vorgangsdaten werden geladen." />;
   }
