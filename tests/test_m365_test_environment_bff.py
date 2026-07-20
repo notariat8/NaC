@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,7 @@ from nac_bff.bpmn_asset import (  # noqa: E402
     CANONICAL_BPMN_SHA256,
     CanonicalBpmnAssetFilePort,
 )
+from nac_bff import test_environment as bff_contract  # noqa: E402
 from nac_bff.test_environment import (  # noqa: E402
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -232,6 +234,62 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(access.calls[0]["actor_id"], "synthetic-assigned-user")
         self.assertEqual(graph.calls, [{"workspace_id": ALLOWED_WORKSPACE_ID, "matter_id": ALLOWED_MATTER_ID}])
         self.assertEqual(self.last_bpmn_port.calls, 1)
+
+    def test_task_step_not_present_in_canonical_bpmn_fails_closed(self) -> None:
+        projection = _projection()
+        projection["tasks"][0]["stepCode"] = "Task_DoesNotExist"
+        patched_tasks = [dict(task) for task in TASKS]
+        patched_tasks[0]["step_code"] = "Task_DoesNotExist"
+        bff, _, _ = self._bff(projection=projection)
+
+        with patch.object(bff_contract, "TASKS", tuple(patched_tasks)):
+            response = bff.get_workspace(
+                claims=self.claims,
+                workspace_id=ALLOWED_WORKSPACE_ID,
+                matter_id=ALLOWED_MATTER_ID,
+                purpose=ALLOWED_PURPOSE,
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.body,
+            {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}},
+        )
+
+    def test_task_bpmn_kg_reference_mismatch_fails_closed(self) -> None:
+        bff, _, _ = self._bff(projection=_projection())
+
+        with patch.object(bff_contract, "BUSINESS_CASE_TYPE_ID", "other"):
+            response = bff.get_workspace(
+                claims=self.claims,
+                workspace_id=ALLOWED_WORKSPACE_ID,
+                matter_id=ALLOWED_MATTER_ID,
+                purpose=ALLOWED_PURPOSE,
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.body,
+            {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}},
+        )
+
+    def test_numeric_boolean_projection_fails_closed(self) -> None:
+        projection = _projection()
+        projection["tasks"][0]["requiresNotaryApproval"] = 1
+        bff, _, _ = self._bff(projection=projection)
+
+        response = bff.get_workspace(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.body,
+            {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}},
+        )
 
     def test_canonical_policy_allows_assignment_and_valid_deputy_but_denies_unassigned(self) -> None:
         assigned, assigned_graph = self._policy_response("nac-synthetic-assigned")

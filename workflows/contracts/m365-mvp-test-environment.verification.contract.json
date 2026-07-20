@@ -20,6 +20,23 @@
     "AC-620-06",
     "AC-620-07"
   ],
+  "hardening_issues": [
+    "https://github.com/notariat8/NaC/issues/681"
+  ],
+  "hardening_acceptance_criteria": [
+    {
+      "id": "AC-681-01",
+      "requirement": "The synthetic fixture contains no embedded BPMN and binds only to the canonical repository BPMN source, process, profile and SHA-256."
+    },
+    {
+      "id": "AC-681-02",
+      "requirement": "Every synthetic task resolves exactly once to a canonical BPMN task whose nac:kgRef matches the canonical BusinessCaseType and knowledge graph binding."
+    },
+    {
+      "id": "AC-681-03",
+      "requirement": "This hardening remains offline-only and performs no tenant writes, permission changes or credential changes."
+    }
+  ],
   "target_boundary": {
     "workspace_id_exact": "notary_team_01",
     "synthetic_matter_id_exact": "NAC-SYN-MATTER-001",
@@ -63,8 +80,16 @@
   "synthetic_fixture": {
     "bpmn_standard_exact": "BPMN 2.0",
     "bpmn_hash_binding_required": true,
+    "canonical_bpmn_source_path_exact": "bpmn/immobilienkaufvertrag.bpmn",
+    "canonical_bpmn_process_id_exact": "Process_immobilienkaufvertrag",
+    "canonical_bpmn_sha256_exact": "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0",
+    "embedded_bpmn_allowed": false,
+    "knowledge_graph_source_path_exact": "usecases/immobilienkaufvertrag/knowledge-graph.graph.json",
+    "knowledge_graph_schema_version_exact": "nac.knowledge-graph/v0.1",
+    "knowledge_graph_sha256_exact": "3bd379066a3c9656046e930efca8d3c7690cdcbe5a7279f7aec12109e777e019",
     "task_count_exact": 2,
     "bpmn_step_link_required_for_each_task": true,
+    "task_bpmn_element_membership_required": true,
     "minimum_explicit_due_dates": 1,
     "due_date_format_exact": "ISO-8601 UTC",
     "role_scenarios_exact": [

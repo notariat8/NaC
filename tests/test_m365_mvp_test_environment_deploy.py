@@ -12,12 +12,14 @@ from unittest.mock import patch
 from nac_mvp_test_environment import (
     BPMN_PROCESS_KEY,
     BPMN_SHA256,
-    BPMN_XML,
+    BPMN_SOURCE_PATH,
     DEADLINE,
+    KG_SCHEMA_VERSION,
     MATTER_ID,
     MATTER_STATUS,
     TASKS,
     WORKSPACE_ID,
+    WORKFLOW_VERSION,
 )
 
 from nac_m365_graph import mvp_test_environment_smoke as smoke_contract
@@ -296,11 +298,13 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 "business_case_type_id": "immobilienkaufvertrag",
                 "status": MATTER_STATUS,
                 "deadline": DEADLINE,
+                "workflow_version": WORKFLOW_VERSION,
+                "kg_version": KG_SCHEMA_VERSION,
             },
         )
         self.assertEqual(workspace["tasks"], [dict(task) for task in TASKS])
         self.assertEqual(fixture["model"]["process_key"], BPMN_PROCESS_KEY)
-        self.assertEqual(fixture["model"]["content"], BPMN_XML)
+        self.assertEqual(fixture["model"]["source_path"], BPMN_SOURCE_PATH)
         self.assertEqual(fixture["model"]["content_sha256"], BPMN_SHA256)
 
         self.assertEqual(smoke_contract.SYNTHETIC_CASE_ID, MATTER_ID)
@@ -326,6 +330,8 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             Path(__file__).resolve().parents[1] / "bpmn/immobilienkaufvertrag.bpmn"
         ).read_bytes()
         self.assertEqual(hashlib.sha256(canonical_bpmn).hexdigest(), CANONICAL_BPMN_SHA256)
+        self.assertEqual(BPMN_PROCESS_KEY, CANONICAL_BPMN_MODEL_KEY)
+        self.assertEqual(BPMN_SHA256, CANONICAL_BPMN_SHA256)
         bff_client = (
             spfx_root / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
         ).read_text(encoding="utf-8")
@@ -339,7 +345,7 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             "https://func-nac-bff-test-funktion8.azurewebsites.net",
         ):
             self.assertIn(value, bff_client)
-        self.assertNotIn(BPMN_XML, bff_client)
+        self.assertNotIn("NAC_SYN_MATTER_001", bff_client)
 
     def test_writer_creates_redacted_json_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -11,8 +11,10 @@ from nac_bff.azure_activation import LIST_IDS, MATTER_ID, SITE_ID, WORKSPACE_ID
 from nac_mvp_test_environment import (
     BUSINESS_CASE_TYPE_ID,
     DEADLINE,
+    KG_SCHEMA_VERSION,
     MATTER_STATUS,
     TASKS,
+    WORKFLOW_VERSION,
 )
 
 
@@ -364,8 +366,8 @@ def _targets(actor: str) -> tuple[_Target, ...]:
         "Status": MATTER_STATUS,
         "NotarTeam": SYNTHETIC_NOTARY_TEAM,
         "Vertraulichkeitsstufe": "Normal",
-        "NacWorkflowVersion": "mvp-test-environment-v0.1",
-        "KgVersion": "synthetic-kg-v0.1",
+        "NacWorkflowVersion": WORKFLOW_VERSION,
+        "KgVersion": KG_SCHEMA_VERSION,
         "FristNaechsteAktion": DEADLINE,
         **_matter_access_fields("assigned", actor),
     }

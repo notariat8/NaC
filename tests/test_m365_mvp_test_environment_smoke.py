@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import tempfile
@@ -8,9 +9,12 @@ import unittest
 import urllib.parse
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
+from nac_m365_graph import mvp_test_environment_smoke as smoke_contract
 from nac_m365_graph.mcp_runtime import DEFAULT_MCP_CONTRACT, load_mcp_contract
 from nac_m365_graph.mvp_test_environment_smoke import (
+    DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE,
     EXPECTED_WORKSPACE_ID,
     SYNTHETIC_CASE_ID,
     SYNTHETIC_DEADLINE_DUE_DATE,
@@ -98,6 +102,7 @@ class MvpTestEnvironmentSmokeTests(unittest.TestCase):
         owner_approved: bool = True,
         state: dict[str, Any] | None = None,
         contract: dict[str, Any] | None = None,
+        fixture_path: Path | None = None,
     ) -> dict[str, Any]:
         return run_mvp_test_environment_smoke(
             client,
@@ -108,6 +113,7 @@ class MvpTestEnvironmentSmokeTests(unittest.TestCase):
             owner_approved=owner_approved,
             correlation_id="raw-correlation-id",
             timestamp="2026-07-13T12:00:00Z",
+            fixture_path=fixture_path or DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE,
         )
 
     def test_success_writes_reads_roles_fixture_and_cleans_exact_items(self) -> None:
@@ -122,6 +128,8 @@ class MvpTestEnvironmentSmokeTests(unittest.TestCase):
         self.assertEqual([check["actual"] for check in result["roleChecks"]], ["ALLOW", "ALLOW", "DENY"])
         self.assertTrue(result["bpmnFixture"]["verified"])
         self.assertTrue(result["bpmnFixture"]["packageBound"])
+        self.assertFalse(result["bpmnFixture"]["embeddedModelStored"])
+        self.assertEqual(result["bpmnFixture"]["taskBindingCount"], 2)
         self.assertTrue(result["summary"]["canonicalInputBindingVerified"])
         self.assertTrue(all(result["inputBinding"].values()))
         self.assertEqual(len(client.posts), 3)
@@ -141,6 +149,122 @@ class MvpTestEnvironmentSmokeTests(unittest.TestCase):
             "fields",
         ):
             self.assertNotIn(raw_value, serialized)
+
+    def test_embedded_bpmn_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["model"]["content"] = "<bpmn:definitions/>"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_FIXTURE_INVALID")
+        self.assertEqual(client.posts, [])
+
+    def test_hidden_workspace_extension_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["workspace"]["embedded_bpmn"] = "<bpmn:definitions/>"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_FIXTURE_INVALID")
+        self.assertEqual(client.posts, [])
+
+    def test_duplicate_json_key_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        raw_fixture = DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8")
+        raw_fixture = raw_fixture.replace(
+            '  "model": {',
+            '  "model": {"content": "<bpmn:definitions/>"},\n  "model": {',
+            1,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(raw_fixture, encoding="utf-8")
+            result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_FIXTURE_INVALID")
+        self.assertEqual(client.posts, [])
+
+    def test_numeric_boolean_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["workspace"]["tasks"][0]["requires_notary_approval"] = 1
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_FIXTURE_INVALID")
+        self.assertEqual(client.posts, [])
+
+    def test_noncanonical_bpmn_source_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["model"]["source_path"] = "bpmn/other.bpmn"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_FIXTURE_INVALID")
+        self.assertEqual(client.posts, [])
+
+    def test_task_step_must_resolve_to_exact_canonical_bpmn_task(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["workspace"]["tasks"][0]["step_code"] = "Task_DoesNotExist"
+        patched_tasks = tuple(fixture["workspace"]["tasks"])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            with patch.object(smoke_contract, "TASKS", patched_tasks):
+                result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_TASK_BINDING_MISMATCH")
+        self.assertEqual(client.posts, [])
+
+    def test_task_bpmn_kg_reference_must_match_business_case_type(self) -> None:
+        client = FakeGraphClient()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        fixture["workspace"]["matter"]["business_case_type_id"] = "other"
+        fixture["model"]["model_id"] = "other"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "fixture.json"
+            path.write_text(json.dumps(fixture), encoding="utf-8")
+            with patch.object(smoke_contract, "BUSINESS_CASE_TYPE_ID", "other"):
+                result = self.run_smoke(client, fixture_path=path)
+
+        self.assertEqual(result["error"]["code"], "BPMN_TASK_BINDING_MISMATCH")
+        self.assertEqual(client.posts, [])
+
+    def test_duplicate_knowledge_graph_key_is_rejected_before_graph_calls(self) -> None:
+        client = FakeGraphClient()
+        raw_kg = (
+            '{"schema_version":"nac.knowledge-graph/v0.1",'
+            '"graph_id":"wrong","graph_id":"usecase.immobilienkaufvertrag"}'
+        )
+        kg_hash = hashlib.sha256(raw_kg.encode("utf-8")).hexdigest()
+        fixture = json.loads(DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            kg_path = Path(tmpdir) / "duplicate-kg.json"
+            kg_path.write_text(raw_kg, encoding="utf-8")
+            fixture["knowledge_graph"]["source_path"] = str(kg_path)
+            fixture["knowledge_graph"]["content_sha256"] = kg_hash
+            fixture_path = Path(tmpdir) / "fixture.json"
+            fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+            with (
+                patch.object(smoke_contract, "KG_SOURCE_PATH", str(kg_path)),
+                patch.object(smoke_contract, "KG_SHA256", kg_hash),
+            ):
+                result = self.run_smoke(client, fixture_path=fixture_path)
+
+        self.assertEqual(result["error"]["code"], "KG_SOURCE_BINDING_MISMATCH")
+        self.assertEqual(client.posts, [])
 
     def test_owner_deny_fails_before_graph_calls(self) -> None:
         client = FakeGraphClient()

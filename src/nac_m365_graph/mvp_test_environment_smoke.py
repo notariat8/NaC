@@ -9,6 +9,24 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
+from nac_bff.bpmn_asset import BpmnAssetError, CanonicalBpmnAssetFilePort
+from nac_mvp_test_environment import (
+    BPMN_PROCESS_KEY,
+    BPMN_PROFILE_VERSION,
+    BPMN_SHA256,
+    BPMN_SOURCE_PATH,
+    BUSINESS_CASE_TYPE_ID,
+    DEADLINE,
+    KG_GRAPH_ID,
+    KG_SCHEMA_VERSION,
+    KG_SHA256,
+    KG_SOURCE_PATH,
+    MATTER_ID,
+    MATTER_STATUS,
+    TASKS,
+    WORKFLOW_VERSION,
+)
+
 from .mcp_runtime import DEFAULT_MCP_CONTRACT, RuntimeContext, load_mcp_contract, plan_tool_request
 from .mvp_test_environment_binding import (
     MvpTestEnvironmentBindingError,
@@ -19,9 +37,9 @@ from .privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_WORKSPACE_ID = "notary_team_01"
-SYNTHETIC_CASE_ID = "NAC-SYN-MATTER-001"
-SYNTHETIC_TASK_IDS = ("NAC-SYN-TASK-001", "NAC-SYN-DEADLINE-001")
-SYNTHETIC_DEADLINE_DUE_DATE = "2026-08-31T16:00:00Z"
+SYNTHETIC_CASE_ID = MATTER_ID
+SYNTHETIC_TASK_IDS = tuple(task["task_id"] for task in TASKS)
+SYNTHETIC_DEADLINE_DUE_DATE = DEADLINE
 DEFAULT_MVP_TEST_ENVIRONMENT_FIXTURE = (
     REPO_ROOT / "tests" / "fixtures" / "m365" / "mvp-test-environment" / "synthetic-bpmn.fixture.json"
 )
@@ -287,51 +305,180 @@ def _validate_contract_boundary(contract: dict[str, Any]) -> None:
         raise _SmokeFailure("MCP_CONTRACT_BOUNDARY_INVALID")
 
 
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _tasks_match_exactly(value: Any) -> bool:
+    expected_tasks = [dict(task) for task in TASKS]
+    if not isinstance(value, list) or len(value) != len(expected_tasks):
+        return False
+    for actual, expected in zip(value, expected_tasks, strict=True):
+        if not isinstance(actual, dict) or set(actual) != set(expected):
+            return False
+        if any(
+            type(actual[key]) is not type(expected_value)
+            or actual[key] != expected_value
+            for key, expected_value in expected.items()
+        ):
+            return False
+    return True
+
+
 def _load_and_verify_bpmn_fixture(path: Path) -> dict[str, Any]:
     try:
-        fixture = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        fixture = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+    except (OSError, ValueError) as exc:
         raise _SmokeFailure("BPMN_FIXTURE_INVALID") from exc
+
     package = fixture.get("package")
+    workspace = fixture.get("workspace")
     model = fixture.get("model")
+    knowledge_graph = fixture.get("knowledge_graph")
     if (
-        fixture.get("schema_version") != "nac.m365-mvp-test-environment-bpmn-fixture/v0.1"
-        or not isinstance(package, dict)
-        or package.get("name") != EXPECTED_BPMN_PACKAGE
-        or package.get("binding") != "package_test_fixture"
-        or not isinstance(package.get("version"), str)
-        or not package["version"]
+        set(fixture) != {
+            "schema_version",
+            "fixture_id",
+            "package",
+            "workspace",
+            "model",
+            "knowledge_graph",
+        }
+        or fixture.get("schema_version") != "nac.m365-mvp-test-environment-bpmn-fixture/v0.2"
+        or fixture.get("fixture_id") != "NAC-SYN-MATTER-001-BPMN"
+        or package != {
+            "name": EXPECTED_BPMN_PACKAGE,
+            "version": "0.2.0",
+            "binding": "canonical_repo_asset",
+        }
+        or not isinstance(workspace, dict)
+        or set(workspace) != {"workspace_id", "matter", "tasks"}
+        or workspace.get("workspace_id") != EXPECTED_WORKSPACE_ID
+        or not isinstance(workspace.get("matter"), dict)
+        or set(workspace["matter"]) != {
+            "matter_id",
+            "business_case_type_id",
+            "status",
+            "deadline",
+            "workflow_version",
+            "kg_version",
+        }
+        or workspace.get("matter") != {
+            "matter_id": MATTER_ID,
+            "business_case_type_id": BUSINESS_CASE_TYPE_ID,
+            "status": MATTER_STATUS,
+            "deadline": DEADLINE,
+            "workflow_version": WORKFLOW_VERSION,
+            "kg_version": KG_SCHEMA_VERSION,
+        }
+        or not _tasks_match_exactly(workspace.get("tasks"))
         or not isinstance(model, dict)
+        or set(model) != {
+            "model_id",
+            "title",
+            "notation",
+            "version",
+            "process_key",
+            "source_path",
+            "content_sha256",
+        }
+        or model.get("model_id") != BUSINESS_CASE_TYPE_ID
+        or model.get("title") != "Immobilienkaufvertrag"
         or model.get("notation") != "BPMN 2.0"
+        or model.get("version") != BPMN_PROFILE_VERSION
+        or model.get("process_key") != BPMN_PROCESS_KEY
+        or model.get("source_path") != BPMN_SOURCE_PATH
+        or model.get("content_sha256") != BPMN_SHA256
+        or not isinstance(knowledge_graph, dict)
+        or knowledge_graph != {
+            "graph_id": KG_GRAPH_ID,
+            "schema_version": KG_SCHEMA_VERSION,
+            "source_path": KG_SOURCE_PATH,
+            "content_sha256": KG_SHA256,
+        }
     ):
         raise _SmokeFailure("BPMN_FIXTURE_INVALID")
-    required_text = ("model_id", "title", "version", "process_key", "content", "content_sha256")
-    if any(not isinstance(model.get(key), str) or not model[key] for key in required_text):
-        raise _SmokeFailure("BPMN_FIXTURE_INVALID")
-    content = model["content"]
-    content_hash = _sha256(content)
-    if content_hash != model["content_sha256"]:
-        raise _SmokeFailure("BPMN_HASH_MISMATCH")
+
     try:
-        root = ET.fromstring(content)
+        asset = CanonicalBpmnAssetFilePort(REPO_ROOT / BPMN_SOURCE_PATH).read_canonical_bpmn()
+    except BpmnAssetError as exc:
+        raise _SmokeFailure("BPMN_SOURCE_BINDING_MISMATCH") from exc
+    if asset.model_key != BPMN_PROCESS_KEY or asset.sha256 != BPMN_SHA256:
+        raise _SmokeFailure("BPMN_MODEL_METADATA_MISMATCH")
+
+    try:
+        root = ET.fromstring(asset.xml)
     except ET.ParseError as exc:
         raise _SmokeFailure("BPMN_FIXTURE_INVALID") from exc
     namespace = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
-    process = root.find(f"{namespace}process")
-    if process is None or process.get("id") != model["process_key"]:
+    processes = root.findall(f"{namespace}process")
+    if len(processes) != 1 or processes[0].get("id") != BPMN_PROCESS_KEY:
         raise _SmokeFailure("BPMN_MODEL_METADATA_MISMATCH")
+    allowed_task_tags = {
+        f"{namespace}businessRuleTask",
+        f"{namespace}manualTask",
+        f"{namespace}receiveTask",
+        f"{namespace}scriptTask",
+        f"{namespace}sendTask",
+        f"{namespace}serviceTask",
+        f"{namespace}task",
+        f"{namespace}userTask",
+    }
+    nac_namespace = "{https://github.com/notariat8/NaC/bpmn/nac}"
+    if processes[0].get(f"{nac_namespace}profile") != BPMN_PROFILE_VERSION:
+        raise _SmokeFailure("BPMN_MODEL_METADATA_MISMATCH")
+    for task in TASKS:
+        matches = [
+            element
+            for element in processes[0].iter()
+            if element.get("id") == task["step_code"]
+        ]
+        if (
+            len(matches) != 1
+            or matches[0].tag not in allowed_task_tags
+            or matches[0].get(f"{nac_namespace}kgRef") != BUSINESS_CASE_TYPE_ID
+        ):
+            raise _SmokeFailure("BPMN_TASK_BINDING_MISMATCH")
+
+    try:
+        kg_content = (REPO_ROOT / KG_SOURCE_PATH).read_bytes()
+        kg_payload = json.loads(
+            kg_content.decode("utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise _SmokeFailure("KG_SOURCE_BINDING_MISMATCH") from exc
+    if (
+        hashlib.sha256(kg_content).hexdigest() != KG_SHA256
+        or kg_payload.get("schema_version") != KG_SCHEMA_VERSION
+        or kg_payload.get("graph_id") != KG_GRAPH_ID
+    ):
+        raise _SmokeFailure("KG_SOURCE_BINDING_MISMATCH")
+
     return {
         "verified": True,
         "packageBound": True,
         "packageName": package["name"],
-        "packageVersion": package.get("version"),
+        "packageVersion": package["version"],
         "notation": model["notation"],
         "modelVersion": model["version"],
         "modelTitle": model["title"],
         "modelRefSha256": _sha256(model["model_id"]),
         "processRefSha256": _sha256(model["process_key"]),
-        "contentSha256": content_hash,
+        "contentSha256": asset.sha256,
+        "knowledgeGraphSha256": KG_SHA256,
+        "businessCaseTypeRefSha256": _sha256(BUSINESS_CASE_TYPE_ID),
+        "taskBindingCount": len(TASKS),
         "xmlParsed": True,
+        "embeddedModelStored": False,
     }
 
 
@@ -361,32 +508,26 @@ def _case_arguments() -> dict[str, Any]:
     return {
         "case_id": SYNTHETIC_CASE_ID,
         "aktenzeichen": "SYN-MAT-001",
-        "vorgangstyp": "immobilienkaufvertrag",
+        "vorgangstyp": BUSINESS_CASE_TYPE_ID,
         "status": "Entwurf",
         "notar_team": "NaC-Notar-01",
         "vertraulichkeitsstufe": "Normal",
-        "nac_workflow_version": "mvp-test-environment-v0.1",
-        "kg_version": "synthetic-kg-v0.1",
+        "nac_workflow_version": WORKFLOW_VERSION,
+        "kg_version": KG_SCHEMA_VERSION,
     }
 
 
 def _task_arguments() -> list[dict[str, Any]]:
     return [
         {
-            "task_id": SYNTHETIC_TASK_IDS[0],
+            "task_id": task["task_id"],
             "case_id": SYNTHETIC_CASE_ID,
-            "bpmn_step_code": "synthetic_contract_review",
-            "status": "Offen",
-            "requires_notary_approval": True,
-        },
-        {
-            "task_id": SYNTHETIC_TASK_IDS[1],
-            "case_id": SYNTHETIC_CASE_ID,
-            "bpmn_step_code": "synthetic_completion_deadline",
-            "status": "Offen",
-            "requires_notary_approval": False,
-            "due_date": SYNTHETIC_DEADLINE_DUE_DATE,
-        },
+            "bpmn_step_code": task["step_code"],
+            "status": task["status"],
+            "requires_notary_approval": task["requires_notary_approval"],
+            **({"due_date": task["due_at"]} if task["due_at"] else {}),
+        }
+        for task in TASKS
     ]
 
 

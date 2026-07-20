@@ -309,6 +309,56 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
             self.contract["target_boundary"]["production_data_allowed"]
         )
 
+    def test_synthetic_fixture_uses_only_canonical_bpmn_and_kg_assets(self) -> None:
+        fixture = self.contract["synthetic_fixture"]
+        self.assertEqual(
+            fixture["canonical_bpmn_source_path_exact"],
+            "bpmn/immobilienkaufvertrag.bpmn",
+        )
+        self.assertEqual(
+            fixture["canonical_bpmn_process_id_exact"],
+            "Process_immobilienkaufvertrag",
+        )
+        self.assertEqual(
+            fixture["canonical_bpmn_sha256_exact"],
+            "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0",
+        )
+        self.assertFalse(fixture["embedded_bpmn_allowed"])
+        self.assertEqual(
+            fixture["knowledge_graph_source_path_exact"],
+            "usecases/immobilienkaufvertrag/knowledge-graph.graph.json",
+        )
+        self.assertEqual(
+            fixture["knowledge_graph_schema_version_exact"],
+            "nac.knowledge-graph/v0.1",
+        )
+        self.assertEqual(
+            fixture["knowledge_graph_sha256_exact"],
+            "3bd379066a3c9656046e930efca8d3c7690cdcbe5a7279f7aec12109e777e019",
+        )
+        self.assertTrue(fixture["task_bpmn_element_membership_required"])
+
+    def test_issue_681_hardening_is_explicitly_traceable(self) -> None:
+        self.assertEqual(
+            self.contract["hardening_issues"],
+            ["https://github.com/notariat8/NaC/issues/681"],
+        )
+        criteria = self.contract["hardening_acceptance_criteria"]
+        self.assertEqual(
+            [item["id"] for item in criteria],
+            ["AC-681-01", "AC-681-02", "AC-681-03"],
+        )
+        requirements = " ".join(item["requirement"] for item in criteria)
+        for phrase in (
+            "no embedded BPMN",
+            "canonical repository BPMN source, process, profile and SHA-256",
+            "resolves exactly once",
+            "nac:kgRef",
+            "offline-only",
+            "no tenant writes",
+        ):
+            self.assertIn(phrase, requirements)
+
     def test_acceptance_requirements_match_issue_620_semantics(self) -> None:
         requirements = {
             item["id"]: item["requirement"]
