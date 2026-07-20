@@ -20,7 +20,9 @@
     "workspace_mismatch_behavior": "stop_before_graph_call",
     "schema_drift_behavior": "stop_before_first_write",
     "plan_sha256_required_by_owner_gate": true,
-    "plan_hash_includes_provisioner_permission_binding": true
+    "plan_hash_includes_provisioner_permission_binding": true,
+    "generic_list_system_column_baseline": "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
+    "plan_hash_includes_system_column_baseline": true
   },
   "schema_contract": {
     "registry_list": "Vorgangsartenregister",
@@ -33,7 +35,14 @@
     "built_in_title_role": "Label",
     "akten_additive_column": "VorgangstypId",
     "legacy_akten_column": "Vorgangstyp",
-    "legacy_akten_column_mutation_allowed": false
+    "legacy_akten_column_mutation_allowed": false,
+    "generic_list_system_column_count_exact": 85,
+    "generic_list_system_column_shape_fields_exact": [
+      "name",
+      "hidden",
+      "readOnly"
+    ],
+    "unexpected_read_only_or_hidden_custom_columns_allowed": false
   },
   "registry_contract": {
     "canonical_row_count_exact": 20,
@@ -111,7 +120,7 @@
     },
     {
       "id": "AC-678-03",
-      "requirement": "Vorgangsartenregister has exactly four bounded custom columns, uses Title as Label, adds Akten.VorgangstypId and leaves legacy Akten.Vorgangstyp unchanged."
+      "requirement": "Vorgangsartenregister has exactly four bounded NaC custom columns in addition to the hash-bound 85-column tenant genericList system baseline, uses Title as Label, adds Akten.VorgangstypId and leaves legacy Akten.Vorgangstyp unchanged."
     },
     {
       "id": "AC-678-04",

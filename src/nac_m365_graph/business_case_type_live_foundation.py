@@ -19,6 +19,9 @@ SOURCE_SCHEMA_PATH = Path("deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint
 SOURCE_PROVISIONER_CONTRACT_PATH = Path(
     "workflows/contracts/m365-azure-bff-live-activation.contract.json"
 )
+SYSTEM_COLUMN_BASELINE_PATH = Path(
+    "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json"
+)
 CATALOG_VERSION = "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
 WORKSPACE_ID = "notary_team_01"
 REGISTRY_NAME = "Vorgangsartenregister"
@@ -146,9 +149,17 @@ def validate_business_case_type_live_foundation(
             "permission_mutation_allowed": False,
             "credential_or_consent_change_allowed": False,
         },
+        "system_column_baseline": {
+            "source_path": SYSTEM_COLUMN_BASELINE_PATH.as_posix(),
+            "workspace_id": WORKSPACE_ID,
+            "list_template": "genericList",
+            "source_list_display_name": AKTEN_NAME,
+            "read_only_capture": True,
+        },
     }:
         errors.append("foundation Graph REST v1.0 additive boundary mismatch")
     errors.extend(_validate_provisioner_source_contract(repo_root, graph))
+    errors.extend(_validate_system_column_baseline(repo_root, graph))
 
     schema = _object(manifest.get("schema"))
     registry_list = _object(schema.get("registry_list"))
@@ -265,6 +276,9 @@ def build_business_case_type_live_foundation_plan(
         "provisioner_source_contract_sha256": _sha256_file(
             repo_root / SOURCE_PROVISIONER_CONTRACT_PATH
         ),
+        "system_column_baseline_sha256": _sha256_file(
+            repo_root / SYSTEM_COLUMN_BASELINE_PATH
+        ),
         "catalog_version": CATALOG_VERSION,
     }
     plan_core = {
@@ -358,8 +372,9 @@ def run_business_case_type_live_foundation(
         return _runner_result(boundary, metrics, operations, "BLOCKED", boundary["error_codes"][0])
 
     manifest = load_business_case_type_live_foundation(repo_root)
+    system_columns = _load_system_column_baseline(repo_root)["columns"]
     try:
-        state = _inspect_foundation_state(client, manifest, metrics)
+        state = _inspect_foundation_state(client, manifest, system_columns, metrics)
     except _SafetyStop as exc:
         return _runner_result(boundary, metrics, operations, "BLOCKED", exc.code)
     except Exception:
@@ -382,7 +397,9 @@ def run_business_case_type_live_foundation(
                 metrics,
             )
             operations.append("create_registry_list")
-            state = _inspect_foundation_state(client, manifest, metrics)
+            state = _inspect_foundation_state(
+                client, manifest, system_columns, metrics
+            )
             if state.registry_list_id is None:
                 raise _SafetyStop("REGISTRY_CREATE_READBACK_FAILED")
 
@@ -395,7 +412,9 @@ def run_business_case_type_live_foundation(
                 metrics,
             )
             operations.append("create_akten_vorgangstyp_id")
-            state = _inspect_foundation_state(client, manifest, metrics)
+            state = _inspect_foundation_state(
+                client, manifest, system_columns, metrics
+            )
             if not state.akten_column_present:
                 raise _SafetyStop("AKTEN_COLUMN_CREATE_READBACK_FAILED")
 
@@ -408,7 +427,9 @@ def run_business_case_type_live_foundation(
                 metrics,
             )
             operations.append("create_registry_row")
-            readback = _inspect_foundation_state(client, manifest, metrics)
+            readback = _inspect_foundation_state(
+                client, manifest, system_columns, metrics
+            )
             if row["BusinessCaseTypeId"] in {
                 item["BusinessCaseTypeId"] for item in readback.missing_rows
             }:
@@ -420,7 +441,9 @@ def run_business_case_type_live_foundation(
         return _runner_result(boundary, metrics, operations, "FAILED", "GRAPH_MUTATION_FAILED")
 
     try:
-        final_state = _inspect_foundation_state(client, manifest, metrics)
+        final_state = _inspect_foundation_state(
+            client, manifest, system_columns, metrics
+        )
     except Exception:
         return _runner_result(boundary, metrics, operations, "FAILED", "FINAL_READBACK_FAILED")
     if (
@@ -447,6 +470,7 @@ def format_business_case_type_live_foundation_plan(payload: dict[str, Any]) -> s
 def _inspect_foundation_state(
     client: BusinessCaseTypeFoundationGraphPort,
     manifest: dict[str, Any],
+    system_columns: list[dict[str, Any]],
     metrics: dict[str, int],
 ) -> _FoundationState:
     target = manifest["target"]
@@ -523,9 +547,22 @@ def _inspect_foundation_state(
     expected_custom_names = {
         item["name"] for item in manifest["schema"]["registry_list"]["columns"]
     }
-    actual_column_names = {item.get("name") for item in registry_columns}
-    if actual_column_names != expected_custom_names | {"Title"}:
+    actual_by_name = {
+        item.get("name"): item
+        for item in registry_columns
+        if isinstance(item.get("name"), str)
+    }
+    if len(actual_by_name) != len(registry_columns):
         raise _SafetyStop("REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
+    system_by_name = {item["name"]: item for item in system_columns}
+    if set(actual_by_name) != expected_custom_names | set(system_by_name):
+        raise _SafetyStop("REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
+    if any(
+        actual_by_name[name].get("hidden") is not expected["hidden"]
+        or actual_by_name[name].get("readOnly") is not expected["readOnly"]
+        for name, expected in system_by_name.items()
+    ):
+        raise _SafetyStop("REGISTRY_SYSTEM_COLUMN_BASELINE_DRIFT")
     for expected in manifest["schema"]["registry_list"]["columns"]:
         matches = [
             item for item in registry_columns if item.get("name") == expected["name"]
@@ -688,6 +725,84 @@ def _validate_legacy_source(repo_root: Path, expected: dict[str, Any]) -> list[s
     ):
         errors.append("legacy Akten.Vorgangstyp source shape drift")
     return errors
+
+
+def _load_system_column_baseline(repo_root: Path) -> dict[str, Any]:
+    payload = json.loads(
+        (repo_root / SYSTEM_COLUMN_BASELINE_PATH).read_text(encoding="utf-8")
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("system column baseline must be an object")
+    return payload
+
+
+def _validate_system_column_baseline(
+    repo_root: Path, graph: dict[str, Any]
+) -> list[str]:
+    binding = _object(graph.get("system_column_baseline"))
+    expected_binding = {
+        "source_path": SYSTEM_COLUMN_BASELINE_PATH.as_posix(),
+        "workspace_id": WORKSPACE_ID,
+        "list_template": "genericList",
+        "source_list_display_name": AKTEN_NAME,
+        "read_only_capture": True,
+    }
+    if binding != expected_binding:
+        return ["system column baseline binding mismatch"]
+    try:
+        payload = _load_system_column_baseline(repo_root)
+        columns = payload.get("columns")
+        source = json.loads((repo_root / SOURCE_SCHEMA_PATH).read_text(encoding="utf-8"))
+        akten = next(
+            item
+            for item in source["sharepoint"]["lists"]
+            if item.get("display_name") == AKTEN_NAME
+        )
+        source_custom_names = sorted(
+            item["name"] for item in akten["columns"] if isinstance(item, dict)
+        )
+    except (OSError, json.JSONDecodeError, KeyError, StopIteration, TypeError, ValueError):
+        return ["system column baseline is unavailable or invalid"]
+    if (
+        payload.get("schema_version")
+        != "nac.sharepoint-generic-list-system-columns/v0.1"
+        or payload.get("contract_id")
+        != "m365.sharepoint_generic_list_system_columns"
+        or payload.get("workspace_id") != WORKSPACE_ID
+        or payload.get("list_template") != "genericList"
+        or payload.get("source_list_display_name") != AKTEN_NAME
+        or payload.get("source_api") != "Microsoft Graph REST v1.0"
+        or payload.get("source_request_method") != "GET"
+        or payload.get("source_writes") != 0
+        or payload.get("excluded_repo_custom_column_names") != source_custom_names
+        or payload.get("excluded_repo_custom_columns_sha256")
+        != _sha256_json(source_custom_names)
+        or not isinstance(columns, list)
+        or payload.get("system_column_count") != len(columns)
+        or payload.get("system_columns_sha256") != _sha256_json(columns)
+    ):
+        return ["system column baseline contract drift"]
+    if (
+        not columns
+        or any(
+            not isinstance(item, dict)
+            or set(item) != {"name", "hidden", "readOnly"}
+            or not isinstance(item.get("name"), str)
+            or type(item.get("hidden")) is not bool
+            or type(item.get("readOnly")) is not bool
+            for item in columns
+        )
+    ):
+        return ["system column baseline shape drift"]
+    names = [item["name"] for item in columns]
+    title = next((item for item in columns if item["name"] == "Title"), None)
+    if (
+        len(names) != len(set(names))
+        or set(names) & set(source_custom_names)
+        or title != {"name": "Title", "hidden": False, "readOnly": False}
+    ):
+        return ["system column baseline identity drift"]
+    return []
 
 
 def _validate_provisioner_source_contract(

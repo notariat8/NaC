@@ -33,6 +33,13 @@
       "permission_change_required": false,
       "permission_mutation_allowed": false,
       "credential_or_consent_change_allowed": false
+    },
+    "system_column_baseline": {
+      "source_path": "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
+      "workspace_id": "notary_team_01",
+      "list_template": "genericList",
+      "source_list_display_name": "Akten",
+      "read_only_capture": true
     }
   },
   "schema": {

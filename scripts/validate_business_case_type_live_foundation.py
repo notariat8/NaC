@@ -18,6 +18,7 @@ from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     CATALOG_VERSION,
     FOUNDATION_PATH,
     SOURCE_PROVISIONER_CONTRACT_PATH,
+    SYSTEM_COLUMN_BASELINE_PATH,
     WORKSPACE_ID,
     build_business_case_type_live_foundation_plan,
     load_business_case_type_live_foundation,
@@ -72,6 +73,14 @@ def validate() -> list[str]:
     ).hexdigest()
     if provisioner_sha256 != expected_provisioner_sha256:
         errors.append("foundation plan must hash-bind the provisioner source contract")
+    system_baseline_sha256 = plan.get("binding", {}).get(
+        "system_column_baseline_sha256"
+    )
+    expected_system_baseline_sha256 = hashlib.sha256(
+        (ROOT / SYSTEM_COLUMN_BASELINE_PATH).read_bytes()
+    ).hexdigest()
+    if system_baseline_sha256 != expected_system_baseline_sha256:
+        errors.append("foundation plan must hash-bind the system column baseline")
     summary = plan.get("summary", {})
     if summary.get("maximum_mutation_count") != 22:
         errors.append("foundation plan must contain at most 22 additive mutations")
@@ -120,6 +129,7 @@ def validate() -> list[str]:
     expected_thresholds = {
         "workspace_count": 1,
         "registry_custom_column_count": 4,
+        "generic_list_system_column_count": 85,
         "canonical_registry_row_count": 20,
         "alias_registry_row_count": 0,
         "maximum_first_run_mutations": 22,
@@ -130,6 +140,17 @@ def validate() -> list[str]:
     }
     if thresholds != expected_thresholds:
         errors.append("verification thresholds mismatch")
+    binding = domain.get("binding", {})
+    schema_contract = domain.get("schema_contract", {})
+    if (
+        binding.get("generic_list_system_column_baseline")
+        != SYSTEM_COLUMN_BASELINE_PATH.as_posix()
+        or binding.get("plan_hash_includes_system_column_baseline") is not True
+        or schema_contract.get("generic_list_system_column_count_exact") != 85
+        or schema_contract.get("unexpected_read_only_or_hidden_custom_columns_allowed")
+        is not False
+    ):
+        errors.append("domain contract system column baseline binding mismatch")
 
     source = (ROOT / "src/nac_m365_graph/business_case_type_live_foundation.py").read_text(
         encoding="utf-8"

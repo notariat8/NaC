@@ -18,6 +18,7 @@
   "applies_when": {
     "paths": [
       "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json",
+      "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
       "src/nac_m365_graph/business_case_type_live_foundation.py",
       "src/nac_cli/cli.py",
       "workflows/contracts/business-case-type-live-foundation.contract.json",
@@ -31,6 +32,7 @@
     "AGENTS.md",
     "workflows/contracts/AGENTS.md",
     "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
+    "deploy/m365/teams-sharepoint/sharepoint-generic-list-system-columns.notary-team-01.json",
     "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
     "src/notary_kg/business_case_type_runtime.py"
   ],
@@ -45,7 +47,7 @@
   "invariants": [
     "AC-678-01: exact notary_team_01 binding and pre-transport workspace rejection",
     "AC-678-02: additive Graph REST v1.0 GET/POST-only plan",
-    "AC-678-03: exact registry and Akten shapes with immutable legacy Choice",
+    "AC-678-03: exact four NaC custom columns over the hash-bound tenant genericList system baseline, exact registry and Akten shapes, immutable legacy Choice",
     "AC-678-04: exact 20 canonical active selectable rows and catalog version",
     "AC-678-05: all existing target drift blocks before write",
     "AC-678-06: converged second simulation has zero mutations",
@@ -61,10 +63,12 @@
     "second_run_mutations": 0,
     "allowed_test_graph_calls": 0,
     "allowed_delete_calls": 0,
-    "allowed_rollback_calls": 0
+    "allowed_rollback_calls": 0,
+    "generic_list_system_column_count": 85
   },
   "required_evidence": [
     "foundation manifest validation",
+    "tenantvalidated genericList system-column baseline SHA-256",
     "offline plan SHA-256",
     "owner-gate boundary result",
     "first simulated run mutation counts",

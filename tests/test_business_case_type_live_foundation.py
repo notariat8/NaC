@@ -19,6 +19,7 @@ import nac_m365_graph.business_case_type_live_foundation as foundation_module  #
 from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     CATALOG_VERSION,
     FoundationApplyRequest,
+    SYSTEM_COLUMN_BASELINE_PATH,
     WORKSPACE_ID,
     build_business_case_type_live_foundation_plan,
     load_business_case_type_live_foundation,
@@ -100,15 +101,14 @@ class FakeFoundationGraph:
                     "list": copy.deepcopy(payload["list"]),
                 }
             )
+            system_columns = json.loads(
+                (REPO_ROOT / SYSTEM_COLUMN_BASELINE_PATH).read_text(encoding="utf-8")
+            )["columns"]
+            for column in system_columns:
+                if column["name"] == "Title":
+                    column["text"] = {}
             self.columns[self.registry_id] = [
-                {
-                    "name": "Title",
-                    "displayName": "Title",
-                    "required": False,
-                    "hidden": False,
-                    "readOnly": False,
-                    "text": {},
-                },
+                *copy.deepcopy(system_columns),
                 *(
                     {**copy.deepcopy(column), "hidden": False, "readOnly": False}
                     for column in payload["columns"]
@@ -163,6 +163,14 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         self.assertEqual(
             len(self.plan["binding"]["provisioner_source_contract_sha256"]), 64
         )
+        self.assertEqual(
+            len(self.plan["binding"]["system_column_baseline_sha256"]), 64
+        )
+        system_baseline = json.loads(
+            (REPO_ROOT / SYSTEM_COLUMN_BASELINE_PATH).read_text(encoding="utf-8")
+        )
+        self.assertEqual(system_baseline["system_column_count"], 85)
+        self.assertEqual(system_baseline["source_writes"], 0)
         self.assertEqual(self.manifest["registry"]["catalog_version"], CATALOG_VERSION)
         self.assertEqual(self.manifest["graph"]["application_permission"], "Sites.FullControl.All")
         self.assertEqual(
@@ -369,6 +377,27 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         result = run_business_case_type_live_foundation(client, REPO_ROOT, request)
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["error_code"], "REGISTRY_CUSTOM_COLUMN_SET_DRIFT")
+        self.assertEqual(client.post_count, post_count)
+
+    def test_system_column_baseline_drift_stops_before_write(self) -> None:
+        client = FakeFoundationGraph(self.manifest)
+        request = owner_request(self.plan["plan_sha256"])
+        self.assertEqual(
+            run_business_case_type_live_foundation(client, REPO_ROOT, request)["status"],
+            "PASSED",
+        )
+        column = next(
+            item
+            for item in client.columns[client.registry_id]
+            if item["name"] == "Attachments"
+        )
+        column["hidden"] = not column["hidden"]
+        post_count = client.post_count
+        result = run_business_case_type_live_foundation(client, REPO_ROOT, request)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(
+            result["error_code"], "REGISTRY_SYSTEM_COLUMN_BASELINE_DRIFT"
+        )
         self.assertEqual(client.post_count, post_count)
 
     def test_hidden_registry_column_stops_before_write(self) -> None:
