@@ -1,0 +1,99 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_live_foundation_678",
+  "domain_contract_id": "m365.business_case_type_live_foundation",
+  "title": "BusinessCaseType live foundation verification",
+  "status": "implemented_offline_runner_contract",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/678",
+  "acceptance_ids": [
+    "AC-678-01",
+    "AC-678-02",
+    "AC-678-03",
+    "AC-678-04",
+    "AC-678-05",
+    "AC-678-06",
+    "AC-678-07",
+    "AC-678-08"
+  ],
+  "applies_when": {
+    "paths": [
+      "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json",
+      "src/nac_m365_graph/business_case_type_live_foundation.py",
+      "src/nac_cli/cli.py",
+      "workflows/contracts/business-case-type-live-foundation.contract.json",
+      "workflows/verification-contracts/business-case-type-live-foundation.verification.json",
+      "scripts/validate_business_case_type_live_foundation.py",
+      "scripts/quality_gate.py",
+      "tests/test_business_case_type_live_foundation*.py"
+    ]
+  },
+  "required_context": [
+    "AGENTS.md",
+    "workflows/contracts/AGENTS.md",
+    "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
+    "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+    "src/notary_kg/business_case_type_runtime.py"
+  ],
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_live_foundation tests.test_business_case_type_live_foundation_cli tests.test_business_case_type_live_foundation_contract",
+    "python3 scripts/validate_business_case_type_live_foundation.py",
+    "python3 scripts/nac.py m365 teams-sharepoint business-case-type-live-foundation-plan --format json",
+    "python3 scripts/nac.py m365 teams-sharepoint business-case-type-live-foundation-apply --help",
+    "python3 scripts/quality_gate.py",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-678-01: exact notary_team_01 binding and pre-transport workspace rejection",
+    "AC-678-02: additive Graph REST v1.0 GET/POST-only plan",
+    "AC-678-03: exact registry and Akten shapes with immutable legacy Choice",
+    "AC-678-04: exact 20 canonical active selectable rows and catalog version",
+    "AC-678-05: all existing target drift blocks before write",
+    "AC-678-06: converged second simulation has zero mutations",
+    "AC-678-07: hash-bound owner gate, existing Sites.FullControl.All provisioner binding without permission changes and no CLI live composition",
+    "AC-678-08: fake-only tests and redacted evidence"
+  ],
+  "thresholds": {
+    "workspace_count": 1,
+    "registry_custom_column_count": 4,
+    "canonical_registry_row_count": 20,
+    "alias_registry_row_count": 0,
+    "maximum_first_run_mutations": 22,
+    "second_run_mutations": 0,
+    "allowed_test_graph_calls": 0,
+    "allowed_delete_calls": 0,
+    "allowed_rollback_calls": 0
+  },
+  "required_evidence": [
+    "foundation manifest validation",
+    "offline plan SHA-256",
+    "owner-gate boundary result",
+    "first simulated run mutation counts",
+    "second simulated run zero-mutation result",
+    "wrong-workspace and schema-drift pre-write stops",
+    "focused unit-test and validator results"
+  ],
+  "evidence_policy": {
+    "redacted_only": true,
+    "raw_graph_payloads_allowed": false,
+    "tokens_or_auth_headers_allowed": false,
+    "approval_reference_or_reason_raw_allowed": false,
+    "matter_or_person_values_allowed": false
+  },
+  "exit_conditions": [
+    "all acceptance IDs are covered",
+    "focused tests and standalone validator pass",
+    "quality gate contains the standalone validator",
+    "only Issue #678 ownership files are staged"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_invariants_hold": true,
+    "live_execution_performed": false
+  },
+  "failure_behavior": {
+    "status": "BLOCKED",
+    "writes_after_preflight_failure": 0,
+    "automatic_rollback": false,
+    "owner_review_required": true
+  }
+}
