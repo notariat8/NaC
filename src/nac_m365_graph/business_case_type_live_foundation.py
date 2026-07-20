@@ -36,6 +36,7 @@ REGISTRY_FIELDS = (
     "CatalogVersion",
 )
 MAX_COLLECTION_PAGES = 20
+SYSTEM_COLUMN_COUNT = 85
 
 
 class BusinessCaseTypeFoundationGraphPort(Protocol):
@@ -65,6 +66,13 @@ class _FoundationState:
     registry_list_id: str | None
     akten_column_present: bool
     missing_rows: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _FoundationRuntimeSnapshot:
+    manifest: dict[str, Any]
+    system_column_baseline: dict[str, Any]
+    binding: dict[str, Any]
 
 
 class _SafetyStop(RuntimeError):
@@ -231,7 +239,6 @@ def build_business_case_type_live_foundation_plan(
             "summary": _plan_summary(0),
         }
 
-    registry = manifest["registry"]
     steps = [
         {
             "sequence": 1,
@@ -267,20 +274,7 @@ def build_business_case_type_live_foundation_plan(
             "canonical_row_count": 20,
         },
     ]
-    binding = {
-        "workspace_id": WORKSPACE_ID,
-        "target_sha256": _sha256_json(manifest["target"]),
-        "schema_sha256": _sha256_json(manifest["schema"]),
-        "registry_sha256": _sha256_json(registry),
-        "graph_sha256": _sha256_json(manifest["graph"]),
-        "provisioner_source_contract_sha256": _sha256_file(
-            repo_root / SOURCE_PROVISIONER_CONTRACT_PATH
-        ),
-        "system_column_baseline_sha256": _sha256_file(
-            repo_root / SYSTEM_COLUMN_BASELINE_PATH
-        ),
-        "catalog_version": CATALOG_VERSION,
-    }
+    binding = _foundation_binding(repo_root, manifest)
     plan_core = {
         "schema_version": "nac.business-case-type-live-foundation-plan/v0.1",
         "contract_id": "m365.business_case_type_live_foundation_plan",
@@ -347,6 +341,7 @@ def build_business_case_type_live_foundation_apply_boundary(
         "status": "READY_FOR_INJECTED_RUNNER" if ready else "BLOCKED",
         "error_codes": reasons,
         "plan_sha256": plan.get("plan_sha256", ""),
+        "binding": plan.get("binding", {}),
         "approval_reference_sha256": _sha256_text(approval_reference),
         "reason_sha256": _sha256_text(reason),
         "summary": {
@@ -371,8 +366,18 @@ def run_business_case_type_live_foundation(
     if boundary["status"] != "READY_FOR_INJECTED_RUNNER":
         return _runner_result(boundary, metrics, operations, "BLOCKED", boundary["error_codes"][0])
 
-    manifest = load_business_case_type_live_foundation(repo_root)
-    system_columns = _load_system_column_baseline(repo_root)["columns"]
+    try:
+        snapshot = _load_foundation_runtime_snapshot(repo_root)
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return _runner_result(
+            boundary, metrics, operations, "BLOCKED", "PLAN_SNAPSHOT_UNAVAILABLE"
+        )
+    if snapshot.binding != boundary.get("binding"):
+        return _runner_result(
+            boundary, metrics, operations, "BLOCKED", "PLAN_SNAPSHOT_DRIFT"
+        )
+    manifest = snapshot.manifest
+    system_columns = snapshot.system_column_baseline["columns"]
     try:
         state = _inspect_foundation_state(client, manifest, system_columns, metrics)
     except _SafetyStop as exc:
@@ -727,6 +732,50 @@ def _validate_legacy_source(repo_root: Path, expected: dict[str, Any]) -> list[s
     return errors
 
 
+def _foundation_binding(
+    repo_root: Path,
+    manifest: dict[str, Any],
+    *,
+    provisioner_source_contract_sha256: str | None = None,
+    system_column_baseline_sha256: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "workspace_id": WORKSPACE_ID,
+        "target_sha256": _sha256_json(manifest["target"]),
+        "schema_sha256": _sha256_json(manifest["schema"]),
+        "registry_sha256": _sha256_json(manifest["registry"]),
+        "graph_sha256": _sha256_json(manifest["graph"]),
+        "provisioner_source_contract_sha256": (
+            provisioner_source_contract_sha256
+            or _sha256_file(repo_root / SOURCE_PROVISIONER_CONTRACT_PATH)
+        ),
+        "system_column_baseline_sha256": (
+            system_column_baseline_sha256
+            or _sha256_file(repo_root / SYSTEM_COLUMN_BASELINE_PATH)
+        ),
+        "catalog_version": CATALOG_VERSION,
+    }
+
+
+def _load_foundation_runtime_snapshot(repo_root: Path) -> _FoundationRuntimeSnapshot:
+    manifest_bytes = (repo_root / FOUNDATION_PATH).read_bytes()
+    manifest = json.loads(manifest_bytes)
+    if not isinstance(manifest, dict):
+        raise ValueError("foundation manifest must be an object")
+    baseline_bytes = (repo_root / SYSTEM_COLUMN_BASELINE_PATH).read_bytes()
+    baseline = json.loads(baseline_bytes)
+    if not isinstance(baseline, dict):
+        raise ValueError("system column baseline must be an object")
+    provisioner_bytes = (repo_root / SOURCE_PROVISIONER_CONTRACT_PATH).read_bytes()
+    binding = _foundation_binding(
+        repo_root,
+        manifest,
+        provisioner_source_contract_sha256=hashlib.sha256(provisioner_bytes).hexdigest(),
+        system_column_baseline_sha256=hashlib.sha256(baseline_bytes).hexdigest(),
+    )
+    return _FoundationRuntimeSnapshot(manifest, baseline, binding)
+
+
 def _load_system_column_baseline(repo_root: Path) -> dict[str, Any]:
     payload = json.loads(
         (repo_root / SYSTEM_COLUMN_BASELINE_PATH).read_text(encoding="utf-8")
@@ -778,7 +827,8 @@ def _validate_system_column_baseline(
         or payload.get("excluded_repo_custom_columns_sha256")
         != _sha256_json(source_custom_names)
         or not isinstance(columns, list)
-        or payload.get("system_column_count") != len(columns)
+        or payload.get("system_column_count") != SYSTEM_COLUMN_COUNT
+        or len(columns) != SYSTEM_COLUMN_COUNT
         or payload.get("system_columns_sha256") != _sha256_json(columns)
     ):
         return ["system column baseline contract drift"]

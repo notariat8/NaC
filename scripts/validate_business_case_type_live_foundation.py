@@ -19,6 +19,7 @@ from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     FOUNDATION_PATH,
     SOURCE_PROVISIONER_CONTRACT_PATH,
     SYSTEM_COLUMN_BASELINE_PATH,
+    SYSTEM_COLUMN_COUNT,
     WORKSPACE_ID,
     build_business_case_type_live_foundation_plan,
     load_business_case_type_live_foundation,
@@ -129,7 +130,7 @@ def validate() -> list[str]:
     expected_thresholds = {
         "workspace_count": 1,
         "registry_custom_column_count": 4,
-        "generic_list_system_column_count": 85,
+        "generic_list_system_column_count": SYSTEM_COLUMN_COUNT,
         "canonical_registry_row_count": 20,
         "alias_registry_row_count": 0,
         "maximum_first_run_mutations": 22,
@@ -146,7 +147,8 @@ def validate() -> list[str]:
         binding.get("generic_list_system_column_baseline")
         != SYSTEM_COLUMN_BASELINE_PATH.as_posix()
         or binding.get("plan_hash_includes_system_column_baseline") is not True
-        or schema_contract.get("generic_list_system_column_count_exact") != 85
+        or schema_contract.get("generic_list_system_column_count_exact")
+        != SYSTEM_COLUMN_COUNT
         or schema_contract.get("unexpected_read_only_or_hidden_custom_columns_allowed")
         is not False
     ):

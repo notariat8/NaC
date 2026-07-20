@@ -20,6 +20,7 @@ from nac_m365_graph.business_case_type_live_foundation import (  # noqa: E402
     CATALOG_VERSION,
     FoundationApplyRequest,
     SYSTEM_COLUMN_BASELINE_PATH,
+    SYSTEM_COLUMN_COUNT,
     WORKSPACE_ID,
     build_business_case_type_live_foundation_plan,
     load_business_case_type_live_foundation,
@@ -204,6 +205,26 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         )
         self.assertNotEqual(changed["plan_sha256"], self.plan["plan_sha256"])
 
+    def test_internally_consistent_84_column_baseline_is_rejected(self) -> None:
+        baseline = copy.deepcopy(
+            json.loads(
+                (REPO_ROOT / SYSTEM_COLUMN_BASELINE_PATH).read_text(encoding="utf-8")
+            )
+        )
+        baseline["columns"].pop()
+        baseline["system_column_count"] = len(baseline["columns"])
+        baseline["system_columns_sha256"] = foundation_module._sha256_json(
+            baseline["columns"]
+        )
+        with mock.patch.object(
+            foundation_module, "_load_system_column_baseline", return_value=baseline
+        ):
+            errors = foundation_module._validate_system_column_baseline(
+                REPO_ROOT, self.manifest["graph"]
+            )
+        self.assertEqual(errors, ["system column baseline contract drift"])
+        self.assertEqual(SYSTEM_COLUMN_COUNT, 85)
+
     def test_provisioner_source_contract_drift_is_rejected(self) -> None:
         graph = copy.deepcopy(self.manifest["graph"])
         with tempfile.TemporaryDirectory() as directory:
@@ -241,6 +262,28 @@ class BusinessCaseTypeLiveFoundationTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["error_code"], "WORKSPACE_SCOPE_MISMATCH")
+        self.assertEqual(client.calls, [])
+
+    def test_manifest_snapshot_drift_stops_before_graph_call(self) -> None:
+        client = FakeFoundationGraph(self.manifest)
+        snapshot = foundation_module._load_foundation_runtime_snapshot(REPO_ROOT)
+        tampered_manifest = copy.deepcopy(snapshot.manifest)
+        tampered_manifest["target"]["site_id"] = "unauthorized-site"
+        tampered_snapshot = foundation_module._FoundationRuntimeSnapshot(
+            tampered_manifest,
+            snapshot.system_column_baseline,
+            foundation_module._foundation_binding(REPO_ROOT, tampered_manifest),
+        )
+        with mock.patch.object(
+            foundation_module,
+            "_load_foundation_runtime_snapshot",
+            return_value=tampered_snapshot,
+        ):
+            result = run_business_case_type_live_foundation(
+                client, REPO_ROOT, owner_request(self.plan["plan_sha256"])
+            )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["error_code"], "PLAN_SNAPSHOT_DRIFT")
         self.assertEqual(client.calls, [])
 
     def test_owner_gate_stops_before_graph_call(self) -> None:
