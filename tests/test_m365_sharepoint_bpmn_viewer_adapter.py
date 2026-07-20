@@ -7,7 +7,10 @@ import sys
 import unittest
 from pathlib import Path
 
-from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import _validate_contract
+from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import (
+    _validate_contract,
+    _validate_spfx_ast_gate,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +63,11 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertEqual(packaging["package_lock"], "spfx/nac-bpmn-viewer/package-lock.json")
         self.assertEqual(packaging["install_command"], "npm ci")
         self.assertEqual(packaging["build_command"], "npm run build")
+        self.assertEqual(
+            packaging["current_step_ast_validator"],
+            "spfx/nac-bpmn-viewer/scripts/validate-current-step-contract.cjs",
+        )
+        self.assertTrue(packaging["current_step_ast_tamper_self_tests_required"])
         self.assertEqual(packaging["package_output"], "sharepoint/solution/nac-bpmn-viewer.sppkg")
         self.assertEqual(
             set(packaging["generated_paths_ignored_untracked"]),
@@ -124,11 +132,29 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             render["dom_markers"],
             {
                 "component": 'data-nac-component="test-workspace"',
+                "current_step": "data-nac-current-step",
                 "synthetic_data": "Synthetische Testdaten",
                 "no_matter_data": "Keine Mandatsdaten",
             },
         )
         self.assertTrue(all(value is False for value in render["privacy_guards"].values()))
+
+        self.assertEqual(
+            self.contract["current_step_binding"],
+            {
+                "source_exact": "matter.tasks[0].stepCode",
+                "marker_class_exact": "nac-current-step",
+                "dom_attribute_exact": "data-nac-current-step",
+                "marker_count_exact": 1,
+                "missing_task_behavior_exact": "render_failed",
+                "missing_element_behavior_exact": "render_failed",
+                "browser_mapping_table_allowed": False,
+            },
+        )
+        self.assertEqual(
+            self.contract["hardening_issue"],
+            "https://github.com/notariat8/NaC/issues/682",
+        )
 
     def test_blocked_operations_cover_writes_real_data_and_network_clients(self) -> None:
         blocked = set(self.contract["blocked_operations"])
@@ -178,6 +204,9 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("STATUS: PASSED", result.stdout)
+
+    def test_spfx_build_is_bound_to_the_typescript_ast_validator(self) -> None:
+        self.assertEqual(_validate_spfx_ast_gate(), [])
 
 
 if __name__ == "__main__":

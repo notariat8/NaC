@@ -38,7 +38,7 @@ const workspace: NacBffWorkspace = {
     tasks: [{
       taskId: 'NAC-SYN-TASK-001',
       title: 'Entwurf prüfen',
-      stepCode: 'draft_review',
+      stepCode: 'Task_EntwurfAbstimmen',
       status: 'Offen',
       requiresNotaryApproval: true,
       dueAt: '2026-08-31T16:00:00Z'
@@ -57,22 +57,61 @@ describe('NaC BPMN viewer runtime boundary', () => {
   let root: HTMLDivElement;
   let importXml: jest.Mock;
   let destroy: jest.Mock;
+  let elementRegistryGet: jest.Mock;
+  let addMarker: jest.Mock;
+  let resized: jest.Mock;
+  let zoom: jest.Mock;
+  let resizeObserverCallback: ResizeObserverCallback;
+  let resizeObserverObserve: jest.Mock;
+  let resizeObserverDisconnect: jest.Mock;
+  let resizeObserverInstance: ResizeObserver;
+  let getService: jest.Mock;
+  const currentElement = { id: 'Task_EntwurfAbstimmen' };
 
   beforeEach(() => {
     root = document.createElement('div');
     document.body.appendChild(root);
     importXml = jest.fn().mockResolvedValue(undefined);
     destroy = jest.fn();
+    elementRegistryGet = jest.fn().mockReturnValue(currentElement);
+    addMarker = jest.fn();
+    resized = jest.fn();
+    zoom = jest.fn();
+    resizeObserverObserve = jest.fn();
+    resizeObserverDisconnect = jest.fn();
+    resizeObserverInstance = {
+      observe: resizeObserverObserve,
+      disconnect: resizeObserverDisconnect,
+      unobserve: jest.fn()
+    } as unknown as ResizeObserver;
+    Object.defineProperty(globalThis, 'ResizeObserver', {
+      configurable: true,
+      writable: true,
+      value: jest.fn().mockImplementation((callback: ResizeObserverCallback) => {
+        resizeObserverCallback = callback;
+        return resizeObserverInstance;
+      })
+    });
+    getService = jest.fn().mockImplementation((serviceName: string) => {
+      if (serviceName === 'elementRegistry') {
+        return { get: elementRegistryGet };
+      }
+      if (serviceName === 'canvas') {
+        return { addMarker, resized, zoom };
+      }
+      throw new Error('Unknown viewer service: ' + serviceName);
+    });
     (BpmnViewer as unknown as jest.Mock).mockImplementation(() => ({
       importXML: importXml,
       destroy,
-      get: jest.fn().mockReturnValue({ zoom: jest.fn() })
+      get: getService
     }));
   });
 
   afterEach(() => {
     ReactDom.unmountComponentAtNode(root);
     root.remove();
+    delete (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
     jest.clearAllMocks();
   });
 
@@ -173,16 +212,116 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(BpmnViewer).not.toHaveBeenCalled();
   });
 
-  it('renders only the BPMN XML returned by the BFF and shows ready metadata', async () => {
+  it('marks the canonical current BPMN task before showing ready metadata', async () => {
     await renderAndFlush(async () => workspace);
 
     expect(importXml).toHaveBeenCalledWith(bpmnXml);
+    expect(elementRegistryGet).toHaveBeenCalledTimes(1);
+    expect(elementRegistryGet).toHaveBeenCalledWith('Task_EntwurfAbstimmen');
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(addMarker).toHaveBeenCalledWith('Task_EntwurfAbstimmen', 'nac-current-step');
+    expect(addMarker.mock.invocationCallOrder[0]).toBeLessThan(zoom.mock.invocationCallOrder[0]);
     expect(root.textContent).toContain(workspace.matter.displayName);
     expect(root.textContent).toContain('Entwurf prüfen');
     expect(root.textContent).toContain('31.08.2026');
     expect(root.textContent).toContain('Entwurf');
     expect(root.textContent).toContain('Zugeordnet (assigned)');
     expect(root.textContent).toContain('Aufgaben1');
+    expect(root.querySelector('main')?.hasAttribute('data-nac-current-step')).toBe(false);
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
+      .toBe('Task_EntwurfAbstimmen');
+    expect(resized).toHaveBeenCalledTimes(1);
+    expect(zoom).toHaveBeenCalledTimes(1);
+    expect(resizeObserverObserve).toHaveBeenCalledWith(
+      root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')
+    );
+  });
+
+  it('refits the same viewer instance after its container resizes', async () => {
+    await renderAndFlush(async () => workspace);
+
+    act(() => {
+      resizeObserverCallback([], resizeObserverInstance);
+    });
+
+    expect(BpmnViewer).toHaveBeenCalledTimes(1);
+    expect(importXml).toHaveBeenCalledTimes(1);
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(resized).toHaveBeenCalledTimes(2);
+    expect(zoom).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when refitting after a resize fails', async () => {
+    resized.mockImplementationOnce(() => undefined).mockImplementationOnce(() => {
+      throw new Error('resize failed');
+    });
+    await renderAndFlush(async () => workspace);
+
+    act(() => {
+      resizeObserverCallback([], resizeObserverInstance);
+    });
+
+    expect(resizeObserverDisconnect).toHaveBeenCalled();
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+  });
+
+  it('fails closed and destroys the viewer for an unknown current BPMN element', async () => {
+    elementRegistryGet.mockReturnValue(undefined);
+
+    await renderAndFlush(async () => workspace);
+
+    expect(elementRegistryGet).toHaveBeenCalledWith('Task_EntwurfAbstimmen');
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(zoom).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed and destroys the viewer when the matter has no current task', async () => {
+    const workspaceWithoutTasks: NacBffWorkspace = {
+      ...workspace,
+      matter: { ...workspace.matter, tasks: [] }
+    };
+
+    await renderAndFlush(async () => workspaceWithoutTasks);
+
+    expect(getService).not.toHaveBeenCalled();
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(zoom).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed and destroys the viewer when a required viewer service fails', async () => {
+    getService.mockImplementation(() => {
+      throw new Error('viewer service unavailable');
+    });
+
+    await renderAndFlush(async () => workspace);
+
+    expect(addMarker).not.toHaveBeenCalled();
+    expect(zoom).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed and destroys the viewer when the marker cannot be added', async () => {
+    addMarker.mockImplementation(() => {
+      throw new Error('marker failed');
+    });
+
+    await renderAndFlush(async () => workspace);
+
+    expect(addMarker).toHaveBeenCalledTimes(1);
+    expect(zoom).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+    expect(destroy).toHaveBeenCalledTimes(1);
   });
 
   it('shows deputy access mode in the ready state', async () => {
@@ -217,6 +356,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
       expect(root.textContent).not.toContain(workspace.matter.displayName);
       expect(root.textContent).not.toContain(workspace.matter.tasks[0].title);
       expect(root.textContent).not.toContain('31.08.2026');
+      expect(root.querySelector('[data-nac-current-step]')).toBeNull();
 
       act(() => {
         jest.advanceTimersByTime(10_000);
@@ -287,6 +427,23 @@ describe('NaC BPMN viewer runtime boundary', () => {
 
     expect(observedSignal).toBeDefined();
     expect(observedSignal?.aborted).toBe(true);
+  });
+
+  it('destroys a ready viewer when the component unmounts', async () => {
+    await renderAndFlush(async () => workspace);
+    const resizeCallCount = resized.mock.calls.length;
+
+    await act(async () => {
+      ReactDom.unmountComponentAtNode(root);
+    });
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(resizeObserverDisconnect).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      resizeObserverCallback([], resizeObserverInstance);
+    });
+    expect(resized).toHaveBeenCalledTimes(resizeCallCount);
   });
 
   async function renderAndFlush(

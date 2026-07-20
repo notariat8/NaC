@@ -6,10 +6,11 @@
     "node": ">=22.14.0 < 23.0.0"
   },
   "scripts": {
-    "build": "heft test --clean --production && heft package-solution --production",
+    "build": "npm run validate:current-step && heft test --clean --production && heft package-solution --production",
     "clean": "heft clean",
     "eject-webpack": "heft eject-webpack",
-    "start": "heft start --clean"
+    "start": "heft start --clean",
+    "validate:current-step": "node scripts/validate-current-step-contract.cjs"
   },
   "dependencies": {
     "@fluentui/react": "^8.106.4",
