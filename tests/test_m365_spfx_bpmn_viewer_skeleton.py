@@ -18,6 +18,7 @@ from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE,
     DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
     REQUIRED_DOM_MARKERS,
+    REQUIRED_TASK_NAVIGATION,
     SPFX_GENERATED_PATHS,
     _iter_spfx_source_files,
     build_spfx_bpmn_viewer_skeleton_result,
@@ -165,12 +166,17 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         invalid["deployment_scope"]["tenant_wide"] = True
         invalid["spfx"]["graph_permissions_requested"] = True
         invalid["render_contract"]["writes_allowed"] = True
+        invalid["render_contract"]["task_navigation"]["writes_allowed"] = True
 
         errors = validate_spfx_bpmn_viewer_skeleton(invalid)
 
         self.assertTrue(any("tenant-wide" in error for error in errors))
         self.assertTrue(any("graph_permissions_requested" in error for error in errors))
         self.assertTrue(any("writes_allowed" in error for error in errors))
+        self.assertIn(
+            "SPFx BPMN viewer skeleton render_contract.task_navigation is invalid",
+            errors,
+        )
 
     def test_package_result_exposes_one_delegated_bff_request_plan(self) -> None:
         result = build_spfx_bpmn_viewer_skeleton_result(load_spfx_bpmn_viewer_skeleton())
@@ -190,6 +196,14 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertEqual(result["requestPlans"][0]["resource"], "api://funktion8.de/nac-bff")
         self.assertEqual(result["requestPlans"][0]["scope"], "Matter.Read")
         self.assertEqual(result["renderContract"]["domMarkers"], REQUIRED_DOM_MARKERS)
+        self.assertEqual(
+            result["renderContract"]["taskNavigation"],
+            REQUIRED_TASK_NAVIGATION,
+        )
+        self.assertEqual(
+            load_spfx_bpmn_viewer_skeleton()["render_contract"]["task_navigation"],
+            REQUIRED_TASK_NAVIGATION,
+        )
         self.assertFalse(result["guardrails"]["graph_permissions_requested"])
         self.assertTrue(result["guardrails"]["aad_http_client_allowed"])
         self.assertFalse(result["guardrails"]["sharepoint_writes_allowed"])

@@ -14,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
 from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     APPROVED_WORKSPACE_ID,
     REQUIRED_DOM_MARKERS,
+    REQUIRED_TASK_NAVIGATION,
     build_spfx_bpmn_viewer_skeleton_result,
     load_spfx_bpmn_viewer_render_fixture,
     validate_spfx_bpmn_viewer_skeleton,
@@ -129,7 +130,7 @@ def _validate_contract(
     del provisioning, data_mcp_contract
     errors: list[str] = []
     expected = {
-        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5",
+        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.6",
         "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
         "status": "bff_read_site_scoped_package_ready_activation_deferred",
     }
@@ -311,6 +312,43 @@ def _validate_contract(
     }
     if current_step != expected_current_step:
         errors.append("current_step_binding must match the fail-closed package UI")
+
+    expected_task_navigation = {
+        "source_exact": "matter.tasks",
+        "initial_selection_exact": "matter.tasks[0]",
+        "selected_marker_class_exact": "nac-selected-step",
+        "selected_dom_attribute_exact": "data-nac-selected-step",
+        "task_dom_attribute_exact": "data-nac-task-id",
+        "selected_marker_count_exact": 1,
+        "current_marker_remains_fixed": True,
+        "native_button_required": True,
+        "pointer_enter_space_required": True,
+        "aria_pressed_required": True,
+        "unique_task_id_required": True,
+        "unique_step_code_required": True,
+        "all_step_codes_resolved_before_ready": True,
+        "resolved_element_instance_of_exact": "bpmn:Task",
+        "null_due_at_text_exact": "Keine eigene Frist",
+        "nonnull_due_at_source_exact": "selectedTask.dueAt",
+        "approval_source_exact": "selectedTask.requiresNotaryApproval",
+        "approval_required_text_exact": "Notarielle Freigabe erforderlich",
+        "approval_not_required_text_exact": "Keine notarielle Freigabe erforderlich",
+        "binding_error_behavior_exact": "render_failed_before_matter_metadata",
+        "marker_transition_error_behavior_exact": "render_failed_and_viewer_destroyed",
+        "denied_metadata_visible": False,
+        "deputy_grant_details_visible": False,
+        "invented_assignees_allowed": False,
+    }
+    if payload.get("task_navigation") != expected_task_navigation:
+        errors.append("task_navigation must match the fail-closed package UI")
+    if payload.get("task_navigation_issue") != "https://github.com/notariat8/NaC/issues/684":
+        errors.append("task_navigation_issue must reference issue 684")
+    if (
+        spfx_skeleton
+        and spfx_skeleton.get("render_contract", {}).get("task_navigation")
+        != REQUIRED_TASK_NAVIGATION
+    ):
+        errors.append("task_navigation must match the SPFx skeleton")
 
     package_link = payload.get("spfx_package")
     if not isinstance(package_link, dict):

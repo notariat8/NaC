@@ -1,5 +1,5 @@
 {
-  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5",
+  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.6",
   "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
   "status": "bff_read_site_scoped_package_ready_activation_deferred",
   "last_update": "2026-07-20",
@@ -113,7 +113,9 @@
       "component": "data-nac-component=\"test-workspace\"",
       "current_step": "data-nac-current-step",
       "synthetic_data": "Synthetische Testdaten",
-      "no_matter_data": "Keine Mandatsdaten"
+      "no_matter_data": "Keine Mandatsdaten",
+      "selected_step": "data-nac-selected-step",
+      "task_id": "data-nac-task-id"
     },
     "privacy_guards": {
       "matter_content_present": false,
@@ -194,5 +196,32 @@
     "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton",
     "python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness",
     "python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter"
-  ]
+  ],
+  "task_navigation_issue": "https://github.com/notariat8/NaC/issues/684",
+  "task_navigation": {
+    "source_exact": "matter.tasks",
+    "initial_selection_exact": "matter.tasks[0]",
+    "selected_marker_class_exact": "nac-selected-step",
+    "selected_dom_attribute_exact": "data-nac-selected-step",
+    "task_dom_attribute_exact": "data-nac-task-id",
+    "selected_marker_count_exact": 1,
+    "current_marker_remains_fixed": true,
+    "native_button_required": true,
+    "pointer_enter_space_required": true,
+    "aria_pressed_required": true,
+    "unique_task_id_required": true,
+    "unique_step_code_required": true,
+    "all_step_codes_resolved_before_ready": true,
+    "null_due_at_text_exact": "Keine eigene Frist",
+    "approval_required_text_exact": "Notarielle Freigabe erforderlich",
+    "approval_not_required_text_exact": "Keine notarielle Freigabe erforderlich",
+    "binding_error_behavior_exact": "render_failed_before_matter_metadata",
+    "marker_transition_error_behavior_exact": "render_failed_and_viewer_destroyed",
+    "denied_metadata_visible": false,
+    "deputy_grant_details_visible": false,
+    "invented_assignees_allowed": false,
+    "resolved_element_instance_of_exact": "bpmn:Task",
+    "nonnull_due_at_source_exact": "selectedTask.dueAt",
+    "approval_source_exact": "selectedTask.requiresNotaryApproval"
+  }
 }

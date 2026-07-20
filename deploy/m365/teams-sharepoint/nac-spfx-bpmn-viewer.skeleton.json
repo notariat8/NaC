@@ -69,13 +69,26 @@
       "component": "data-nac-component=\"test-workspace\"",
       "current_step": "data-nac-current-step",
       "synthetic_data": "Synthetische Testdaten",
-      "no_matter_data": "Keine Mandatsdaten"
+      "no_matter_data": "Keine Mandatsdaten",
+      "selected_step": "data-nac-selected-step",
+      "task_id": "data-nac-task-id"
     },
     "privacy_guards": {
       "matter_content_present": false,
       "private_payload_values_present": false,
       "credential_material_present": false,
       "raw_graph_paths_present": false
+    },
+    "task_navigation": {
+      "source": "matter.tasks",
+      "initial_selection": "matter.tasks[0]",
+      "current_marker_class": "nac-current-step",
+      "selected_marker_class": "nac-selected-step",
+      "native_button_required": true,
+      "pointer_enter_space_required": true,
+      "all_bindings_resolved_before_ready": true,
+      "binding_failure_state": "render_failed_before_matter_metadata",
+      "writes_allowed": false
     }
   },
   "package_contract": {

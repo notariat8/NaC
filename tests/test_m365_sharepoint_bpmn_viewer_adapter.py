@@ -22,7 +22,7 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
     def test_contract_defines_packageable_viewer_only_spfx(self) -> None:
-        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.5")
+        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.6")
         self.assertEqual(self.contract["status"], "bff_read_site_scoped_package_ready_activation_deferred")
         spfx = self.contract["spfx_surface"]
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
@@ -133,6 +133,8 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             {
                 "component": 'data-nac-component="test-workspace"',
                 "current_step": "data-nac-current-step",
+                "selected_step": "data-nac-selected-step",
+                "task_id": "data-nac-task-id",
                 "synthetic_data": "Synthetische Testdaten",
                 "no_matter_data": "Keine Mandatsdaten",
             },
@@ -155,6 +157,34 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             self.contract["hardening_issue"],
             "https://github.com/notariat8/NaC/issues/682",
         )
+        navigation = self.contract["task_navigation"]
+        self.assertEqual(navigation["source_exact"], "matter.tasks")
+        self.assertEqual(navigation["initial_selection_exact"], "matter.tasks[0]")
+        self.assertEqual(navigation["selected_marker_class_exact"], "nac-selected-step")
+        self.assertEqual(navigation["selected_marker_count_exact"], 1)
+        self.assertTrue(navigation["current_marker_remains_fixed"])
+        self.assertTrue(navigation["native_button_required"])
+        self.assertTrue(navigation["pointer_enter_space_required"])
+        self.assertTrue(navigation["all_step_codes_resolved_before_ready"])
+        self.assertEqual(navigation["resolved_element_instance_of_exact"], "bpmn:Task")
+        self.assertEqual(navigation["null_due_at_text_exact"], "Keine eigene Frist")
+        self.assertEqual(navigation["nonnull_due_at_source_exact"], "selectedTask.dueAt")
+        self.assertEqual(
+            navigation["approval_source_exact"],
+            "selectedTask.requiresNotaryApproval",
+        )
+        self.assertFalse(navigation["denied_metadata_visible"])
+        self.assertFalse(navigation["deputy_grant_details_visible"])
+        self.assertFalse(navigation["invented_assignees_allowed"])
+        self.assertEqual(
+            self.contract["task_navigation_issue"],
+            "https://github.com/notariat8/NaC/issues/684",
+        )
+
+        invalid = copy.deepcopy(self.contract)
+        invalid["task_navigation"]["selected_marker_count_exact"] = 2
+        errors = _validate_contract(invalid, {}, {}, {}, {})
+        self.assertIn("task_navigation must match the fail-closed package UI", errors)
 
     def test_blocked_operations_cover_writes_real_data_and_network_clients(self) -> None:
         blocked = set(self.contract["blocked_operations"])
