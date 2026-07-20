@@ -1148,6 +1148,11 @@ def _catalog_app_record_is_deployed(record: Any) -> bool:
 
 
 def _normalize_catalog_permissions(value: Any) -> list[dict[str, str]]:
+    if isinstance(value, str):
+        expected = f"{BFF_API_RESOURCE}, {BFF_API_SCOPE}"
+        if value.strip() == expected:
+            return list(APPROVED_WEB_API_PERMISSION_REQUESTS)
+        return []
     if not isinstance(value, list):
         return []
     normalized: list[dict[str, str]] = []
