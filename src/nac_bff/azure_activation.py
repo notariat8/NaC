@@ -83,11 +83,17 @@ API_CLIENT_ID_BINDING = {
 _SPFX_ROOT = "spfx/nac-bpmn-viewer"
 _GIT_EXECUTABLE = Path("/usr/bin/git")
 _PACKAGE_BUILDER_SHA256 = (
-    "96a55638359f3e89d16ed577ccdc425754d3ecf0aed1d5c03f1282833a630f36"
+    "6c273c71baa8b133eb4bd4f061a8d2681d029057d0138cacb7f71c8ee77bd3d0"
 )
 _PACKAGE_HOST_FILES = ("function_app.py", "host.json", "requirements.txt")
 _PACKAGE_SOURCE_PACKAGES = ("nac_bff", "nac_m365_graph")
 _PACKAGE_SOURCE_MODULES = ("nac_mvp_test_environment.py",)
+_PACKAGE_ASSET_FILES = ("bpmn/immobilienkaufvertrag.bpmn",)
+_PACKAGE_EXPECTED_ASSET_SHA256 = {
+    "bpmn/immobilienkaufvertrag.bpmn": (
+        "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
+    ),
+}
 _PACKAGE_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
@@ -112,7 +118,8 @@ _ARTIFACT_PATHS = (
     "spfx/nac-bpmn-viewer/config/package-solution.json",
     "spfx/nac-bpmn-viewer/package-lock.json",
     "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "src/nac_bff/bpmn_asset.py",
+    "bpmn/immobilienkaufvertrag.bpmn",
 )
 
 
@@ -351,6 +358,8 @@ def _package_builder_ast_is_declarative(tree: ast.Module) -> bool:
         "_HOST_FILES": _PACKAGE_HOST_FILES,
         "_SOURCE_PACKAGES": _PACKAGE_SOURCE_PACKAGES,
         "_SOURCE_MODULES": _PACKAGE_SOURCE_MODULES,
+        "_ASSET_FILES": _PACKAGE_ASSET_FILES,
+        "_EXPECTED_ASSET_SHA256": _PACKAGE_EXPECTED_ASSET_SHA256,
         "_ZIP_TIMESTAMP": _PACKAGE_ZIP_TIMESTAMP,
     }
     observed: dict[str, object] = {}
@@ -419,6 +428,14 @@ def _build_function_package_bytes(root: Path) -> bytes:
     for name in _PACKAGE_SOURCE_MODULES:
         content = (src_root / name).read_bytes()
         ast.parse(content.decode("utf-8"), filename=name)
+        files[name] = content
+    for name in _PACKAGE_ASSET_FILES:
+        content = (root / name).read_bytes()
+        if (
+            hashlib.sha256(content).hexdigest()
+            != _PACKAGE_EXPECTED_ASSET_SHA256[name]
+        ):
+            raise ValueError(f"canonical package asset hash is invalid: {name}")
         files[name] = content
     files["package-manifest.json"] = _function_package_manifest(files)
 

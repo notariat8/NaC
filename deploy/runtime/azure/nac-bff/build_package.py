@@ -19,10 +19,7 @@ DEFAULT_OUTPUT = HOST_ROOT / "dist/nac-bff-function.zip"
 _HOST_FILES = ("function_app.py", "host.json", "requirements.txt")
 _SOURCE_PACKAGES = ("nac_bff", "nac_m365_graph")
 _SOURCE_MODULES = ("nac_mvp_test_environment.py",)
-_ASSET_FILES = {
-    "bpmn/immobilienkaufvertrag.bpmn": REPO_ROOT
-    / "bpmn/immobilienkaufvertrag.bpmn",
-}
+_ASSET_FILES = ("bpmn/immobilienkaufvertrag.bpmn",)
 _EXPECTED_ASSET_SHA256 = {
     "bpmn/immobilienkaufvertrag.bpmn": (
         "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
@@ -60,8 +57,8 @@ def _source_files() -> dict[str, bytes]:
     for name in _SOURCE_MODULES:
         path = SRC_ROOT / name
         files[name] = path.read_bytes()
-    for package_path, source_path in sorted(_ASSET_FILES.items()):
-        content = source_path.read_bytes()
+    for package_path in _ASSET_FILES:
+        content = (REPO_ROOT / package_path).read_bytes()
         if hashlib.sha256(content).hexdigest() != _EXPECTED_ASSET_SHA256[package_path]:
             raise ValueError(f"canonical package asset hash is invalid: {package_path}")
         files[package_path] = content
