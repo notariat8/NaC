@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, ContextManager, Mapping, Protocol
 
+from .bpmn_asset import BpmnAsset
 from nac_mvp_test_environment import (
-    BPMN_PROCESS_KEY,
-    BPMN_SHA256,
     BUSINESS_CASE_TYPE_ID,
     DEADLINE,
     MATTER_ID,
@@ -24,7 +23,7 @@ ALLOWED_WORKSPACE_ID = WORKSPACE_ID
 ALLOWED_MATTER_ID = MATTER_ID
 ALLOWED_PURPOSE = PURPOSE
 _MATTER_DISPLAY_NAME = "Synthetische IKV-Testakte"
-_SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.1"
+_SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.2"
 
 
 class AccessMode(str, Enum):
@@ -145,6 +144,13 @@ class GraphRestPort(Protocol):
         ...
 
 
+class BpmnAssetPort(Protocol):
+    """Fixed server-side port for the package-bound canonical BPMN model."""
+
+    def read_canonical_bpmn(self) -> BpmnAsset:
+        ...
+
+
 @dataclass(frozen=True, slots=True)
 class BffResponse:
     status_code: int
@@ -166,6 +172,7 @@ class TestEnvironmentBff:
         expected_tenant_id: str,
         access_decision_port: AccessDecisionPort,
         graph_rest_port: GraphRestPort,
+        bpmn_asset_port: BpmnAssetPort,
         request_budget_factory: Callable[[], ContextManager[None]] | None = None,
     ) -> None:
         if not isinstance(expected_tenant_id, str) or not expected_tenant_id.strip():
@@ -173,6 +180,7 @@ class TestEnvironmentBff:
         self._expected_tenant_id = expected_tenant_id
         self._access_decision_port = access_decision_port
         self._graph_rest_port = graph_rest_port
+        self._bpmn_asset_port = bpmn_asset_port
         self._request_budget_factory = request_budget_factory
 
     def get_workspace(
@@ -243,13 +251,23 @@ class TestEnvironmentBff:
         if not raw_projection:
             return _error(404, "RESOURCE_NOT_FOUND")
         try:
-            dto = _build_redacted_dto(raw_projection, access_mode=decision.mode.value)
-        except _ProjectionError:
+            bpmn_asset = self._bpmn_asset_port.read_canonical_bpmn()
+            dto = _build_redacted_dto(
+                raw_projection,
+                access_mode=decision.mode.value,
+                bpmn_asset=bpmn_asset,
+            )
+        except Exception:
             return _error(503, "SERVICE_UNAVAILABLE")
         return BffResponse(status_code=200, body=dto)
 
 
-def _build_redacted_dto(raw: Mapping[str, Any], *, access_mode: str) -> dict[str, Any]:
+def _build_redacted_dto(
+    raw: Mapping[str, Any],
+    *,
+    access_mode: str,
+    bpmn_asset: BpmnAsset,
+) -> dict[str, Any]:
     if not isinstance(raw, Mapping):
         raise _ProjectionError("projection must be an object")
     if raw.get("status") != MATTER_STATUS or raw.get("deadline") != DEADLINE:
@@ -277,15 +295,6 @@ def _build_redacted_dto(raw: Mapping[str, Any], *, access_mode: str) -> dict[str
         if any(task.get(key) != value for key, value in canonical.items()):
             raise _ProjectionError("synthetic task projection diverged")
         tasks.append(canonical)
-
-    bpmn_value = raw.get("bpmn")
-    if (
-        not isinstance(bpmn_value, Mapping)
-        or bpmn_value.get("modelKey") != BPMN_PROCESS_KEY
-        or bpmn_value.get("sha256") != BPMN_SHA256
-    ):
-        raise _ProjectionError("synthetic BPMN projection diverged")
-
     return {
         "schemaVersion": _SCHEMA_VERSION,
         "workspaceId": ALLOWED_WORKSPACE_ID,
@@ -296,7 +305,7 @@ def _build_redacted_dto(raw: Mapping[str, Any], *, access_mode: str) -> dict[str
             "status": MATTER_STATUS,
             "deadline": DEADLINE,
             "tasks": tasks,
-            "bpmn": {"modelKey": BPMN_PROCESS_KEY, "sha256": BPMN_SHA256},
+            "bpmn": bpmn_asset.as_dict(),
             "accessMode": access_mode,
         },
     }

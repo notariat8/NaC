@@ -19,6 +19,15 @@ DEFAULT_OUTPUT = HOST_ROOT / "dist/nac-bff-function.zip"
 _HOST_FILES = ("function_app.py", "host.json", "requirements.txt")
 _SOURCE_PACKAGES = ("nac_bff", "nac_m365_graph")
 _SOURCE_MODULES = ("nac_mvp_test_environment.py",)
+_ASSET_FILES = {
+    "bpmn/immobilienkaufvertrag.bpmn": REPO_ROOT
+    / "bpmn/immobilienkaufvertrag.bpmn",
+}
+_EXPECTED_ASSET_SHA256 = {
+    "bpmn/immobilienkaufvertrag.bpmn": (
+        "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
+    ),
+}
 _ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _LOCKED_IMPORTS = {
     "azure.functions": "azure-functions",
@@ -51,6 +60,11 @@ def _source_files() -> dict[str, bytes]:
     for name in _SOURCE_MODULES:
         path = SRC_ROOT / name
         files[name] = path.read_bytes()
+    for package_path, source_path in sorted(_ASSET_FILES.items()):
+        content = source_path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != _EXPECTED_ASSET_SHA256[package_path]:
+            raise ValueError(f"canonical package asset hash is invalid: {package_path}")
+        files[package_path] = content
     return files
 
 
@@ -129,9 +143,17 @@ def validate_package(package_bytes: bytes) -> list[str]:
         return ["package is not a readable ZIP archive"]
 
     _validate_manifest(files, errors)
+    _validate_assets(files, errors)
     locked = _locked_distributions(files.get("requirements.txt", b""), errors)
     _validate_python_import_closure(files, locked, errors)
     return errors
+
+
+def _validate_assets(files: dict[str, bytes], errors: list[str]) -> None:
+    for path, expected_hash in sorted(_EXPECTED_ASSET_SHA256.items()):
+        content = files.get(path)
+        if content is None or hashlib.sha256(content).hexdigest() != expected_hash:
+            errors.append(f"canonical package asset is missing or invalid: {path}")
 
 
 def _validate_manifest(files: dict[str, bytes], errors: list[str]) -> None:

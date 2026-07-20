@@ -10,6 +10,7 @@ import threading
 import time
 from typing import Any
 
+from .bpmn_asset import CanonicalBpmnAssetFilePort
 from .entra_access_token import build_entra_access_token_validator
 from .fastapi_adapter import (
     create_fastapi_app,
@@ -191,6 +192,7 @@ def build_configured_app(
     graph_client_factory: Callable[[Any], Any] = RawGraphV1Client,
     access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
+    bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
 ) -> Any:
     """Compose the configured app, raising only generic configuration errors."""
 
@@ -218,6 +220,7 @@ def build_configured_app(
             expected_tenant_id=settings.tenant_id,
         ),
         graph_rest_port=workspace_port_factory(graph_client),
+        bpmn_asset_port=bpmn_asset_port_factory(),
         request_budget_factory=request_budget_factory,
     )
     return create_fastapi_app(
@@ -240,6 +243,7 @@ def create_app_from_env(
     graph_client_factory: Callable[[Any], Any] = RawGraphV1Client,
     access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
+    bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
 ) -> Any:
     """Build the runtime app and fail closed to deny-all on every start error."""
 
@@ -251,6 +255,7 @@ def create_app_from_env(
             graph_client_factory=graph_client_factory,
             access_port_factory=access_port_factory,
             workspace_port_factory=workspace_port_factory,
+            bpmn_asset_port_factory=bpmn_asset_port_factory,
         )
     except Exception:
         return create_unconfigured_app()

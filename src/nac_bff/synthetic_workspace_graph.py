@@ -13,8 +13,6 @@ from typing import Any, Callable, Mapping, Protocol
 
 from nac_bff.test_environment import ALLOWED_MATTER_ID, ALLOWED_WORKSPACE_ID
 from nac_mvp_test_environment import (
-    BPMN_PROCESS_KEY,
-    BPMN_SHA256,
     BUSINESS_CASE_TYPE_ID,
     DEADLINE,
     MATTER_STATUS,
@@ -390,7 +388,6 @@ class SyntheticWorkspaceGraphRestAdapter:
             "status": MATTER_STATUS,
             "deadline": DEADLINE,
             "tasks": projected_tasks,
-            "bpmn": {"modelKey": BPMN_PROCESS_KEY, "sha256": BPMN_SHA256},
         }
 
 
