@@ -626,6 +626,117 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             any("attribute-write targets differ" in error for error in errors)
         )
 
+    def test_sealed_account_binding_unreachable_stream_rebind_fails(self) -> None:
+        path = self.root / validator.AZURE_CLI_SEALED_RUNTIME_PATH
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        bootstrap = validator._literal_assignment(tree, "_BOOTSTRAP_SOURCE")
+        self.assertIsInstance(bootstrap, str)
+        assert isinstance(bootstrap, str)
+        mutated = bootstrap.replace(
+            "            sys.stdout = child_stdout\n",
+            "            return\n"
+            "            sys.stdout = child_stdout\n",
+            1,
+        )
+        self.assertNotEqual(mutated, bootstrap)
+        self._write_bootstrap_source(path, source, mutated)
+
+        self.assertIn(
+            "Azure CLI sealed bootstrap child stream isolation differs",
+            validator.validate(self.root),
+        )
+
+    def test_sealed_account_binding_assert_before_stream_rebind_fails(
+        self,
+    ) -> None:
+        path = self.root / validator.AZURE_CLI_SEALED_RUNTIME_PATH
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        bootstrap = validator._literal_assignment(tree, "_BOOTSTRAP_SOURCE")
+        self.assertIsInstance(bootstrap, str)
+        assert isinstance(bootstrap, str)
+        mutated = bootstrap.replace(
+            "            sys.stdout = child_stdout\n",
+            "            assert False\n"
+            "            sys.stdout = child_stdout\n",
+            1,
+        )
+        self.assertNotEqual(mutated, bootstrap)
+        self._write_bootstrap_source(path, source, mutated)
+
+        self.assertIn(
+            "Azure CLI sealed bootstrap child stream isolation differs",
+            validator.validate(self.root),
+        )
+
+    def test_sealed_account_binding_unreachable_stream_rebind_via_raise_fails(
+        self,
+    ) -> None:
+        path = self.root / validator.AZURE_CLI_SEALED_RUNTIME_PATH
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        bootstrap = validator._literal_assignment(tree, "_BOOTSTRAP_SOURCE")
+        self.assertIsInstance(bootstrap, str)
+        assert isinstance(bootstrap, str)
+        mutated = bootstrap.replace(
+            "            sys.stdout = child_stdout\n",
+            "            raise SystemExit(TAMPER_EXIT)\n"
+            "            sys.stdout = child_stdout\n",
+            1,
+        )
+        self.assertNotEqual(mutated, bootstrap)
+        self._write_bootstrap_source(path, source, mutated)
+
+        self.assertIn(
+            "Azure CLI sealed bootstrap child stream isolation differs",
+            validator.validate(self.root),
+        )
+
+    def test_sealed_account_binding_nested_raise_before_stream_rebind_fails(
+        self,
+    ) -> None:
+        path = self.root / validator.AZURE_CLI_SEALED_RUNTIME_PATH
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        bootstrap = validator._literal_assignment(tree, "_BOOTSTRAP_SOURCE")
+        self.assertIsInstance(bootstrap, str)
+        assert isinstance(bootstrap, str)
+        mutated = bootstrap.replace(
+            "            sys.stdout = child_stdout\n",
+            "            if True:\n"
+            "                raise SystemExit(TAMPER_EXIT)\n"
+            "            sys.stdout = child_stdout\n",
+            1,
+        )
+        self.assertNotEqual(mutated, bootstrap)
+        self._write_bootstrap_source(path, source, mutated)
+
+        self.assertIn(
+            "Azure CLI sealed bootstrap child stream isolation differs",
+            validator.validate(self.root),
+        )
+
+    def test_sealed_account_binding_stream_alias_rebind_fails(self) -> None:
+        path = self.root / validator.AZURE_CLI_SEALED_RUNTIME_PATH
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        bootstrap = validator._literal_assignment(tree, "_BOOTSTRAP_SOURCE")
+        self.assertIsInstance(bootstrap, str)
+        assert isinstance(bootstrap, str)
+        mutated = bootstrap.replace(
+            "            sys.__stdout__ = child_stdout\n",
+            "            sys.__stdout__ = inherited_streams[0]\n",
+            1,
+        )
+        self.assertNotEqual(mutated, bootstrap)
+        self._write_bootstrap_source(path, source, mutated)
+
+        self.assertIn(
+            "Azure CLI sealed bootstrap child stream isolation differs",
+            validator.validate(self.root),
+        )
+
     def test_sealed_account_binding_assertion_argv_mutation_fails(
         self,
     ) -> None:

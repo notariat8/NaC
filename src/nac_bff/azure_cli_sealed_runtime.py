@@ -827,6 +827,37 @@ def verify_write_account_binding(azure_argv):
             close_fd(output_write)
             close_fd(devnull)
             close_inherited_descriptors()
+            # Keep copied parent buffers alive until os._exit without flushing them.
+            inherited_streams = (
+                sys.stdout,
+                sys.stderr,
+                sys.__stdout__,
+                sys.__stderr__,
+            )
+            child_stdout = open(
+                1,
+                mode="w",
+                buffering=1,
+                encoding="utf-8",
+                errors="strict",
+                closefd=False,
+            )
+            try:
+                child_stderr = open(
+                    2,
+                    mode="w",
+                    buffering=1,
+                    encoding="utf-8",
+                    errors="strict",
+                    closefd=False,
+                )
+            except BaseException:
+                child_stdout.close()
+                raise
+            sys.stdout = child_stdout
+            sys.stderr = child_stderr
+            sys.__stdout__ = child_stdout
+            sys.__stderr__ = child_stderr
             sys.argv = [
                 "az", "account", "show",
                 "--subscription", EXPECTED_SUBSCRIPTION_ID,
@@ -836,13 +867,23 @@ def verify_write_account_binding(azure_argv):
             ]
             exit_code = 0
             try:
-                runpy.run_module("azure.cli", run_name="__main__")
-            except SystemExit as exc:
-                exit_code = exc.code if isinstance(exc.code, int) else 1
-            try:
-                sys.stdout.flush()
-            except (AttributeError, OSError):
-                exit_code = 1
+                try:
+                    runpy.run_module("azure.cli", run_name="__main__")
+                except SystemExit as exc:
+                    exit_code = exc.code if isinstance(exc.code, int) else 1
+                try:
+                    child_stdout.flush()
+                except (AttributeError, OSError):
+                    exit_code = 1
+            finally:
+                for stream in (child_stdout, child_stderr):
+                    try:
+                        stream.close()
+                    except (OSError, ValueError):
+                        exit_code = 1
+                close_fd(1)
+                close_fd(2)
+            _ = inherited_streams
             os._exit(exit_code)
         except BaseException:
             os._exit(TAMPER_EXIT)
