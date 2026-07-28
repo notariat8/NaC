@@ -50,7 +50,8 @@ gantt
     BusinessCaseType-S1-S2-Verträge            :done,    b1ah, 2026-07-11, 1d
     BusinessCaseType-S3-Offline-Runtime         :done,    b1ai, 2026-07-11, 7d
     BusinessCaseType-S4-Graph-Adapter           :done,    b1aj, 2026-07-11, 1d
-    BusinessCaseType-S5-Offline-Migration      :active,  b1ak, 2026-07-12, 7d
+    BusinessCaseType-S5-Offline-Migration      :done,    b1ak, 2026-07-12, 7d
+    BusinessCaseType-S6a-Evidence-Foundation    :active,  b1al, 2026-07-20, 7d
     Projektstimme und Aktivbau-Doku bereinigen   :done,    b1b, 2026-05-15, 1d
     START_HERE-Betriebseinstieg bereinigen       :done,    b1c, 2026-05-15, 1d
     Dokumentationsordner-Taxonomie bereinigen    :done,    b1d, 2026-05-15, 1d

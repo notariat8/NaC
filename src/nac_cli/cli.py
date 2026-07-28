@@ -346,6 +346,13 @@ def build_parser() -> argparse.ArgumentParser:
     kg_business_case_type_migration.add_argument(
         "--format", choices=["text", "json"], default=argparse.SUPPRESS
     )
+    kg_business_case_type_evidence = kg_sub.add_parser(
+        "business-case-type-evidence-dry-run",
+        help="Prüft den S6-Immutable-Evidence-Kern ausschließlich mit synthetischen In-Memory-Adaptern.",
+    )
+    kg_business_case_type_evidence.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
     kg_ontology_storage_contract = kg_sub.add_parser(
         "ontology-storage-contract",
         help="Prüft den Ontologie-Sizing- und Storage-Vertrag gegen das Geschäftsvorfall-Inventar.",
@@ -1996,6 +2003,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
             ("Business Case Type Graph Read Edge", "validate_business_case_type_graph_read_edge.py"),
             ("Business Case Type Migration S5", "validate_business_case_type_migration.py"),
+            ("Business Case Type Immutable Evidence S6", "validate_business_case_type_immutable_evidence.py"),
             ("M365 Azure BFF Live Activation Contract", "validate_m365_azure_bff_live_activation.py"),
         ]
         overall_rc = 0
@@ -2030,6 +2038,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_business_case_type_runtime.py",
             "scripts/validate_business_case_type_graph_read_edge.py",
             "scripts/validate_business_case_type_migration.py",
+            "scripts/validate_business_case_type_immutable_evidence.py",
             "scripts/validate_m365_azure_bff_live_activation.py",
         ]
         overall_rc = 0

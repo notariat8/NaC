@@ -1,0 +1,720 @@
+{
+  "schema_version": "nac.business-case-type-immutable-evidence-s6/v0.1",
+  "contract_id": "notary-kg.business_case_type_immutable_evidence_s6",
+  "title": "BusinessCaseType immutable evidence S6a offline foundation",
+  "status": "S6_OFFLINE_FOUNDATION",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/687",
+  "slice": {
+    "id": "S6a",
+    "offline_only": true,
+    "live_status_exact": "BLOCKED_PENDING_S7_APPROVAL",
+    "allowed_network_calls": 0,
+    "allowed_provider_calls": 0,
+    "allowed_tenant_calls": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_credential_reads": 0,
+    "production_adapters_implemented": false,
+    "live_mutation_authorization_provided": false,
+    "s7_approval_available": false,
+    "allowed_live_mutations": 0
+  },
+  "mutation_boundary": {
+    "actions_exact": [
+      "schema_apply",
+      "backfill",
+      "correction",
+      "cutover",
+      "rollback"
+    ],
+    "intent_must_be_persisted_before_mutation": true,
+    "outcome_and_readback_required_after_mutation": true,
+    "s6a_executes_mutations": false,
+    "missing_completion_blocks_retry_and_completion": true,
+    "incomplete_chain_requires_reconciliation": true
+  },
+  "evidence_envelope": {
+    "event_schema_version_exact": "nac.immutable-evidence-event/v0.1",
+    "phases_exact": [
+      "intent",
+      "outcome",
+      "readback",
+      "reconciliation_required",
+      "reconciliation_closed"
+    ],
+    "normal_phase_order_exact": [
+      "intent",
+      "outcome",
+      "readback"
+    ],
+    "reconciliation_phase_order_exact": [
+      "intent",
+      "outcome",
+      "reconciliation_required",
+      "readback",
+      "reconciliation_closed"
+    ],
+    "recoverable_phase_orders_exact": [
+      [
+        "intent",
+        "outcome",
+        "readback",
+        "reconciliation_required",
+        "readback",
+        "reconciliation_closed"
+      ],
+      [
+        "intent",
+        "outcome",
+        "reconciliation_required",
+        "readback",
+        "reconciliation_closed",
+        "readback",
+        "reconciliation_closed"
+      ]
+    ],
+    "orphan_intent_recovery_requires_uncertain_outcome_before_reconciliation": true,
+    "base_fields_exact": [
+      "schema_version",
+      "event_id",
+      "idempotency_key_sha256",
+      "delivery_key_sha256",
+      "correlation_id",
+      "phase",
+      "sequence",
+      "previous_event_sha256",
+      "actor_ref",
+      "actor_principal_ref",
+      "tenant_binding_sha256",
+      "principal_key_binding_sha256",
+      "tool_id",
+      "role_id",
+      "action",
+      "business_case_type_id",
+      "catalog_version",
+      "manifest_sha256",
+      "occurred_at",
+      "retention",
+      "privacy",
+      "etags"
+    ],
+    "phase_specific_fields": {
+      "intent": [],
+      "outcome": [
+        "result_code"
+      ],
+      "readback": [
+        "result_code"
+      ],
+      "reconciliation_required": [
+        "reason_code"
+      ],
+      "reconciliation_closed": [
+        "result_code",
+        "operator_ref",
+        "operator_principal_ref",
+        "operator_tenant_binding_sha256",
+        "operator_principal_key_binding_sha256",
+        "approver_ref",
+        "approver_principal_ref",
+        "approver_tenant_binding_sha256",
+        "approver_principal_key_binding_sha256"
+      ]
+    },
+    "canonical_json_exact": "json.dumps(sort_keys=True,separators=(',', ':'),ensure_ascii=True,allow_nan=False)",
+    "event_hash_algorithm": "sha256",
+    "first_previous_event_sha256_exact": "64_lowercase_zeroes",
+    "subsequent_previous_hash_must_equal_prior_event_hash": true,
+    "sequence_starts_at": 1,
+    "sequence_contiguous": true,
+    "duplicate_events_allowed": false,
+    "floats_allowed": false,
+    "timestamps_exact": "RFC3339_UTC_seconds_Z",
+    "maximum_etag_entries": 16,
+    "maximum_etag_value_length": 256,
+    "etag_storage_exact": "hmac-sha256:k<positive_integer>:<64_lowercase_hex>",
+    "raw_etag_value_allowed": false,
+    "outcome_result_codes_exact": [
+      "confirmed",
+      "failed",
+      "write-state-uncertain"
+    ],
+    "readback_result_codes_exact": [
+      "confirmed",
+      "failed",
+      "verified"
+    ],
+    "reconciliation_closed_result_codes_exact": [
+      "failed",
+      "reconciled"
+    ],
+    "failed_outcome_with_verified_readback_is_terminal": true,
+    "event_creation_requires_factory_verified_actor_and_correlation_refs": true,
+    "outbox_append_requires_untampered_factory_event": true,
+    "publisher_snapshots_untrusted_outbox_before_chain_verification": true,
+    "etag_hmac_algorithm_exact": "HMAC-SHA256",
+    "etag_hmac_domain_separator_exact": "nac.etag-evidence.v1\\u0000",
+    "etag_hmac_minimum_key_bytes": 32,
+    "etag_hmac_key_version_required": true,
+    "etag_hmac_tenant_bound": true,
+    "etag_hmac_tenant_binding_exact": "SHA-256(nac.tenant-binding.v1\\u0000,tenant_id)"
+  },
+  "correlation_and_binding": {
+    "correlation_id_stable_for_complete_chain": true,
+    "correlation_id_pattern": "^correlation-v1-k[0-9]+-[0-9a-f]{64}$",
+    "immutable_across_chain_exact": [
+      "correlation_id",
+      "actor_ref",
+      "actor_principal_ref",
+      "tenant_binding_sha256",
+      "principal_key_binding_sha256",
+      "tool_id",
+      "role_id",
+      "action",
+      "business_case_type_id",
+      "catalog_version",
+      "manifest_sha256",
+      "idempotency_key_sha256",
+      "retention",
+      "privacy"
+    ],
+    "idempotency_binding_fields_exact": [
+      "correlation_id",
+      "actor_ref",
+      "actor_principal_ref",
+      "tenant_binding_sha256",
+      "principal_key_binding_sha256",
+      "tool_id",
+      "role_id",
+      "action",
+      "business_case_type_id",
+      "catalog_version",
+      "manifest_sha256"
+    ],
+    "event_identity_components_exact": [
+      "canonical_event_without_event_id_sha256"
+    ],
+    "idempotent_replay_accepts_new_event": false,
+    "foreign_binding_behavior": "BLOCKED",
+    "correlation_ref_algorithm_exact": "tenant-and-key-version-bound-HMAC-SHA256",
+    "raw_correlation_source_allowed": false,
+    "event_creation_requires_factory_verified_correlation_ref": true,
+    "stored_event_syntax_is_not_factory_provenance": true,
+    "delivery_key_is_event_specific": true,
+    "delivery_key_reuse_across_events_allowed": false,
+    "correlation_and_actor_tenant_binding_must_match": true,
+    "cross_tenant_event_or_retry_allowed": false,
+    "tenant_binding_algorithm_exact": "SHA-256(nac.tenant-binding.v1\\u0000,tenant_id)",
+    "tenant_binding_persisted_in_event": true,
+    "delivery_binding_components_exact": [
+      "canonical_event_without_event_id_or_delivery_key_sha256"
+    ]
+  },
+  "typed_identifiers": {
+    "tool_id_pattern": "^tool-[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "role_id_pattern": "^role-[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "business_case_type_id_pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "catalog_version_pattern": "^[0-9a-f]{64}$",
+    "registered_tool_ids_exact": [
+      "tool-nac-cli",
+      "tool-nac-kg-business-case-type-evidence",
+      "tool-nac-kg-business-case-type-migration"
+    ],
+    "registered_role_ids_exact": [
+      "role-automation",
+      "role-migration-operator",
+      "role-migration-reviewer"
+    ],
+    "registered_business_case_type_ids_exact": [
+      "adoption-familienrechtliche-erklaerungen",
+      "bautraegervertrag",
+      "ehevertrag-scheidungsfolgenvereinbarung",
+      "erbausschlagung",
+      "erbscheinsantrag-nachlass",
+      "geschaeftsanteilsuebertragung-gmbh",
+      "gesellschafterbeschluss-gmbh-ug",
+      "grundschuld-hypothekenbestellung",
+      "handelsregisteranmeldung",
+      "immobilienkaufvertrag",
+      "loeschungsbewilligung-grundbuchloeschung",
+      "online-gmbh-gruendung",
+      "pflichtteilsverzicht-erbverzicht",
+      "schenkungsvertrag-uebertragungsvertrag",
+      "teilungserklaerung-weg",
+      "testament-erbvertrag",
+      "unterschriftsbeglaubigung",
+      "vereinsregisteranmeldung",
+      "vollmacht-immobilien-gesellschaftsgeschaefte",
+      "vorsorgevollmacht-patientenverfuegung"
+    ],
+    "registered_catalog_versions_exact": [
+      "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0"
+    ],
+    "etag_keys_exact": [
+      "deadline",
+      "matter",
+      "process",
+      "registry",
+      "task"
+    ],
+    "free_form_or_resolvable_identifiers_allowed": false,
+    "registry_source_exact": "BusinessCaseTypeCatalog.from_repo",
+    "registry_must_exactly_match_s3_catalog": true
+  },
+  "actor_ref": {
+    "scheme_exact": "actor-v1",
+    "algorithm_exact": "HMAC-SHA256",
+    "domain_separator_exact": "nac.actor-ref.v1\\u0000",
+    "tenant_bound": true,
+    "key_version_bound": true,
+    "format_pattern": "^actor-v1-k[0-9]+-[0-9a-f]{64}$",
+    "minimum_key_bytes": 32,
+    "minimum_key_version": 1,
+    "raw_tenant_id_in_event_allowed": false,
+    "raw_actor_object_id_in_event_allowed": false,
+    "secret_or_key_material_in_event_allowed": false,
+    "reversal_claim_allowed": false,
+    "rotation_requires_new_key_version": true,
+    "event_creation_requires_factory_verified_actor_ref": true,
+    "stored_event_verification_requires_future_signature_and_key_registry": true,
+    "stable_principal_binding_algorithm_exact": "HMAC-SHA256",
+    "stable_principal_binding_is_key_version_independent": true,
+    "stable_principal_binding_persisted_in_event": true,
+    "dual_control_uses_stable_principal_binding": true,
+    "stable_principal_binding_domain_separator_exact": "nac.principal-ref.v1\\u0000",
+    "stable_principal_binding_format_pattern": "^principal-v1-[0-9a-f]{64}$",
+    "stable_principal_binding_minimum_key_bytes": 32,
+    "stable_principal_binding_is_tenant_bound": true,
+    "persisted_principal_fields_exact": [
+      "actor_principal_ref",
+      "operator_principal_ref",
+      "approver_principal_ref"
+    ],
+    "closure_principal_refs_must_match_factory_actor_refs": true,
+    "principal_key_binding_algorithm_exact": "SHA-256(nac.principal-key-binding.v1\\u0000,principal_key)",
+    "principal_key_binding_persisted_in_event": true,
+    "principal_key_binding_must_match_actor_operator_and_approver": true,
+    "different_principal_keys_fail_closed": true,
+    "closure_security_binding_fields_exact": [
+      "operator_tenant_binding_sha256",
+      "operator_principal_key_binding_sha256",
+      "approver_tenant_binding_sha256",
+      "approver_principal_key_binding_sha256"
+    ]
+  },
+  "retention_legal_hold_and_access": {
+    "minimum_retention_years": 10,
+    "event_retention_fields_exact": [
+      "minimum_years",
+      "legal_hold_capable"
+    ],
+    "event_privacy_fields_exact": [
+      "classification",
+      "read_role",
+      "monthly_access_review_required"
+    ],
+    "event_privacy_classification_exact": "pseudonymous_personal_data",
+    "event_read_role_exact": "revision_audit",
+    "event_monthly_access_review_required_exact": true,
+    "legal_hold_capable_must_equal": true,
+    "retention_reduction_allowed": false,
+    "delete_before_retention_end_allowed": false,
+    "legal_hold_release_authorized_by_s6a": false,
+    "production_legal_hold_activation_implemented": false,
+    "monthly_access_review_required_for_production": true,
+    "access_review_evidence_required_for_production": true,
+    "separation_of_duties_required_for_policy_change": true,
+    "offline_metadata_is_not_provider_policy_readback": true
+  },
+  "ports": {
+    "postgresql_outbox": {
+      "interface": "OutboxPort",
+      "offline_adapter": "InMemoryEvidenceOutbox",
+      "production_adapter_available": false,
+      "production_requirements_exact": [
+        "transactional_persistence_before_mutation",
+        "unique_correlation_id_and_sequence",
+        "append_only_rows",
+        "restart_safe_hash_chain_validation",
+        "publisher_claim_with_idempotent_ack"
+      ]
+    },
+    "broker": {
+      "interface": "BrokerPort",
+      "offline_adapter": null,
+      "production_adapter_available": false,
+      "production_requirements_exact": [
+        "durable_publish_ack",
+        "per_correlation_ordering",
+        "idempotent_delivery",
+        "retry_policy",
+        "dead_letter_queue"
+      ],
+      "offline_test_double": "_SyntheticBroker",
+      "ack_fields_exact": [
+        "ack_ref",
+        "event_id",
+        "event_sha256",
+        "idempotency_key_sha256",
+        "delivery_key_sha256"
+      ],
+      "ack_ref_pattern": "^broker-ack-v1-[0-9a-f]{64}$",
+      "ack_refs_unique_per_publication": true,
+      "delivery_key_binding_required": true
+    },
+    "signature_anchor": {
+      "interface": "SignatureAnchorPort",
+      "offline_adapter": null,
+      "production_adapter_available": false,
+      "production_requirements_exact": [
+        "detached_signature",
+        "daily_anchor",
+        "first_and_last_event_binding",
+        "chain_head_binding",
+        "signature_reference_readback"
+      ],
+      "offline_test_double": "_SyntheticSignatureAnchor",
+      "anchor_fields_exact": [
+        "anchor_ref",
+        "signature_ref",
+        "record_count",
+        "first_event_sha256",
+        "last_event_sha256",
+        "head_sha256"
+      ],
+      "anchor_ref_pattern": "^anchor-v1-[0-9a-f]{64}$",
+      "signature_ref_pattern": "^signature-v1-[0-9a-f]{64}$",
+      "independent_readback_required": true,
+      "independent_readback_must_exactly_match_receipt": true,
+      "anchor_call_keyword_fields_exact": [
+        "idempotency_key_sha256"
+      ],
+      "idempotency_key_required": true,
+      "idempotency_key_operation_exact": "signature-anchor",
+      "idempotency_key_derivation_exact": "SHA-256(nac.immutable-evidence-publication-operation.v1\\u0000,operation,chain_head_sha256)",
+      "same_key_must_return_same_receipt_for_resume": true
+    },
+    "worm_journal": {
+      "interface": "WormJournalPort",
+      "offline_adapter": null,
+      "production_adapter_available": false,
+      "production_requirements_exact": [
+        "append_only_commit",
+        "minimum_ten_year_retention_policy",
+        "legal_hold_capability",
+        "provider_receipt",
+        "independent_receipt_readback"
+      ],
+      "offline_test_double": "_SyntheticWormJournal",
+      "commit_receipt_fields_exact": [
+        "receipt_ref",
+        "head_sha256"
+      ],
+      "independent_readback_fields_exact": [
+        "receipt_ref",
+        "head_sha256",
+        "retention_years",
+        "legal_hold_capable"
+      ],
+      "receipt_ref_pattern": "^worm-receipt-v1-[0-9a-f]{64}$",
+      "readback_retention_may_exceed_event_minimum": true,
+      "commit_call_keyword_fields_exact": [
+        "idempotency_key_sha256"
+      ],
+      "idempotency_key_required": true,
+      "idempotency_key_operation_exact": "worm-commit",
+      "idempotency_key_derivation_exact": "SHA-256(nac.immutable-evidence-publication-operation.v1\\u0000,operation,chain_head_sha256)",
+      "same_key_must_return_same_receipt_for_resume": true
+    },
+    "reconciliation_store": {
+      "interface": "ReconciliationStorePort",
+      "offline_adapter": "InMemoryReconciliationStore",
+      "production_adapter_available": false,
+      "production_requirements_exact": [
+        "persistent_required_state",
+        "restart_safe_block",
+        "reason_code_not_replaceable",
+        "operator_approver_separation",
+        "closure_evidence_before_unblock"
+      ],
+      "publication_progress_fields_exact": [
+        "stage",
+        "acknowledged_event_sha256s",
+        "anchor_ref_sha256",
+        "signature_ref_sha256",
+        "worm_receipt_ref_sha256"
+      ],
+      "publication_stages_exact": [
+        "outbox-snapshot",
+        "broker-in-flight",
+        "broker-complete",
+        "anchor-in-flight",
+        "anchor-readback-in-flight",
+        "anchor-readback-complete",
+        "worm-commit-in-flight",
+        "worm-readback-in-flight",
+        "worm-readback-complete"
+      ],
+      "publication_progress_is_redacted_and_sticky": true,
+      "interface_operations_exact": [
+        "claim_publication",
+        "advance_publication",
+        "complete_publication",
+        "authorize_publication_retry",
+        "require",
+        "close",
+        "is_required"
+      ],
+      "publication_progress_persisted_before_each_external_call": true,
+      "publication_completion_persisted_before_success_return": true,
+      "completed_publication_replay_returns_persisted_result_without_external_calls": true,
+      "interrupted_publication_blocks_blind_retry": true,
+      "outbox_snapshot_failure_is_sticky_with_zero_chain_head": true,
+      "publication_claim_acquired_before_first_external_call": true,
+      "publication_claim_id_pattern": "^claim-v1-[0-9a-f]{64}$",
+      "publication_claim_is_exclusive": true,
+      "publication_claim_binds_chain_head": true,
+      "publication_claim_returns_completed_result_for_idempotent_replay": true,
+      "publication_retry_requires_authorization": true,
+      "publication_retry_authorization_requires_dual_control": true,
+      "publication_retry_resumes_persisted_progress": true,
+      "publication_retry_skips_acknowledged_broker_events": true,
+      "publication_retry_preserves_anchor_signature_and_worm_bindings": true,
+      "interrupted_publication_can_resume_after_dual_control_authorization": true,
+      "claim_publication_keyword_fields_exact": [
+        "claim_id",
+        "tenant_binding_sha256",
+        "principal_key_binding_sha256",
+        "event_sha256s"
+      ],
+      "publication_claim_binds_tenant_binding": true,
+      "publication_claim_binds_principal_key_binding": true,
+      "publication_security_binding_mismatch_fails_closed": true,
+      "completed_claim_fields_exact": [
+        "status",
+        "result",
+        "publication_progress"
+      ],
+      "completed_claim_returns_validated_progress": true,
+      "requirement_security_binding_fields_exact": [
+        "tenant_binding_sha256",
+        "principal_key_binding_sha256"
+      ],
+      "retry_authorization_binds_correlation_operator_and_approver_to_same_tenant": true,
+      "retry_authorization_binds_operator_and_approver_to_publication_principal_key": true,
+      "require_keyword_fields_exact": [
+        "claim_id",
+        "publication_progress",
+        "tenant_binding_sha256",
+        "principal_key_binding_sha256",
+        "event_sha256s"
+      ],
+      "require_security_binding_fields_are_optional": true,
+      "pre_claim_publication_requirement_reason_exact": "evidence-publication-incomplete",
+      "pre_claim_publication_requirement_fields_exact": [
+        "reason_code",
+        "chain_head_sha256",
+        "publication_progress",
+        "tenant_binding_sha256",
+        "principal_key_binding_sha256",
+        "event_sha256s",
+        "retry_authorized",
+        "retry_authorizations"
+      ],
+      "pre_claim_publication_requirement_initial_retry_authorized": false,
+      "pre_claim_publication_requirement_initial_retry_authorizations_exact": [],
+      "pre_claim_retry_authorization_is_principal_key_bound": true,
+      "pre_claim_retry_without_principal_key_binding_fails_closed": true,
+      "pre_claim_authorization_persisted_before_claim": true,
+      "claim_atomically_consumes_authorized_requirement": true,
+      "claim_copies_retry_authorizations_into_publication_state": true,
+      "claim_removes_consumed_requirement": true,
+      "claim_event_sha256s_required_and_nonempty": true,
+      "claim_event_sha256s_last_must_equal_chain_head": true,
+      "pre_claim_requirement_binds_ordered_event_hash_prefix": true,
+      "pre_claim_event_hash_prefix_may_be_empty_before_snapshot": true,
+      "claim_must_exactly_extend_pre_claim_event_hash_prefix": true,
+      "publication_state_persists_complete_ordered_event_hash_sequence": true,
+      "existing_publication_reclaim_requires_exact_event_hash_sequence": true
+    },
+    "orchestrator": {
+      "implementation": "ImmutableEvidencePublisher",
+      "synthetic_test_doubles_exercise_all_ports": true,
+      "missing_or_invalid_receipt_sets_sticky_reconciliation": true,
+      "receipt_references_returned_raw": false,
+      "production_durability_claim": false,
+      "defensive_copy_per_port_call": true,
+      "snapshot_before_chain_verification": true,
+      "broker_ack_event_binding_required": true,
+      "anchor_readback_is_separate_operation": true,
+      "worm_readback_is_separate_operation": true,
+      "provider_references_are_normalized_to_opaque_core_references": true,
+      "write_ahead_publication_claim_required": true,
+      "durable_completion_replay_required": true,
+      "operation_idempotency_and_delivery_keys_are_distinct": true,
+      "authorized_resume_from_persisted_progress_required": true,
+      "unauthorized_resume_allowed": false,
+      "completion_result_fields_exact": [
+        "schema_version",
+        "status",
+        "correlation_id",
+        "chain_head_sha256",
+        "event_count",
+        "broker_ack_count",
+        "anchor_ref_sha256",
+        "signature_ref_sha256",
+        "worm_receipt_ref_sha256",
+        "worm_readback_ref_sha256",
+        "worm_readback_verified",
+        "production_durability_claim"
+      ],
+      "completion_result_binds_chain_head": true,
+      "completion_result_binds_signature_reference_hash": true,
+      "completed_result_event_count_equals_current_chain_length": true,
+      "completed_result_broker_ack_count_equals_progress_length": true,
+      "completed_result_progress_head_equals_chain_head": true,
+      "completed_claim_progress_must_be_worm_readback_complete": true,
+      "all_external_port_exceptions_are_redacted": true,
+      "external_immutable_evidence_error_is_redacted": true,
+      "provider_exception_detail_returned_or_persisted": false,
+      "redacted_external_failure_messages_exact": [
+        "evidence publication state is unavailable",
+        "evidence publication requires reconciliation"
+      ]
+    }
+  },
+  "reconciliation": {
+    "required_for_exact": [
+      "missing_outcome",
+      "missing_readback",
+      "uncertain_write_state",
+      "outbox_publish_failure",
+      "broker_ack_failure",
+      "anchor_failure",
+      "worm_receipt_failure",
+      "worm_readback_mismatch"
+    ],
+    "required_state_is_sticky": true,
+    "automatic_close_allowed": false,
+    "operator_and_approver_must_differ": true,
+    "closure_requires_readback": true,
+    "closure_requires_reconciliation_closed_event": true,
+    "production_close_requires_persistent_port": true,
+    "s6a_close_proves_production_reconciliation": false,
+    "required_state_binds_chain_head": true,
+    "substitute_chain_close_allowed": false,
+    "publication_failure_close_supported_in_s6a": false,
+    "publication_failure_retry_allowed_while_required": false,
+    "normal_chain_recovery_after_missing_or_failed_readback_supported": true,
+    "failed_closure_can_be_retried_after_new_verified_readback": true,
+    "uncertain_outcome_requires_reconciliation_before_readback": true,
+    "direct_readback_after_uncertain_outcome_allowed": false,
+    "failed_closure_requires_new_successful_readback_before_reconciled_closure": true,
+    "publication_failure_retry_after_dual_control_authorization": true,
+    "publication_retry_authorization_operator_and_approver_must_differ": true,
+    "publication_retry_resumes_same_chain_head_and_progress": true
+  },
+  "negative_gates": {
+    "reject_exact": [
+      "tampered_event_or_event_hash",
+      "duplicate_event",
+      "sequence_gap_or_reordered_phase",
+      "previous_hash_mismatch",
+      "foreign_correlation_or_binding",
+      "missing_intent_outcome_or_readback",
+      "raw_identity_secret_credential_or_payload",
+      "retention_or_legal_hold_downgrade",
+      "missing_port_ack_receipt_or_readback",
+      "semantic_or_duplicate_provider_reference",
+      "factory_provenance_or_post_build_mutation",
+      "outbox_snapshot_tamper_or_partial_publish_retry",
+      "same_reconciliation_operator_and_approver",
+      "delivery_key_reuse_or_ack_binding_drift",
+      "publication_progress_regression_or_reference_replacement",
+      "same_principal_across_actor_key_rotation",
+      "publication_retry_without_dual_control_authorization",
+      "publication_claim_mismatch_or_parallel_owner",
+      "completion_chain_head_or_signature_binding_drift",
+      "closure_principal_ref_mismatch",
+      "correlation_actor_operator_or_approver_tenant_binding_mismatch",
+      "principal_key_binding_mismatch",
+      "anchor_or_worm_idempotency_key_drift",
+      "completed_claim_missing_or_inconsistent_publication_progress",
+      "completed_result_event_count_or_progress_binding_drift",
+      "external_port_error_detail_disclosure"
+    ],
+    "failure_mode": "fail_closed",
+    "live_override_allowed": false,
+    "partial_completion_allowed": false,
+    "external_partial_publish_requires_reconciliation": true
+  },
+  "evidence_policy": {
+    "synthetic_only": true,
+    "redacted_only": true,
+    "production_or_resolvable_matter_data_allowed": false,
+    "raw_provider_or_graph_payloads_allowed": false,
+    "documents_persons_free_text_allowed": false,
+    "credentials_tokens_certificates_private_keys_allowed": false,
+    "raw_actor_or_tenant_identifiers_allowed": false,
+    "audit_journal_lite_is_worm_evidence": false,
+    "offline_outbox_is_postgresql_claim": false,
+    "offline_chain_is_signature_or_anchor_claim": false,
+    "offline_chain_is_worm_claim": false,
+    "offline_reconciliation_is_production_persistence_claim": false,
+    "production_immutability_or_audit_proof_claim_allowed": false
+  },
+  "offline_output": {
+    "status_exact": "S6_OFFLINE_FOUNDATION",
+    "live_status_exact": "BLOCKED_PENDING_S7_APPROVAL",
+    "production_worm_claim_exact": false,
+    "required_production_ports_exact": [
+      "postgresql_outbox",
+      "broker_with_dlq",
+      "detached_signature_and_daily_anchor",
+      "worm_journal_with_retention_readback",
+      "persistent_reconciliation_store"
+    ],
+    "next_gate_exact": "S6B_PROVIDER_ADAPTERS_AND_S7_DUAL_APPROVAL",
+    "zero_activity_counters_exact": [
+      "network_calls",
+      "provider_calls",
+      "tenant_calls",
+      "tenant_writes",
+      "credential_reads",
+      "live_mutations"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-S6-01",
+      "requirement": "A canonical redacted envelope models intent, outcome, readback, reconciliation-required and reconciliation-closed evidence with strict phase order, contiguous sequence and SHA-256 hash chaining."
+    },
+    {
+      "id": "AC-S6-02",
+      "requirement": "Every declared mutation requires persisted intent before execution and outcome plus readback afterwards; operation idempotency, event-specific delivery keys, the ordered event-hash sequence, persisted tenant/principal-key bindings, an exclusive chain-head-bound publication claim and write-ahead progress make retry fail closed unless dual-control resume is explicitly authorized."
+    },
+    {
+      "id": "AC-S6-03",
+      "requirement": "Correlation, actor and closure principals carry the same persisted tenant_binding_sha256; actor, operator and approver additionally carry a matching persisted principal_key_binding_sha256. Cross-tenant or mixed-principal-key evidence fails closed while pseudonymous principal refs remain stable across ActorRef rotation."
+    },
+    {
+      "id": "AC-S6-04",
+      "requirement": "Explicit ports define the later PostgreSQL outbox, broker acknowledgements bound to delivery keys, deterministic chain-head-bound idempotency keys for signature anchor and WORM commit, independent readbacks and a restart-safe reconciliation store with security-bound claims, resumable progress and completed-result replay."
+    },
+    {
+      "id": "AC-S6-05",
+      "requirement": "Every event requires at least ten years retention and legal-hold capability; production additionally requires policy readback, monthly access review and separation of duties, none of which S6a claims to implement."
+    },
+    {
+      "id": "AC-S6-06",
+      "requirement": "Publication claims bind chain head, tenant, principal-key identity and the complete ordered event-hash sequence. A pre-claim evidence-publication-incomplete requirement persists its available ordered event-hash prefix plus retry authorization and dual-control evidence; retry fails closed without a principal-key binding, and claim must exactly extend that prefix while atomically consuming the authorized requirement into publication state. Completed claims return result plus publication progress, which must match the current chain length, acknowledged count, head, anchor, signature and WORM bindings."
+    },
+    {
+      "id": "AC-S6-07",
+      "requirement": "The synthetic offline result is exactly S6_OFFLINE_FOUNDATION and BLOCKED_PENDING_S7_APPROVAL with zero network, provider, tenant, credential and live-mutation activity and no WORM or production durability claim."
+    },
+    {
+      "id": "AC-S6-08",
+      "requirement": "Negative gates reject tenant/principal-key drift, ordered event-hash prefix or complete-sequence drift, unbound pre-claim retry, claim or completion-progress drift, non-deterministic anchor/WORM operation keys, unauthorized retry and all prior evidence violations. Every external port exception, including ImmutableEvidenceError, is reduced to a fixed redacted boundary without provider detail."
+    }
+  ]
+}

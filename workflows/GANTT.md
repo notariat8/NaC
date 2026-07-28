@@ -15,7 +15,8 @@ gantt
     BusinessCaseType-S1-S2-Verträge            :done,   w3b, 2026-07-11, 1d
     BusinessCaseType-S3-Offline-Runtime         :done,   w3c, 2026-07-11, 7d
     BusinessCaseType-S4-Graph-Adapter           :done,   w3d, 2026-07-11, 1d
-    BusinessCaseType-S5-Offline-Migration      :active, w3e, 2026-07-12, 7d
+    BusinessCaseType-S5-Offline-Migration      :done,   w3e, 2026-07-12, 7d
+    BusinessCaseType-S6a-Evidence-Foundation    :active, w3f, 2026-07-20, 7d
     Usecase-lokale KG-Runtime-Bindung          :done,   w3a, 2026-05-15, 1d
     No-code-KG-Editor-View-Vertrag             :done,   w4a, 2026-05-15, 1d
     Deutsche Workflow-MD-Sprachführung        :done,   w4b, 2026-05-17, 1d
