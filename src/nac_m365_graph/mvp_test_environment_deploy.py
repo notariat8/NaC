@@ -79,6 +79,21 @@ _EXPECTED_BFF_URL = (
     "notary_team_01/matters/NAC-SYN-MATTER-001"
     "?purpose=view_synthetic_matter_workspace"
 )
+_EXPECTED_BFF_TAMPERED_URLS = (
+    _EXPECTED_BFF_URL.replace(
+        "/workspaces/notary_team_01/", "/workspaces/foreign_workspace/"
+    ),
+    _EXPECTED_BFF_URL.replace(
+        "/matters/NAC-SYN-MATTER-001", "/matters/NAC-SYN-MATTER-FOREIGN"
+    ),
+    _EXPECTED_BFF_URL.replace(
+        "purpose=view_synthetic_matter_workspace", "purpose=foreign"
+    ),
+    f"{_EXPECTED_BFF_URL}&site_id=foreign",
+)
+_EXPECTED_BFF_ALLOWED_URLS = frozenset(
+    (_EXPECTED_BFF_URL, *_EXPECTED_BFF_TAMPERED_URLS)
+)
 _GUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -814,7 +829,7 @@ def _safe_bff_http_denial(
         url = command[command.index("--url") + 1]
     except (ValueError, IndexError):
         return None
-    if url not in {_EXPECTED_BFF_URL, f"{_EXPECTED_BFF_URL}&site_id=foreign"}:
+    if url not in _EXPECTED_BFF_ALLOWED_URLS:
         return None
     messages = [
         value.strip()
@@ -854,8 +869,7 @@ def _matches_request_get(command: tuple[str, ...]) -> bool:
     return (
         len(command) == len(resource_prefix) + 1 + len(bff_suffix)
         and command[: len(resource_prefix)] == resource_prefix
-        and command[len(resource_prefix)]
-        in {_EXPECTED_BFF_URL, f"{_EXPECTED_BFF_URL}&site_id=foreign"}
+        and command[len(resource_prefix)] in _EXPECTED_BFF_ALLOWED_URLS
         and command[len(resource_prefix) + 1 :] == bff_suffix
     )
 
@@ -905,8 +919,8 @@ def run_mvp_test_environment_deploy(
         "accessDecisionVerification": {
             "source": SYNTHETIC_ACCESS_DECISION_SOURCE,
             "liveBffDecision": False,
-            "liveEntraBffActivation": "DEFERRED",
-            "deferredReason": "requires_new_delegated_scope_and_public_https_endpoint",
+            "liveEntraBffActivation": "FINAL_LIVE_RUN_PENDING",
+            "pendingReason": "provisioned_endpoint_and_scope_require_current_main_live_verification",
             "failClosed": True,
             "policyRequirements": [
                 "primary_assignment",

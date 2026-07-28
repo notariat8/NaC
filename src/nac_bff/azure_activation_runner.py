@@ -77,7 +77,9 @@ _SUMMARY_EVIDENCE_KEYS = {
     "authenticated_read_passed", "readyz_after_authenticated_read_passed",
     "synthetic_state_restored", "assigned_access_passed",
     "deputy_access_passed", "denied_access_passed",
-    "tampered_access_passed", "resume_enabled",
+    "tampered_access_passed", "tampered_workspace_passed",
+    "tampered_matter_passed", "tampered_purpose_passed",
+    "tampered_filter_passed", "resume_enabled",
 }
 _SUMMARY_COUNT_KEYS = {
     "required_step_count", "passed_step_count", "failed_step_count",
@@ -106,6 +108,10 @@ _STEP_11_ACCESS_SIGNAL_KEYS = (
     "deputy_access_passed",
     "denied_access_passed",
     "tampered_access_passed",
+    "tampered_workspace_passed",
+    "tampered_matter_passed",
+    "tampered_purpose_passed",
+    "tampered_filter_passed",
 )
 _STEP_11_SIGNAL_KEYS = _STEP_11_ACCESS_SIGNAL_KEYS + _STEP_11_SUMMARY_SIGNAL_KEYS
 
@@ -1850,6 +1856,10 @@ def _load_or_initialize_state(
         "deputy_access_passed": False,
         "denied_access_passed": False,
         "tampered_access_passed": False,
+        "tampered_workspace_passed": False,
+        "tampered_matter_passed": False,
+        "tampered_purpose_passed": False,
+        "tampered_filter_passed": False,
         "resume_enabled": False,
         "ledger_hash_chain_valid": False,
     }
@@ -2413,6 +2423,18 @@ def _evidence_from_state(state: dict[str, Any]) -> dict[str, Any]:
             "tampered_access_passed": bool(
                 state.get("tampered_access_passed", False)
             ),
+            "tampered_workspace_passed": bool(
+                state.get("tampered_workspace_passed", False)
+            ),
+            "tampered_matter_passed": bool(
+                state.get("tampered_matter_passed", False)
+            ),
+            "tampered_purpose_passed": bool(
+                state.get("tampered_purpose_passed", False)
+            ),
+            "tampered_filter_passed": bool(
+                state.get("tampered_filter_passed", False)
+            ),
             "resume_enabled": bool(state.get("resume_enabled", False)),
         },
     }
@@ -2481,6 +2503,10 @@ def _validate_evidence(evidence: dict[str, Any]) -> None:
         or summary["deputy_access_passed"] is not True
         or summary["denied_access_passed"] is not True
         or summary["tampered_access_passed"] is not True
+        or summary["tampered_workspace_passed"] is not True
+        or summary["tampered_matter_passed"] is not True
+        or summary["tampered_purpose_passed"] is not True
+        or summary["tampered_filter_passed"] is not True
         or summary["resume_enabled"] is not False
     ):
         raise ActivationStepError("EVIDENCE_SUMMARY_INVALID")

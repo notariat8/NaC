@@ -453,6 +453,10 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
             "deputy_access_passed": True,
             "denied_access_passed": True,
             "tampered_access_passed": True,
+            "tampered_workspace_passed": True,
+            "tampered_matter_passed": True,
+            "tampered_purpose_passed": True,
+            "tampered_filter_passed": True,
             "resume_enabled": False,
         }
         run.return_value = {

@@ -693,7 +693,13 @@ class _FakeM365:
             )
         if command[1] == "request" and "api://funktion8.de/nac-bff" in command:
             url = command[command.index("--url") + 1]
-            if "site_id=foreign" in url:
+            is_tampered = (
+                "/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001"
+                not in url
+                or "purpose=view_synthetic_matter_workspace" not in url
+                or "site_id=foreign" in url
+            )
+            if is_tampered:
                 if self.allow_tampered:
                     return SimpleNamespace(returncode=0, stdout="{}", stderr="")
                 return SimpleNamespace(
@@ -3484,10 +3490,10 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(self._prewrite()["status"], "PASSED")
         self.port._actor_id = ACTOR_ID
         result = self.port.execute_step(STEPS[10], self.context)
-        self.assertEqual(result["verified_count"], 7)
+        self.assertEqual(result["verified_count"], 11)
         self.assertEqual(
             [call[1] for call in self.synthetic.calls if call[0] == "mode"],
-            ["assigned", "deputy", "denied"],
+            ["assigned", "deputy", "denied", "assigned"],
         )
         restore_index = next(
             index
@@ -3500,10 +3506,16 @@ class AzureBffCompositionTests(unittest.TestCase):
             for command in self.m365.commands
             if command[1] == "request" and "api://funktion8.de/nac-bff" in command
         ]
-        self.assertEqual(len(bff_calls), 5)
+        self.assertEqual(len(bff_calls), 9)
+        joined_calls = [" ".join(command) for command in bff_calls]
         self.assertTrue(
-            any("site_id=foreign" in " ".join(command) for command in bff_calls)
+            any("/workspaces/foreign_workspace/" in call for call in joined_calls)
         )
+        self.assertTrue(
+            any("/matters/NAC-SYN-MATTER-FOREIGN" in call for call in joined_calls)
+        )
+        self.assertTrue(any("purpose=foreign" in call for call in joined_calls))
+        self.assertTrue(any("site_id=foreign" in call for call in joined_calls))
         self.assertGreater(len(self.synthetic.calls), restore_index)
         self.assertEqual(
             self.http_readiness.calls,
@@ -3526,6 +3538,10 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertIs(result["deputy_access_passed"], True)
         self.assertIs(result["denied_access_passed"], True)
         self.assertIs(result["tampered_access_passed"], True)
+        self.assertIs(result["tampered_workspace_passed"], True)
+        self.assertIs(result["tampered_matter_passed"], True)
+        self.assertIs(result["tampered_purpose_passed"], True)
+        self.assertIs(result["tampered_filter_passed"], True)
         self.assertIs(result["healthz_before_auth_passed"], True)
         self.assertIs(result["authenticated_read_passed"], True)
         self.assertIs(
@@ -3642,7 +3658,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             for command in self.m365.commands
             if command[1] == "request" and "api://funktion8.de/nac-bff" in command
         ]
-        self.assertEqual(len(bff_calls), 4)
+        self.assertEqual(len(bff_calls), 8)
 
     def test_step_twelve_reconciles_complete_lane_read_only_and_rejects_gap(
         self,
@@ -4125,6 +4141,10 @@ class AzureBffCompositionTests(unittest.TestCase):
             "deputy_access_passed": True,
             "denied_access_passed": True,
             "tampered_access_passed": True,
+            "tampered_workspace_passed": True,
+            "tampered_matter_passed": True,
+            "tampered_purpose_passed": True,
+            "tampered_filter_passed": True,
             "healthz_before_auth_passed": True,
             "authenticated_read_passed": True,
             "readyz_after_authenticated_read_passed": True,

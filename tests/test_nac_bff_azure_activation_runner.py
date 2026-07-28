@@ -94,6 +94,10 @@ class _Port:
                 "deputy_access_passed": True,
                 "denied_access_passed": True,
                 "tampered_access_passed": True,
+                "tampered_workspace_passed": True,
+                "tampered_matter_passed": True,
+                "tampered_purpose_passed": True,
+                "tampered_filter_passed": True,
                 "healthz_before_auth_passed": True,
                 "authenticated_read_passed": True,
                 "readyz_after_authenticated_read_passed": True,
@@ -631,10 +635,31 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             ),
             (
                 {
+                    "assigned_access_passed": True,
+                    "deputy_access_passed": True,
+                    "denied_access_passed": True,
+                    "tampered_access_passed": True,
+                    "tampered_workspace_passed": True,
+                    "tampered_matter_passed": True,
+                    "tampered_purpose_passed": True,
+                    "tampered_filter_passed": False,
+                    "healthz_before_auth_passed": True,
+                    "authenticated_read_passed": True,
+                    "readyz_after_authenticated_read_passed": True,
+                    "synthetic_state_restored": True,
+                },
+                "STEP_11_SUMMARY_SIGNALS_INVALID",
+            ),
+            (
+                {
                     "assigned_access_passed": False,
                     "deputy_access_passed": True,
                     "denied_access_passed": True,
                     "tampered_access_passed": True,
+                    "tampered_workspace_passed": True,
+                    "tampered_matter_passed": True,
+                    "tampered_purpose_passed": True,
+                    "tampered_filter_passed": True,
                     "healthz_before_auth_passed": True,
                     "authenticated_read_passed": True,
                     "readyz_after_authenticated_read_passed": True,
@@ -769,6 +794,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         self.assertTrue(result["summary"]["deputy_access_passed"])
         self.assertTrue(result["summary"]["denied_access_passed"])
         self.assertTrue(result["summary"]["tampered_access_passed"])
+        self.assertTrue(result["summary"]["tampered_workspace_passed"])
+        self.assertTrue(result["summary"]["tampered_matter_passed"])
+        self.assertTrue(result["summary"]["tampered_purpose_passed"])
+        self.assertTrue(result["summary"]["tampered_filter_passed"])
         self.assertFalse(result["summary"]["resume_enabled"])
         serialized = json.dumps(result)
         self.assertNotIn(APPROVAL_REFERENCE, serialized)
@@ -2077,6 +2106,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             "deputy_access_passed": True,
             "denied_access_passed": True,
             "tampered_access_passed": True,
+            "tampered_workspace_passed": True,
+            "tampered_matter_passed": True,
+            "tampered_purpose_passed": True,
+            "tampered_filter_passed": True,
             "healthz_before_auth_passed": True,
             "authenticated_read_passed": True,
             "readyz_after_authenticated_read_passed": True,

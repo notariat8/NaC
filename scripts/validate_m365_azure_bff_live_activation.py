@@ -418,7 +418,9 @@ SUMMARY_FIELDS = [
     "authenticated_read_passed", "readyz_after_authenticated_read_passed",
     "synthetic_state_restored", "assigned_access_passed",
     "deputy_access_passed", "denied_access_passed",
-    "tampered_access_passed", "resume_enabled",
+    "tampered_access_passed", "tampered_workspace_passed",
+    "tampered_matter_passed", "tampered_purpose_passed",
+    "tampered_filter_passed", "resume_enabled",
 ]
 SUMMARY_COUNT_FIELDS = [
     "required_step_count", "passed_step_count", "failed_step_count",
@@ -471,7 +473,7 @@ THRESHOLDS = {
     "allowed_resume_requests_reaching_lock_or_provider": 0,
     "required_static_inputs_before_first_write": 3,
     "required_resolved_inputs_before_bicep_write": 4,
-    "required_summary_fields": 19,
+    "required_summary_fields": len(SUMMARY_FIELDS),
 }
 EXACT_BINDINGS = {
     "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
@@ -545,7 +547,11 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
             "assigned",
             "deputy",
             "denied",
-            "tampered",
+            "assigned_immediately_before_tamper",
+            "tampered_workspace",
+            "tampered_matter",
+            "tampered_purpose",
+            "tampered_filter",
             "restore_assigned",
             "final_assigned_read",
             "readyz",

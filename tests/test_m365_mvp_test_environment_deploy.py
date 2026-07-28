@@ -252,7 +252,7 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertTrue(smoke.call_args.kwargs["provisioned_state_path"].name.endswith(".json"))
         self.assertEqual(smoke.call_args.kwargs["fixture_path"].name, "synthetic-bpmn.fixture.json")
 
-    def test_policy_evidence_is_data_driven_and_live_entra_bff_is_deferred(self) -> None:
+    def test_policy_evidence_is_data_driven_and_live_entra_bff_is_pending(self) -> None:
         base = {
             "workspace_id": WORKSPACE_ID,
             "case_id": MATTER_ID,
@@ -277,10 +277,13 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertEqual(evidence["source"], SYNTHETIC_ACCESS_DECISION_SOURCE)
         self.assertTrue(evidence["failClosed"])
         self.assertFalse(evidence["liveBffDecision"])
-        self.assertEqual(evidence["liveEntraBffActivation"], "DEFERRED")
         self.assertEqual(
-            evidence["deferredReason"],
-            "requires_new_delegated_scope_and_public_https_endpoint",
+            evidence["liveEntraBffActivation"],
+            "FINAL_LIVE_RUN_PENDING",
+        )
+        self.assertEqual(
+            evidence["pendingReason"],
+            "provisioned_endpoint_and_scope_require_current_main_live_verification",
         )
 
     def test_ui_graph_smoke_and_bff_bind_their_declared_bpmn_sources(self) -> None:
@@ -589,6 +592,9 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 ("m365", "request", "--url", graph_installed, "--method", "get", "--output", "json"),
                 ("m365", "request", "--url", "https://graph.microsoft.com/v1.0/me?$select=id", "--resource", "https://graph.microsoft.com", "--method", "get", "--output", "json"),
                 ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001?purpose=view_synthetic_matter_workspace", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/foreign_workspace/matters/NAC-SYN-MATTER-001?purpose=view_synthetic_matter_workspace", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-FOREIGN?purpose=view_synthetic_matter_workspace", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001?purpose=foreign", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
                 ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001?purpose=view_synthetic_matter_workspace&site_id=foreign", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
             ]
             run.return_value = subprocess.CompletedProcess([], 0, "{}", "")
@@ -803,7 +809,23 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 "",
                 "Error: Request failed with status code 403",
             )
-            for url in (base_url, f"{base_url}&site_id=foreign"):
+            urls = (
+                base_url,
+                base_url.replace(
+                    "/workspaces/notary_team_01/",
+                    "/workspaces/foreign_workspace/",
+                ),
+                base_url.replace(
+                    "/matters/NAC-SYN-MATTER-001",
+                    "/matters/NAC-SYN-MATTER-FOREIGN",
+                ),
+                base_url.replace(
+                    "purpose=view_synthetic_matter_workspace",
+                    "purpose=foreign",
+                ),
+                f"{base_url}&site_id=foreign",
+            )
+            for url in urls:
                 with self.subTest(url=url):
                     result = runner.run(
                         (

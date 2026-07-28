@@ -347,7 +347,12 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
                 "read:deputy",
                 "mode:denied",
                 "read:denied",
-                "read:tampered",
+                "mode:assigned",
+                "read:assigned",
+                "read:tampered_workspace",
+                "read:tampered_matter",
+                "read:tampered_purpose",
+                "read:tampered_filter",
                 "restore:assigned",
                 "read:assigned",
                 "readyz",
@@ -486,7 +491,7 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
         )
         self.assertEqual(events[-1], "restore:assigned")
         self.assertNotIn("readyz", events)
-        self.assertEqual(events.count("read:assigned"), 1)
+        self.assertEqual(events.count("read:assigned"), 2)
 
 
 if __name__ == "__main__":

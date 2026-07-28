@@ -28,8 +28,9 @@ PR and a separate owner gate for live, credential or deployment actions.
 
 ## Slice 3: SPFx Read-Only Workspace
 
-Status 14 July 2026: The owner-approved Live-One-Shot in `notary_team_01`
-succeeded; live BFF and live Entra token validation remain DEFERRED.
+Status 28 July 2026: The baseline Live-One-Shot in `notary_team_01`
+succeeded; #632 provisioned the bounded BFF bindings. The current complete
+12-step closure run and live Entra proof remain outstanding.
 
 Evidence binding: [Issue #620](https://github.com/notariat8/NaC/issues/620),
 [verification contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json),

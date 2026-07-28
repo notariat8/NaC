@@ -309,7 +309,7 @@ thresholds:
   allowed_resume_requests_reaching_lock_or_provider: 0
   required_static_inputs_before_first_write: 3
   required_resolved_inputs_before_bicep_write: 4
-  required_summary_fields: 19
+  required_summary_fields: 23
 
 negative_tests:
   - id: wrong_hash
@@ -425,7 +425,11 @@ negative_tests:
         - assigned
         - deputy
         - denied
-        - tampered
+        - assigned_immediately_before_tamper
+        - tampered_workspace
+        - tampered_matter
+        - tampered_purpose
+        - tampered_filter
         - restore_assigned
         - final_assigned_read
         - readyz
@@ -638,6 +642,10 @@ evidence_policy:
     - deputy_access_passed
     - denied_access_passed
     - tampered_access_passed
+    - tampered_workspace_passed
+    - tampered_matter_passed
+    - tampered_purpose_passed
+    - tampered_filter_passed
     - resume_enabled
   redacted_only: true
   strict_unknown_field_rejection: true
@@ -669,6 +677,10 @@ pass_condition:
   deputy_access_passed: true
   denied_access_passed: true
   tampered_access_passed: true
+  tampered_workspace_passed: true
+  tampered_matter_passed: true
+  tampered_purpose_passed: true
+  tampered_filter_passed: true
   resume_enabled: false
   evidence_allowlist_valid: true
   write_replay_idempotency_claimed: false
