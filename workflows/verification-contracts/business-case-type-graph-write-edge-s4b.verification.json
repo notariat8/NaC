@@ -1,0 +1,132 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_graph_write_edge_s4b",
+  "domain_contract_id": "m365.business_case_type_graph_write_edge_s4b",
+  "title": "BusinessCaseType bounded Graph write edge S4b verification",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/694",
+  "acceptance_ids": [
+    "AC-S4B-01",
+    "AC-S4B-02",
+    "AC-S4B-03",
+    "AC-S4B-04",
+    "AC-S4B-05",
+    "AC-S4B-06",
+    "AC-S4B-07"
+  ],
+  "applies_when": {
+    "paths": [
+      "src/notary_kg/business_case_type_mutation.py",
+      "src/nac_m365_graph/business_case_type_write_edge.py",
+      "src/nac_m365_graph/business_case_type_write_plan.py",
+      "scripts/validate_business_case_type_graph_write_edge.py",
+      "tests/test_business_case_type_graph_write_edge*.py",
+      "tests/fixtures/business-case-type-graph-write-edge/**",
+      "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
+      "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "Issue #694 acceptance criteria and offline-only boundary"
+    ],
+    "scoped": [
+      "BusinessCaseType S4b design and implementation plan",
+      "workflow contract agent rules"
+    ],
+    "on_demand": [
+      "S4 Graph read edge, S5 migration and S6a immutable evidence contracts"
+    ],
+    "runtime": [
+      "Synthetic fake-Graph fixtures only; no live connector"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract",
+    "python3 scripts/validate_business_case_type_graph_write_edge.py",
+    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-S4B-01: Five operations and every execution canonically revalidate exact Graph REST v1.0 methods, targets, field allowlists, authorization, approval, S5 and request bindings, including workspace, site and both lists for every operation.",
+    "AC-S4B-02: Role, purpose, approval, target and separate write-identity drift blocks before transport.",
+    "AC-S4B-03: Creates use one bounded dedupe page, treat nextLink as ambiguity, resolve HTTP 409 by strict readback, and PATCH uses one freshly read exact ETag without retrying HTTP 412.",
+    "AC-S4B-04: Backfill writes only VorgangstypId and verifies the canonical S5 operation and idempotency hashes.",
+    "AC-S4B-05: Persistent intent generations are read back before write; failed marker acknowledgement remains open, and a physically closed generation is terminal across fresh hooks even when downstream closure confirmation fails.",
+    "AC-S4B-06: No live factory, credentials, network or tenant writes exist and BFF UAMI remains Sites.Selected/read.",
+    "AC-S4B-07: Contract, validator, all safety paths, compileall, DE/EN traceability and review evidence agree."
+  ],
+  "thresholds": {
+    "required_acceptance_criteria": 7,
+    "operations": 5,
+    "create_operations": 2,
+    "patch_operations": 3,
+    "legacy_case_create_types": 4,
+    "maximum_patch_attempts": 1,
+    "allowed_live_graph_calls": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_credential_reads": 0,
+    "allowed_live_factories": 0,
+    "dedupe_top_exact": 2,
+    "maximum_dedupe_pages_followed": 0
+  },
+  "required_evidence": [
+    "Canonical S4b domain and verification contracts",
+    "Exact operation target, field-allowlist and execute-time plan-revalidation assertions for all five operations",
+    "Synthetic paging, HTTP 409/412, strict actual-field readback and redacted transport-error traces",
+    "Persistent reconciliation acknowledgement and restart fail-closed traces",
+    "Fresh hook over shared persistent store blocks clear plus open intent after failed reconciliation acknowledgement",
+    "Fresh builder, hook and edge over a shared persistent store block replay after physical closure plus failed downstream confirmation",
+    "Case plans bind AufgabenFristen and task plans bind Akten so inactive-list drift blocks before transport",
+    "PATCH 5xx foreign response-item ID is ignored in favor of the exact mutation target",
+    "Canonical S5 backfill operation-hash fixture",
+    "Standalone validator, focused unit tests and compileall",
+    "DE/EN spec and implementation plan with AC-S4B-01..07"
+  ],
+  "evidence_policy": {
+    "synthetic_only": true,
+    "redacted_only": true,
+    "raw_site_list_item_or_field_values_allowed": false,
+    "credentials_tokens_certificates_allowed": false,
+    "live_graph_calls_allowed": 0,
+    "tenant_writes_allowed": 0
+  },
+  "exit_conditions": [
+    "All seven acceptance criteria are covered by executable checks.",
+    "All five operations match and revalidate their exact method, target, fields, authorization, approval and request contract.",
+    "Plan manipulation, cross-list target drift, paging, HTTP 409/412/5xx, strict readback, shared-store restart, terminal persistent closure and error-redaction paths pass.",
+    "No live factory, credential path, HTTP client or tenant write is introduced.",
+    "Protected PR review and required checks are green."
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "all_fixtures_synthetic": true,
+    "implementation_matches_contract": true,
+    "allowed_live_graph_calls": 0,
+    "allowed_tenant_writes": 0,
+    "no_unresolved_review_findings": true
+  },
+  "failure_behavior": {
+    "binding_or_identity_drift": "block_before_transport",
+    "dedupe_ambiguity": "sticky_reconciliation_without_post",
+    "fresh_etag_mismatch": "block_before_patch",
+    "http_412": "precondition_failed_without_retry",
+    "uncertain_write_or_readback": "sticky_reconciliation",
+    "network_credential_factory_or_tenant_write": "block_completion",
+    "plan_snapshot_or_hash_drift": "block_before_transport",
+    "dedupe_next_link": "sticky_reconciliation_without_post",
+    "invalid_negative_or_412_readback": "sticky_reconciliation_without_false_not_applied",
+    "reconciliation_persistence_or_state_unavailable": "process_wide_fail_closed_before_replay",
+    "preflight_transport_error": "structured_redacted_block_without_write",
+    "clear_with_open_intent": "block_before_transport_until_persistent_closure_proof",
+    "failed_reconciliation_ack": "keep_durable_intent_open_across_hook_restart",
+    "patch_5xx_foreign_response_item_id": "ignore_and_read_exact_mutation_item",
+    "inactive_list_binding_drift": "block_before_transport",
+    "post_close_confirmation_unavailable": "closed_intent_blocks_fresh_process_replay"
+  }
+}

@@ -1,0 +1,375 @@
+{
+  "schema_version": "nac.business-case-type-graph-write-edge-s4b/v0.1",
+  "contract_id": "m365.business_case_type_graph_write_edge_s4b",
+  "title": "BusinessCaseType bounded Graph write edge S4b",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/694",
+  "slice": {
+    "id": "S4b",
+    "offline_only": true,
+    "allowed_live_graph_calls": 0,
+    "allowed_tenant_writes": 0,
+    "live_factory_allowed": false,
+    "credentials_allowed": false
+  },
+  "operations": {
+    "case_create": {
+      "method": "POST",
+      "list_name": "Akten",
+      "path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "fields_required_exact": [
+        "NacCaseId",
+        "Aktenzeichen",
+        "Vorgangstyp",
+        "VorgangstypId",
+        "Status",
+        "NotarTeam",
+        "Vertraulichkeitsstufe",
+        "NacWorkflowVersion",
+        "KgVersion"
+      ],
+      "fields_optional_exact": [],
+      "dedupe_field_exact": "NacCaseId",
+      "legacy_business_case_types_exact": [
+        "handelsregisteranmeldung",
+        "immobilienkaufvertrag",
+        "online-gmbh-gruendung",
+        "unterschriftsbeglaubigung"
+      ]
+    },
+    "case_status_update": {
+      "method": "PATCH",
+      "list_name": "Akten",
+      "path_template": "/sites/{site-id}/lists/{list-id}/items/{item-id}/fields",
+      "fields_allowed_exact": [
+        "Status"
+      ],
+      "minimum_fields": 1
+    },
+    "task_create": {
+      "method": "POST",
+      "list_name": "AufgabenFristen",
+      "path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "fields_required_exact": [
+        "NacTaskId",
+        "NacCaseId",
+        "BpmnStepCode",
+        "Status",
+        "RequiresNotaryApproval"
+      ],
+      "fields_optional_exact": [
+        "DueDate"
+      ],
+      "dedupe_field_exact": "NacTaskId"
+    },
+    "task_update": {
+      "method": "PATCH",
+      "list_name": "AufgabenFristen",
+      "path_template": "/sites/{site-id}/lists/{list-id}/items/{item-id}/fields",
+      "fields_allowed_exact": [
+        "Status",
+        "DueDate",
+        "RequiresNotaryApproval",
+        "BlockedReason"
+      ],
+      "minimum_fields": 1
+    },
+    "business_case_type_backfill": {
+      "method": "PATCH",
+      "list_name": "Akten",
+      "path_template": "/sites/{site-id}/lists/{list-id}/items/{item-id}/fields",
+      "fields_allowed_exact": [
+        "VorgangstypId"
+      ],
+      "minimum_fields": 1
+    }
+  },
+  "binding": {
+    "immutable_target_fields_exact": [
+      "workspace_id",
+      "site_id",
+      "akten_list_id",
+      "aufgaben_list_id",
+      "write_identity_id",
+      "bff_uami_identity_id"
+    ],
+    "target_binding_hash_scope_fields_required_exact": [
+      "workspace_id",
+      "site_id",
+      "akten_list_id",
+      "aufgaben_list_id"
+    ],
+    "target_binding_hash_includes_both_lists_for_all_operations": true,
+    "inactive_list_drift_behavior": "block_before_transport",
+    "runtime_fields_exact": [
+      "workspace_id",
+      "site_id",
+      "list_id",
+      "actor_role",
+      "purpose",
+      "approval_ref",
+      "approved_operation",
+      "write_approved",
+      "write_identity_id",
+      "write_identity_permission",
+      "write_site_grant_role",
+      "write_identity_site_id",
+      "bff_uami_identity_id",
+      "bff_uami_permission",
+      "bff_uami_site_grant_role",
+      "bff_uami_site_id"
+    ],
+    "mismatch_behavior": "block_before_transport",
+    "graph_base_url_exact": "https://graph.microsoft.com/v1.0",
+    "graph_beta_sdk_sharepoint_rest_pnp_allowed": false
+  },
+  "identity_boundary": {
+    "write_identity_contract_only": true,
+    "write_permission_exact": "Sites.Selected",
+    "write_site_grant_role_exact": "write",
+    "bff_uami_permission_exact": "Sites.Selected",
+    "bff_uami_site_grant_role_exact": "read",
+    "write_and_bff_identity_must_differ": true,
+    "write_identity_credentials_or_factory_in_scope": false,
+    "bff_uami_permission_change_in_scope": false
+  },
+  "authorization": {
+    "operation_role_bindings": {
+      "case_create": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ],
+      "case_status_update": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ],
+      "task_create": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ],
+      "task_update": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ],
+      "business_case_type_backfill": [
+        "BackfillOperator",
+        "runtime_service"
+      ]
+    },
+    "operation_purpose_bindings": {
+      "case_create": "matter_workflow",
+      "case_status_update": "matter_workflow",
+      "task_create": "matter_workflow",
+      "task_update": "matter_workflow",
+      "business_case_type_backfill": "business_case_type_migration"
+    },
+    "write_approval_required": true,
+    "approval_operation_must_equal_mutation": true,
+    "unknown_or_drifted_binding_behavior": "block_before_transport"
+  },
+  "create_idempotency": {
+    "dedupe_get_precedes_intent_and_post": true,
+    "case_identity_field_exact": "NacCaseId",
+    "task_identity_field_exact": "NacTaskId",
+    "dedupe_projection_equals_create_field_allowlist": true,
+    "one_match_requires_exact_create_payload": true,
+    "zero_matches_behavior": "continue_to_intent_and_single_post",
+    "one_match_behavior": "deduplicated_without_post",
+    "http_409_exact_readback_behavior": "deduplicated_without_post_retry",
+    "multiple_matches_behavior": "sticky_reconciliation_without_post",
+    "one_match_payload_drift_behavior": "sticky_reconciliation_without_post",
+    "unique_sharepoint_columns_required": true,
+    "dedupe_top_exact": 2,
+    "maximum_followed_pages": 0,
+    "odata_next_link_behavior": "sticky_reconciliation_without_post",
+    "dedupe_response_shape_and_actual_fields_required": true,
+    "dedupe_transport_failure_behavior": "structured_redacted_block_before_post"
+  },
+  "concurrency": {
+    "patch_fresh_item_get_required": true,
+    "fresh_item_get_projects_mutation_fields_only": true,
+    "fresh_etag_must_equal_expected_etag": true,
+    "if_match_header_source_exact": "fresh_item_get.eTag",
+    "maximum_patch_attempts": 1,
+    "retry_on_412": false,
+    "readback_after_412_required": true,
+    "freshness_response_shape_and_actual_fields_required": true,
+    "freshness_transport_failure_behavior": "structured_redacted_block_before_patch",
+    "http_412_readback_must_verify_status_shape_item_and_actual_fields": true,
+    "http_412_invalid_readback_behavior": "sticky_reconciliation",
+    "http_412_result_codes_exact": [
+      "PRECONDITION_FAILED",
+      "PRECONDITION_FAILED_ALREADY_APPLIED"
+    ]
+  },
+  "s5_binding": {
+    "operation_exact": "business_case_type_backfill",
+    "target_field_exact": "VorgangstypId",
+    "manifest_hash_required": true,
+    "record_ref_hash_required": true,
+    "idempotency_components_exact": [
+      "manifest_hash",
+      "record_ref_hash",
+      "target_business_case_type_id",
+      "current_etag"
+    ],
+    "operation_hash_required": true,
+    "operation_hash_payload_fields_exact": [
+      "record_ref_hash",
+      "field",
+      "value",
+      "if_match",
+      "idempotency_key"
+    ],
+    "hash_algorithm_exact": "sha256_canonical_json"
+  },
+  "evidence": {
+    "hook_injected": true,
+    "intent_before_write": true,
+    "outcome_after_write_attempt": true,
+    "readback_after_write_attempt": true,
+    "normal_order_exact": [
+      "intent",
+      "outcome",
+      "readback"
+    ],
+    "uncertain_order_exact": [
+      "intent",
+      "outcome",
+      "reconciliation_required",
+      "readback"
+    ],
+    "uncertain_transport_or_5xx_requires_reconciliation": true,
+    "successful_readback_auto_closes_reconciliation": false,
+    "open_reconciliation_blocks_replay_before_transport": true,
+    "evidence_contains_raw_site_list_item_or_field_values": false,
+    "durable_acknowledgement_required_for_each_event": true,
+    "authoritative_state_store_process_wide": true,
+    "open_durable_intent_is_fail_closed_after_restart": true,
+    "reconciliation_persistence_confirmation_required": true,
+    "reconciliation_state_unavailable_blocks_before_transport": true,
+    "local_only_reconciliation_marker_allowed": false,
+    "persistent_state_fields_exact": [
+      "reconciliation_state",
+      "intent_state",
+      "intent_generation",
+      "closed_generation"
+    ],
+    "safe_start_intent_states_exact": [
+      "absent"
+    ],
+    "closed_intent_is_terminal": true,
+    "closed_intent_replay_behavior": "block_before_transport",
+    "same_mutation_id_reopen_allowed": false,
+    "post_close_confirmation_failure_behavior": "return_persistence_failed_and_block_fresh_process_replay",
+    "intent_open_requires_durable_readback_before_write": true,
+    "reconciliation_clear_with_open_intent_behavior": "block_before_transport",
+    "verified_readback_closure_is_atomic": true,
+    "closure_proof_exact": "closed_generation_equals_intent_generation",
+    "failed_reconciliation_ack_keeps_intent_open": true,
+    "fresh_hook_shared_store_restart_must_block_open_intent": true,
+    "reconciliation_clear_alone_sufficient": false
+  },
+  "offline_boundary": {
+    "transport_is_injected_protocol_only": true,
+    "synthetic_fake_graph_only": true,
+    "http_client_implementation_allowed": false,
+    "credential_environment_token_or_certificate_reads_allowed": false,
+    "dns_network_graph_sharepoint_entra_calls_allowed": false,
+    "tenant_schema_permission_or_data_writes_allowed": false,
+    "cli_changes_in_scope": false,
+    "production_composition_in_scope": false
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-S4B-01",
+      "requirement": "Every operation and every execution canonically bind and revalidate the exact Graph REST v1.0 method, target, field set, authorization, approval, dedupe/freshness request and workspace, site and both list identities; inactive-list drift also blocks."
+    },
+    {
+      "id": "AC-S4B-02",
+      "requirement": "Role, purpose, approval, site/list or write-grant drift blocks before transport."
+    },
+    {
+      "id": "AC-S4B-03",
+      "requirement": "Case and task creates use a bounded one-page dedupe query and treat nextLink as ambiguity; PATCH requires the fresh exact ETag and never retries HTTP 412."
+    },
+    {
+      "id": "AC-S4B-04",
+      "requirement": "The S5 backfill writes only VorgangstypId and binds the S5 manifest, idempotency key and canonical operation hash."
+    },
+    {
+      "id": "AC-S4B-05",
+      "requirement": "Durably read-back intent generations precede writes; failed reconciliation acknowledgement leaves the intent open, while an atomically persisted closure is terminal for that mutation ID even when its downstream confirmation fails, so every fresh hook blocks replay before transport."
+    },
+    {
+      "id": "AC-S4B-06",
+      "requirement": "The slice remains offline with zero credentials, HTTP calls, live factories and tenant writes; the existing BFF UAMI remains Sites.Selected/read."
+    },
+    {
+      "id": "AC-S4B-07",
+      "requirement": "Contracts, validator, focused fake-Graph safety tests, compileall, traceability, language parity and independent review pass."
+    }
+  ],
+  "plan_integrity": {
+    "canonical_revalidation_before_every_execute": true,
+    "builder_issued_snapshot_required": true,
+    "canonical_plan_sha256_required": true,
+    "revalidated_components_exact": [
+      "mutation_and_mutation_id",
+      "s5_hash_binding",
+      "authorization_and_approval",
+      "target_binding_hash",
+      "logical_list_name",
+      "collection_url",
+      "write_method",
+      "write_url",
+      "write_field_allowlist_and_payload",
+      "dedupe_request",
+      "freshness_request"
+    ],
+    "mutation_and_request_payloads_deeply_immutable": true,
+    "mismatch_behavior": "block_before_transport"
+  },
+  "readback": {
+    "http_status_exact": 200,
+    "item_id_binding_required": true,
+    "nonempty_etag_required": true,
+    "actual_field_names_equal_mutation_fields": true,
+    "verified_not_applied_requires_valid_shape_and_actual_field_difference": true,
+    "negative_or_412_invalid_readback_behavior": "sticky_reconciliation",
+    "readback_transport_errors_exposed": false,
+    "item_shape_required_fields_exact": [
+      "id",
+      "eTag",
+      "fields"
+    ],
+    "additional_odata_metadata_ignored": true,
+    "negative_applied_result_exact": "WRITE_REJECTED_STATE_ALREADY_APPLIED",
+    "negative_not_applied_result_exact": "WRITE_REJECTED",
+    "patch_5xx_item_id_source_exact": "plan.mutation.item_id",
+    "post_5xx_response_item_id_allowed": true,
+    "patch_5xx_response_item_id_allowed": false,
+    "foreign_patch_5xx_response_item_id_in_evidence_allowed": false
+  },
+  "error_handling": {
+    "preflight_transport_reason_codes_exact": [
+      "dedupe_transport_unavailable",
+      "freshness_transport_unavailable"
+    ],
+    "exception_type_message_url_body_or_headers_exposed": false,
+    "structured_result_required": true,
+    "write_attempts_on_preflight_error": 0
+  }
+}
