@@ -164,6 +164,9 @@
       "resourceGroup().id",
       "storageAccountName"
     ],
+    "provider_binding_hashes_emitted_by_template": false,
+    "provider_binding_material_source_exact": "runtime-readback-not-template-metadata",
+    "custom_role_definition_scope_exact": "resource_group",
     "existing_identity_broadened": false,
     "writer_role_kind": "CustomRole",
     "writer_data_actions_exact": [

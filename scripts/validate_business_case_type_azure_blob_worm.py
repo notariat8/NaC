@@ -117,11 +117,9 @@ EXPECTED_BICEP_MARKERS = [
     "Microsoft.Storage/storageAccounts/encryptionScopes/read",
     "subscription().tenantId",
     "var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, storageAccountName)",
-    "providerTenantBindingSha256",
-    "providerSubscriptionBindingSha256",
-    "providerResourceBindingSha256",
-    "providerContextBindingSha256",
     "azure-subscription-resource-tenant-readback",
+    "providerBindingMaterial: 'runtime-readback-not-template-metadata'",
+    "provider_binding_material: 'runtime-readback-not-template-metadata'",
 ]
 
 
@@ -227,6 +225,10 @@ def _validate_contracts(
             "resourceGroup().id",
             "storageAccountName",
         ]
+        and baseline.get("provider_binding_hashes_emitted_by_template") is False
+        and baseline.get("provider_binding_material_source_exact")
+        == "runtime-readback-not-template-metadata"
+        and baseline.get("custom_role_definition_scope_exact") == "resource_group"
         and baseline.get("compiled_claim") is False,
         "Bicep baseline contract drift",
         errors,
@@ -438,6 +440,12 @@ def _validate_bicep(errors: list[str]) -> None:
         "/blobs/write'",
         "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
         "b7e6dc6d-f1e8-4753-8033-0f276bb0955b",
+        "sha256(",
+        "scope: subscription()",
+        "provider_tenant_binding_sha256:",
+        "provider_subscription_binding_sha256:",
+        "provider_resource_binding_sha256:",
+        "provider_context_binding_sha256:",
     ):
         _expect(forbidden not in bicep_text, f"forbidden Bicep marker: {forbidden}", errors)
     _expect(bicep_text.count("{") == bicep_text.count("}"), "Bicep brace imbalance", errors)

@@ -30,19 +30,12 @@ var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'
 var keyVaultCryptoServiceEncryptionUserRoleId = 'e147488a-f6f5-4113-8e2d-b22465e65bf6'
 var writerDataRoleId = guid(subscription().id, resourceGroup().id, 'nac-worm-blob-add-read-v2')
 var writerManagementReadRoleId = guid(subscription().id, resourceGroup().id, 'nac-worm-management-read-v1')
-var providerTenantBindingSha256 = sha256('nac.azure-provider-tenant.v1|${subscription().tenantId}')
-var providerSubscriptionBindingSha256 = sha256('nac.azure-subscription-resource.v1|${subscription().id}')
-var providerResourceBindingSha256 = sha256('nac.azure-storage-resource.v1|${resourceId('Microsoft.Storage/storageAccounts', storageAccountName)}')
-var providerContextBindingSha256 = sha256('nac.azure-provider-context.v1|${providerTenantBindingSha256}|${providerSubscriptionBindingSha256}|${providerResourceBindingSha256}')
 var baselineTags = union(tags, {
   workload: 'nac-immutable-evidence'
   status: 'S6B_AZURE_WORM_ADAPTER_READY_OFFLINE'
   liveStatus: 'BLOCKED_PENDING_S7_APPROVAL'
-  providerTenantBindingSha256: providerTenantBindingSha256
-  providerSubscriptionBindingSha256: providerSubscriptionBindingSha256
-  providerResourceBindingSha256: providerResourceBindingSha256
-  providerContextBindingSha256: providerContextBindingSha256
   providerContextBindingSource: 'azure-subscription-resource-tenant-readback'
+  providerBindingMaterial: 'runtime-readback-not-template-metadata'
   dataClassification: 'pseudonymous-personal-data'
 })
 
@@ -108,7 +101,6 @@ resource cmkEncryptionRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
 
 resource writerDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: writerDataRoleId
-  scope: subscription()
   properties: {
     roleName: 'NaC WORM Blob Add Read'
     description: 'Add and read immutable evidence blobs without overwrite or lifecycle permissions.'
@@ -132,7 +124,6 @@ resource writerDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 
 resource writerManagementReadRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: writerManagementReadRoleId
-  scope: subscription()
   properties: {
     roleName: 'NaC WORM Storage Policy Read'
     description: 'Read only the container, immutability policy, and encryption scope required for fail-closed verification.'
@@ -251,11 +242,8 @@ resource evidenceContainer 'Microsoft.Storage/storageAccounts/blobServices/conta
     metadata: {
       nac_schema_version: 'nac.azure-blob-worm-container/v0.4'
       nac_status: 'S6B_AZURE_WORM_ADAPTER_READY_OFFLINE'
-      provider_tenant_binding_sha256: providerTenantBindingSha256
-      provider_subscription_binding_sha256: providerSubscriptionBindingSha256
-      provider_resource_binding_sha256: providerResourceBindingSha256
-      provider_context_binding_sha256: providerContextBindingSha256
       provider_context_binding_source: 'azure-subscription-resource-tenant-readback'
+      provider_binding_material: 'runtime-readback-not-template-metadata'
       legal_hold_capability_source: 'container-policy-properties'
       minimum_retention_days: '${immutableRetentionDays}'
       encryption_scope: encryptionScopeName
@@ -303,10 +291,6 @@ output lockActionStatus string = 'OWNER_GATED_NOT_EXECUTED'
 output lockTargetResourceId string = baselineImmutabilityPolicy.id
 output configuredContainerName string = evidenceContainer.name
 output configuredEncryptionScope string = encryptionScope.name
-output configuredProviderTenantBindingSha256 string = providerTenantBindingSha256
-output configuredProviderSubscriptionBindingSha256 string = providerSubscriptionBindingSha256
-output configuredProviderResourceBindingSha256 string = providerResourceBindingSha256
-output configuredProviderContextBindingSha256 string = providerContextBindingSha256
 output providerContextBindingSource string = 'azure-subscription-resource-tenant-readback'
 output cmkIdentityResourceId string = cmkIdentity.id
 output writerIdentityResourceId string = writerIdentity.id

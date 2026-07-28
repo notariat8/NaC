@@ -88,6 +88,15 @@ class AzureBlobWormContractTests(unittest.TestCase):
                 "storageAccountName",
             ],
         )
+        self.assertFalse(baseline["provider_binding_hashes_emitted_by_template"])
+        self.assertEqual(
+            baseline["provider_binding_material_source_exact"],
+            "runtime-readback-not-template-metadata",
+        )
+        self.assertEqual(
+            baseline["custom_role_definition_scope_exact"],
+            "resource_group",
+        )
         self.assertEqual(
             lock["operation"]["operation_exact"],
             "POST immutabilityPolicies/default/lock",
@@ -139,8 +148,6 @@ class AzureBlobWormContractTests(unittest.TestCase):
             "var keyVaultName = 'kv-nacw-${targetIsolationSuffix}'",
             "var cmkIdentityName = 'id-nac-worm-cmk-${targetIsolationSuffix}'",
             "var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'",
-            "resourceId('Microsoft.Storage/storageAccounts', storageAccountName)",
-            "providerTenantBindingSha256",
             "azure-subscription-resource-tenant-readback",
         ):
             with self.subTest(marker=marker):
@@ -149,6 +156,16 @@ class AzureBlobWormContractTests(unittest.TestCase):
         self.assertNotIn("state: 'Locked'", text)
         self.assertNotIn("param tenantBindingSha256", text)
         self.assertNotIn("uniqueString(resourceGroup().id)", text)
+        self.assertNotIn("sha256(", text)
+        self.assertNotIn("scope: subscription()", text)
+        self.assertNotIn("provider_tenant_binding_sha256:", text)
+        self.assertNotIn("provider_subscription_binding_sha256:", text)
+        self.assertNotIn("provider_resource_binding_sha256:", text)
+        self.assertNotIn("provider_context_binding_sha256:", text)
+        self.assertIn(
+            "provider_binding_material: 'runtime-readback-not-template-metadata'",
+            text,
+        )
         self.assertNotIn("/delete'", text)
         self.assertNotIn("/blobs/write'", text)
         self.assertNotIn("ba92f5b4-2d11-453d-a403-e96b0029c9fe", text)
