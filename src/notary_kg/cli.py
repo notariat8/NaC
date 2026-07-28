@@ -17,6 +17,7 @@ from nac_m365_graph.provisioner_env_bootstrap import (
 
 from .business_case_inventory import build_business_case_inventory
 from .business_case_type_cache import BusinessCaseTypeRegistryCache
+from .business_case_type_immutable_evidence import build_synthetic_evidence_dry_run
 from .business_case_type_runtime import (
     BusinessCaseTypeCatalog,
     BusinessCaseTypeLookupRequest,
@@ -184,6 +185,11 @@ def build_parser() -> argparse.ArgumentParser:
     business_case_type_migration.add_argument("--quarantine-state", type=Path, required=True)
     business_case_type_migration.add_argument(
         "--output", type=Path, default=BUSINESS_CASE_TYPE_MIGRATION_DEFAULT_OUTPUT
+    )
+
+    subparsers.add_parser(
+        "business-case-type-evidence-dry-run",
+        help="Run the synthetic-only S6 immutable-evidence contract core without provider access.",
     )
 
     subparsers.add_parser(
@@ -714,6 +720,11 @@ def main(argv: list[str] | None = None) -> int:
         }
         _print_business_case_type_migration(payload, args.format)
         return 1
+
+    if args.command == "business-case-type-evidence-dry-run":
+        payload = build_synthetic_evidence_dry_run()
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "S6_OFFLINE_FOUNDATION" else 1
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)

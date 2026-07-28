@@ -1,0 +1,152 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_immutable_evidence_s6",
+  "domain_contract_id": "notary-kg.business_case_type_immutable_evidence_s6",
+  "title": "BusinessCaseType immutable evidence S6a offline verification",
+  "status": "S6_OFFLINE_FOUNDATION",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/687",
+  "acceptance_ids": [
+    "AC-S6-01",
+    "AC-S6-02",
+    "AC-S6-03",
+    "AC-S6-04",
+    "AC-S6-05",
+    "AC-S6-06",
+    "AC-S6-07",
+    "AC-S6-08"
+  ],
+  "applies_when": {
+    "paths": [
+      "src/nac_runtime/immutable_evidence.py",
+      "src/notary_kg/business_case_type_immutable_evidence.py",
+      "src/notary_kg/cli.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_immutable_evidence.py",
+      "tests/test_immutable_evidence*.py",
+      "tests/test_business_case_type_immutable_evidence*.py",
+      "workflows/contracts/business-case-type-immutable-evidence-s6.contract.json",
+      "workflows/verification-contracts/business-case-type-immutable-evidence-s6.verification.json",
+      "docs/de/superpowers/specs/2026-07-20-business-case-type-immutable-evidence-s6-design.md",
+      "docs/en/superpowers/specs/2026-07-20-business-case-type-immutable-evidence-s6-design.md",
+      "docs/de/superpowers/plans/2026-07-20-business-case-type-immutable-evidence-s6.md",
+      "docs/en/superpowers/plans/2026-07-20-business-case-type-immutable-evidence-s6.md"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "Issue #687 acceptance criteria and offline-only boundary",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "scoped": [
+      "BusinessCaseType S5 migration contract",
+      "BusinessCaseType S6a DE and EN design specs"
+    ],
+    "on_demand": [
+      "Revisionssicherheit eventstream policy for future production requirements"
+    ],
+    "runtime": [
+      "Synthetic in-memory adapters only; no external connector, credential or provider"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_immutable_evidence tests.test_business_case_type_immutable_evidence tests.test_business_case_type_immutable_evidence_cli tests.test_business_case_type_immutable_evidence_contract",
+    "python3 scripts/validate_business_case_type_immutable_evidence.py",
+    "python3 scripts/nac.py kg business-case-type-evidence-dry-run --format json",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "python3 scripts/nac.py doctor --profile strict",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-S6-01: canonical redacted envelopes accept only declared recoverable phase transitions, contiguous sequence and verified SHA-256 hash chaining",
+    "AC-S6-02: factory-verified actor, correlation and event provenance plus an immutable outbox snapshot precede publication under stable bindings",
+    "AC-S6-03: ActorRef is tenant-bound and key-versioned, identifiers come from explicit registries, and raw tenant, actor and key material are absent",
+    "AC-S6-04: PostgreSQL outbox, broker, separately read anchor, separately read WORM and redacted reconciliation progress are explicit unimplemented production ports",
+    "AC-S6-05: retention is at least ten years, stronger provider retention is accepted, legal-hold capability is mandatory and production access review remains unimplemented",
+    "AC-S6-06: incomplete or uncertain domain evidence creates a sticky recoverable block; publication failures persist progress but remain intentionally unclosable in S6a",
+    "AC-S6-07: output is S6_OFFLINE_FOUNDATION and BLOCKED_PENDING_S7_APPROVAL with every external activity count at zero and no production claim",
+    "AC-S6-08: declared provenance, tamper, sequence, binding, completion, redaction, opaque-reference, retention, receipt and separation gates fail closed"
+  ],
+  "thresholds": {
+    "required_acceptance_criteria": 8,
+    "mutation_actions": 5,
+    "evidence_phases": 5,
+    "normal_chain_events": 3,
+    "reconciliation_chain_events": 5,
+    "minimum_retention_years": 10,
+    "required_production_ports": 5,
+    "minimum_negative_gates": 10,
+    "allowed_network_calls": 0,
+    "allowed_provider_calls": 0,
+    "allowed_tenant_calls": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_credential_reads": 0,
+    "allowed_live_mutations": 0
+  },
+  "required_evidence": [
+    "Canonical domain and verification contracts with AC-S6-01 through AC-S6-08",
+    "Synthetic normal intent-outcome-readback chain and verified chain head",
+    "Synthetic reconciliation-required and dual-control closure chain",
+    "Deterministic ActorRef vectors proving tenant and key-version binding without raw identity output",
+    "Tamper, duplicate, gap, reorder, foreign-binding, incomplete-chain and sensitive-field negative results",
+    "Retention, legal-hold, missing-port-receipt and same-principal closure negative results",
+    "Synthetic port orchestration with unique broker acknowledgements, bound anchor, WORM receipt/readback and sticky reconciliation on any missing receipt",
+    "Redacted CLI smoke output with exact offline and blocked-live statuses and zero external activity",
+    "Opaque tenant- and key-version-bound correlation vectors with raw person and matter-like identifiers rejected",
+    "Failed mutation plus verified readback terminal-state evidence",
+    "Defensive port-copy, event-bound broker ACK, detached anchor bindings, separate WORM readback and substitute-chain rejection evidence",
+    "Exact runtime-registry parity for tool, role, BusinessCaseType, catalog version and ETag identifiers",
+    "Factory-provenance and post-build mutation rejection at the persisted outbox boundary",
+    "Immutable outbox snapshot evidence preventing time-of-check/time-of-use mutation",
+    "Unique opaque broker acknowledgements plus exact independent anchor readback",
+    "Sticky redacted partial-publication progress and blocked retry evidence",
+    "Recovery variants for missing or failed readback and failed closure",
+    "Provider WORM retention greater than the event minimum accepted without weakening the minimum"
+  ],
+  "evidence_policy": {
+    "synthetic_only": true,
+    "redacted_only": true,
+    "production_or_resolvable_matter_data_allowed": false,
+    "raw_provider_or_graph_payloads_allowed": false,
+    "credentials_tokens_certificates_private_keys_allowed": false,
+    "raw_actor_or_tenant_identifiers_allowed": false,
+    "immutable_or_worm_claim_allowed": false,
+    "production_durability_claim_allowed": false,
+    "offline_postgresql_broker_anchor_or_worm_adapter_allowed": false,
+    "synthetic_port_test_doubles_allowed": true,
+    "synthetic_receipt_references_must_be_redacted": true
+  },
+  "exit_conditions": [
+    "All eight acceptance IDs are covered by executable checks.",
+    "The normal and reconciliation chains pass and every declared negative case fails for the expected stable reason.",
+    "The CLI smoke reports S6_OFFLINE_FOUNDATION and BLOCKED_PENDING_S7_APPROVAL without external activity.",
+    "No offline artifact claims PostgreSQL durability, detached signature, anchor, WORM retention readback or production reconciliation persistence.",
+    "Protected PR checks and independent review are green."
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "all_negative_gates_checked": true,
+    "all_evidence_synthetic_and_redacted": true,
+    "status_exact": "S6_OFFLINE_FOUNDATION",
+    "live_status_exact": "BLOCKED_PENDING_S7_APPROVAL",
+    "production_worm_claim": false,
+    "allowed_network_calls": 0,
+    "allowed_provider_calls": 0,
+    "allowed_tenant_calls": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_credential_reads": 0
+  },
+  "failure_behavior": {
+    "tamper_duplicate_gap_reorder_or_binding_drift": "BLOCKED",
+    "missing_intent_outcome_or_readback": "reconciliation_required",
+    "retention_legal_hold_redaction_or_separation_failure": "BLOCKED",
+    "missing_outbox_broker_anchor_worm_or_reconciliation_receipt": "reconciliation_required_with_redacted_publication_progress",
+    "publication_failure_retry_or_close_in_s6a": "BLOCKED",
+    "network_credential_provider_tenant_or_live_mutation_attempt": "block_completion",
+    "s7_approval_absent": "BLOCKED_PENDING_S7_APPROVAL",
+    "unbound_ack_anchor_worm_readback_or_substitute_chain": "reconciliation_required"
+  }
+}

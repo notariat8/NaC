@@ -117,6 +117,8 @@ CI:
 73. `legal_model_evaluation_benchmark` (nur `strict`)
 74. `legal_graph_contracts` (nur `strict`)
 
+75. `business_case_type_immutable_evidence_s6` (nur `strict`)
+
 ## Artefakte
 
 Standardausgabe:

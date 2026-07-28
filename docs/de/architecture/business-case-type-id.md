@@ -1,7 +1,7 @@
 # ADR: Stabile BusinessCaseTypeId
 
-Status: Angenommen; S1/S2/S3/S4 offline implementiert, S5 in Umsetzung, kein Live-Apply
-Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616), [GitHub #618](https://github.com/notariat8/NaC/issues/618)
+Status: Angenommen; S1-S5 offline implementiert, S6a in Umsetzung, kein Live-Apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616), [GitHub #618](https://github.com/notariat8/NaC/issues/618), [GitHub #687](https://github.com/notariat8/NaC/issues/687)
 Datum: 2026-07-11
 
 ## Kontext
@@ -24,13 +24,13 @@ und der
 Issue #610 implementiert S1 und S2 ausschließlich offline in Verträgen,
 Validatoren, Inventar und Schema-Planung. Es wurden keine Graph-Requests
 ausgeführt, kein Tenant verändert und kein SharePoint-Schema live angewendet.
-S1 bis S4 sind offline implementiert. S5 wird nach der
-[S5-Spec](../superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md)
+S1 bis S5 sind offline implementiert; S5 wurde mit Issue #618 und PR #619
+abgeschlossen. S6a wird nach der
+[S6a-Spec](../superpowers/specs/2026-07-20-business-case-type-immutable-evidence-s6-design.md)
 und dem
-[S5-Implementierungsplan](../superpowers/plans/2026-07-12-business-case-type-migration-s5.md)
-in Issue #618 ausschließlich offline umgesetzt. Der Status bleibt bis zu
-Code-, Vertrags-, Negativtest-, Strict-Gate-, Review- und Protected-PR-Nachweisen
-`in Umsetzung`. S6 und S7 bleiben offen.
+[S6a-Implementierungsplan](../superpowers/plans/2026-07-20-business-case-type-immutable-evidence-s6.md)
+in Issue #687 ausschließlich offline umgesetzt. S6b-Produktivadapter und S7
+bleiben offen und live blockiert.
 
 ## Entscheidung
 
@@ -267,8 +267,7 @@ Zweckfreigabe.
 ## Explizite Umsetzungsslices
 
 Diese ADR ist angenommen. Issue #610 hat S1 und S2 am 2026-07-11 offline
-implementiert. S3 und S4 sind offline implementiert; S5 bis S7 bleiben offen und brauchen jeweils Review und passende
-Tests, bevor ein Live-Apply erwogen wird.
+implementiert. S3 und S4 sind offline implementiert; S5 wurde in #619 offline abgeschlossen. S6a wird in Issue #687 als Offline-Evidence-Foundation umgesetzt. S6b-Provideradapter und S7 bleiben offen und brauchen jeweils Review und passende Tests, bevor ein Live-Apply erwogen wird.
 
 | Slice | Status | Erforderliche Änderung | Abnahmekante |
 | --- | --- | --- | --- |
@@ -276,8 +275,8 @@ Tests, bevor ein Live-Apply erwogen wird.
 | S2 Schema-Plan | offline implementiert in #610 | `Akten.VorgangstypId` und `Vorgangsartenregister` im verpflichtenden Default planen; `Prozessregister` und `BPMN Models` bleiben getrennte optionale Viewer-Provisionierung; Legacy-Choice unverändert lassen | 33 Plan-Schritte und 66 Workspace-Apply-Units; Dry-Run, Readiness, Snapshot- und Rollback-Plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
 | S3 Runtime | offline implementiert in #614 | `business_case_type_get`, inhaltsbasierte `CatalogVersion`, expliziten Runtime-Lifecycle, zweckgebundene Aliase und getrennte Registry-/Viewer-ETag-Caches offline implementieren | Spec, Domain-/Verification Contract, Validator, CLI, Negativtests, Strict-Gate, unabhängiger Review und Protected-PR-Checks bestehen ohne Graph-/Tenant-Zugriff |
 | S4 Graph Read Edge | offline implementiert in #617; S4b-Writes offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
-| S5 Migration | in Umsetzung in #618; ausschließlich offline | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
-| S6 Immutable Evidence | offen | durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
+| S5 Migration | offline implementiert in #619 | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
+| S6 Immutable Evidence | S6a offline in Umsetzung in #687; S6b offen | kanonischen Evidence-Kern und Ports für durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
 | S7 Live-Freigabe | offen | separaten owner-gated Schema-/Backfill-Apply mit Funktionstrennung und Cleanup-Verbot vorbereiten | vollständige PR-Diff, N-/N-1-Rollback-Probe, negative Autorisierung und explizite duale Freigabe |
 
 ## Akzeptanzkriterien Und Verifikation
