@@ -5,8 +5,9 @@ SharePoint the workflow engine or Microsoft a cloud-AI prerequisite.
 
 **Architecture:** Teams/SPFx/SharePoint/Entra/Graph form the Microsoft edge.
 Python/FastAPI, deterministic workflows, NeMo, PostgreSQL, outbox/broker and
-WORM run on-prem. Temporal and baseline modes are exclusive execution modes
-with one technical truth each; WORM remains separate. Local sidecars remain
+the evidence publisher run on-prem. The authoritative WORM copy is stored in
+tenant-bound Azure Blob immutable storage. Temporal and baseline modes remain
+exclusive execution modes; WORM is separate and is not runtime truth. Local sidecars remain
 non-authoritative.
 
 **Delivery:** Every slice has a leading issue, contract/verification, protected

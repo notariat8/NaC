@@ -111,7 +111,7 @@ class MicrosoftFirstOnPremTargetArchitectureValidatorTests(unittest.TestCase):
         temporary, paths = self._isolated_inputs()
         self.addCleanup(temporary.cleanup)
         contract = json.loads(paths["CONTRACT"].read_text(encoding="utf-8"))
-        contract["decisions"]["onprem_core"].remove("worm_audit")
+        contract["decisions"]["onprem_core"].remove("worm_evidence_publisher")
         paths["CONTRACT"].write_text(json.dumps(contract, indent=2) + "\n", encoding="utf-8")
 
         with mock.patch.multiple(validator, **paths):

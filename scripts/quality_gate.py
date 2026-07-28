@@ -189,6 +189,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_business_case_type_immutable_evidence.py"],
                 ),
                 (
+                    "business_case_type_azure_blob_worm_s6b",
+                    "Business Case Type Azure Blob WORM S6b",
+                    [sys.executable, "scripts/validate_business_case_type_azure_blob_worm.py"],
+                ),
+                (
                     "process_ontology_sharepoint_schema_gap",
                     "Process Ontology SharePoint Schema Gap Review",
                     [sys.executable, "scripts/validate_process_ontology_sharepoint_schema_gap.py"],

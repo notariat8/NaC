@@ -1,0 +1,223 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "notary-kg.business_case_type_azure_blob_worm_s6b",
+  "title": "BusinessCaseType Azure Blob WORM S6b offline adapter",
+  "status": "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/693",
+  "spec": {
+    "de": "docs/de/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md",
+    "en": "docs/en/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md"
+  },
+  "plan": {
+    "de": "docs/de/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md",
+    "en": "docs/en/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md"
+  },
+  "irreversible_lock_contract": "workflows/contracts/azure-blob-worm-irreversible-lock-s6b.contract.json",
+  "slice": {
+    "offline_only": true,
+    "live_status_exact": "BLOCKED_PENDING_S7_APPROVAL",
+    "allowed_network_calls": 0,
+    "allowed_azure_calls": 0,
+    "allowed_credential_reads": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_lock_actions": 0,
+    "live_factory_wiring": false,
+    "azure_sdk_required": false,
+    "production_worm_claim": false
+  },
+  "port_compatibility": {
+    "unchanged_port": "nac_runtime.immutable_evidence.WormJournalPort",
+    "implementation": "nac_runtime.azure_blob_worm.AzureBlobWormJournal",
+    "methods_exact": [
+      "commit(records, anchor, *, idempotency_key_sha256)",
+      "readback(receipt_ref)"
+    ],
+    "commit_receipt_keys_exact": ["receipt_ref", "head_sha256"],
+    "public_readback_keys_exact": [
+      "receipt_ref",
+      "head_sha256",
+      "retention_years",
+      "legal_hold_capable"
+    ]
+  },
+  "create_only_commit": {
+    "precondition_header_exact": "If-None-Match: *",
+    "idempotency_key_operation_exact": "worm-commit",
+    "idempotency_key_derivation_exact": "S6a _publication_operation_key(worm-commit, chain_head_sha256)",
+    "arbitrary_or_foreign_chain_key_rejected_before_transport": true,
+    "same_key_same_payload_returns_same_receipt": true,
+    "post_create_response_loss_recoverable_by_412_discovery": true,
+    "same_blob_distinct_valid_payload_race_tested": true,
+    "overwrite_allowed": false,
+    "append_allowed": false
+  },
+  "pre_put_validation": {
+    "all_event_timestamps_validated_before_put": true,
+    "retention_formula_evaluated_before_put": true,
+    "retention_deadline_overflow_checked_before_put": true,
+    "policy_and_provider_context_checked_before_put": true,
+    "future_event_timestamp_does_not_define_azure_create_time": true,
+    "invalid_or_overflowing_retention_create_effects": 0,
+    "fake_retention_origin_exact": "blob_created_at"
+  },
+  "version_bound_receipt": {
+    "format_exact": "worm-receipt-v1-{blob_locator_128}{version_binding_128}",
+    "blob_locator_bits": 128,
+    "version_binding_bits": 128,
+    "raw_provider_version_id_in_receipt": false,
+    "create_http_status_exact": 201,
+    "create_version_header_exact": "x-ms-version-id",
+    "conflict_http_status_exact": 412,
+    "conflict_response_version_id_allowed": false,
+    "conflict_discovery_exact": "List Blob Versions then GET each candidate by raw versionid",
+    "unknown_foreign_or_ambiguous_conflict_version": "BLOCKED",
+    "transport_get_selector_exact": "raw versionid",
+    "transport_hash_selector_allowed": false,
+    "create_exact_version_get_required": true,
+    "conflict_exact_version_get_required": true,
+    "public_readback_exact_version_required": true
+  },
+  "full_readback": {
+    "canonical_body_required": true,
+    "maximum_blob_bytes": 4194304,
+    "hash_chain_verified": true,
+    "anchor_binding_verified": true,
+    "metadata_exact_match_required": true,
+    "blob_version_id_required": true,
+    "blob_created_at_required": true,
+    "blob_version_immutability_mode_exact": "Locked",
+    "blob_version_retention_until_required": true,
+    "retention_origin_exact": "blob_created_at",
+    "container_default_is_not_version_proof": true
+  },
+  "provider_tenant_evidence": {
+    "source_exact": "azure-subscription-resource-tenant-readback",
+    "fresh_transport_readback_required": true,
+    "raw_fields_exact": ["tenant_id", "subscription_resource_id", "resource_id"],
+    "bindings_exact": [
+      "provider_tenant_binding_sha256",
+      "provider_subscription_binding_sha256",
+      "provider_resource_binding_sha256",
+      "provider_context_binding_sha256"
+    ],
+    "bicep_inputs_exact": [
+      "subscription().tenantId",
+      "subscription().id",
+      "resourceId(Microsoft.Storage/storageAccounts, storageAccountName)"
+    ],
+    "stale_metadata_behavior": "BLOCKED",
+    "tenant_transfer_behavior": "BLOCKED",
+    "subscription_or_resource_drift_behavior": "BLOCKED",
+    "plaintext_allowed": false,
+    "free_bicep_tenant_binding_parameter_allowed": false
+  },
+  "container_policy": {
+    "runtime_default_immutability_policy_mode_exact": "Locked",
+    "minimum_retention_years": 10,
+    "minimum_retention_days": 3653,
+    "retention_days_formula_exact": "ceil(retention_years*365.25)",
+    "legal_hold_capable_required": true,
+    "legal_hold_capability_source_exact": "container-policy-properties",
+    "legal_hold_active_is_separate_blob_version_state": true,
+    "dedicated_encryption_scope_required": true,
+    "encryption_key_source_exact": "Microsoft.Keyvault",
+    "customer_managed_key_ref_sha256_required": true,
+    "policy_checked_before_commit": true,
+    "policy_checked_during_readback": true
+  },
+  "error_redaction": {
+    "public_exception": "AzureBlobWormError",
+    "public_message_exact": "Azure Blob WORM operation rejected",
+    "provider_message_allowed": false,
+    "payload_value_allowed": false,
+    "provider_plaintext_allowed": false,
+    "credential_or_token_value_allowed": false,
+    "exception_cause_allowed": false,
+    "exception_context_allowed": false,
+    "malformed_transport_result_rejected": true
+  },
+  "fake_transport": {
+    "implementation": "FakeAzureBlobWormTransport",
+    "network_calls": 0,
+    "azure_calls": 0,
+    "credential_reads": 0,
+    "thread_safe": true,
+    "http_201_raw_version_header": true,
+    "http_412_has_no_version": true,
+    "list_and_raw_version_get": true,
+    "retention_from_create_time": true,
+    "supports_post_create_response_loss": true,
+    "supports_none_ambiguous_foreign_version_tests": true,
+    "returns_defensive_copies": true
+  },
+  "bicep_baseline": {
+    "path": "deploy/runtime/azure/immutable-evidence/main.bicep",
+    "api_version_exact": "2023-05-01",
+    "immutability_policy_state_property_emitted": false,
+    "expected_post_deploy_readback_state": "Unlocked",
+    "retention_days": 3653,
+    "customer_managed_key": true,
+    "dedicated_cmk_managed_identity": true,
+    "dedicated_writer_managed_identity": true,
+    "identity_name_binding_inputs_exact": [
+      "subscription().tenantId",
+      "resourceGroup().id",
+      "storageAccountName"
+    ],
+    "existing_identity_broadened": false,
+    "writer_role_kind": "CustomRole",
+    "writer_data_actions_exact": [
+      "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+      "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
+    ],
+    "writer_management_actions_exact": [
+      "Microsoft.Storage/storageAccounts/blobServices/containers/read",
+      "Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies/read",
+      "Microsoft.Storage/storageAccounts/encryptionScopes/read"
+    ],
+    "writer_management_assignment_scope_exact": "storage_account",
+    "writer_delete_action_allowed": false,
+    "writer_blob_write_action_allowed": false,
+    "writer_built_in_owner_or_contributor_allowed": false,
+    "compiled_claim": false,
+    "deployment_performed": false,
+    "lock_performed": false
+  },
+  "central_integration": {
+    "performed_by_track_b": false,
+    "central_adoption_required": true,
+    "central_adoption_preserved": true,
+    "pinned_ci_bicep_compile_required": true,
+    "live_factory_after_integration_allowed": false
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-S6B-01",
+      "requirement": "Adapter semantics: AzureBlobWormJournal implements the unchanged WormJournalPort with complete exact-version readback."
+    },
+    {
+      "id": "AC-S6B-02",
+      "requirement": "Create/idempotency: canonical S6a worm-commit key, If-None-Match *, 201 version header, 412 unique discovery, retries and races never overwrite."
+    },
+    {
+      "id": "AC-S6B-03",
+      "requirement": "Policy evidence: the exact committed version proves Locked mode, at least 3653 create-time retention days, legal-hold capability, CMK encryption and tenant/subscription/resource binding."
+    },
+    {
+      "id": "AC-S6B-04",
+      "requirement": "Drift/redaction: content, version, policy, provider-context and malformed-result drift fail closed with fully redacted public errors."
+    },
+    {
+      "id": "AC-S6B-05",
+      "requirement": "Dedicated Bicep baseline: CMK and dedicated identities use minimal add/read plus exact management reads without delete, owner, contributor, blob write or broadened existing identity."
+    },
+    {
+      "id": "AC-S6B-06",
+      "requirement": "Zero live: no HTTP, Azure, credential, tenant-write, lock or live-factory action occurs and S7 remains BLOCKED_PENDING_S7_APPROVAL."
+    },
+    {
+      "id": "AC-S6B-07",
+      "requirement": "Contracts/tests/strict/review: paired specs and plans, validator, focused negative tests, canonical owner-gated lock plan and pinned CI Bicep compilation remain required verification evidence."
+    }
+  ]
+}

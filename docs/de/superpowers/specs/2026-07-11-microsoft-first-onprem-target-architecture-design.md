@@ -41,7 +41,10 @@ Die verbindliche Grenze lautet:
 
 - Microsoft-first für Teams, SPFx, SharePoint, Entra und Graph REST v1.0/MCP.
 - On-prem-first für Python/FastAPI, AI/Modelle, deterministische
-  Workflow-Control-Plane, PostgreSQL, Outbox/Broker und WORM. Temporal- und
+  Workflow-Control-Plane, PostgreSQL, Outbox/Broker und den
+  WORM-Evidence-Publisher. Die autoritative WORM-Evidence-Kopie liegt in tenantgebundenem
+  Azure Blob Immutable Storage; Azure erhält keine Workflow-Runtime-Autorität.
+  Temporal- und
   Baseline-Modus sind exklusive Ausführungsmodi: Temporal History führt im
   Temporal-Modus Zustand/Timer/Retries, PostgreSQL im Baseline-Modus zusätzlich
   Zustand/Timer/Leases/Retries; WORM bleibt in beiden getrennt.
@@ -70,6 +73,8 @@ Die verbindliche Grenze lautet:
 ## Grenzen
 
 Dieser Slice ändert keine Runtime, keine Tenant-Konfiguration, keine Entra-App,
-keine Credentials, kein Deployment und keine Live-Daten. Er entscheidet weder
-Temporal noch einen WORM-Anbieter oder ein M365-Lizenzpaket endgültig.
+keine Credentials, kein Deployment und keine Live-Daten. Azure Blob Immutable
+Storage ist als WORM-Evidence-Ziel gewählt; Bereitstellung und irreversibler
+Policy-Lock bleiben getrennte, Owner-gated Folgeslices. Temporal und ein
+M365-Lizenzpaket bleiben offene Entscheidungen.
 
