@@ -58,6 +58,18 @@ class AzureBlobWormContractTests(unittest.TestCase):
         )
         self.assertTrue(provider_tenant["fresh_transport_readback_required"])
         self.assertFalse(provider_tenant["plaintext_allowed"])
+        self.assertFalse(provider_tenant["bicep_emits_plaintext_or_binding_hashes"])
+        self.assertEqual(
+            provider_tenant["expected_binding_source_exact"],
+            "owner-approved-commit-hash-bound-deployment-attestation",
+        )
+        self.assertEqual(
+            provider_tenant["actual_binding_source_exact"],
+            "fresh-runtime-azure-readback",
+        )
+        self.assertFalse(
+            provider_tenant["expected_and_actual_same_readback_allowed"]
+        )
         baseline = domain["bicep_baseline"]
         self.assertFalse(baseline["immutability_policy_state_property_emitted"])
         self.assertEqual(
@@ -97,6 +109,8 @@ class AzureBlobWormContractTests(unittest.TestCase):
             baseline["custom_role_definition_scope_exact"],
             "resource_group",
         )
+        self.assertTrue(baseline["custom_role_id_target_bound"])
+        self.assertTrue(baseline["custom_role_name_target_bound"])
         self.assertEqual(
             lock["operation"]["operation_exact"],
             "POST immutabilityPolicies/default/lock",
@@ -117,8 +131,29 @@ class AzureBlobWormContractTests(unittest.TestCase):
         )
         for relative_path in relative_paths:
             with self.subTest(path=relative_path):
-                self.assertTrue((ROOT / "docs/de" / relative_path).is_file())
-                self.assertTrue((ROOT / "docs/en" / relative_path).is_file())
+                de_path = ROOT / "docs/de" / relative_path
+                en_path = ROOT / "docs/en" / relative_path
+                self.assertTrue(de_path.is_file())
+                self.assertTrue(en_path.is_file())
+                if "specs/" in relative_path:
+                    de_text = de_path.read_text(encoding="utf-8")
+                    en_text = en_path.read_text(encoding="utf-8")
+                    self.assertIn(
+                        "Owner-approved,\ncommit- und hashgebundenen Deployment-Attestation",
+                        de_text,
+                    )
+                    self.assertIn(
+                        "owner-approved,\ncommit- and hash-bound deployment attestation",
+                        en_text,
+                    )
+                    self.assertIn(
+                        "nicht aus demselben Readback",
+                        de_text,
+                    )
+                    self.assertIn(
+                        "not be\nderived from the same readback",
+                        en_text,
+                    )
 
     def test_dedicated_bicep_baseline_declares_reviewed_controls(self) -> None:
         text = (
@@ -148,6 +183,9 @@ class AzureBlobWormContractTests(unittest.TestCase):
             "var keyVaultName = 'kv-nacw-${targetIsolationSuffix}'",
             "var cmkIdentityName = 'id-nac-worm-cmk-${targetIsolationSuffix}'",
             "var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'",
+            "guid(subscription().id, resourceGroup().id, storageAccountName",
+            "roleName: 'NaC WORM Blob Add Read ${targetIsolationSuffix}'",
+            "roleName: 'NaC WORM Storage Policy Read ${targetIsolationSuffix}'",
             "azure-subscription-resource-tenant-readback",
         ):
             with self.subTest(marker=marker):

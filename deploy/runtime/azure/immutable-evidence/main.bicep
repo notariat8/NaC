@@ -28,8 +28,8 @@ var keyVaultName = 'kv-nacw-${targetIsolationSuffix}'
 var cmkIdentityName = 'id-nac-worm-cmk-${targetIsolationSuffix}'
 var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'
 var keyVaultCryptoServiceEncryptionUserRoleId = 'e147488a-f6f5-4113-8e2d-b22465e65bf6'
-var writerDataRoleId = guid(subscription().id, resourceGroup().id, 'nac-worm-blob-add-read-v2')
-var writerManagementReadRoleId = guid(subscription().id, resourceGroup().id, 'nac-worm-management-read-v1')
+var writerDataRoleId = guid(subscription().id, resourceGroup().id, storageAccountName, 'nac-worm-blob-add-read-v2')
+var writerManagementReadRoleId = guid(subscription().id, resourceGroup().id, storageAccountName, 'nac-worm-management-read-v1')
 var baselineTags = union(tags, {
   workload: 'nac-immutable-evidence'
   status: 'S6B_AZURE_WORM_ADAPTER_READY_OFFLINE'
@@ -102,7 +102,7 @@ resource cmkEncryptionRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
 resource writerDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: writerDataRoleId
   properties: {
-    roleName: 'NaC WORM Blob Add Read'
+    roleName: 'NaC WORM Blob Add Read ${targetIsolationSuffix}'
     description: 'Add and read immutable evidence blobs without overwrite or lifecycle permissions.'
     type: 'CustomRole'
     permissions: [
@@ -125,7 +125,7 @@ resource writerDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 resource writerManagementReadRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: writerManagementReadRoleId
   properties: {
-    roleName: 'NaC WORM Storage Policy Read'
+    roleName: 'NaC WORM Storage Policy Read ${targetIsolationSuffix}'
     description: 'Read only the container, immutability policy, and encryption scope required for fail-closed verification.'
     type: 'CustomRole'
     permissions: [

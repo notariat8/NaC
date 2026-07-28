@@ -94,9 +94,11 @@ The exact committed version must prove:
 For commit and readback the transport freshly reads the actual provider
 context: tenant ID, subscription resource ID, and storage resource ID. Only
 domain-separated hash bindings enter the object, metadata, and evidence. The
-Bicep baseline binds the same sources from `subscription().tenantId`,
-`subscription().id`, and
-`resourceId('Microsoft.Storage/storageAccounts', storageAccountName)`.
+Bicep baseline emits neither plaintext IDs nor self-asserted hashes. The
+expected `provider_context_binding_sha256` comes from an owner-approved,
+commit- and hash-bound deployment attestation; the actual value comes from an
+independent fresh Azure readback. Expected and actual values must not be
+derived from the same readback.
 
 Stale container metadata, subscription or resource drift, and tenant transfer
 fail closed. No plaintext tenant, subscription, or resource ID appears in

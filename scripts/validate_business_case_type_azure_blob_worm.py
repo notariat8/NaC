@@ -120,6 +120,9 @@ EXPECTED_BICEP_MARKERS = [
     "azure-subscription-resource-tenant-readback",
     "providerBindingMaterial: 'runtime-readback-not-template-metadata'",
     "provider_binding_material: 'runtime-readback-not-template-metadata'",
+    "guid(subscription().id, resourceGroup().id, storageAccountName",
+    "roleName: 'NaC WORM Blob Add Read ${targetIsolationSuffix}'",
+    "roleName: 'NaC WORM Storage Policy Read ${targetIsolationSuffix}'",
 ]
 
 
@@ -202,6 +205,12 @@ def _validate_contracts(
         and tenant.get("fresh_transport_readback_required") is True
         and len(tenant.get("bindings_exact", [])) == 4
         and tenant.get("plaintext_allowed") is False
+        and tenant.get("bicep_emits_plaintext_or_binding_hashes") is False
+        and tenant.get("expected_binding_source_exact")
+        == "owner-approved-commit-hash-bound-deployment-attestation"
+        and tenant.get("actual_binding_source_exact")
+        == "fresh-runtime-azure-readback"
+        and tenant.get("expected_and_actual_same_readback_allowed") is False
         and tenant.get("free_bicep_tenant_binding_parameter_allowed") is False,
         "provider tenant evidence drift",
         errors,
@@ -229,6 +238,8 @@ def _validate_contracts(
         and baseline.get("provider_binding_material_source_exact")
         == "runtime-readback-not-template-metadata"
         and baseline.get("custom_role_definition_scope_exact") == "resource_group"
+        and baseline.get("custom_role_id_target_bound") is True
+        and baseline.get("custom_role_name_target_bound") is True
         and baseline.get("compiled_claim") is False,
         "Bicep baseline contract drift",
         errors,
@@ -459,15 +470,22 @@ def _validate_docs(errors: list[str]) -> None:
         text = _read(path, errors)
         _expect(all(identifier in text for identifier in EXPECTED_ACCEPTANCE), f"acceptance traceability missing: {path.relative_to(ROOT)}", errors)
         _expect(S6B_STATUS in text and LIVE_STATUS in text, f"status boundary missing: {path.relative_to(ROOT)}", errors)
-        for marker in (
-            "3653",
-            "version_id",
-            "versionid",
-            "ETag",
-            "CMK",
-            "subscription().tenantId",
-            "subscription().id",
-        ):
+        markers = ["3653", "version_id", "versionid", "ETag", "CMK"]
+        if "/specs/" in str(path):
+            markers.extend(
+                [
+                    "Owner-approved" if "/de/" in str(path) else "owner-approved",
+                    "frischen" if "/de/" in str(path) else "fresh",
+                    (
+                        "Deployment-Attestation"
+                        if "/de/" in str(path)
+                        else "deployment attestation"
+                    ),
+                ]
+            )
+        else:
+            markers.extend(["subscription().tenantId", "subscription().id"])
+        for marker in markers:
             _expect(marker in text, f"documentation marker missing ({marker}): {path.relative_to(ROOT)}", errors)
         _expect(
             "AC-S6B-08" not in text,

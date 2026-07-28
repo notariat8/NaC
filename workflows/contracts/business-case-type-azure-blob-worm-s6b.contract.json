@@ -100,11 +100,10 @@
       "provider_resource_binding_sha256",
       "provider_context_binding_sha256"
     ],
-    "bicep_inputs_exact": [
-      "subscription().tenantId",
-      "subscription().id",
-      "resourceId(Microsoft.Storage/storageAccounts, storageAccountName)"
-    ],
+    "bicep_emits_plaintext_or_binding_hashes": false,
+    "expected_binding_source_exact": "owner-approved-commit-hash-bound-deployment-attestation",
+    "actual_binding_source_exact": "fresh-runtime-azure-readback",
+    "expected_and_actual_same_readback_allowed": false,
     "stale_metadata_behavior": "BLOCKED",
     "tenant_transfer_behavior": "BLOCKED",
     "subscription_or_resource_drift_behavior": "BLOCKED",
@@ -167,6 +166,8 @@
     "provider_binding_hashes_emitted_by_template": false,
     "provider_binding_material_source_exact": "runtime-readback-not-template-metadata",
     "custom_role_definition_scope_exact": "resource_group",
+    "custom_role_id_target_bound": true,
+    "custom_role_name_target_bound": true,
     "existing_identity_broadened": false,
     "writer_role_kind": "CustomRole",
     "writer_data_actions_exact": [
