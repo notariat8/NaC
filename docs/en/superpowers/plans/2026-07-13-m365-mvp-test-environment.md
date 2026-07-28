@@ -4,7 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365 MVP Test Environment Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
-**Live Status:** Owner-approved Live-One-Shot succeeded in `notary_team_01` on 14 July 2026; Azure BFF offline READY, live activation DEFERRED
+**Live Status:** Baseline Live-One-Shot succeeded on 14 July 2026; bounded BFF bindings from [#632](https://github.com/notariat8/NaC/issues/632) exist; final 12-step closure run on current `main` pending
 
 ## Target State
 
@@ -23,9 +23,11 @@ implemented offline and report `READY` through
 loads dynamic matter data only from the fixed BFF endpoint through
 `AadHttpClient`; only the hash-bound BPMN XML remains in the package without
 matter data. The complete live sequence is hash-bound through
-`nac m365 teams-sharepoint bff-azure-activation-plan`. The delegated BFF
-scope, Azure deployment, site grant, and live Entra token validation remain
-`DEFERRED` until the single consolidated owner gate.
+`nac m365 teams-sharepoint bff-azure-activation-plan`. Issue #632 provisioned
+the Azure resources, `Matter.Read`, runtime `Sites.Selected`, and exact site
+grant `read` under an owner gate. The current complete 12-step run,
+idempotency, four tamper probes, and SharePoint/Teams render evidence remain
+outstanding.
 
 ## Implementation Steps
 
@@ -36,17 +38,17 @@ scope, Azure deployment, site grant, and live Entra token validation remain
 2. **Enforce the browser and API boundary (AC-620-02).**
    Block Graph permission requests and direct Graph calls from SPFx. Define a
    delegated NaC BFF scope as the only dynamic API target. The new package
-   uses that boundary; live deployment remains DEFERRED until the bundled
-   scope and HTTPS activation.
+   uses that boundary; #632 provisioned the scope and HTTPS endpoint, while
+   the current complete closure run remains pending.
 3. **Verify BFF identity, projection, and fail-closed behavior
    (AC-620-03, AC-620-04, AC-620-05).**
    Derive identity only from validated Entra token claims; resolve workspace,
    site, and list IDs exclusively through a server-side allowlist; return only
    redacted status, tasks, due date, and BPMN to assigned users. Deny
    unassigned users and manipulated workspace, matter, purpose, or filter
-   values without an existence leak. Live token validation and live BFF
-   delivery remain DEFERRED; the BFF client, DTO validation, and fail-closed
-   UI states are package-ready.
+   values without an existence leak. The BFF client, DTO validation, and
+   fail-closed UI states are package-ready; live token validation and delivery
+   must be proven in the current closure run.
 4. **Protect SharePoint/Teams deployment and the Graph smoke (AC-620-06).**
    Verify package ID, SHA-256, SPFx version, site/team binding, and App Catalog
    responses. Idempotently deploy the app, page, web part, and optional Teams
@@ -54,8 +56,10 @@ scope, Azure deployment, site grant, and live Entra token validation remain
    back by exact ID, and delete them as run-owned cleanup. Deployment,
    readback, cleanup, and evidence must be reproducible and redacted.
 5. **Verify the immutable safety boundary (AC-620-07).**
-   Create or change no credential, permission, or Entra scope; read or write
-   no production data; and allow no action outside notary_team_01. A wrong
+   Create or change no credential or unbounded permission; only an absent exact binding defined by #632 may be created or an exact
+   existing binding reused. Drift, duplicates, or broader rights block and are
+   not repaired. Read or
+   write no production data and allow no action outside `notary_team_01`. A wrong
    workspace, missing owner approval, hash drift, or security error stops
    before the first write.
 6. **Integrate the one-shot operator edge and acceptance
@@ -68,30 +72,38 @@ scope, Azure deployment, site grant, and live Entra token validation remain
 
 ## Live Action Order
 
-1. bind the current package and SHA-256 to the deployment gate,
-2. deploy the App Catalog package site-scoped,
-3. install or upgrade the app on the target site,
-4. publish the test page and web part idempotently,
-5. optionally publish the Teams package and install it in the exact team,
-6. run the synthetic Graph smoke with readback and cleanup,
-7. verify the installation and page read-only,
-8. produce redacted completion evidence and visual proof.
+The hash-bound closure run executes exactly these twelve steps:
+
+1. register Azure providers (`register_azure_providers`),
+2. create or exactly reuse the bound resource group (`ensure_resource_group`),
+3. create or reuse the exact Entra API application (`ensure_entra_api_application`),
+4. deploy the bound Bicep baseline (`deploy_bicep_baseline`),
+5. assign exactly `Sites.Selected` to the runtime identity (`assign_sites_selected`),
+6. create the exact target-site grant with role `read` (`grant_target_site_read`),
+7. deploy the hash-bound Functions package (`deploy_function_package`),
+8. site-scope deploy the prepared hash-bound `.sppkg` (`build_and_deploy_spfx`),
+9. approve only `Matter.Read` for the SPFx package (`approve_spfx_bff_scope`),
+10. seed the run-owned synthetic workspace (`seed_synthetic_workspace`),
+11. run role, tamper, and readback smokes (`run_access_and_readback_smokes`),
+12. verify idempotency and redacted completion evidence (`run_idempotency_and_evidence`).
 
 ## Stop Conditions
 
 The run fails closed on missing permission, a security error, workspace/site/
 team drift, a wrong package hash, tenant-wide deployment, a Graph permission
 in the SPFx package, production-like data, incomplete readback, or failed
-targeted cleanup. It does not change permissions, credentials, certificates,
-or Entra scopes.
+targeted cleanup. It changes no credential or certificate. Permission actions
+are limited to the exact bound create/reuse/approve steps 3, 5, 6, and 9;
+existing drift, duplicates, or broader rights are not repaired.
 
 ## BFF Activation after Issue #620
 
 The offline BFF implementation belongs to this slice, including the Azure
 Functions host, managed-identity IaC, storage network boundary, cost limits,
-JWT/JWKS hardening, and fixed `notary_team_01` Graph projection. Public
-activation happens in one consolidated owner gate: deploy Azure resources,
-configure the delegated Entra scope and exact site grant, deploy the source package through Azure Functions Flex OneDeploy with `--build-remote true`, and switch SPFx to the BFF through `AadHttpClient`. The ZIP is intentionally a reproducible source package; deployment without remote build is forbidden. Until that gate, the BFF
+JWT/JWKS hardening, and fixed `notary_team_01` Graph projection. The remaining
+closure run uses one consolidated owner gate: create or exactly reuse bound
+Azure resources, create an absent delegated Entra scope and exact site grant,
+or reuse their exact existing bindings, deploy the source package through Azure Functions Flex OneDeploy with `--build-remote true`, and switch SPFx to the BFF through `AadHttpClient`. The ZIP is intentionally a reproducible source package; deployment without remote build is forbidden. Until that gate, the BFF
 leaves the previously deployed package version visible, while the new
 repository package is fully cut over to `AadHttpClient -> NaC BFF`. SPFx must
 still never call Graph directly. The `bff-azure-activation-plan` command
@@ -115,5 +127,5 @@ The owner-approved Live-One-Shot completed successfully in `notary_team_01` on
 synthetic matter, BPMN, tasks/due date, role decisions, Graph REST `v1.0`
 readback, and run-owned cleanup. Evidence remains synthetic and redacted.
 Document pointers and `bpmn-js` lazy loading were not proven and remain open.
-The BFF scope, public activation, and live Entra token validation remain
-explicitly DEFERRED and are not reported as live-complete.
+The historical evidence includes neither BFF activation nor live Entra token
+validation. Those claims require a current complete 12-step closure run.

@@ -204,9 +204,10 @@ Bicep-/Parameter-Snapshots, `healthz` vor Auth, `readyz` nach
 authentifiziertem Read, synthetischer Zustandswiederherstellung,
 hashverkettetem Ledger und exakt allowlisteter Evidence vorbereitet. Resume
 ist für den MVP bis zu providerspezifischer read-only Reconciliation aller
-Write-Schritte und Crash-Fenster deaktiviert. Die NaC-BFF-Live-Aktivierung
-selbst bleibt bis zum einzigen konsolidierten Owner-Gate ausdrücklich
-`DEFERRED`.
+Write-Schritte und Crash-Fenster deaktiviert. Der begrenzte NaC-BFF-Endpunkt,
+delegierte Scope und Site-Grant sind unter Issue #632 bereitgestellt. Offen
+bleiben der aktuelle zwölfstufige Abschlusslauf, Idempotenz, die vollständige
+Manipulationsmatrix sowie SharePoint-/Teams-Render-Evidence.
 
 ## Regel
 

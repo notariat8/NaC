@@ -979,7 +979,9 @@
         "GET /healthz succeeds before any authentication attempt",
         "assigned-user authenticated synthetic read succeeds with an allowlisted redacted DTO",
         "valid-deputy authenticated synthetic read succeeds with an allowlisted redacted DTO",
-        "unauthorized and manipulated-input authenticated requests fail closed without existence leakage",
+        "unauthorized authenticated request fails closed without existence leakage",
+        "assigned-user authenticated synthetic read succeeds immediately before tamper probes",
+        "workspace, matter, purpose and filter tamper requests each fail closed without existence leakage",
         "temporary synthetic access state is restored deterministically to the captured assigned baseline",
         "authenticated synthetic read after restoration succeeds",
         "GET /readyz succeeds only after the successful authenticated read"
@@ -1059,6 +1061,10 @@
       "deputy_access_passed",
       "denied_access_passed",
       "tampered_access_passed",
+      "tampered_workspace_passed",
+      "tampered_matter_passed",
+      "tampered_purpose_passed",
+      "tampered_filter_passed",
       "resume_enabled"
     ],
     "raw_target_ids_in_evidence_allowed": false,
@@ -1099,6 +1105,10 @@
     "deputy_access_passed": true,
     "denied_access_passed": true,
     "tampered_access_passed": true,
+    "tampered_workspace_passed": true,
+    "tampered_matter_passed": true,
+    "tampered_purpose_passed": true,
+    "tampered_filter_passed": true,
     "write_replay_idempotency_claimed": false
   },
   "failure_behavior": {

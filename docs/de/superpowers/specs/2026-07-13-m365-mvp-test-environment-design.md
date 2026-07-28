@@ -1,6 +1,6 @@
 # M365-MVP-Testumgebung Design
 
-Status: Live-Deployment am 14. Juli 2026 verifiziert; Azure-BFF offline READY, Livepfad DEFERRED
+Status: Live-Deployment am 14. Juli 2026 verifiziert; finaler Azure-BFF-Live-Abschlusslauf auf aktuellem main offen
 Datum: 13. Juli 2026
 Scope: site-spezifische, ausschließlich synthetische Testumgebung im Workspace `notary_team_01`
 
@@ -75,16 +75,17 @@ und die synthetische Akten-ID `NAC-SYN-MATTER-001` gebunden. Er führt keine
 Rechte- oder Credential-Änderung aus und stoppt fail-closed bei Workspace-,
 Paket-, Hash-, Rollen- oder Readback-Abweichungen.
 
-### Spätere BFF-Aktivierung
+### BFF-Abschlusslauf
 
 Direkter Microsoft-Graph-Zugriff aus SPFx bleibt dauerhaft verboten. Der
-spätere dynamische Lesepfad lautet `SPFx/Teams -> NaC BFF -> Graph REST v1.0`.
-Der BFF erzwingt serverseitig Workspace-, Akten-, Zweck-, Rollen- und
-Vertretungsgrenzen und gibt nur redigierte DTOs zurück. Seine Aktivierung ist
-in Issue #620 bewusst zurückgestellt, bis ein bereits vorhandener öffentlicher
-HTTPS-Endpunkt und ein bereits vorhandener delegierter Entra-Scope genutzt
-werden können. Dieser Slice darf keine Entra-Berechtigung, kein Credential und
-keinen Scope neu anlegen oder verändern.
+dynamische Lesepfad lautet `SPFx/Teams -> NaC BFF -> Graph REST v1.0`. Der BFF
+erzwingt serverseitig Workspace-, Akten-, Zweck-, Rollen- und
+Vertretungsgrenzen und gibt nur redigierte DTOs zurück. Issue #632 stellte den
+öffentlichen Endpunkt, `Matter.Read`, Runtime-`Sites.Selected` und Site-Rolle
+`read` owner-gated bereit. Der Abschlusslauf darf eine fehlende exakte Bindung anlegen oder eine exakt
+passende vorhandene Bindung wiederverwenden. Abweichende, doppelte oder breitere
+Bindungen stoppen fail-closed und werden nicht im Lauf repariert; Credentials
+werden nicht erzeugt oder geändert.
 
 ## Synthetischer Testvorgang
 
@@ -145,26 +146,30 @@ Live-Aktionen bleiben owner-gated und auf den freigegebenen Workspace begrenzt.
   TeamsTab und setzt skipFeatureDeployment=false.
 - **AC-620-02:** SPFx fordert niemals Microsoft-Graph-Berechtigungen an und
   ruft Graph nie direkt auf. Einziger zulässiger dynamischer API-Zielpfad ist
-  ein delegierter NaC-BFF-Scope. Scope, HTTPS-Endpunkt und SPFx-Umschaltung
-  bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
+  der unter Issue #632 owner-gated bereitgestellte NaC-BFF-Scope `Matter.Read`;
+  der finale Live-Nachweis auf aktuellem `main` steht noch aus.
 - **AC-620-03:** Der BFF leitet die Benutzeridentität ausschließlich aus einem
   validierten Entra-Access-Token ab und löst Workspace-, Site- und Listen-IDs
   ausschließlich über eine serverseitige Allowlist auf. JWT/JWKS-Prüfung und
   Fail-closed-Grenzen sind offline implementiert; die Live-Tokenvalidierung
-  bleibt bis zum Owner-Gate `DEFERRED`.
+  ist Pflicht des noch offenen zwölfstufigen Abschlusslaufs.
 - **AC-620-04:** Ein zugeordneter Benutzer erhält ausschließlich eine
   redigierte Projektion aus synthetischem Aktenstatus, Aufgaben, Frist und
-  BPMN. Diese Projektion und der fixe Graph-REST-Adapter sind offline
-  package-ready; die Auslieferung über den Live-BFF bleibt `DEFERRED`.
+  BPMN. Diese Projektion und der fixe Graph-REST-Adapter sind package-ready;
+  SharePoint- und Teams-Auslieferung müssen im Abschlusslauf auf aktuellem
+  `main` live nachgewiesen werden.
 - **AC-620-05:** Nicht zugeordnete Benutzer sowie manipulierte Workspace-,
   Akten-, Zweck- oder Filtereingaben scheitern fail-closed, ohne Existenz oder
   Metadaten der Akte preiszugeben.
 - **AC-620-06:** Site-spezifische SharePoint- und optionale Teams-
   Bereitstellung, Graph-REST-v1.0-Write/Readback, laufgebundenes Cleanup und
   die zugehörige Evidence sind reproduzierbar und redigiert.
-- **AC-620-07:** Der Slice erzeugt keine Credentials oder Berechtigungen,
-  berührt keine Produktivdaten und führt keine Aktion in einem anderen
-  Workspace als notary_team_01 aus.
+- **AC-620-07:** Der Abschlusslauf erzeugt keine Credentials oder ungebundenen
+  Berechtigungen, berührt keine Produktivdaten und führt keine Aktion in einem
+  anderen Workspace als `notary_team_01` aus. Unter der begrenzten Supersession
+  aus Issue #632 darf er ausschließlich `Matter.Read` sowie Runtime-
+  `Sites.Selected` mit Site-Rolle `read` bei Fehlen anlegen oder exakt
+  wiederverwenden. Abweichungen werden nicht repariert, sondern blockieren.
 
 ## Lieferstatus
 
@@ -178,15 +183,17 @@ Code Splitting für `bpmn-js` sind nicht nachgewiesen und bleiben offen.
 
 Der Azure-Functions-BFF ist mit Entra-JWT/JWKS-Prüfung, fixer Graph-REST-
 `v1.0`-Projektion, deterministischem Paket, Managed-Identity-IaC und zentralem
-Offline-Readiness-Gate als **READY** prüfbar. Öffentliche BFF-Aktivierung,
-delegierter Entra-Scope, exakter Site-Grant, SPFx-`AadHttpClient`-Umschaltung
-und Live-Tokenvalidierung bleiben ausdrücklich **DEFERRED** und waren nicht
-Bestandteil des erfolgreichen Live-One-Shots.
+Offline-Readiness-Gate als **READY** prüfbar. Issue #632 hat den öffentlichen
+Endpunkt, `Matter.Read`, Runtime-`Sites.Selected` und den exakten Site-Grant
+`read` owner-gated und eng begrenzt eingeführt. Der letzte Aktivierungsversuch
+war `FAILED_PARTIAL` am SPFx-Deployment; der Fix ist gemergt. Es fehlt ein
+aktueller vollständiger 12-Step-Lauf samt Idempotenz, vier Manipulationstests,
+SharePoint-/Teams-Rendernachweis und redigierter Abschluss-Evidence.
 
 ## Nichtziele
 
 - keine Produktivdaten und kein Zugriff auf andere Workspaces,
-- keine Entra-Rechte-, Scope-, App-Credential- oder Zertifikatsänderung,
+- keine anderen oder breiteren Entra-Rechte und keine App-Credential- oder Zertifikatsänderungen im Abschlusslauf,
 - kein direkter Graph-Zugriff aus SPFx,
 - keine produktive BFF-Aktivierung ohne vorhandenen Endpunkt und Scope,
 - keine Workflow-Ausführung durch `bpmn-js`; das Paket rendert BPMN read-only,

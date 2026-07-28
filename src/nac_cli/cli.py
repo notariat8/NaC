@@ -8071,6 +8071,10 @@ def _redact_bff_azure_activation_result(result: dict[str, Any]) -> dict[str, Any
         "deputy_access_passed",
         "denied_access_passed",
         "tampered_access_passed",
+        "tampered_workspace_passed",
+        "tampered_matter_passed",
+        "tampered_purpose_passed",
+        "tampered_filter_passed",
         "resume_enabled",
     )
     summary = result.get("summary")

@@ -252,10 +252,10 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
             [],
         )
 
-    def test_live_attestation_keeps_bff_and_token_validation_deferred(self) -> None:
+    def test_historical_live_attestation_excludes_bff_and_token_validation(self) -> None:
         self.assertEqual(
             self.contract["bff_boundary"]["live_activation_status_exact"],
-            "DEFERRED",
+            "FINAL_LIVE_RUN_PENDING",
         )
         self.assertEqual(
             self.live_attestation["explicitly_not_verified_exact"][-2:],
@@ -276,16 +276,55 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
                 for link in required_links:
                     self.assertIn(link, text)
 
-    def test_bff_deferred_state_is_not_auto_scheduled_in_gantts(self) -> None:
-        gantt_row = re.compile(
-            r"^\s+NaC-BFF-Live-Aktivierung DEFERRED\s+:",
-            flags=re.MULTILINE,
+    def test_mvp_plans_reflect_bounded_632_gate_and_pending_final_run(self) -> None:
+        for path in (DE_PLAN, EN_PLAN):
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("DEFERRED", text)
+                self.assertIn("#632", text)
+
+    def test_mvp_plans_bind_the_canonical_twelve_step_closure(self) -> None:
+        expected_steps = (
+            "register_azure_providers",
+            "ensure_resource_group",
+            "ensure_entra_api_application",
+            "deploy_bicep_baseline",
+            "assign_sites_selected",
+            "grant_target_site_read",
+            "deploy_function_package",
+            "build_and_deploy_spfx",
+            "approve_spfx_bff_scope",
+            "seed_synthetic_workspace",
+            "run_access_and_readback_smokes",
+            "run_idempotency_and_evidence",
         )
+        sections = (
+            (DE_PLAN, "## Reihenfolge der Live-Aktionen", "## Stop-Bedingungen"),
+            (EN_PLAN, "## Live Action Order", "## Stop Conditions"),
+        )
+        for path, start, end in sections:
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                section = text.split(start, 1)[1].split(end, 1)[0]
+                observed_steps = tuple(
+                    re.findall(
+                        r"^\d+\..*?\(`([a-z0-9_]+)`\)[,.]?$",
+                        section,
+                        flags=re.MULTILINE,
+                    )
+                )
+                self.assertEqual(observed_steps, expected_steps)
+                self.assertNotIn("reconciled", text)
+                self.assertNotIn("rekonstruiert", text)
+                self.assertNotIn("build and site-scope deploy SPFx", text)
+                self.assertNotIn("SPFx bauen und site-spezifisch", text)
+
+    def test_bff_final_live_run_is_visible_in_gantts(self) -> None:
         for path in (ROADMAP_GANTT, WORKFLOWS_GANTT):
             with self.subTest(path=path):
                 text = path.read_text(encoding="utf-8")
-                self.assertNotRegex(text, gantt_row)
-                self.assertIn("DEFERRED", text)
+                self.assertNotIn("BFF `DEFERRED`", text)
+                self.assertIn("Abschlusslauf", text)
 
     def test_contract_binds_issue_scope_and_all_acceptance_ids(self) -> None:
         self.assertEqual(
@@ -373,18 +412,18 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
             "AC-620-02": (
                 "never requests Microsoft Graph permissions",
                 "delegated NaC BFF scope",
-                "activation remains DEFERRED",
+                "final live verification still pending",
             ),
             "AC-620-03": (
                 "validated Entra access token",
                 "server-side allowlist",
-                "live token validation remains DEFERRED",
+                "final live token validation is required",
             ),
             "AC-620-04": (
                 "assigned user",
                 "redacted projection",
                 "status, tasks, due date and BPMN",
-                "live BFF delivery path remains DEFERRED",
+                "requires final live verification",
             ),
             "AC-620-05": (
                 "Unassigned users",
@@ -399,7 +438,12 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
                 "reproducible and redacted",
             ),
             "AC-620-07": (
-                "no credential or permission",
+                "no credential or unbounded permission",
+                "bounded Issue #632 supersession",
+                "create an absent exact binding or reuse an exact existing binding",
+                "fails closed without in-place repair",
+                "Matter.Read",
+                "runtime Sites.Selected with site role read",
                 "no production data",
                 "no operation in any workspace other than notary_team_01",
             ),
@@ -423,7 +467,8 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
         self.assertFalse(package["direct_graph_from_spfx_allowed"])
         self.assertEqual(package["delegated_api_target_exact"], "NaC BFF")
         self.assertEqual(
-            package["delegated_api_activation_status_exact"], "DEFERRED"
+            package["delegated_api_activation_status_exact"],
+            "PROVISIONED_FINAL_LIVE_VERIFICATION_PENDING",
         )
         self.assertFalse(package["legacy_sharepoint_api_or_sdk_allowed"])
         self.assertEqual(
@@ -478,13 +523,15 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
             ],
         )
 
-    def test_bff_activation_is_deferred_without_permission_changes(self) -> None:
+    def test_bff_final_run_preserves_bounded_permission_supersession(self) -> None:
         bff = self.contract["bff_boundary"]
         self.assertEqual(
             bff["dynamic_path_exact"],
             "SPFx/Teams -> NaC BFF -> Microsoft Graph REST v1.0",
         )
-        self.assertEqual(bff["live_activation_status_exact"], "DEFERRED")
+        self.assertEqual(
+            bff["live_activation_status_exact"], "FINAL_LIVE_RUN_PENDING"
+        )
         self.assertEqual(
             bff["identity_source_exact"], "validated Entra access token claims"
         )
@@ -495,12 +542,31 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
         self.assertEqual(
             bff["activation_prerequisites"],
             [
-                "existing_public_https_endpoint",
-                "existing_delegated_entra_scope",
+                "provisioned_public_https_endpoint",
+                "provisioned_delegated_entra_scope",
             ],
         )
         self.assertFalse(
             bff["new_permission_scope_or_credential_change_allowed_in_slice"]
+        )
+        supersession = self.contract["permission_boundary_supersession"]
+        self.assertEqual(supersession["scope_exact"], "Matter.Read")
+        self.assertEqual(
+            supersession["runtime_graph_permission_exact"], "Sites.Selected"
+        )
+        self.assertEqual(supersession["runtime_site_role_exact"], "read")
+        self.assertFalse(supersession["credential_change_allowed"])
+        self.assertTrue(
+            supersession[
+                "exact_create_or_reuse_allowed_in_closure_run"
+            ]
+        )
+        self.assertFalse(supersession["in_place_permission_repair_allowed"])
+        target = self.contract["target_boundary"]
+        self.assertFalse(target["credential_changes_allowed"])
+        self.assertFalse(target["unbounded_permission_changes_allowed"])
+        self.assertTrue(
+            target["exact_owner_gated_binding_create_or_reuse_allowed"]
         )
 
     def test_bilingual_specs_and_plans_share_traceability(self) -> None:

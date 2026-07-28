@@ -1,6 +1,6 @@
 # M365 MVP Test Environment Design
 
-Status: Live deployment verified on 14 July 2026; Azure BFF offline READY, live path DEFERRED
+Status: Live deployment verified on 14 July 2026; final Azure BFF live closure run on current main pending
 Date: 13 July 2026
 Scope: site-specific, synthetic-only test environment in workspace `notary_team_01`
 
@@ -72,15 +72,16 @@ site and team binding, and the synthetic matter ID `NAC-SYN-MATTER-001`. It
 performs no permission or credential change and fails closed on workspace,
 package, hash, role, or readback drift.
 
-### Deferred BFF Activation
+### BFF Closure Run
 
 Direct Microsoft Graph access from SPFx remains permanently forbidden. The
-future dynamic read path is `SPFx/Teams -> NaC BFF -> Graph REST v1.0`. The BFF
+dynamic read path is `SPFx/Teams -> NaC BFF -> Graph REST v1.0`. The BFF
 enforces workspace, matter, purpose, role, and deputy boundaries server-side
-and returns redacted DTOs only. Its activation is deliberately deferred in
-Issue #620 until an existing public HTTPS endpoint and an existing delegated
-Entra scope are available. This slice must not create or modify an Entra
-permission, credential, or scope.
+and returns redacted DTOs only. Issue #632 provisioned the public endpoint,
+`Matter.Read`, runtime `Sites.Selected`, and site role `read` under an owner
+gate. The closure run may create an absent exact binding or reuse an exact existing
+binding. Any mismatched, duplicate, or broader binding fails closed and is not
+repaired in place; credentials are neither created nor changed.
 
 ## Synthetic Test Matter
 
@@ -139,27 +140,30 @@ owner-gated and limited to the approved workspace.
   package declares the SharePointWebPart and TeamsTab hosts and sets
   skipFeatureDeployment=false.
 - **AC-620-02:** SPFx never requests Microsoft Graph permissions and never
-  calls Graph directly. Its only permitted dynamic API target is a delegated
-  NaC BFF scope. Scope, HTTPS endpoint, and SPFx cutover remain `DEFERRED`
-  until the consolidated owner gate.
+  calls Graph directly. Its only permitted dynamic API target is the NaC BFF
+  `Matter.Read` scope provisioned owner-gated under Issue #632; final live
+  proof on current `main` is still pending.
 - **AC-620-03:** The BFF derives user identity exclusively from a validated
   Entra access token and resolves workspace, site, and list identifiers only
   through a server-side allowlist. JWT/JWKS validation and fail-closed
-  boundaries are implemented offline; live token validation remains
-  `DEFERRED` until the owner gate.
+  boundaries are implemented offline; live token validation is mandatory in
+  the still-pending twelve-step closure run.
 - **AC-620-04:** An assigned user receives only a redacted projection of
   synthetic matter status, tasks, due date, and BPMN. This projection and the
-  fixed Graph REST adapter are package-ready offline; delivery through the
-  live BFF remains `DEFERRED`.
+  fixed Graph REST adapter are package-ready; SharePoint and Teams delivery
+  must be proven live in the closure run on current `main`.
 - **AC-620-05:** Unassigned users and manipulated workspace, matter, purpose,
   or filter inputs fail closed without disclosing the matter's existence or
   metadata.
 - **AC-620-06:** Site-scoped SharePoint and optional Teams deployment, Graph
   REST v1.0 write/readback, run-owned cleanup, and the associated evidence
   are reproducible and redacted.
-- **AC-620-07:** The slice creates no credential or permission, touches no
-  production data, and performs no operation in any workspace other than
-  notary_team_01.
+- **AC-620-07:** The closure run creates no credential or unbounded permission,
+  touches no production data, and performs no operation in any workspace other
+  than `notary_team_01`. Under the bounded Issue #632 supersession it may
+  create an absent exact binding or reuse an exact existing binding only for
+  `Matter.Read` plus runtime `Sites.Selected` with site role `read`. Drift is
+  blocked rather than repaired.
 
 ## Delivery Status
 
@@ -173,15 +177,17 @@ proven and remain open.
 
 The Azure Functions BFF is verifiable as **READY** offline with Entra JWT/JWKS
 validation, a fixed Graph REST `v1.0` projection, deterministic package,
-managed-identity IaC, and the central offline readiness gate. Public BFF
-activation, delegated Entra scope, exact site grant, SPFx `AadHttpClient`
-cutover, and live token validation remain explicitly **DEFERRED** and were not
-part of the successful Live-One-Shot.
+managed-identity IaC, and the central offline readiness gate. Issue #632
+introduced the public endpoint, `Matter.Read`, runtime `Sites.Selected`, and
+the exact `read` site grant under a bounded owner gate. The latest activation
+attempt was `FAILED_PARTIAL` at SPFx deployment and its fix is merged. A
+current complete 12-step run, idempotency, all four tamper probes, SharePoint
+and Teams render proof, and redacted closure evidence remain outstanding.
 
 ## Non-goals
 
 - no production data and no access to another workspace,
-- no Entra permission, scope, app credential, or certificate change,
+- no other or broader Entra permission and no app credential or certificate changes in the closure run,
 - no direct Graph access from SPFx,
 - no production BFF activation without an existing endpoint and scope,
 - no BPMN execution by `bpmn-js`; the package renders BPMN read-only,

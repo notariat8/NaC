@@ -173,6 +173,12 @@ _BFF_URL = (
     f"{_FUNCTION_URL}/v1/workspaces/{WORKSPACE_ID}/matters/NAC-SYN-MATTER-001"
     "?purpose=view_synthetic_matter_workspace"
 )
+_BFF_TAMPER_MODES = (
+    "tampered_workspace",
+    "tampered_matter",
+    "tampered_purpose",
+    "tampered_filter",
+)
 _GRAPH_ME_URL = "https://graph.microsoft.com/v1.0/me?$select=id"
 _PROVIDERS = ("Microsoft.Web", "Microsoft.Storage", "Microsoft.OperationalInsights")
 _SAFE_PROVIDER_STATES = ("Registered", "Registering", "NotRegistered")
@@ -2236,6 +2242,10 @@ class AzureBffLiveExecutionPort:
             "deputy_access_passed": False,
             "denied_access_passed": False,
             "tampered_access_passed": False,
+            "tampered_workspace_passed": False,
+            "tampered_matter_passed": False,
+            "tampered_purpose_passed": False,
+            "tampered_filter_passed": False,
         }
         primary_error: BaseException | None = None
         restored_ok = False
@@ -2265,9 +2275,17 @@ class AzureBffLiveExecutionPort:
                     self._request_bff(mode)
                     mode_signals[signal_by_mode[mode]] = True
                     checks += 1
-                self._request_bff("tampered")
-                mode_signals["tampered_access_passed"] = True
+                self._synthetic.set_access_mode("assigned", actor, correlation)
+                self._request_bff("assigned")
                 checks += 1
+                for tamper_mode in _BFF_TAMPER_MODES:
+                    self._request_bff(tamper_mode)
+                    mode_signals[f"{tamper_mode}_passed"] = True
+                    checks += 1
+                mode_signals["tampered_access_passed"] = all(
+                    mode_signals[f"{tamper_mode}_passed"]
+                    for tamper_mode in _BFF_TAMPER_MODES
+                )
             except BaseException as exc:
                 primary_error = exc
             finally:
@@ -2291,7 +2309,7 @@ class AzureBffLiveExecutionPort:
             self._http_readiness.wait_for_status(f"{_FUNCTION_URL}/readyz", 200)
             readyz_after_authenticated_read_passed = True
             checks += 1
-            outcome = _outcome("verified", updated=4, verified=checks)
+            outcome = _outcome("verified", updated=5, verified=checks)
             outcome.update(
                 {
                     **mode_signals,
@@ -2434,7 +2452,22 @@ class AzureBffLiveExecutionPort:
 
     def _request_bff(self, expected_mode: str) -> None:
         url = _BFF_URL
-        if expected_mode == "tampered":
+        if expected_mode == "tampered_workspace":
+            url = url.replace(
+                f"/workspaces/{WORKSPACE_ID}/",
+                "/workspaces/foreign_workspace/",
+            )
+        elif expected_mode == "tampered_matter":
+            url = url.replace(
+                "/matters/NAC-SYN-MATTER-001",
+                "/matters/NAC-SYN-MATTER-FOREIGN",
+            )
+        elif expected_mode == "tampered_purpose":
+            url = url.replace(
+                "purpose=view_synthetic_matter_workspace",
+                "purpose=foreign",
+            )
+        elif expected_mode == "tampered_filter":
             url += "&site_id=foreign"
         result = self._m365.run(
             (
@@ -2450,7 +2483,7 @@ class AzureBffLiveExecutionPort:
                 "json",
             )
         )
-        if expected_mode in {"denied", "tampered"}:
+        if expected_mode == "denied" or expected_mode in _BFF_TAMPER_MODES:
             _validate_structured_bff_denial(result, "ACCESS_DENIED")
             return
         if result.returncode != 0:

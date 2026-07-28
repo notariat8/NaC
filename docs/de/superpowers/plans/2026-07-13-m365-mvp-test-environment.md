@@ -4,7 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365-MVP-Testumgebung Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
-**Live-Status:** Owner-approved Live-One-Shot am 14. Juli 2026 in `notary_team_01` erfolgreich; Azure-BFF offline READY, Live-Aktivierung DEFERRED
+**Live-Status:** Baseline-Live-One-Shot am 14. Juli 2026 erfolgreich; begrenzte BFF-Bindungen aus [#632](https://github.com/notariat8/NaC/issues/632) vorhanden; finaler 12-Step-Abschlusslauf auf aktuellem `main` offen
 
 ## Zielzustand
 
@@ -25,8 +25,10 @@ Das neue SPFx-Paket lädt dynamische Vorgangsdaten nur noch per
 `AadHttpClient` vom festen BFF-Endpunkt; im Paket verbleibt ausschließlich
 das hashgebundene BPMN-XML ohne Mandatsdaten. Der vollständige Live-Ablauf ist
 über `nac m365 teams-sharepoint bff-azure-activation-plan` hashgebunden.
-Delegierter BFF-Scope, Azure-Bereitstellung, Site-Grant und Live-Entra-
-Tokenvalidierung bleiben bis zum einzigen gebündelten Owner-Gate `DEFERRED`.
+Issue #632 stellte Azure-Bereitstellung, `Matter.Read`, Runtime-
+`Sites.Selected` und den exakten Site-Grant `read` owner-gated bereit. Offen
+bleiben der aktuelle vollständige 12-Step-Lauf, Idempotenz, die vier
+Manipulationsproben und SharePoint-/Teams-Render-Evidence.
 
 ## Umsetzungsschritte
 
@@ -37,17 +39,18 @@ Tokenvalidierung bleiben bis zum einzigen gebündelten Owner-Gate `DEFERRED`.
 2. **Browser-/API-Grenze erzwingen (AC-620-02).**
    Graph-Permission-Requests und direkte Graph-Aufrufe aus SPFx blockieren.
    Als einzigen dynamischen API-Zielpfad den delegierten NaC-BFF-Scope
-   verwenden. Das neue Paket ist darauf umgestellt; sein Live-Deployment
-   bleibt bis zur gebündelten Scope-/HTTPS-Aktivierung DEFERRED.
+   verwenden. Das neue Paket ist darauf umgestellt; der Scope und der
+   HTTPS-Endpunkt sind unter #632 bereitgestellt, der aktuelle vollständige
+   Abschlusslauf steht noch aus.
 3. **BFF-Identität, Projektion und Fail-closed-Verhalten prüfen
    (AC-620-03, AC-620-04, AC-620-05).**
    Identität nur aus validierten Entra-Token-Claims ableiten; Workspace-, Site-
    und Listen-IDs ausschließlich serverseitig allowlisten; für zugeordnete
    Benutzer nur redigierten Status, Aufgaben, Frist und BPMN liefern.
    Unzugeordnete Benutzer sowie manipulierte Workspace-, Akten-, Zweck- oder
-   Filterwerte ohne Existenzleck ablehnen. Live-Tokenvalidierung und Live-BFF-
-   Auslieferung bleiben DEFERRED; BFF-Client, DTO-Validierung und
-   fail-closed UI-Zustände sind package-ready.
+   Filterwerte ohne Existenzleck ablehnen. BFF-Client, DTO-Validierung und
+   fail-closed UI-Zustände sind package-ready; Live-Tokenvalidierung und
+   Auslieferung müssen im aktuellen Abschlusslauf nachgewiesen werden.
 4. **SharePoint-/Teams-Deployment und Graph-Smoke absichern (AC-620-06).**
    Paket-ID, SHA-256, SPFx-Version, Site-/Team-Binding und App-Catalog-
    Antworten prüfen. App, Seite, Webpart und optionales Teams-Paket idempotent
@@ -55,9 +58,12 @@ Tokenvalidierung bleiben bis zum einzigen gebündelten Owner-Gate `DEFERRED`.
    v1.0 schreiben, gezielt zurücklesen und laufgebunden löschen. Deployment,
    Readback, Cleanup und Evidence müssen reproduzierbar und redigiert sein.
 5. **Unveränderliche Sicherheitsgrenze prüfen (AC-620-07).**
-   Keine Credentials, Berechtigungen oder Entra-Scopes anlegen oder ändern,
-   keine Produktivdaten lesen oder schreiben und keine Aktion außerhalb
-   notary_team_01 zulassen. Falscher Workspace, fehlende Owner-Freigabe,
+   Keine Credentials oder ungebundenen Berechtigungen anlegen oder ändern;
+   ausschließlich eine fehlende, unter #632 festgelegte Bindung darf angelegt
+   oder eine exakt passende vorhandene Bindung wiederverwendet werden. Drift,
+   Duplikate oder breitere Rechte blockieren und werden nicht repariert. Keine Produktivdaten
+   lesen oder schreiben und keine Aktion außerhalb `notary_team_01` zulassen.
+   Falscher Workspace, fehlende Owner-Freigabe,
    Hash-Drift und Sicherheitsfehler stoppen vor dem ersten Write.
 6. **One-Shot-Bedienkante und Abnahme integrieren (AC-620-01, AC-620-02, AC-620-03, AC-620-04, AC-620-05, AC-620-06, AC-620-07).**
    Die zentrale nac-CLI verbindet Paketprüfung, site-spezifisches Deployment,
@@ -68,14 +74,20 @@ Tokenvalidierung bleiben bis zum einzigen gebündelten Owner-Gate `DEFERRED`.
 
 ## Reihenfolge der Live-Aktionen
 
-1. aktuelles Paket und SHA-256 an das Deployment-Gate binden,
-2. App-Catalog-Paket site-spezifisch bereitstellen,
-3. App auf der Zielsite installieren oder aktualisieren,
-4. Testseite und Webpart idempotent veröffentlichen,
-5. optional Teams-Paket veröffentlichen und im exakten Team installieren,
-6. synthetischen Graph-Smoke mit Readback und Cleanup ausführen,
-7. Installation und Seite read-only prüfen,
-8. redigierte Abschluss-Evidence und visuellen Nachweis erzeugen.
+Der hashgebundene Abschlusslauf führt exakt diese zwölf Schritte aus:
+
+1. Azure-Provider registrieren (`register_azure_providers`),
+2. die gebundene Resource Group anlegen oder exakt wiederverwenden (`ensure_resource_group`),
+3. die exakte Entra-API-Anwendung anlegen oder wiederverwenden (`ensure_entra_api_application`),
+4. die gebundene Bicep-Baseline bereitstellen (`deploy_bicep_baseline`),
+5. der Runtime-Identität exakt `Sites.Selected` zuweisen (`assign_sites_selected`),
+6. den exakten Site-Grant mit Rolle `read` anlegen (`grant_target_site_read`),
+7. das hashgebundene Functions-Paket bereitstellen (`deploy_function_package`),
+8. das vorbereitete hashgebundene `.sppkg` site-spezifisch bereitstellen (`build_and_deploy_spfx`),
+9. ausschließlich `Matter.Read` für das SPFx-Paket genehmigen (`approve_spfx_bff_scope`),
+10. den synthetischen Workspace laufgebunden anlegen (`seed_synthetic_workspace`),
+11. Rollen-, Manipulations- und Readback-Smokes ausführen (`run_access_and_readback_smokes`),
+12. Idempotenz sowie redigierte Abschluss-Evidence prüfen (`run_idempotency_and_evidence`).
 
 ## Stop-Bedingungen
 
@@ -83,15 +95,18 @@ Der Lauf stoppt fail-closed bei fehlender Berechtigung, Sicherheitsfehler,
 Workspace-/Site-/Team-Abweichung, falschem Paket-Hash, tenant-weiter
 Bereitstellung, Graph-Permission im SPFx-Paket, produktionsähnlichen Daten,
 unvollständigem Readback oder fehlgeschlagenem zielgenauem Cleanup. Er ändert
-keine Rechte, Credentials, Zertifikate oder Entra-Scopes.
+keine Credentials oder Zertifikate. Berechtigungsaktionen sind ausschließlich
+die exakt gebundenen Create-/Reuse-/Approve-Schritte 3, 5, 6 und 9; bestehende
+Abweichungen, Duplikate oder breitere Rechte werden nicht repariert.
 
 ## BFF-Aktivierung nach Issue #620
 
 Die Offline-Implementierung des BFF-Cores einschließlich Azure-Functions-Host,
 Managed-Identity-IaC, Storage-Netzgrenze, Kostenlimits, JWT/JWKS-Härtung und
-fixer `notary_team_01`-Graph-Projektion gehört zum Slice. Die öffentliche
-Aktivierung erfolgt in einem gebündelten Owner-Gate: Azure-Ressourcen
-bereitstellen, delegierten Entra-Scope und exakten Site-Grant konfigurieren,
+fixer `notary_team_01`-Graph-Projektion gehört zum Slice. Der noch ausstehende
+Abschlusslauf erfolgt in einem gebündelten Owner-Gate: gebundene Azure-Ressourcen
+exakt anlegen oder wiederverwenden, fehlenden delegierten Entra-Scope und
+exakten Site-Grant anlegen oder vorhandene exakte Bindungen wiederverwenden,
 Paket als Azure-Functions-Flex-OneDeploy mit `--build-remote true` bereitstellen und SPFx per `AadHttpClient` auf den BFF umschalten. Das ZIP ist bewusst ein reproduzierbares Quellpaket; ein Deployment ohne Remote-Build ist unzulässig. Bis zu
 diesem Gate bleibt die bereits bereitgestellte Altversion sichtbar; das neue
 Repository-Paket ist jedoch vollständig auf `AadHttpClient -> NaC BFF`
@@ -118,6 +133,6 @@ erfolgreich mit site-spezifischem SPFx-/Heft-Paket, SharePoint-/Teams-Gate,
 synthetischem Vorgang, BPMN, Aufgaben/Frist, Rollenentscheidungen, Graph REST
 `v1.0`-Readback und laufgebundenem Cleanup ausgeführt. Die Evidence bleibt
 synthetisch und redigiert. Dokumentzeiger und `bpmn-js`-Lazy-Loading sind nicht
-nachgewiesen und bleiben offen. BFF-Scope, öffentliche Aktivierung und Live-
-Entra-Tokenvalidierung bleiben ausdrücklich DEFERRED und werden nicht als live
-erfüllt dargestellt.
+nachgewiesen und bleiben offen. Der historische Nachweis umfasst weder BFF-
+Aktivierung noch Live-Entra-Tokenvalidierung. Diese gelten erst nach einem
+aktuellen vollständigen 12-Step-Abschlusslauf als erfüllt.
