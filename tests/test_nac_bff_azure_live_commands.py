@@ -415,6 +415,52 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 verify(["provider", "show", "--namespace", "Microsoft.Web"])
                 self.assertEqual(calls.read_bytes(), b"")
 
+    def test_sealed_account_child_does_not_flush_parent_stdout_buffer(
+        self,
+    ) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        prefix = source.rsplit("\nmain()\n", 1)[0]
+        valid = {
+            "id": EXPECTED_SUBSCRIPTION_ID,
+            "tenantId": EXPECTED_TENANT_ID,
+            "environmentName": EXPECTED_CLOUD_NAME,
+            "state": "Enabled",
+        }
+        helper = (
+            "import io, json, sys\n"
+            "namespace = {}\n"
+            f"exec({prefix!r}, namespace)\n"
+            "raw = io.FileIO(1, mode='wb', closefd=False)\n"
+            "buffer = io.BufferedWriter(raw, buffer_size=8192)\n"
+            "sys.stdout = io.TextIOWrapper(\n"
+            "    buffer,\n"
+            "    encoding='utf-8',\n"
+            "    line_buffering=False,\n"
+            "    write_through=False,\n"
+            ")\n"
+            "sys.stdout.write('parent-buffered-output\\n')\n"
+            "sys.__stdout__ = sys.stdout\n"
+            f"valid = {valid!r}\n"
+            "def fake_run_module(*_args, **_kwargs):\n"
+            "    print(json.dumps(valid), file=sys.__stdout__)\n"
+            "namespace['runpy'].run_module = fake_run_module\n"
+            "namespace['verify_write_account_binding'](\n"
+            "    ['group', 'create', '--name', 'nac-test']\n"
+            ")\n"
+            "sys.stdout.flush()\n"
+        )
+
+        completed = subprocess.run(
+            [os.sys.executable, "-c", helper],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "parent-buffered-output\n")
+
     def test_sealed_bootstrap_account_assertion_fails_closed(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}

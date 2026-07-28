@@ -236,10 +236,13 @@ SMART_DETECTION_FUNCTION_AST_SHA256 = {
 }
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
 AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256 = (
-    "3464a0bc43e02eb9b6734b5088002df593f9145229e9fa7aeff2972435c81c6f"
+    "675b346d76b6554d8887a6182cb7ae6b0bc5b99e147f29c5a96ced69ccd988ae"
 )
 AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256 = (
-    "0e110be3006a9328853c1519cad47eaffb524d8ecf8075b131065e720a6d8bbf"
+    "f524792afe964a24669e34c08fd741e5e6ee783834cf8b6b81dc38b724981f59"
+)
+AZURE_CLI_SEALED_CHILD_STREAM_PREFIX_AST_SHA256 = (
+    "0b08d14a37c20fb2253638d4b4be017d58bf35fd61065b704e465b8a47ea66a1"
 )
 ACCEPTANCE_IDS = [f"AC-632-{index:02d}" for index in range(1, 9)]
 TOP_LEVEL_FIELDS = [
@@ -2589,6 +2592,17 @@ def _has_constant_false_control(tree: ast.AST) -> bool:
     )
 
 
+def _has_raise_outside_exception_handlers(node: ast.AST) -> bool:
+    if isinstance(node, ast.ExceptHandler):
+        return False
+    if isinstance(node, ast.Raise):
+        return True
+    return any(
+        _has_raise_outside_exception_handlers(child)
+        for child in ast.iter_child_nodes(node)
+    )
+
+
 def _outer_module_shape(tree: ast.Module) -> list[str]:
     shape: list[str] = []
     for node in tree.body:
@@ -2807,9 +2821,135 @@ def _validate_sealed_runtime_account_binding(
         if isinstance(node, ast.Attribute)
         and isinstance(node.ctx, (ast.Store, ast.Del))
     ]
-    if attribute_store_targets != ["sys.argv", "sys.argv"]:
+    if attribute_store_targets != [
+        "sys.argv",
+        "sys.stdout",
+        "sys.stderr",
+        "sys.__stdout__",
+        "sys.__stderr__",
+        "sys.argv",
+    ]:
         errors.append(
             "Azure CLI sealed bootstrap attribute-write targets differ"
+        )
+
+    account_functions = [
+        node
+        for node in bootstrap_tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "verify_write_account_binding"
+    ]
+    stream_isolation_valid = len(account_functions) == 1
+    if stream_isolation_valid:
+        account_function = account_functions[0]
+        child_branches = [
+            node
+            for node in account_function.body
+            if isinstance(node, ast.If)
+            and isinstance(node.test, ast.Compare)
+            and isinstance(node.test.left, ast.Name)
+            and node.test.left.id == "pid"
+            and len(node.test.ops) == 1
+            and isinstance(node.test.ops[0], ast.Eq)
+            and len(node.test.comparators) == 1
+            and isinstance(node.test.comparators[0], ast.Constant)
+            and node.test.comparators[0].value == 0
+        ]
+        stream_isolation_valid = len(child_branches) == 1
+    if stream_isolation_valid:
+        child_branch = child_branches[0]
+        child_tries = [
+            node for node in child_branch.body if isinstance(node, ast.Try)
+        ]
+        stream_isolation_valid = len(child_tries) == 1
+    if stream_isolation_valid:
+        child_try = child_tries[0]
+        forbidden_control_flow = (
+            ast.Return,
+            ast.Yield,
+            ast.YieldFrom,
+            ast.FunctionDef,
+            ast.AsyncFunctionDef,
+            ast.ClassDef,
+            ast.Lambda,
+        )
+        stream_prefix_sha256 = hashlib.sha256(
+            "\n".join(
+                _portable_ast_dump(node) for node in child_try.body[:16]
+            ).encode("utf-8")
+        ).hexdigest()
+        stream_isolation_valid = (
+            len(child_try.body) >= 16
+            and stream_prefix_sha256
+            == AZURE_CLI_SEALED_CHILD_STREAM_PREFIX_AST_SHA256
+            and not any(
+                isinstance(node, forbidden_control_flow)
+                for node in ast.walk(child_branch)
+            )
+            and not any(
+                _has_raise_outside_exception_handlers(node)
+                for node in child_try.body
+            )
+        )
+        stream_assignments = [
+            (
+                _call_name(node.targets[0]),
+                ast.unparse(node.value),
+                node.lineno,
+            )
+            for node in child_try.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Attribute)
+            and _call_name(node.targets[0])
+            in {
+                "sys.stdout",
+                "sys.stderr",
+                "sys.__stdout__",
+                "sys.__stderr__",
+            }
+        ]
+        expected_stream_assignments = [
+            ("sys.stdout", "child_stdout"),
+            ("sys.stderr", "child_stderr"),
+            ("sys.__stdout__", "child_stdout"),
+            ("sys.__stderr__", "child_stderr"),
+        ]
+        stream_isolation_valid = (
+            stream_isolation_valid
+            and [
+                (target, value)
+                for target, value, _line in stream_assignments
+            ] == expected_stream_assignments
+        )
+        dup2_lines = [
+            node.lineno
+            for node in child_try.body
+            if isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and _call_name(node.value.func) == "os.dup2"
+        ]
+        run_module_lines = [
+            node.lineno
+            for node in ast.walk(child_try)
+            if isinstance(node, ast.Call)
+            and _call_name(node.func) == "runpy.run_module"
+        ]
+        if stream_assignments:
+            first_stream_line = stream_assignments[0][2]
+            last_stream_line = stream_assignments[-1][2]
+        else:
+            first_stream_line = last_stream_line = -1
+        stream_isolation_valid = (
+            stream_isolation_valid
+            and len(dup2_lines) == 2
+            and len(run_module_lines) == 1
+            and max(dup2_lines) < first_stream_line
+            and last_stream_line < run_module_lines[0]
+        )
+    if not stream_isolation_valid:
+        errors.append(
+            "Azure CLI sealed bootstrap child stream isolation differs"
         )
 
     dynamic_namespace_calls = {
