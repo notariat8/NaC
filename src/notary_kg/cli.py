@@ -9,6 +9,7 @@ from pathlib import Path
 from nac_gnotkg.views import build_cost_review_view
 from nac_m365_graph.auth import token_provider_from_env
 from nac_m365_graph.graph_client import GraphRestClient
+from nac_runtime.azure_blob_worm import build_azure_blob_worm_readiness
 from nac_m365_graph.provisioner_env_bootstrap import (
     build_provisioner_env_bootstrap,
     load_provisioner_env_state,
@@ -190,6 +191,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "business-case-type-evidence-dry-run",
         help="Run the synthetic-only S6 immutable-evidence contract core without provider access.",
+    )
+
+    subparsers.add_parser(
+        "business-case-type-azure-worm-readiness",
+        help="Report provider-free S6b Azure Blob WORM adapter and lock readiness.",
     )
 
     subparsers.add_parser(
@@ -725,6 +731,11 @@ def main(argv: list[str] | None = None) -> int:
         payload = build_synthetic_evidence_dry_run()
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "S6_OFFLINE_FOUNDATION" else 1
+
+    if args.command == "business-case-type-azure-worm-readiness":
+        payload = dict(build_azure_blob_worm_readiness())
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE" else 1
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)

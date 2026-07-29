@@ -262,6 +262,26 @@
             "tests/test_immutable_evidence.py",
             "tests/test_business_case_type_immutable_evidence*.py"
           ]
+        },
+        {
+          "id": "business_case_type_azure_blob_worm_s6b",
+          "description": "Issue #693 S6b offline Azure Blob immutable-evidence adapter: on-prem publisher, authoritative tenant-bound Azure WORM copy, version-bound receipts, delete-free writer role, dedicated Bicep and separate owner-gated lock contract; no deployment or lock action.",
+          "paths": [
+            "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+            "docs/en/architecture/microsoft-first-onprem-target-architecture.md",
+            "docs/de/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md",
+            "docs/en/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md",
+            "docs/de/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md",
+            "docs/en/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md",
+            "src/nac_runtime/azure_blob_worm.py",
+            "deploy/runtime/azure/immutable-evidence/main.bicep",
+            "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json",
+            "workflows/contracts/azure-blob-worm-irreversible-lock-s6b.contract.json",
+            "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json",
+            "scripts/validate_business_case_type_azure_blob_worm.py",
+            "tests/test_azure_blob_worm.py",
+            "tests/test_azure_blob_worm_contract.py"
+          ]
         }
       ]
     },
@@ -279,6 +299,7 @@
   "verification_contracts": [
     "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json",
     "workflows/verification-contracts/business-case-type-immutable-evidence-s6.verification.json",
+    "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json",
     "workflows/verification-contracts/business-case-type-migration-s5.verification.json",
     "workflows/verification-contracts/business-case-type-runtime.verification.json",
     "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json",

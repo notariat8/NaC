@@ -5,7 +5,7 @@
   "status": "accepted_planning_baseline",
   "last_update": "2026-07-11",
   "leading_issue": "https://github.com/notariat8/NaC/issues/613",
-  "purpose": "Bind the Microsoft 365 user, identity and data edge to an on-prem AI, durable workflow, persistence and audit core without making SharePoint the workflow engine or selecting Temporal without a measured spike.",
+  "purpose": "Bind the Microsoft 365 user, identity and data edge to an on-prem AI, durable workflow and persistence core with an on-prem evidence publisher and an authoritative tenant-bound Azure Blob immutable evidence copy, without making SharePoint the workflow engine or selecting Temporal without a measured spike.",
   "decisions": {
     "microsoft_first_edge": [
       "microsoft_teams",
@@ -20,13 +20,16 @@
       "nvidia_nemo_agent_toolkit",
       "postgresql",
       "outbox_broker",
-      "worm_audit"
+      "worm_evidence_publisher"
     ],
     "only_agentic_toolkit": "nvidia_nemo_agent_toolkit",
     "m365_agents_sdk_role": "optional_channel_adapter_only",
     "temporal_status": "timeboxed_candidate_spike_not_selected",
     "sharepoint_role": "documents_visible_lists_and_business_projections",
-    "local_wsl_role": "non_authoritative_workstation_sidecar"
+    "local_wsl_role": "non_authoritative_workstation_sidecar",
+    "worm_authoritative_copy": "azure_blob_immutable_storage",
+    "worm_publisher_location": "onprem",
+    "worm_lock_status": "owner_gated_s7_not_executed"
   },
   "pdf_assessment": {
     "teams_as_user_entry": "adopt",
@@ -85,7 +88,12 @@
     },
     "audit": {
       "required": ["append_only_events", "hash_binding", "worm_retention", "reconciliation"],
-      "sharepoint_version_history_is_sufficient": false
+      "sharepoint_version_history_is_sufficient": false,
+      "publisher_location": "onprem",
+      "authoritative_evidence_copy": "azure_blob_immutable_storage",
+      "workflow_runtime_authority": false,
+      "minimum_retention_days": 3653,
+      "immutable_policy_lock_owner_gated": true
     }
   },
   "guardrails": {
@@ -97,6 +105,7 @@
     "graph_beta_allowed": false,
     "azure_ai_runtime_required": false,
     "cloud_runtime_required": false,
+    "azure_worm_evidence_target_selected": true,
     "ai_and_models_onprem": true,
     "sharepoint_is_workflow_engine": false,
     "sharepoint_is_technical_workflow_truth": false,
@@ -117,7 +126,7 @@
       "postgresql_owns": ["workflow_execution_state", "timers", "leases", "retries", "domain_read_models", "outbox", "human_task_metadata", "projections", "sync_state"]
     },
     "workflow_history": "selected_engine_execution_history_not_sole_legal_evidence",
-    "worm": "immutable_approval_access_delegation_and_mutation_evidence",
+    "worm": {"authoritative_evidence_copy": "azure_blob_immutable_storage", "publisher_and_outbox": "onprem", "workflow_runtime_authority": false, "minimum_retention_days": 3653, "immutable_policy_lock_owner_gated": true},
     "local_cache": "encrypted_short_lived_non_authoritative",
     "agent_memory": "personal_preferences_without_matter_truth"
   },
@@ -151,11 +160,12 @@
     "workflow_control_plane": "src/nac_runtime/",
     "workflow_contracts": "workflows/",
     "onprem_deployment": "deploy/runtime/onprem/",
+    "azure_worm_deployment": "deploy/runtime/azure/immutable-evidence/",
     "workstation_connectors": "plugins/"
   },
   "open_owner_decisions": [
     "rpo_rto_availability_and_maintenance",
-    "worm_target_retention_anchor_and_exit",
+    "worm_lock_cmk_network_and_exit_operations",
     "entra_m365_license_level",
     "durable_workflow_spike_outcome",
     "teams_chat_required_for_first_pilot",

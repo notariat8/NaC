@@ -40,7 +40,10 @@ The binding boundary is:
 
 - Microsoft-first for Teams, SPFx, SharePoint, Entra and Graph REST v1.0/MCP.
 - On-prem-first for Python/FastAPI, AI/models, deterministic workflow control
-  plane, PostgreSQL, outbox/broker and WORM. Temporal and baseline modes are
+  plane, PostgreSQL, outbox/broker and the WORM evidence publisher. The
+  authoritative WORM evidence copy resides in tenant-bound Azure Blob
+  Immutable Storage; Azure receives no workflow runtime authority. Temporal
+  and baseline modes are
   exclusive execution modes: Temporal History owns state/timers/retries in
   Temporal mode, while PostgreSQL additionally owns state/timers/leases/retries
   in baseline mode; WORM remains separate in both.
@@ -68,6 +71,8 @@ The binding boundary is:
 ## Boundaries
 
 This slice changes no runtime, tenant configuration, Entra app, credentials,
-deployment or live data. It does not finally select Temporal, a WORM provider
-or an M365 license package.
+deployment or live data. Azure Blob Immutable Storage is selected as the WORM
+evidence target; provisioning and the irreversible policy lock remain separate
+owner-gated follow-up slices. Temporal and an M365 license package remain open
+decisions.
 

@@ -103,6 +103,9 @@ jobs:
           cmp /tmp/nac-bff-main.json deploy/runtime/azure/nac-bff/infra/compiled/main.json
           cmp /tmp/nac-bff-main-params.json deploy/runtime/azure/nac-bff/infra/compiled/main.example.json
 
+      - name: Compile Azure WORM Bicep baseline
+        run: az bicep build --file deploy/runtime/azure/immutable-evidence/main.bicep --stdout > /tmp/nac-worm-main.json
+
       - name: Run strict quality gate
         run: python scripts/quality_gate.py --profile strict
 
