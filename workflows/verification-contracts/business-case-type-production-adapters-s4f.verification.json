@@ -38,7 +38,7 @@
     "Graph v1.0 transport rejects redirects, retries, foreign hosts, beta paths, dot-segment normalization, encoded separators and error bodies.",
     "Exactly one unchanged canonical GitHub owner comment is accepted through a SHA-256 verified sealed memfd with bounded stdout and no raw comment return.",
     "Certificate write identity construction binds tenant, client ID, certificate bytes, private-key bytes and the exact Sites.Selected/write readback.",
-    "Local SQLite staging survives restart, binds routing columns to signed event content and exposes no completion, promotion, acknowledgement or cleanup authority.",
+    "Local SQLite staging survives restart, binds routing columns to hash-bound event content and exposes no completion, promotion, acknowledgement or cleanup authority.",
     "PostgreSQL promotion/ack/retention/local cleanup, broker, signature anchor, identity readback, synced-directory detection, WORM transport and irreversible lock remain blockers.",
     "Output makes no production-readiness, runtime-composition or live-authorization claim.",
     "Independent base...head review has no unresolved P1 or P2 findings."

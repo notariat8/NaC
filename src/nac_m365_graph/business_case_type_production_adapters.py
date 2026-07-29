@@ -516,7 +516,10 @@ def _bound_graph_url(value: object) -> bool:
         or any(not 0x21 <= ord(character) <= 0x7E for character in value)
     ):
         return False
-    parsed = urllib.parse.urlsplit(value)
+    try:
+        parsed = urllib.parse.urlsplit(value)
+    except ValueError:
+        return False
     return bool(
         parsed.scheme == "https"
         and parsed.netloc == "graph.microsoft.com"

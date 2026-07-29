@@ -55,7 +55,7 @@ readiness claim.
    provider error bodies.
 4. A SQLite outbox persists canonical evidence events atomically, across
    restarts, and with sequence/hash binding. On open, routing columns are
-   checked globally against signed event content.
+   checked globally against hash-bound event content.
 
 ## Deliberately Open Adapters
 

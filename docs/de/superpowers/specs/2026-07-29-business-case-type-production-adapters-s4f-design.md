@@ -55,7 +55,7 @@ Anspruch auf Produktionsreife.
    Retries und unredigierte Fehlerkörper.
 4. Eine lokale SQLite-Staging-Outbox persistiert kanonische Evidence-Ereignisse
    atomar, restartfest und hash-/sequenzgebunden. Routing-Spalten werden beim
-   Öffnen global gegen den signierten Ereignisinhalt geprüft. Sie darf eine Mutation nicht
+   Öffnen global gegen den hashgebundenen Ereignisinhalt geprüft. Sie darf eine Mutation nicht
    abschließen und ist keine zentrale Wahrheit.
 
 ## Bewusst offene Adapter

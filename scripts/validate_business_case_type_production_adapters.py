@@ -111,7 +111,7 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
             "parentDirectoryFsyncAfterCreate": True,
             "maximumDatabaseBytes": 8388608,
             "sequenceHashTransitionValidationRequired": True,
-            "routingColumnsBoundToSignedEventRequired": True,
+            "routingColumnsBoundToHashedEventRequired": True,
             "globalRoutingValidationOnOpenRequired": True,
         },
         "offlineCompletion": {

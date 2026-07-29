@@ -262,6 +262,7 @@ class GraphHttpAdapterTests(unittest.TestCase):
             {"method": "PUT"},
             {"url": "https://graph.microsoft.com/beta/sites/site-id"},
             {"url": "https://graph.microsoft.com.evil/v1.0/sites/site-id"},
+            {"url": "https://[invalid/v1.0/sites/site-id"},
             {"url": "http://graph.microsoft.com/v1.0/sites/site-id"},
             {"url": GRAPH_URL + "#fragment"},
             {"url": "https://graph.microsoft.com/v1.0/../beta/sites/x"},

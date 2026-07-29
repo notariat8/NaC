@@ -93,8 +93,8 @@
     "parentDirectoryFsyncAfterCreate": true,
     "maximumDatabaseBytes": 8388608,
     "sequenceHashTransitionValidationRequired": true,
-    "routingColumnsBoundToSignedEventRequired": true,
-    "globalRoutingValidationOnOpenRequired": true
+    "globalRoutingValidationOnOpenRequired": true,
+    "routingColumnsBoundToHashedEventRequired": true
   },
   "remainingBlockersExact": [
     "azure_blob_worm_policy_lock",
