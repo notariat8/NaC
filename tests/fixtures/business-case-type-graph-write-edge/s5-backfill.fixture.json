@@ -1,0 +1,15 @@
+{
+  "schema_version": "nac.business-case-type-graph-write-edge-s5-fixture/v0.1",
+  "data_classification": "synthetic",
+  "contains_production_data": false,
+  "item_id": "41",
+  "manifest_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "operation": {
+    "record_ref_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "field": "VorgangstypId",
+    "value": "immobilienkaufvertrag",
+    "if_match": "synthetic-etag-backfill-01",
+    "idempotency_key": "30927974be4fd41f6c90c62be62aeab5a75abedd247762527afa92f0c77df060"
+  },
+  "operation_hash": "9224101785c5cbde41612578e2c838d553bf5f17ff3c1643d209c7d67c80d652"
+}

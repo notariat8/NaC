@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-07-14
+Letzte Aktualisierung: 2026-07-29
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter
@@ -50,6 +50,7 @@ gantt
     BusinessCaseType-S1-S2-Verträge            :done,    b1ah, 2026-07-11, 1d
     BusinessCaseType-S3-Offline-Runtime         :done,    b1ai, 2026-07-11, 7d
     BusinessCaseType-S4-Graph-Adapter           :done,    b1aj, 2026-07-11, 1d
+    BusinessCaseType-S4b-Graph-Write-Edge       :done,    b1an, 2026-07-29, 1d
     BusinessCaseType-S5-Offline-Migration      :done,    b1ak, 2026-07-12, 7d
     BusinessCaseType-S6a-Evidence-Foundation    :active,  b1al, 2026-07-20, 7d
     BusinessCaseType-S6b-Azure-WORM           :done,    b1am, 2026-07-28, 1d

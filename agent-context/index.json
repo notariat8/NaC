@@ -222,6 +222,36 @@
           ]
         },
         {
+          "id": "business_case_type_graph_write_edge_s4b",
+          "description": "Issue #694 offline S4b Graph write edge for five bounded operations with a separate Sites.Selected/write identity, ETag and dedupe controls, S5 hash binding, persistent reconciliation, and a synthetic redacted dry run with zero live Graph calls or tenant writes; production composition and live write remain owner-gated.",
+          "paths": [
+            "docs/de/architecture/business-case-type-id.md",
+            "docs/en/architecture/business-case-type-id.md",
+            "docs/de/architecture/business-case-type-graph-write-edge-s4b-plan.md",
+            "docs/en/architecture/business-case-type-graph-write-edge-s4b-plan.md",
+            "docs/de/superpowers/specs/2026-07-28-business-case-type-graph-write-edge-s4b-design.md",
+            "docs/en/superpowers/specs/2026-07-28-business-case-type-graph-write-edge-s4b-design.md",
+            "docs/de/superpowers/plans/2026-07-28-business-case-type-graph-write-edge-s4b.md",
+            "docs/en/superpowers/plans/2026-07-28-business-case-type-graph-write-edge-s4b.md",
+            "docs/de/cli.md",
+            "docs/en/cli.md",
+            "src/notary_kg/business_case_type_mutation.py",
+            "src/nac_m365_graph/business_case_type_write_plan.py",
+            "src/nac_m365_graph/business_case_type_write_edge.py",
+            "src/nac_m365_graph/business_case_type_write_dry_run.py",
+            "src/nac_cli/cli.py",
+            "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
+            "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json",
+            "scripts/validate_business_case_type_graph_write_edge.py",
+            "tests/test_business_case_type_graph_write_edge.py",
+            "tests/test_business_case_type_graph_write_edge_cli.py",
+            "tests/test_business_case_type_graph_write_edge_contract.py",
+            "tests/test_business_case_type_graph_write_edge_graph_contract.py",
+            "tests/test_business_case_type_graph_write_edge_reconciliation.py",
+            "tests/test_business_case_type_graph_write_edge_schema.py"
+          ]
+        },
+        {
           "id": "business_case_type_migration_s5",
           "description": "Issue #618 S5 deterministic synthetic-only offline migration: exact seven-class inventory, typed four-row mapping, idempotent backfill plan, process-serialized persistent local quarantine, independently captured stable scans and hash-pinned N/N-1 profile evaluation; READY is S5_OFFLINE_ONLY with no live calls or tenant writes.",
           "paths": [
@@ -298,6 +328,7 @@
   ],
   "verification_contracts": [
     "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json",
+    "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json",
     "workflows/verification-contracts/business-case-type-immutable-evidence-s6.verification.json",
     "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json",
     "workflows/verification-contracts/business-case-type-migration-s5.verification.json",

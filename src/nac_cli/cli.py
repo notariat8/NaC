@@ -57,6 +57,12 @@ from nac_m365_graph.business_case_type_read_plan import (
     build_business_case_type_read_plan,
     format_business_case_type_read_plan,
 )
+from nac_m365_graph.business_case_type_write_dry_run import (
+    DEFAULT_OPERATION as DEFAULT_BUSINESS_CASE_TYPE_WRITE_OPERATION,
+    WRITE_DRY_RUN_OPERATIONS as BUSINESS_CASE_TYPE_WRITE_DRY_RUN_OPERATIONS,
+    build_business_case_type_write_dry_run,
+    format_business_case_type_write_dry_run,
+)
 from nac_m365_graph.business_case_type_live_foundation import (
     FoundationApplyRequest,
     WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
@@ -721,6 +727,7 @@ def build_parser() -> argparse.ArgumentParser:
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
+            "business-case-type-write-dry-run",
             "business-case-type-live-foundation-plan",
             "business-case-type-live-foundation-apply",
             "bpmn-viewer-plan",
@@ -2009,6 +2016,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
             ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
             ("Business Case Type Graph Read Edge", "validate_business_case_type_graph_read_edge.py"),
+            ("Business Case Type Graph Write Edge", "validate_business_case_type_graph_write_edge.py"),
             ("Business Case Type Migration S5", "validate_business_case_type_migration.py"),
             ("Business Case Type Immutable Evidence S6", "validate_business_case_type_immutable_evidence.py"),
             ("Business Case Type Azure Blob WORM S6b", "validate_business_case_type_azure_blob_worm.py"),
@@ -2045,6 +2053,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_verification_contracts_domain_pilot.py",
             "scripts/validate_business_case_type_runtime.py",
             "scripts/validate_business_case_type_graph_read_edge.py",
+            "scripts/validate_business_case_type_graph_write_edge.py",
             "scripts/validate_business_case_type_migration.py",
             "scripts/validate_business_case_type_immutable_evidence.py",
             "scripts/validate_business_case_type_azure_blob_worm.py",
@@ -2607,6 +2616,21 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 print(format_business_case_type_read_plan(plan).rstrip())
             return 0 if plan["status"] == "PASSED" else 2
+
+        if args.teams_sharepoint_command == "business-case-type-write-dry-run":
+            result = build_business_case_type_write_dry_run(
+                repo_root,
+                operation=getattr(
+                    args,
+                    "operation",
+                    DEFAULT_BUSINESS_CASE_TYPE_WRITE_OPERATION,
+                ),
+            )
+            if args.format == "json":
+                print_json(result)
+            else:
+                print(format_business_case_type_write_dry_run(result).rstrip())
+            return 0 if result["status"] == "PASSED" else 2
 
         if args.teams_sharepoint_command == "runtime-env-bootstrap":
             runtime_state_path = _resolve_m365_release_gate_path(
@@ -7742,6 +7766,13 @@ def main(argv: list[str] | None = None) -> int:
         return _run_bff_azure_activation_recovery_command(
             effective_argv, recovery_index
         )
+    write_dry_run_index = _business_case_type_write_dry_run_command_index(
+        effective_argv
+    )
+    if write_dry_run_index is not None:
+        return _run_business_case_type_write_dry_run_command(
+            effective_argv, write_dry_run_index
+        )
     command_index = _business_case_type_read_plan_command_index(effective_argv)
     if command_index is not None:
         return _run_business_case_type_read_plan_command(effective_argv, command_index)
@@ -8133,6 +8164,42 @@ def _redact_bff_azure_activation_result(result: dict[str, Any]) -> dict[str, Any
         ):
             redacted["recovery"] = safe_recovery
     return redacted
+
+
+def _business_case_type_write_dry_run_command_index(argv: list[str]) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "business-case-type-write-dry-run",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_business_case_type_write_dry_run_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint business-case-type-write-dry-run",
+        description=(
+            "Erzeugt einen synthetischen und redigierten Offline-Plan fuer die "
+            "begrenzte Vorgangsarten-Schreibkante."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--operation",
+        choices=BUSINESS_CASE_TYPE_WRITE_DRY_RUN_OPERATIONS,
+        default=DEFAULT_BUSINESS_CASE_TYPE_WRITE_OPERATION,
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    args.m365_command = "teams-sharepoint"
+    args.teams_sharepoint_command = "business-case-type-write-dry-run"
+    return command_m365(args)
 
 
 def _business_case_type_read_plan_command_index(argv: list[str]) -> int | None:

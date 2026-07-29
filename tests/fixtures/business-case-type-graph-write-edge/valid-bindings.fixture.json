@@ -1,0 +1,31 @@
+{
+  "schema_version": "nac.business-case-type-graph-write-edge-fixture/v0.1",
+  "data_classification": "synthetic",
+  "contains_production_data": false,
+  "target": {
+    "workspace_id": "synthetic-workspace-01",
+    "site_id": "synthetic.example,site-collection,site-01",
+    "akten_list_id": "00000000-0000-4000-8000-000000000010",
+    "aufgaben_list_id": "00000000-0000-4000-8000-000000000011",
+    "write_identity_id": "synthetic-write-identity-01",
+    "bff_uami_identity_id": "synthetic-bff-uami-read-01"
+  },
+  "authorization": {
+    "workspace_id": "synthetic-workspace-01",
+    "site_id": "synthetic.example,site-collection,site-01",
+    "list_id": "00000000-0000-4000-8000-000000000010",
+    "actor_role": "notary_clerk",
+    "purpose": "matter_workflow",
+    "approval_ref": "synthetic-approval-case-create-01",
+    "approved_operation": "case_create",
+    "write_approved": true,
+    "write_identity_id": "synthetic-write-identity-01",
+    "write_identity_permission": "Sites.Selected",
+    "write_site_grant_role": "write",
+    "write_identity_site_id": "synthetic.example,site-collection,site-01",
+    "bff_uami_identity_id": "synthetic-bff-uami-read-01",
+    "bff_uami_permission": "Sites.Selected",
+    "bff_uami_site_grant_role": "read",
+    "bff_uami_site_id": "synthetic.example,site-collection,site-01"
+  }
+}

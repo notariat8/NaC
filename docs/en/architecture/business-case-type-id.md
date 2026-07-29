@@ -1,7 +1,7 @@
 # ADR: Stable BusinessCaseTypeId
 
-Status: accepted; S1-S5 implemented offline, S6a in progress, no live apply
-Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616), [GitHub #618](https://github.com/notariat8/NaC/issues/618), [GitHub #687](https://github.com/notariat8/NaC/issues/687)
+Status: accepted; S1-S5 including S4b implemented offline, S6a in progress, no live apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616), [GitHub #618](https://github.com/notariat8/NaC/issues/618), [GitHub #687](https://github.com/notariat8/NaC/issues/687), [GitHub #694](https://github.com/notariat8/NaC/issues/694)
 Date: 2026-07-11
 
 ## Context
@@ -255,15 +255,15 @@ cutover by the backfill operator, rollback without independent approval, and
 ## Explicit Implementation Slices
 
 This ADR is accepted. Issue #610 implemented S1 and S2 offline on 2026-07-11.
-S3 and S4 are implemented offline; S5 was completed offline in #619. S6a is being implemented in Issue #687 as an offline evidence foundation. S6b provider adapters and S7 remain open and require review and suitable tests before a
-live apply can be considered.
+S3, S4, and the bounded S4b write edge are implemented offline; S5 was completed offline in #619. S6a is being implemented in Issue #687 as an offline evidence foundation. Production S4b composition, S6b provider adapters, and S7 remain open and require review, an owner gate, and suitable tests before a live apply can be considered.
 
 | Slice | Status | Required change | Acceptance edge |
 | --- | --- | --- | --- |
 | S1 Contract | implemented offline in #610 | align ontology, inventory and viewer contracts on independent `Vorgangsartenregister`, optional `Prozessregister`, nullable BPMN links and alias invariants | validators prove viewer-independent type validity and block drift offline |
 | S2 Schema plan | implemented offline in #610 | plan `Akten.VorgangstypId` and `Vorgangsartenregister` in the required default; keep `Prozessregister` and `BPMN Models` in separate optional viewer provisioning; leave legacy Choice unchanged | 33 plan steps and 66 workspace apply units; dry run, readiness, snapshot and rollback plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
 | S3 Runtime | implemented offline in #614 | implement `business_case_type_get`, content-based `CatalogVersion`, explicit runtime lifecycle, purpose-bound aliases and separate registry/viewer ETag caches offline | spec, domain/verification contracts, validator, CLI, negative tests, strict gate, independent review and Protected PR checks pass without Graph/tenant access |
-| S4 Graph Read Edge | implemented offline in #617; S4b writes open | constrain `case_create`, correction/backfill paths and optional process reads by selected fields, paging, ETag, site scope and operation roles | negative authorization and fake-Graph smokes prove no broad rights or viewer coupling |
+| S4 Graph Read Edge | implemented offline in #617 | constrain registry and optional process reads by selected fields, paging, ETag, site scope and operation roles | negative authorization and fake-Graph smokes prove no broad rights or viewer coupling |
+| S4b Graph Write Edge | implemented offline in #694; production composition and live write open/owner-gated | constrain `case_create`, `case_status_update`, `task_create`, `task_update`, and `business_case_type_backfill` through a separate `Sites.Selected`/`write` identity, deduplication, ETags, S5 hash binding, and persistent reconciliation | synthetic redacted dry run, contracts, validator, and negative tests prove five exact operations and zero credentials, live factories, Graph calls, or tenant writes |
 | S5 Migration | implemented offline in #619 | implement inventory dry run, idempotent backfill, persistent quarantine, registry/process snapshots, stable final scans and N-1 replay | all seven classes, ETag conflicts, rollback order and forward recovery pass |
 | S6 Immutable evidence | S6a offline active in #687; S6b open | implement the canonical evidence core and ports for durable outbox, broker/WORM events, correlation, pseudonymous ActorRef, retention, access review and reconciliation | every live mutation stays blocked without complete intent/outcome/readback evidence |
 | S7 Live approval | open | prepare separate owner-gated schema/backfill apply with separation of duties and no cleanup | complete PR diff, N/N-1 rollback rehearsal, negative authorization and explicit dual approval |
@@ -303,9 +303,15 @@ validators and the [strict quality gate](../quality-gate.md).
 
 ## S4 Graph Read Edge (#616)
 
-The active S4 read edge binds Graph REST v1.0 `GET` immutably to the site, `Vorgangsartenregister`, operation and role. Only `Sites.Selected` and an existing site grant `read` are allowed; paging must preserve the `BusinessCaseTypeId` and `CatalogVersion` filters. Row ETags are compared locally only after a complete read and are never sent as collection `If-None-Match`. Results remain redacted and viewer-isolated. The entry point is `nac m365 teams-sharepoint business-case-type-read-plan`; it is offline and loads no credentials, HTTP, DNS or Graph client. S4b writes remain open.
+The active S4 read edge binds Graph REST v1.0 `GET` immutably to the site, `Vorgangsartenregister`, operation and role. Only `Sites.Selected` and an existing site grant `read` are allowed; paging must preserve the `BusinessCaseTypeId` and `CatalogVersion` filters. Row ETags are compared locally only after a complete read and are never sent as collection `If-None-Match`. Results remain redacted and viewer-isolated. The entry point is `nac m365 teams-sharepoint business-case-type-read-plan`; it is offline and loads no credentials, HTTP, DNS or Graph client.
 
 Traceability: **AC-S4-01:** exact GET/projection path; **AC-S4-02:** complete same-filter paging; **AC-S4-03:** local ETag evaluation; **AC-S4-04:** exact permission/grant binding; **AC-S4-05:** strict typing and viewer isolation; **AC-S4-06:** redaction; **AC-S4-07:** CLI, contracts, validator, tests, documentation and gates.
+
+## S4b Graph Write Edge (#694)
+
+The offline-implemented S4b edge closes the five operations `case_create`, `case_status_update`, `task_create`, `task_update`, and `business_case_type_backfill` over exact field sets and Graph REST v1.0 targets. Create operations check unique deduplication fields, patch operations require fresh ETags, backfill remains bound to canonical S5 hashes, and uncertain outcomes enter persistent fail-closed reconciliation. A separate write identity is contractually limited to `Sites.Selected` with site grant `write`; the BFF UAMI remains unchanged at `Sites.Selected` with site grant `read`.
+
+The entry point `nac m365 teams-sharepoint business-case-type-write-dry-run` creates synthetic, redacted plans only for all five `--operation` values. It loads no credentials, instantiates no live factory, and performs no HTTP, DNS, or Graph call and no tenant write. Site, list, identity, and field values are not emitted. The [S4b plan](business-case-type-graph-write-edge-s4b-plan.md), [domain contract](../../../workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json), and [verification contract](../../../workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json) keep production composition and every live write explicitly open and owner-gated.
 
 ## S5 Offline Migration (#618)
 
