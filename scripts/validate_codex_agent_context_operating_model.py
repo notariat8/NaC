@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-import fnmatch
 import json
 import py_compile
 from pathlib import Path
 from typing import Any
+
+
+if __package__:
+    from scripts.scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
+else:
+    from scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -253,22 +258,6 @@ def _validate_path_pattern(pattern: str, source: str) -> list[str]:
     if _path_or_glob_matches(pattern):
         return []
     return [f"{source}: Pfad oder Glob matcht nichts: {pattern}"]
-
-
-def _path_or_glob_matches(pattern: str) -> bool:
-    if any(char in pattern for char in "*?[]"):
-        return any(fnmatch.fnmatch(path.as_posix(), pattern) for path in _repo_files())
-    return (REPO_ROOT / pattern).exists()
-
-
-def _repo_files() -> list[Path]:
-    files: list[Path] = []
-    for path in REPO_ROOT.rglob("*"):
-        if ".git" in path.parts or "out" in path.parts:
-            continue
-        if path.is_file():
-            files.append(path.relative_to(REPO_ROOT))
-    return files
 
 
 def _string_list(value: object) -> list[str]:

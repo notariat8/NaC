@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-import fnmatch
 import json
 from pathlib import Path
 from typing import Any
+
+
+if __package__:
+    from scripts.scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
+else:
+    from scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -259,12 +264,6 @@ def _read_json(path: Path, errors: list[str]) -> dict[str, Any] | None:
         errors.append(f"{path.relative_to(REPO_ROOT)} muss JSON-Objekt sein")
         return None
     return payload
-
-
-def _path_or_glob_matches(pattern: str) -> bool:
-    if any(char in pattern for char in "*?["):
-        return any(fnmatch.fnmatch(path.relative_to(REPO_ROOT).as_posix(), pattern) for path in REPO_ROOT.rglob("*"))
-    return (REPO_ROOT / pattern).exists()
 
 
 def _string_list(value: object) -> list[str]:
