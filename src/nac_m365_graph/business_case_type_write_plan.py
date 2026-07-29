@@ -406,10 +406,8 @@ def _dedupe_url(
     escaped = urllib.parse.quote(value.replace("'", "''"), safe="")
     projection = ",".join(selected_fields)
     return (
-        f"{collection_url}?$select=id,eTag"
-        f"&$expand=fields($select={projection})"
+        f"{collection_url}?expand=fields(select={projection})"
         f"&$filter=fields/{field}%20eq%20%27{escaped}%27"
-        f"&$top={MAX_DEDUPE_ROWS}"
     )
 
 
