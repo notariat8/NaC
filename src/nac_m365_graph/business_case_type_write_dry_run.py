@@ -77,20 +77,20 @@ def build_business_case_type_write_dry_run(
 
 def format_business_case_type_write_dry_run(result: dict[str, Any]) -> str:
     lines = [
-        f"STATUS: {result[\"status\"]}",
+        f"STATUS: {result['status']}",
         "Mode: offline dry run",
-        f"Operation: {result[\"operation\"]}",
-        f"Method: {result.get(\"method\", \"BLOCKED\")}",
-        f"Graph version: {result.get(\"graph_version\", \"v1.0\")}",
-        f"Logical list: {result.get(\"logical_list_name\", \"BLOCKED\")}",
-        f"Fields: {\", \".join(result.get(\"field_names\", []))}",
-        f"Write executed: {str(result.get(\"write_request_executed\", False)).lower()}",
-        f"Contract version: {result[\"contract_version\"]}",
+        f"Operation: {result['operation']}",
+        f"Method: {result.get('method', 'BLOCKED')}",
+        f"Graph version: {result.get('graph_version', 'v1.0')}",
+        f"Logical list: {result.get('logical_list_name', 'BLOCKED')}",
+        f"Fields: {', '.join(result.get('field_names', []))}",
+        f"Write executed: {str(result.get('write_request_executed', False)).lower()}",
+        f"Contract version: {result['contract_version']}",
         "Gates:",
     ]
     lines.extend(
         f"  {name}: {str(value).lower()}"
-        for name, value in result["gate_results"].items()
+        for name, value in result['gate_results'].items()
     )
     return "\n".join(lines) + "\n"
 
