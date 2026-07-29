@@ -7,7 +7,7 @@ Leading issue: [#613](https://github.com/notariat8/NaC/issues/613)
 ## Decision
 
 NaC is **Microsoft-first at the user, identity and data edge**, while remaining
-**on-prem-first for AI, process execution and long-lived technical truth**.
+**on-prem-first for AI and process execution**; the authoritative WORM evidence copy produced by the on-prem publisher is stored separately in tenant-bound Azure Blob immutable storage.
 
 - Microsoft Teams is the primary workplace.
 - SharePoint Framework (SPFx) provides Teams/SharePoint surfaces and the
@@ -17,8 +17,10 @@ NaC is **Microsoft-first at the user, identity and data edge**, while remaining
   `v1.0`, is the only M365 data edge.
 - SharePoint stores documents, visible lists and business projections, but is
   neither the workflow engine nor the long-lived technical source of truth.
-- Python/FastAPI, the deterministic workflow control plane, PostgreSQL,
-  outbox/broker and WORM evidence run centrally on-prem.
+- Python/FastAPI, the deterministic workflow control plane, PostgreSQL and
+  outbox/broker run centrally on-prem. An on-prem evidence publisher writes
+  create-only to Azure Blob immutable storage; that tenant-bound copy is the
+  authoritative WORM evidence and has no workflow-runtime authority.
 - NVIDIA NeMo Agent Toolkit is the only productive agentic toolkit.
 - Microsoft 365 Agents SDK may later serve only as a Teams channel adapter. It
   must not introduce a second agentic runtime or business truth.
@@ -194,8 +196,10 @@ keys and matter data belong in no product repository.
 - Existing M365/Teams/SharePoint licenses reduce additional UI/collaboration
   cost but do not replace verification of Entra, Teams, SharePoint, App Catalog
   and compliance license boundaries.
-- On-prem costs include redundant hosts, PostgreSQL, backup, WORM, broker,
+- On-prem costs include redundant hosts, PostgreSQL, backup, broker,
   monitoring, patching, certificates, GPU/model operation and on-call support.
+- Azure WORM adds separate storage, versioning, CMK/Key Vault, retention, legal
+  hold, monitoring and exit/export operating costs.
 - Temporal would add operating, upgrade and observability complexity; the spike
   must quantify it against custom durable-execution logic.
 - WSL sidecars move support into workstation patching, device connectors, local

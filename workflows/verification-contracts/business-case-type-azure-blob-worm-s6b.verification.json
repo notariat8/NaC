@@ -1,0 +1,125 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_azure_blob_worm_s6b",
+  "domain_contract_id": "notary-kg.business_case_type_azure_blob_worm_s6b",
+  "lock_contract_id": "notary-kg.azure_blob_worm_irreversible_lock_s6b",
+  "title": "BusinessCaseType Azure Blob WORM S6b offline verification",
+  "status": "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/693",
+  "acceptance_ids": [
+    "AC-S6B-01",
+    "AC-S6B-02",
+    "AC-S6B-03",
+    "AC-S6B-04",
+    "AC-S6B-05",
+    "AC-S6B-06",
+    "AC-S6B-07"
+  ],
+  "applies_when": {
+    "paths": [
+      "src/nac_runtime/azure_blob_worm.py",
+      "deploy/runtime/azure/immutable-evidence/**",
+      "tests/test_azure_blob_worm*.py",
+      "scripts/validate_business_case_type_azure_blob_worm.py",
+      "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json",
+      "workflows/contracts/azure-blob-worm-irreversible-lock-s6b.contract.json",
+      "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json",
+      "docs/de/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md",
+      "docs/en/superpowers/specs/2026-07-28-business-case-type-azure-blob-worm-s6b-design.md",
+      "docs/de/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md",
+      "docs/en/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_immutable_evidence tests.test_azure_blob_worm tests.test_azure_blob_worm_contract",
+    "python3 scripts/validate_business_case_type_azure_blob_worm.py",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check"
+  ],
+  "bicep_compilation": {
+    "local_tools_checked": ["az bicep", "bicep", "npx bicep"],
+    "local_compiler_available": false,
+    "compiled_claim": false,
+    "ci_compile_required": true,
+    "ci_command_exact": "az bicep build --file deploy/runtime/azure/immutable-evidence/main.bicep --stdout",
+    "ci_must_use_pinned_bicep_version": true,
+    "compiled_result_required_before_merge": true
+  },
+  "invariants": [
+    "AC-S6B-01: unchanged WormJournalPort semantics and complete exact-version readback",
+    "AC-S6B-02: canonical S6a key, create-only 201 x-ms-version-id and unique 412 List/Get discovery",
+    "AC-S6B-03: exact version proves Locked, create-time retention >=3653, legal-hold capability, CMK and provider context",
+    "AC-S6B-04: object schema v0.3 and approved attestation digest are exact across body and metadata; timestamp, retention, content, provider and version drift fail closed and remain redacted",
+    "AC-S6B-05: dedicated Bicep uses add/read and exact management reads without write, delete, owner, contributor or existing-identity broadening",
+    "AC-S6B-06: zero live actions and S7 remains BLOCKED_PENDING_S7_APPROVAL",
+    "AC-S6B-07: contracts, paired docs, tests, validator, lock plan, review and pinned CI compile are required"
+  ],
+  "thresholds": {
+    "required_acceptance_criteria": 7,
+    "minimum_retention_years": 10,
+    "minimum_retention_days": 3653,
+    "blob_locator_bits": 128,
+    "version_binding_bits": 128,
+    "maximum_blob_bytes": 4194304,
+    "allowed_network_calls": 0,
+    "allowed_azure_calls": 0,
+    "allowed_credential_reads": 0,
+    "allowed_tenant_writes": 0,
+    "allowed_live_factory_wirings": 0,
+    "allowed_lock_actions": 0,
+    "allowed_writer_delete_actions": 0,
+    "allowed_writer_blob_write_actions": 0
+  },
+  "required_evidence": [
+    "Pre-Put timestamp, retention formula, overflow, policy and provider validation with zero create effects",
+    "Future S6a event timestamp with Azure retention derived from blob create time",
+    "201 raw x-ms-version-id followed by raw-versionid GET",
+    "412 List Blob Versions and raw-versionid GET with none, ambiguous and foreign negatives",
+    "Fresh tenant, subscription and storage resource readback bindings without plaintext evidence",
+    "Object schema nac.azure-blob-worm-object/v0.3 with exact approved attestation digest in canonical body and metadata",
+    "Exact-version Locked, retention, legal-hold capability, CMK and canonical-content negatives",
+    "Dedicated writer add/read and exact container, policy and encryption-scope management reads",
+    "Canonical irreversible lock plan with target, stale-ETag and request-hash negatives",
+    "Paired DE/EN spec and plan plus pinned CI Bicep compilation requirement"
+  ],
+  "integration_handoff": {
+    "track_b_central_files_changed": false,
+    "central_integration_preserved": true,
+    "required_before_merge": [
+      "retain central contract and verification adoption",
+      "retain central CLI and quality-gate registration",
+      "run pinned CI Bicep compilation and retain successful result"
+    ],
+    "live_factory_after_integration_allowed": false,
+    "live_factory_requires_s7_locked_readback": true
+  },
+  "pass_condition": {
+    "all_local_checks_pass": true,
+    "ci_bicep_compile_required_before_merge": true,
+    "central_adoption_required_before_merge": true,
+    "all_acceptance_ids_covered": true,
+    "status_exact": "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE",
+    "live_status_exact": "BLOCKED_PENDING_S7_APPROVAL",
+    "network_calls": 0,
+    "azure_calls": 0,
+    "credential_reads": 0,
+    "tenant_writes": 0,
+    "lock_actions": 0,
+    "live_factory_wiring": false
+  },
+  "failure_behavior": {
+    "pre_put_timestamp_retention_overflow_or_policy_failure": "BLOCKED_WITH_ZERO_CREATE_EFFECTS",
+    "arbitrary_or_foreign_chain_operation_key": "BLOCKED_BEFORE_TRANSPORT",
+    "missing_ambiguous_or_foreign_conflict_version": "BLOCKED",
+    "receipt_or_resolved_version_drift": "BLOCKED",
+    "same_blob_distinct_payload_conflict": "ONE_CREATE_OTHER_BLOCKED",
+    "body_chain_anchor_metadata_or_canonical_byte_drift": "BLOCKED",
+    "provider_context_or_tenant_transfer_drift": "BLOCKED",
+    "lock_target_etag_or_request_hash_drift": "BLOCKED",
+    "provider_or_malformed_result_failure": "REDACTED_BLOCKED",
+    "bicep_compile_missing_in_ci": "block_merge",
+    "s7_approval_absent": "BLOCKED_PENDING_S7_APPROVAL"
+  }
+}

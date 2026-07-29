@@ -1,0 +1,72 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "notary-kg.azure_blob_worm_irreversible_lock_s6b",
+  "title": "Azure Blob WORM irreversible lock offline preparation",
+  "status": "PREPARED_OFFLINE_NOT_EXECUTED",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/693",
+  "parent_contract_id": "notary-kg.business_case_type_azure_blob_worm_s6b",
+  "operation": {
+    "operation_exact": "POST immutabilityPolicies/default/lock",
+    "api_version_exact": "2023-05-01",
+    "target_components_exact": [
+      "target_resource_id_sha256",
+      "provider_context_binding_sha256",
+      "policy_resource_id_sha256"
+    ],
+    "target_plaintext_in_evidence_allowed": false,
+    "request_schema_exact": "nac.azure-blob-worm-lock-request/v0.1",
+    "canonical_json_required": true
+  },
+  "preconditions": {
+    "pre_readback_state_exact": "Unlocked",
+    "minimum_retention_days": 3653,
+    "if_match_etag_required": true,
+    "prepared_request_sha256_required": true,
+    "prepared_request_hash_covers_exact": [
+      "schema_version",
+      "operation_exact",
+      "api_version_exact",
+      "target_resource_id_sha256",
+      "provider_context_binding_sha256",
+      "policy_resource_id_sha256",
+      "if_match_etag",
+      "retention_days"
+    ],
+    "target_drift_behavior": "BLOCKED",
+    "provider_context_drift_behavior": "BLOCKED",
+    "policy_drift_behavior": "BLOCKED",
+    "stale_etag_behavior": "BLOCKED",
+    "request_hash_drift_behavior": "BLOCKED"
+  },
+  "dual_control": {
+    "operator_ref_required": true,
+    "approver_ref_required": true,
+    "operator_approver_distinct": true,
+    "raw_identity_allowed": false,
+    "owner_approval_required": true
+  },
+  "postconditions": {
+    "post_readback_state_exact": "Locked",
+    "same_target_required": true,
+    "same_provider_context_required": true,
+    "same_policy_required": true,
+    "retention_not_reduced": true,
+    "etag_changed_required": true,
+    "pre_readback_sha256_required": true,
+    "post_readback_sha256_required": true,
+    "fresh_locked_readback_before_live_factory_required": true
+  },
+  "execution": {
+    "performed_by_s6b": false,
+    "network_calls": 0,
+    "azure_calls": 0,
+    "lock_actions": 0,
+    "live_factory_wiring": false,
+    "s7_status_without_owner_gate": "BLOCKED_PENDING_S7_APPROVAL"
+  },
+  "offline_negative_tests": [
+    "target drift",
+    "stale ETag",
+    "prepared request hash drift"
+  ]
+}

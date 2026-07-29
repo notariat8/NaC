@@ -8,7 +8,7 @@ Führendes Issue: [#613](https://github.com/notariat8/NaC/issues/613)
 ## Entscheidung
 
 NaC wird **Microsoft-first an der Benutzer-, Identitäts- und Datenkante**, aber
-**on-prem-first für AI, Prozessausführung und technische Langzeitwahrheit**.
+**on-prem-first für AI und Prozessausführung**; die autoritative, vom on-prem Publisher erzeugte WORM-Evidence-Kopie liegt getrennt in tenantgebundenem Azure Blob Immutable Storage.
 
 - Microsoft Teams ist der primäre Arbeitsplatz.
 - SharePoint Framework (SPFx) liefert Teams-/SharePoint-Oberflächen und den
@@ -18,8 +18,10 @@ NaC wird **Microsoft-first an der Benutzer-, Identitäts- und Datenkante**, aber
   `v1.0` verwenden, bilden die einzige M365-Datenkante.
 - SharePoint speichert Dokumente, sichtbare Listen und fachliche Projektionen,
   ist aber weder Workflow-Engine noch technische Langzeitwahrheit.
-- Python/FastAPI, die deterministische Workflow-Control-Plane, PostgreSQL,
-  Outbox/Broker und WORM-Nachweise laufen zentral on-prem.
+- Python/FastAPI, die deterministische Workflow-Control-Plane, PostgreSQL und
+  Outbox/Broker laufen zentral on-prem. Ein on-prem Evidence-Publisher schreibt
+  create-only in Azure Blob Immutable Storage; diese tenantgebundene Kopie ist
+  der autoritative WORM-Nachweis und besitzt keine Workflow-Runtime-Autorität.
 - NVIDIA NeMo Agent Toolkit ist das einzige produktive Agentic Toolkit.
 - Microsoft 365 Agents SDK darf später nur als Teams-Kanaladapter dienen. Es
   darf keine zweite Agentic Runtime oder fachliche Wahrheit einführen.
@@ -198,8 +200,10 @@ Zertifikats-Private-Keys und Mandatsdaten gehören in kein Produktrepo.
 - Bereits vorhandene M365-/Teams-/SharePoint-Lizenzen reduzieren zusätzliche
   UI- und Kollaborationskosten, ersetzen aber keine Prüfung von Entra-, Teams-,
   SharePoint-, App-Catalog- oder Compliance-Lizenzgrenzen.
-- On-prem entstehen Kosten für redundante Hosts, PostgreSQL, Backup, WORM,
-  Broker, Monitoring, Patchen, Zertifikate, GPU-/Modellbetrieb und Rufbereitschaft.
+- On-prem entstehen Kosten für redundante Hosts, PostgreSQL, Backup, Broker,
+  Monitoring, Patchen, Zertifikate, GPU-/Modellbetrieb und Rufbereitschaft.
+- Azure-WORM verursacht getrennte Kosten für Storage, Versionierung, CMK/Key
+  Vault, Retention, Legal Hold, Monitoring und Exit-/Exportbetrieb.
 - Temporal würde zusätzliche Betriebs-, Upgrade- und Observability-Komplexität
   einführen; der Spike muss diese gegen selbst gebaute Durable-Execution-Logik
   quantifizieren.

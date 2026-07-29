@@ -6,8 +6,9 @@ Cloud-AI-Voraussetzung zu machen.
 
 **Architektur:** Teams/SPFx/SharePoint/Entra/Graph bilden die Microsoft-Kante.
 Python/FastAPI, deterministische Workflows, NeMo, PostgreSQL, Outbox/Broker und
-WORM laufen on-prem. Temporal- und Baseline-Modus sind exklusive
-Ausführungsmodi mit je einer technischen Wahrheit; WORM bleibt getrennt. Lokale
+der Evidence-Publisher laufen on-prem. Die autoritative WORM-Kopie liegt
+tenantgebunden in Azure Blob Immutable Storage. Temporal- und Baseline-Modus
+sind exklusive Ausführungsmodi; WORM bleibt getrennt und ist keine Runtime-Wahrheit. Lokale
 Sidecars bleiben nichtautoritativ.
 
 **Delivery:** Jeder Slice besitzt ein führendes Issue, Contract/Verification,

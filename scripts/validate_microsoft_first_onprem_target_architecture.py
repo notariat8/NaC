@@ -60,7 +60,7 @@ def validate() -> list[str]:
             "nvidia_nemo_agent_toolkit",
             "postgresql",
             "outbox_broker",
-            "worm_audit",
+            "worm_evidence_publisher",
         ]
         _expect(
             decisions.get("microsoft_first_edge") == expected_microsoft_first_edge,
@@ -75,6 +75,9 @@ def validate() -> list[str]:
         _expect(decisions.get("only_agentic_toolkit") == "nvidia_nemo_agent_toolkit", "NeMo Agent Toolkit must be the only agentic toolkit", errors)
         _expect(decisions.get("m365_agents_sdk_role") == "optional_channel_adapter_only", "M365 Agents SDK must remain channel-adapter-only", errors)
         _expect(decisions.get("temporal_status") == "timeboxed_candidate_spike_not_selected", "Temporal must remain an unselected spike candidate", errors)
+        _expect(decisions.get("worm_authoritative_copy") == "azure_blob_immutable_storage", "Azure Blob immutable storage must be the authoritative WORM evidence copy", errors)
+        _expect(decisions.get("worm_publisher_location") == "onprem", "WORM evidence publisher must remain on-prem", errors)
+        _expect(decisions.get("worm_lock_status") == "owner_gated_s7_not_executed", "WORM policy lock must remain owner-gated and unexecuted", errors)
 
     expected_pdf_assessment = {
         "teams_as_user_entry": "adopt",
@@ -101,6 +104,7 @@ def validate() -> list[str]:
     required_true = {
         "graph_rest_or_graph_backed_mcp_only",
         "ai_and_models_onprem",
+        "azure_worm_evidence_target_selected",
     }
     required_false = {
         "sharepoint_rest_allowed",
@@ -143,6 +147,11 @@ def validate() -> list[str]:
     expected_audit = {
         "required": ["append_only_events", "hash_binding", "worm_retention", "reconciliation"],
         "sharepoint_version_history_is_sufficient": False,
+        "publisher_location": "onprem",
+        "authoritative_evidence_copy": "azure_blob_immutable_storage",
+        "workflow_runtime_authority": False,
+        "minimum_retention_days": 3653,
+        "immutable_policy_lock_owner_gated": True,
     }
     _expect(
         audit == expected_audit,
@@ -163,7 +172,13 @@ def validate() -> list[str]:
             "postgresql_owns": ["workflow_execution_state", "timers", "leases", "retries", "domain_read_models", "outbox", "human_task_metadata", "projections", "sync_state"],
         },
         "workflow_history": "selected_engine_execution_history_not_sole_legal_evidence",
-        "worm": "immutable_approval_access_delegation_and_mutation_evidence",
+        "worm": {
+            "authoritative_evidence_copy": "azure_blob_immutable_storage",
+            "publisher_and_outbox": "onprem",
+            "workflow_runtime_authority": False,
+            "minimum_retention_days": 3653,
+            "immutable_policy_lock_owner_gated": True,
+        },
         "local_cache": "encrypted_short_lived_non_authoritative",
         "agent_memory": "personal_preferences_without_matter_truth",
     }
@@ -183,6 +198,7 @@ def validate() -> list[str]:
         "workflow_control_plane": "src/nac_runtime/",
         "workflow_contracts": "workflows/",
         "onprem_deployment": "deploy/runtime/onprem/",
+        "azure_worm_deployment": "deploy/runtime/azure/immutable-evidence/",
         "workstation_connectors": "plugins/",
     }
     _expect(
@@ -300,6 +316,22 @@ def _validate_document_markers(path: str, text: str, errors: list[str]) -> None:
         markers.append("issues/613")
         markers.extend([f"AC-613-0{number}" for number in range(1, 7)])
         markers.append("Ausführungswahrheit" if is_german else "execution truth")
+        markers.extend(
+            [
+                (
+                    "WORM-Evidence-Publisher"
+                    if is_german
+                    else "WORM evidence publisher"
+                ),
+                "Azure Blob Immutable Storage",
+                (
+                    "keine Workflow-Runtime-Autorität"
+                    if is_german
+                    else "no workflow runtime authority"
+                ),
+                "Owner-gated" if is_german else "owner-gated",
+            ]
+        )
     elif "/plans/" in path:
         markers.append("#613")
         markers.extend([f"Slice {number}" for number in range(1, 8)])
