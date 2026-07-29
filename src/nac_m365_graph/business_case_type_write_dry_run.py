@@ -150,8 +150,16 @@ def _contract_is_valid(contract: dict[str, Any]) -> bool:
             isinstance(cli, dict)
             and cli.get("command_exact")
             == "nac m365 teams-sharepoint business-case-type-write-dry-run",
+            isinstance(cli, dict)
+            and isinstance(cli.get("operations_exact"), list)
+            and tuple(cli["operations_exact"]) == WRITE_DRY_RUN_OPERATIONS,
             isinstance(cli, dict) and cli.get("synthetic_only") is True,
             isinstance(cli, dict) and cli.get("redacted_output_only") is True,
+            isinstance(cli, dict)
+            and cli.get("resource_identifiers_or_urls_in_output_allowed")
+            is False,
+            isinstance(cli, dict)
+            and cli.get("field_values_in_output_allowed") is False,
             isinstance(cli, dict) and cli.get("live_factory_allowed") is False,
             isinstance(cli, dict) and cli.get("credentials_allowed") is False,
             isinstance(cli, dict) and cli.get("live_graph_calls_allowed") == 0,
@@ -206,7 +214,7 @@ def _synthetic_mutation(operation: str) -> BusinessCaseTypeMutation:
                 "Vorgangstyp": "immobilienkaufvertrag",
                 "VorgangstypId": "immobilienkaufvertrag",
                 "Status": "Entwurf",
-                "NotarTeam": "Synthetic-Notary-Team",
+                "NotarTeam": "NaC-Notar-01",
                 "Vertraulichkeitsstufe": "Normal",
                 "NacWorkflowVersion": "synthetic-workflow-v1",
                 "KgVersion": "synthetic-kg-v1",

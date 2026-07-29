@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -51,6 +52,45 @@ OPERATIONS = (
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _ITEM_ID = re.compile(r"[1-9][0-9]{0,18}\Z")
 _SAFE_VALUE = re.compile(r"[^\x00-\x1f\x7f]{1,256}\Z")
+_ISO_8601_DATETIME = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"
+    r"(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})\Z"
+)
+
+_TEXT_FIELDS = frozenset(
+    {
+        "NacCaseId",
+        "Aktenzeichen",
+        "VorgangstypId",
+        "NacWorkflowVersion",
+        "KgVersion",
+        "NacTaskId",
+        "BpmnStepCode",
+        "BlockedReason",
+    }
+)
+_CHOICE_FIELDS_BY_LIST = {
+    "Akten": {
+        "Vorgangstyp": frozenset(FROZEN_LEGACY_CHOICES),
+        "Status": frozenset(
+            {
+                "Entwurf",
+                "InPrüfung",
+                "Beurkundung",
+                "Vollzug",
+                "Abgeschlossen",
+                "Pausiert",
+            }
+        ),
+        "NotarTeam": frozenset({"NaC-Notar-01", "NaC-Notar-02"}),
+        "Vertraulichkeitsstufe": frozenset({"Normal", "Sensibel", "Hoch"}),
+    },
+    "AufgabenFristen": {
+        "Status": frozenset({"Offen", "InArbeit", "Blockiert", "Erledigt"}),
+    },
+}
+_DATETIME_FIELDS = frozenset({"DueDate"})
+_BOOLEAN_FIELDS = frozenset({"RequiresNotaryApproval"})
 
 
 class MutationValidationError(ValueError):
@@ -89,7 +129,7 @@ class BusinessCaseTypeMutation:
             raise MutationValidationError(
                 "case_create requires an exact legacy-mappable BusinessCaseType"
             )
-        _validate_scalar_fields(normalized)
+        _validate_sharepoint_fields(normalized, list_name="Akten")
         return cls._new(
             operation="case_create",
             fields=normalized,
@@ -107,7 +147,7 @@ class BusinessCaseTypeMutation:
         normalized = _exact_fields(
             fields, CASE_STATUS_UPDATE_FIELDS, "case_status_update"
         )
-        _validate_scalar_fields(normalized)
+        _validate_sharepoint_fields(normalized, list_name="Akten")
         return cls._new(
             operation="case_status_update",
             fields=normalized,
@@ -128,9 +168,8 @@ class BusinessCaseTypeMutation:
             field for field in TASK_CREATE_OPTIONAL_FIELDS if field in supplied
         )
         normalized = {field: fields[field] for field in order}
-        _validate_scalar_fields(normalized)
-        _require_bool(
-            normalized["RequiresNotaryApproval"], "RequiresNotaryApproval"
+        _validate_sharepoint_fields(
+            normalized, list_name="AufgabenFristen"
         )
         return cls._new(
             operation="task_create",
@@ -154,14 +193,11 @@ class BusinessCaseTypeMutation:
         normalized = {
             field: fields[field] for field in TASK_UPDATE_FIELDS if field in supplied
         }
-        _validate_scalar_fields(
-            normalized, empty_string_fields=frozenset({"BlockedReason"})
+        _validate_sharepoint_fields(
+            normalized,
+            list_name="AufgabenFristen",
+            empty_string_fields=frozenset({"BlockedReason"}),
         )
-        if "RequiresNotaryApproval" in normalized:
-            _require_bool(
-                normalized["RequiresNotaryApproval"],
-                "RequiresNotaryApproval",
-            )
         return cls._new(
             operation="task_update",
             fields=normalized,
@@ -185,6 +221,9 @@ class BusinessCaseTypeMutation:
             raise MutationValidationError(
                 "backfill target must be a canonical BusinessCaseTypeId"
             )
+        _validate_sharepoint_fields(
+            {"VorgangstypId": target}, list_name="Akten"
+        )
         etag = _etag(expected_etag)
         for name, value in {
             "S5 manifest hash": s5_binding.manifest_hash,
@@ -350,19 +389,30 @@ def _exact_fields(
     return {field: fields[field] for field in expected}
 
 
-def _validate_scalar_fields(
+def _validate_sharepoint_fields(
     fields: Mapping[str, Any],
     *,
+    list_name: str,
     empty_string_fields: frozenset[str] = frozenset(),
 ) -> None:
     for field, value in fields.items():
-        if type(value) is bool:
+        if field in _TEXT_FIELDS:
+            if value == "" and field in empty_string_fields:
+                continue
+            _nonempty_string(value, field)
             continue
-        if type(value) is not str:
-            raise MutationValidationError(f"{field} must be a string or boolean")
-        if value == "" and field in empty_string_fields:
+        if field in _CHOICE_FIELDS_BY_LIST.get(list_name, {}):
+            _choice(value, field, list_name=list_name)
             continue
-        _nonempty_string(value, field)
+        if field in _DATETIME_FIELDS:
+            _iso_8601_datetime(value, field)
+            continue
+        if field in _BOOLEAN_FIELDS:
+            _require_bool(value, field)
+            continue
+        raise MutationValidationError(
+            f"{field} is not provisioned for {list_name}"
+        )
 
 
 def _nonempty_string(value: Any, name: str) -> str:
@@ -374,6 +424,35 @@ def _nonempty_string(value: Any, name: str) -> str:
 def _require_bool(value: Any, name: str) -> bool:
     if type(value) is not bool:
         raise MutationValidationError(f"{name} must be boolean")
+    return value
+
+
+def _choice(value: Any, name: str, *, list_name: str) -> str:
+    normalized = _nonempty_string(value, name)
+    choices = _CHOICE_FIELDS_BY_LIST.get(list_name, {}).get(name)
+    if choices is None or normalized not in choices:
+        raise MutationValidationError(
+            f"{name} must be a provisioned {list_name} choice"
+        )
+    return normalized
+
+
+def _iso_8601_datetime(value: Any, name: str) -> str:
+    if type(value) is not str or _ISO_8601_DATETIME.fullmatch(value) is None:
+        raise MutationValidationError(
+            f"{name} must be an ISO-8601 date-time with timezone"
+        )
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise MutationValidationError(
+            f"{name} must be an ISO-8601 date-time with timezone"
+        ) from exc
+    if parsed.tzinfo is None:
+        raise MutationValidationError(
+            f"{name} must be an ISO-8601 date-time with timezone"
+        )
     return value
 
 
