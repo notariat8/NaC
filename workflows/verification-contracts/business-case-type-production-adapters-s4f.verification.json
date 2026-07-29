@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "nac.verification-contract/v0.1",
+  "id": "business-case-type-production-adapters-s4f",
+  "title": "BusinessCaseType partial production adapter implementations S4f verification",
+  "issue": "https://github.com/notariat8/NaC/issues/704",
+  "appliesWhen": {
+    "paths": [
+      "src/nac_m365_graph/business_case_type_production_adapters.py",
+      "src/nac_runtime/sqlite_evidence_staging_outbox.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_production_adapters.py",
+      "tests/test_business_case_type_production_adapters.py",
+      "tests/test_sqlite_evidence_staging_outbox.py",
+      "tests/test_business_case_type_production_adapters_contract.py",
+      "tests/test_business_case_type_production_adapters_cli.py",
+      "workflows/contracts/business-case-type-production-adapters-s4f.contract.json",
+      "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json"
+    ]
+  },
+  "requiredContext": [
+    "AGENTS.md",
+    "docs/de/superpowers/specs/2026-07-29-business-case-type-production-adapters-s4f-design.md",
+    "docs/de/superpowers/plans/2026-07-29-business-case-type-production-adapters-s4f.md",
+    "workflows/contracts/business-case-type-live-write-readiness-s4e.contract.json"
+  ],
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_production_adapters tests.test_sqlite_evidence_staging_outbox tests.test_business_case_type_production_adapters_contract tests.test_business_case_type_production_adapters_cli",
+    "python3 scripts/validate_business_case_type_production_adapters.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check",
+    "python3 -m compileall -q src scripts tests",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "requiredEvidence": [
+    "Graph v1.0 transport rejects redirects, retries, foreign hosts, beta paths, dot-segment normalization, encoded separators and error bodies.",
+    "Exactly one unchanged canonical GitHub owner comment is accepted through a SHA-256 verified sealed memfd with bounded stdout and no raw comment return.",
+    "Certificate write identity construction binds tenant, client ID, certificate bytes, private-key bytes and the exact Sites.Selected/write readback.",
+    "Local SQLite staging survives restart, binds routing columns to hash-bound event content and exposes no completion, promotion, acknowledgement or cleanup authority.",
+    "PostgreSQL promotion/ack/retention/local cleanup, broker, signature anchor, identity readback, synced-directory detection, WORM transport and irreversible lock remain blockers.",
+    "Output makes no production-readiness, runtime-composition or live-authorization claim.",
+    "Independent base...head review has no unresolved P1 or P2 findings."
+  ],
+  "invariants": [
+    "Provisioning, writer and BFF identities remain separate.",
+    "Local SQLite staging is not central truth and cannot close a mutation.",
+    "No live Graph, Entra, SharePoint, Teams or Azure action occurs.",
+    "S4F_PARTIAL_ADAPTERS_VERIFIED_OFFLINE is not production or runtime readiness."
+  ],
+  "thresholds": {
+    "socketOrDnsCalls": 0,
+    "externalCredentialStoreReads": 0,
+    "graphCalls": 0,
+    "azureCalls": 0,
+    "tenantWrites": 0,
+    "unresolvedP1OrP2Findings": 0
+  },
+  "passCondition": {
+    "allChecksPass": true,
+    "statusExact": "S4F_PARTIAL_ADAPTERS_VERIFIED_OFFLINE",
+    "productionReadinessClaimed": false,
+    "runtimeCompositionEnabled": false,
+    "liveWriteAuthorized": false
+  },
+  "failureBehavior": {
+    "mode": "fail_closed",
+    "mergeAllowed": false,
+    "liveRetryAllowed": false,
+    "ownerInputRequiredForLiveBoundary": true
+  }
+}

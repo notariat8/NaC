@@ -1089,6 +1089,14 @@ nac m365 teams-sharepoint business-case-type-write-dry-run --operation case_crea
 nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-path /tmp/nac-s4c-smoke/state.sqlite --format json
 ```
 
+## Partielle S4f-Produktionsadapter Offline
+
+`nac m365 teams-sharepoint business-case-type-production-adapters` meldet die offline geprüften Adapterimplementierungen aus Issue #704: exakte GitHub-Owner-Kommentarprüfung, zertifikatsbasierte Writer-Erzeugung, redirect-freies Graph REST v1.0 HTTP und lokales SQLite-Evidence-Staging. Die Staging-Outbox ist keine zentrale Wahrheit und darf eine Mutation weder abschließen noch promoten, bestätigen oder bereinigen. PostgreSQL-Promotion/Ack/Retention/lokales Cleanup, Broker, Signatur-Anchor, provider-seitiger Identity-Readback, Azure-WORM-Transport und irreversibler Lock, Runtime-Komposition und Live-Aktivierung bleiben Blocker.
+
+```bash
+nac m365 teams-sharepoint business-case-type-production-adapters --format json
+```
+
 ## S6a Immutable-Evidence-Foundation Offline
 
 `nac kg business-case-type-evidence-dry-run` prüft die S6a-Immutable-Evidence-Foundation ausschließlich mit synthetischen In-Memory-Adaptern. Der Befehl erzeugt kanonische Intent-, Outcome-, Readback- und Reconciliation-Ketten, lädt keine Credentials und führt keine Netzwerk-, Provider-, Tenant- oder Live-Mutationsaktion aus. Das Ergebnis bleibt `S6_OFFLINE_FOUNDATION` und `BLOCKED_PENDING_S7_APPROVAL`; es behauptet weder PostgreSQL-Durability noch Signatur, Anchor oder WORM-Speicherung.

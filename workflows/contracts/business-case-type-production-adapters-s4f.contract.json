@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "nac.business-case-type-production-adapters-s4f/v0.1",
+  "title": "BusinessCaseType partial production adapter implementations S4f",
+  "issue": "https://github.com/notariat8/NaC/issues/704",
+  "status": "S4F_PARTIAL_ADAPTERS_VERIFIED_OFFLINE",
+  "extendsContractsExact": [
+    "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+    "workflows/contracts/business-case-type-live-write-readiness-s4e.contract.json",
+    "workflows/contracts/business-case-type-immutable-evidence-s6.contract.json"
+  ],
+  "acceptanceIdsExact": [
+    "AC-S4F-01",
+    "AC-S4F-02",
+    "AC-S4F-03",
+    "AC-S4F-04",
+    "AC-S4F-05",
+    "AC-S4F-06",
+    "AC-S4F-07"
+  ],
+  "offlineVerifiedAdaptersExact": [
+    "CertificateWriteIdentityFactory",
+    "GitHubS4dOwnerApprovalVerifier",
+    "SqliteEvidenceStagingOutbox",
+    "UrllibNoRedirectGraphHttpPort"
+  ],
+  "graphTransport": {
+    "baseUrlExact": "https://graph.microsoft.com/v1.0",
+    "methodsExact": [
+      "GET",
+      "POST",
+      "PATCH"
+    ],
+    "redirectsAllowed": false,
+    "automaticRetries": 0,
+    "maximumResponseBytes": 1048576,
+    "errorResponseBodiesReturned": false,
+    "foreignHostsAllowed": false,
+    "graphBetaAllowed": false,
+    "sharePointRestAllowed": false,
+    "graphSdkAllowed": false,
+    "pnpAllowed": false,
+    "canonicalPathRequired": true,
+    "dotSegmentsAllowed": false,
+    "encodedPathSeparatorsAllowed": false,
+    "controlCharactersAllowed": false
+  },
+  "ownerVerification": {
+    "sourceExact": "github_issue_owner_comment",
+    "issueExact": "https://github.com/notariat8/NaC/issues/700",
+    "canonicalCommentRequired": true,
+    "exactlyOneUnmodifiedMatchRequired": true,
+    "ownerAllowlistHashBound": true,
+    "verifierPrincipalHashBound": true,
+    "attestationExpectedFieldComparisonRequired": true,
+    "binaryExecutionExact": "sha256_verified_sealed_memfd",
+    "rawCommentReturned": false,
+    "stdoutCaptureBoundedBeforeCompletion": true,
+    "stderrCaptured": false
+  },
+  "writeIdentity": {
+    "factoryExact": "CertificateWriteIdentityFactory",
+    "permissionExact": "Sites.Selected",
+    "siteRoleExact": "write",
+    "broaderRolesAllowed": false,
+    "certificateClientIdPrincipalBindingRequired": true,
+    "completeIdentityContextValidationRequired": true,
+    "freshInspectionReadbackRequired": true,
+    "providerSideIdentityReadbackImplemented": false,
+    "providerSideIdentityReadbackRequiredBeforeRuntime": true,
+    "tenantBindingRequired": true,
+    "certificateContentSha256BindingRequired": true,
+    "privateKeyContentSha256BindingRequired": true,
+    "credentialFilesReopenedByProvider": false
+  },
+  "localStagingOutbox": {
+    "adapterExact": "SqliteEvidenceStagingOutbox",
+    "engineExact": "sqlite3",
+    "scopeExact": "local_single_host_staging_only",
+    "centralTruth": false,
+    "canCloseMutation": false,
+    "promotionSupported": false,
+    "centralAcknowledgementSupported": false,
+    "cleanupSupported": false,
+    "restartSafe": true,
+    "transactionModeExact": "BEGIN IMMEDIATE",
+    "journalModeExact": "DELETE",
+    "synchronousModeExact": "FULL",
+    "requiredFileModeOctal": "0600",
+    "requiredDirectoryModeOctal": "0700",
+    "filesystemPolicyExact": "explicit_linux_local_allowlist",
+    "unknownFilesystemAllowed": false,
+    "syncedFilesystemDetectionImplemented": false,
+    "parentDirectoryFsyncAfterCreate": true,
+    "maximumDatabaseBytes": 8388608,
+    "sequenceHashTransitionValidationRequired": true,
+    "globalRoutingValidationOnOpenRequired": true,
+    "routingColumnsBoundToHashedEventRequired": true
+  },
+  "remainingBlockersExact": [
+    "azure_blob_worm_policy_lock",
+    "azure_blob_worm_rest_transport",
+    "broker_product_owner_decision",
+    "central_postgresql_outbox_promotion_ack_retention_cleanup",
+    "dedicated_entra_write_identity_and_site_grant",
+    "durable_reconciliation_store",
+    "production_identity_inspection_readback",
+    "synced_filesystem_runtime_detection",
+    "signature_anchor_owner_decision"
+  ],
+  "offlineCompletion": {
+    "statusExact": "S4F_PARTIAL_ADAPTERS_VERIFIED_OFFLINE",
+    "productionReadinessClaimed": false,
+    "runtimeCompositionEnabled": false,
+    "liveWriteAuthorized": false,
+    "socketOrDnsCallsExact": 0,
+    "externalCredentialStoreReadsExact": 0,
+    "graphCallsExact": 0,
+    "azureCallsExact": 0,
+    "tenantWritesExact": 0
+  },
+  "outOfScopeExact": [
+    "azure_blob_worm_deployment_or_lock",
+    "broker_selection_or_deployment",
+    "central_postgresql_outbox_or_promotion",
+    "credential_or_permission_change",
+    "entra_identity_or_site_grant_write",
+    "live_graph_or_tenant_write",
+    "production_identity_readback",
+    "runtime_composition",
+    "synced_filesystem_runtime_detection",
+    "signature_anchor_selection_or_deployment"
+  ]
+}

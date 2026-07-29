@@ -367,6 +367,23 @@
             "scripts/validate_business_case_type_live_write_readiness.py",
             "tests/test_business_case_type_live_write_readiness*.py"
           ]
+        },
+        {
+          "id": "business_case_type_production_adapters_s4f",
+          "description": "Issue #704 partial offline S4f adapter implementations: exact owner-comment verification, certificate writer factory, redirect-free Graph v1.0 HTTP and local SQLite evidence staging without completion authority. PostgreSQL promotion/ack, broker, signature, identity readback, WORM transport/lock and runtime activation remain blockers.",
+          "paths": [
+            "docs/de/superpowers/specs/2026-07-29-business-case-type-production-adapters-s4f-design.md",
+            "docs/en/superpowers/specs/2026-07-29-business-case-type-production-adapters-s4f-design.md",
+            "docs/de/superpowers/plans/2026-07-29-business-case-type-production-adapters-s4f.md",
+            "docs/en/superpowers/plans/2026-07-29-business-case-type-production-adapters-s4f.md",
+            "src/nac_m365_graph/business_case_type_production_adapters.py",
+            "src/nac_runtime/sqlite_evidence_staging_outbox.py",
+            "workflows/contracts/business-case-type-production-adapters-s4f.contract.json",
+            "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json",
+            "scripts/validate_business_case_type_production_adapters.py",
+            "tests/test_business_case_type_production_adapters*.py",
+            "tests/test_sqlite_evidence_staging_outbox.py"
+          ]
         }
       ]
     },
