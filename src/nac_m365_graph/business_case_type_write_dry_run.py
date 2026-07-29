@@ -29,6 +29,49 @@ WRITE_DRY_RUN_OPERATIONS = (
     "business_case_type_backfill",
 )
 
+_EXPECTED_SLICE = {
+    "id": "S4b",
+    "offline_only": True,
+    "allowed_live_graph_calls": 0,
+    "allowed_tenant_writes": 0,
+    "live_factory_allowed": False,
+    "credentials_allowed": False,
+}
+_EXPECTED_IDENTITY_BOUNDARY = {
+    "write_identity_contract_only": True,
+    "write_permission_exact": "Sites.Selected",
+    "write_site_grant_role_exact": "write",
+    "bff_uami_permission_exact": "Sites.Selected",
+    "bff_uami_site_grant_role_exact": "read",
+    "write_and_bff_identity_must_differ": True,
+    "write_identity_credentials_or_factory_in_scope": False,
+    "bff_uami_permission_change_in_scope": False,
+}
+_EXPECTED_OFFLINE_BOUNDARY = {
+    "transport_is_injected_protocol_only": True,
+    "synthetic_fake_graph_only": True,
+    "http_client_implementation_allowed": False,
+    "credential_environment_token_or_certificate_reads_allowed": False,
+    "dns_network_graph_sharepoint_entra_calls_allowed": False,
+    "tenant_schema_permission_or_data_writes_allowed": False,
+    "cli_changes_in_scope": True,
+    "production_composition_in_scope": False,
+}
+_EXPECTED_OFFLINE_CLI = {
+    "command_exact": (
+        "nac m365 teams-sharepoint business-case-type-write-dry-run"
+    ),
+    "operations_exact": list(WRITE_DRY_RUN_OPERATIONS),
+    "synthetic_only": True,
+    "redacted_output_only": True,
+    "resource_identifiers_or_urls_in_output_allowed": False,
+    "field_values_in_output_allowed": False,
+    "live_factory_allowed": False,
+    "credentials_allowed": False,
+    "live_graph_calls_allowed": 0,
+    "tenant_writes_allowed": 0,
+}
+
 
 def build_business_case_type_write_dry_run(
     repo_root: Path,
@@ -117,6 +160,7 @@ def _load_contract(repo_root: Path) -> dict[str, Any]:
 
 def _contract_is_valid(contract: dict[str, Any]) -> bool:
     offline = contract.get("offline_boundary")
+    slice_boundary = contract.get("slice")
     cli = contract.get("offline_cli")
     identity = contract.get("identity_boundary")
     binding = contract.get("binding")
@@ -130,40 +174,13 @@ def _contract_is_valid(contract: dict[str, Any]) -> bool:
             isinstance(binding, dict)
             and binding.get("graph_base_url_exact")
             == "https://graph.microsoft.com/v1.0",
-            isinstance(identity, dict)
-            and identity.get("write_permission_exact") == "Sites.Selected",
-            isinstance(identity, dict)
-            and identity.get("write_site_grant_role_exact") == "write",
-            isinstance(identity, dict)
-            and identity.get("bff_uami_site_grant_role_exact") == "read",
-            isinstance(offline, dict)
-            and offline.get("cli_changes_in_scope") is True,
-            isinstance(offline, dict)
-            and offline.get("dns_network_graph_sharepoint_entra_calls_allowed")
+            isinstance(binding, dict)
+            and binding.get("graph_beta_sdk_sharepoint_rest_pnp_allowed")
             is False,
-            isinstance(offline, dict)
-            and offline.get("credential_environment_token_or_certificate_reads_allowed")
-            is False,
-            isinstance(offline, dict)
-            and offline.get("tenant_schema_permission_or_data_writes_allowed")
-            is False,
-            isinstance(cli, dict)
-            and cli.get("command_exact")
-            == "nac m365 teams-sharepoint business-case-type-write-dry-run",
-            isinstance(cli, dict)
-            and isinstance(cli.get("operations_exact"), list)
-            and tuple(cli["operations_exact"]) == WRITE_DRY_RUN_OPERATIONS,
-            isinstance(cli, dict) and cli.get("synthetic_only") is True,
-            isinstance(cli, dict) and cli.get("redacted_output_only") is True,
-            isinstance(cli, dict)
-            and cli.get("resource_identifiers_or_urls_in_output_allowed")
-            is False,
-            isinstance(cli, dict)
-            and cli.get("field_values_in_output_allowed") is False,
-            isinstance(cli, dict) and cli.get("live_factory_allowed") is False,
-            isinstance(cli, dict) and cli.get("credentials_allowed") is False,
-            isinstance(cli, dict) and cli.get("live_graph_calls_allowed") == 0,
-            isinstance(cli, dict) and cli.get("tenant_writes_allowed") == 0,
+            slice_boundary == _EXPECTED_SLICE,
+            identity == _EXPECTED_IDENTITY_BOUNDARY,
+            offline == _EXPECTED_OFFLINE_BOUNDARY,
+            cli == _EXPECTED_OFFLINE_CLI,
         )
     )
 

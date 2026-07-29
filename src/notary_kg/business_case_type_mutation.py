@@ -57,17 +57,25 @@ _ISO_8601_DATETIME = re.compile(
     r"(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})\Z"
 )
 
+_TEXT_MAX_LENGTH_BY_LIST = {
+    "Akten": {
+        "NacCaseId": 255,
+        "Aktenzeichen": 255,
+        "VorgangstypId": 128,
+        "NacWorkflowVersion": 255,
+        "KgVersion": 255,
+    },
+    "AufgabenFristen": {
+        "NacTaskId": 255,
+        "NacCaseId": 255,
+        "BpmnStepCode": 255,
+        "BlockedReason": 255,
+    },
+}
 _TEXT_FIELDS = frozenset(
-    {
-        "NacCaseId",
-        "Aktenzeichen",
-        "VorgangstypId",
-        "NacWorkflowVersion",
-        "KgVersion",
-        "NacTaskId",
-        "BpmnStepCode",
-        "BlockedReason",
-    }
+    field
+    for fields in _TEXT_MAX_LENGTH_BY_LIST.values()
+    for field in fields
 )
 _CHOICE_FIELDS_BY_LIST = {
     "Akten": {
@@ -396,10 +404,11 @@ def _validate_sharepoint_fields(
     empty_string_fields: frozenset[str] = frozenset(),
 ) -> None:
     for field, value in fields.items():
-        if field in _TEXT_FIELDS:
+        text_max_length = _TEXT_MAX_LENGTH_BY_LIST.get(list_name, {}).get(field)
+        if text_max_length is not None:
             if value == "" and field in empty_string_fields:
                 continue
-            _nonempty_string(value, field)
+            _bounded_text(value, field, max_length=text_max_length)
             continue
         if field in _CHOICE_FIELDS_BY_LIST.get(list_name, {}):
             _choice(value, field, list_name=list_name)
@@ -419,6 +428,15 @@ def _nonempty_string(value: Any, name: str) -> str:
     if type(value) is not str or _SAFE_VALUE.fullmatch(value) is None:
         raise MutationValidationError(f"{name} must be a bounded nonempty string")
     return value
+
+
+def _bounded_text(value: Any, name: str, *, max_length: int) -> str:
+    normalized = _nonempty_string(value, name)
+    if len(normalized) > max_length:
+        raise MutationValidationError(
+            f"{name} exceeds the provisioned text maxLength {max_length}"
+        )
+    return normalized
 
 
 def _require_bool(value: Any, name: str) -> bool:

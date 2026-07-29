@@ -25,11 +25,18 @@ from notary_kg.business_case_type_mutation import (
     _CHOICE_FIELDS_BY_LIST,
     _DATETIME_FIELDS,
     _TEXT_FIELDS,
+    _TEXT_MAX_LENGTH_BY_LIST,
+    _validate_sharepoint_fields,
 )
 
 
-SCHEMA_PATH = (
+MVP_SCHEMA_PATH = (
     ROOT / "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json"
+)
+FOUNDATION_SCHEMA_PATH = (
+    ROOT
+    / "deploy/m365/teams-sharepoint/"
+    "nac-business-case-type-foundation.notary-team-01.json"
 )
 CONTRACT_PATH = (
     ROOT
@@ -38,7 +45,7 @@ CONTRACT_PATH = (
 
 
 def _lists_by_name() -> dict[str, dict[str, Any]]:
-    payload = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    payload = json.loads(MVP_SCHEMA_PATH.read_text(encoding="utf-8"))
     return {
         item["display_name"]: item
         for item in payload["sharepoint"]["lists"]
@@ -46,10 +53,40 @@ def _lists_by_name() -> dict[str, dict[str, Any]]:
 
 
 def _columns(list_name: str) -> dict[str, dict[str, Any]]:
-    return {
-        column["name"]: column
+    columns = {
+        column["name"]: dict(column)
         for column in _lists_by_name()[list_name]["columns"]
     }
+    for column in columns.values():
+        if column["type"] == "text":
+            column["maxLength"] = column.get("text", {}).get(
+                "maxLength", 255
+            )
+    if list_name == "Akten":
+        foundation = json.loads(
+            FOUNDATION_SCHEMA_PATH.read_text(encoding="utf-8")
+        )
+        legacy = foundation["schema"]["legacy_akten_column"]
+        additive = foundation["schema"]["akten_additive_column"]
+        additive_facets = {
+            name
+            for name in ("text", "choice", "boolean")
+            if name in additive
+        }
+        if (
+            legacy.get("name") != "Vorgangstyp"
+            or legacy.get("type") != "choice"
+            or legacy.get("choices") != columns["Vorgangstyp"]["choices"]
+            or additive_facets != {"text"}
+        ):
+            raise AssertionError("foundation Akten schema does not match MVP")
+
+        columns[additive["name"]] = {
+            "name": additive["name"],
+            "type": "text",
+            "maxLength": additive["text"]["maxLength"],
+        }
+    return columns
 
 
 def _valid_case_fields() -> dict[str, Any]:
@@ -88,28 +125,62 @@ class ProvisionedSharePointSchemaValidationTests(unittest.TestCase):
                 },
             },
         )
-        provisioned_text_fields = {
-            name
-            for name in (
-                "NacCaseId",
-                "Aktenzeichen",
-                "NacWorkflowVersion",
-                "KgVersion",
-            )
-            if akten[name]["type"] == "text"
-        } | {
-            name
-            for name in (
-                "NacTaskId",
-                "NacCaseId",
-                "BpmnStepCode",
-                "BlockedReason",
-            )
-            if aufgaben[name]["type"] == "text"
+        provisioned_text_max_lengths = {
+            "Akten": {
+                name: column["maxLength"]
+                for name, column in akten.items()
+                if column["type"] == "text"
+            },
+            "AufgabenFristen": {
+                name: column["maxLength"]
+                for name, column in aufgaben.items()
+                if column["type"] == "text"
+            },
         }
         self.assertEqual(
+            _TEXT_MAX_LENGTH_BY_LIST, provisioned_text_max_lengths
+        )
+        self.assertEqual(
             _TEXT_FIELDS,
-            provisioned_text_fields | {"VorgangstypId"},
+            frozenset(
+                field
+                for fields in provisioned_text_max_lengths.values()
+                for field in fields
+            ),
+        )
+        expected_field_schema = {
+            "source_paths_exact": [
+                "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+                "deploy/m365/teams-sharepoint/"
+                "nac-business-case-type-foundation.notary-team-01.json",
+            ],
+            "text_fields_by_list_exact": provisioned_text_max_lengths,
+            "choice_fields_by_list_exact": {
+                "Akten": {
+                    name: akten[name]["choices"]
+                    for name in (
+                        "Vorgangstyp",
+                        "Status",
+                        "NotarTeam",
+                        "Vertraulichkeitsstufe",
+                    )
+                },
+                "AufgabenFristen": {
+                    "Status": aufgaben["Status"]["choices"]
+                },
+            },
+            "date_time_fields_by_list_exact": {
+                "AufgabenFristen": ["DueDate"]
+            },
+            "boolean_fields_by_list_exact": {
+                "AufgabenFristen": ["RequiresNotaryApproval"]
+            },
+            "boolean_as_text_or_integer_allowed": False,
+            "date_time_format_exact": "ISO-8601 timezone-aware",
+        }
+        contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            contract["field_schema"], expected_field_schema
         )
         self.assertEqual(_DATETIME_FIELDS, {"DueDate"})
         self.assertEqual(aufgaben["DueDate"]["type"], "dateTime")
@@ -227,6 +298,19 @@ class ProvisionedSharePointSchemaValidationTests(unittest.TestCase):
             with self.assertRaises(MutationValidationError):
                 BusinessCaseTypeMutation.case_create(fields)
 
+    def test_text_fields_enforce_provisioned_max_length_boundaries(self) -> None:
+        for list_name, fields in _TEXT_MAX_LENGTH_BY_LIST.items():
+            for field, max_length in fields.items():
+                with self.subTest(list_name=list_name, field=field):
+                    _validate_sharepoint_fields(
+                        {field: "x" * max_length}, list_name=list_name
+                    )
+                    with self.assertRaises(MutationValidationError):
+                        _validate_sharepoint_fields(
+                            {field: "x" * (max_length + 1)},
+                            list_name=list_name,
+                        )
+
     def test_dry_run_mutations_use_deployable_synthetic_values(self) -> None:
         for operation in WRITE_DRY_RUN_OPERATIONS:
             mutation = _synthetic_mutation(operation)
@@ -237,16 +321,14 @@ class ProvisionedSharePointSchemaValidationTests(unittest.TestCase):
             )
             columns = _columns(list_name)
             for field, value in mutation.fields.items():
-                if field == "VorgangstypId":
-                    self.assertEqual(
-                        value, mutation.fields.get("Vorgangstyp", value)
-                    )
-                    continue
                 column = columns[field]
                 if column["type"] == "choice":
                     self.assertIn(value, column["choices"])
                 elif column["type"] == "boolean":
                     self.assertIs(type(value), bool)
+                elif column["type"] == "text":
+                    self.assertIs(type(value), str)
+                    self.assertLessEqual(len(value), column["maxLength"])
                 else:
                     self.assertIs(type(value), str)
 
@@ -254,17 +336,41 @@ class ProvisionedSharePointSchemaValidationTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertTrue(_contract_is_valid(contract))
 
-        drifts = (
-            ("operations_exact", list(reversed(WRITE_DRY_RUN_OPERATIONS))),
-            ("operations_exact", None),
-            ("operations_exact", 1),
-            ("resource_identifiers_or_urls_in_output_allowed", True),
-            ("field_values_in_output_allowed", True),
-        )
-        for key, value in drifts:
+        checked_paths = [
+            ("schema_version",),
+            ("status",),
+            ("operations",),
+            ("binding", "graph_base_url_exact"),
+            ("binding", "graph_beta_sdk_sharepoint_rest_pnp_allowed"),
+        ]
+        for section in (
+            "slice",
+            "identity_boundary",
+            "offline_boundary",
+            "offline_cli",
+        ):
+            checked_paths.extend((section, key) for key in contract[section])
+
+        def drift(value: Any) -> Any:
+            if type(value) is bool:
+                return not value
+            if type(value) is int:
+                return value + 1
+            if isinstance(value, str):
+                return f"{value}-drift"
+            if isinstance(value, list):
+                return list(reversed(value))
+            if isinstance(value, dict):
+                return dict(reversed(tuple(value.items())))
+            return None
+
+        for path in checked_paths:
             drifted = copy.deepcopy(contract)
-            drifted["offline_cli"][key] = value
-            with self.subTest(key=key):
+            target = drifted
+            for key in path[:-1]:
+                target = target[key]
+            target[path[-1]] = drift(target[path[-1]])
+            with self.subTest(path=".".join(path)):
                 self.assertFalse(_contract_is_valid(drifted))
 
 

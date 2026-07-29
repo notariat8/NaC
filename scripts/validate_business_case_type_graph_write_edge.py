@@ -19,6 +19,14 @@ sys.path.insert(0, str(SRC))
 DOMAIN_PATH = Path(
     "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json"
 )
+MVP_SCHEMA_PATH = Path(
+    "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json"
+)
+FOUNDATION_SCHEMA_PATH = Path(
+    "deploy/m365/teams-sharepoint/"
+    "nac-business-case-type-foundation.notary-team-01.json"
+)
+
 VERIFICATION_PATH = Path(
     "workflows/verification-contracts/"
     "business-case-type-graph-write-edge-s4b.verification.json"
@@ -68,6 +76,8 @@ VERIFICATION_KEYS = {
 }
 REQUIRED_PATHS = {
     "src/notary_kg/business_case_type_mutation.py",
+    "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+    "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json",
     "src/nac_m365_graph/business_case_type_write_edge.py",
     "src/nac_m365_graph/business_case_type_write_plan.py",
     "src/nac_m365_graph/business_case_type_write_dry_run.py",
@@ -156,7 +166,7 @@ REQUIRED_SAFETY_TEST_MODULES = {
     "tests/test_business_case_type_graph_write_edge.py": REQUIRED_RUNTIME_TEST_METHODS,
     "tests/test_business_case_type_graph_write_edge_reconciliation.py": {
         "test_execution_key_isolates_identical_mutation_across_targets",
-        "test_retryable_statuses_allow_later_authorized_run",
+        "test_retryable_statuses_require_new_authorization_run",
         "test_unclear_retryable_response_remains_sticky_without_retry",
         "test_terminal_rejection_closes_and_blocks_replay",
         "test_412_remains_terminal_no_retry",
@@ -169,6 +179,7 @@ REQUIRED_SAFETY_TEST_MODULES = {
         "test_datetime_requires_valid_iso_8601_value_with_timezone",
         "test_boolean_and_text_fields_reject_substitute_types",
         "test_dry_run_mutations_use_deployable_synthetic_values",
+        "test_text_fields_enforce_provisioned_max_length_boundaries",
         "test_contract_gate_covers_complete_cli_safety_shape",
     },
     "tests/test_business_case_type_graph_write_edge_graph_contract.py": {
@@ -388,36 +399,10 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("domain contract separate write/BFF identity boundary mismatch")
 
     field_schema = contract.get("field_schema", {})
-    if field_schema != {
-        "source_exact": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
-        "text_fields_exact": [
-            "NacCaseId", "Aktenzeichen", "NacWorkflowVersion", "KgVersion",
-            "NacTaskId", "BpmnStepCode", "BlockedReason",
-        ],
-        "choice_fields_exact": {
-            "Vorgangstyp": [
-                "immobilienkaufvertrag", "unterschriftsbeglaubigung",
-                "online-gmbh-gruendung", "handelsregisteranmeldung",
-            ],
-            "VorgangstypId": [
-                "immobilienkaufvertrag", "unterschriftsbeglaubigung",
-                "online-gmbh-gruendung", "handelsregisteranmeldung",
-            ],
-            "Akten.Status": [
-                "Entwurf", "InPrüfung", "Beurkundung", "Vollzug",
-                "Abgeschlossen", "Pausiert",
-            ],
-            "NotarTeam": ["NaC-Notar-01", "NaC-Notar-02"],
-            "Vertraulichkeitsstufe": ["Normal", "Sensibel", "Hoch"],
-            "AufgabenFristen.Status": [
-                "Offen", "InArbeit", "Blockiert", "Erledigt",
-            ],
-        },
-        "date_time_fields_exact": ["DueDate"],
-        "boolean_fields_exact": ["RequiresNotaryApproval"],
-        "boolean_as_text_or_integer_allowed": False,
-        "date_time_format_exact": "ISO-8601 timezone-aware",
-    }:
+    provisioned_field_schema = _load_provisioned_field_schema()
+    if not provisioned_field_schema:
+        errors.append("provisioned SharePoint field schema is invalid")
+    elif field_schema != provisioned_field_schema:
         errors.append("domain contract SharePoint field schema mismatch")
 
     authorization = contract.get("authorization", {})
@@ -953,6 +938,103 @@ def validate_implementation() -> list[str]:
             if marker in text:
                 errors.append(f"{relative} contains forbidden live marker {marker}")
     return errors
+
+
+def _load_provisioned_field_schema() -> dict[str, Any]:
+    mvp = _load(MVP_SCHEMA_PATH)
+    foundation = _load(FOUNDATION_SCHEMA_PATH)
+    if (
+        mvp.get("schema_version")
+        != "nac.teams-sharepoint-graph-data-plane/v0.1"
+        or foundation.get("schema_version")
+        != "nac.business-case-type-live-foundation/v0.1"
+    ):
+        return {}
+    try:
+        lists = {
+            item["display_name"]: item
+            for item in mvp["sharepoint"]["lists"]
+        }
+        columns_by_list = {
+            list_name: {
+                column["name"]: dict(column)
+                for column in lists[list_name]["columns"]
+            }
+            for list_name in ("Akten", "AufgabenFristen")
+        }
+        legacy = foundation["schema"]["legacy_akten_column"]
+        additive = foundation["schema"]["akten_additive_column"]
+        additive_facets = {
+            name for name in ("text", "choice", "boolean") if name in additive
+        }
+        mvp_legacy = columns_by_list["Akten"].get("Vorgangstyp", {})
+        if (
+            legacy.get("name") != "Vorgangstyp"
+            or legacy.get("type") != "choice"
+            or legacy.get("choices") != mvp_legacy.get("choices")
+            or additive_facets != {"text"}
+            or additive["name"] in columns_by_list["Akten"]
+        ):
+            return {}
+        columns_by_list["Akten"][additive["name"]] = {
+            "name": additive["name"],
+            "type": "text",
+            "text": additive["text"],
+        }
+    except (KeyError, TypeError):
+        return {}
+
+    mutation_fields: dict[str, set[str]] = {
+        "Akten": set(),
+        "AufgabenFristen": set(),
+    }
+    for operation in EXPECTED_OPERATION_SHAPES.values():
+        fields = mutation_fields[operation["list_name"]]
+        for key in (
+            "fields_required_exact",
+            "fields_optional_exact",
+            "fields_allowed_exact",
+        ):
+            fields.update(operation.get(key, []))
+
+    text_fields: dict[str, dict[str, int]] = {}
+    choice_fields: dict[str, dict[str, list[str]]] = {}
+    date_time_fields: dict[str, list[str]] = {}
+    boolean_fields: dict[str, list[str]] = {}
+    try:
+        for list_name, field_names in mutation_fields.items():
+            for field_name in sorted(field_names):
+                column = columns_by_list[list_name][field_name]
+                column_type = column["type"]
+                if column_type == "text":
+                    text = column.get("text", {})
+                    max_length = text.get("maxLength", 255)
+                    if type(max_length) is not int or not 1 <= max_length <= 255:
+                        return {}
+                    text_fields.setdefault(list_name, {})[field_name] = max_length
+                elif column_type == "choice":
+                    choices = column.get("choices")
+                    if not isinstance(choices, list) or not choices:
+                        return {}
+                    choice_fields.setdefault(list_name, {})[field_name] = choices
+                elif column_type == "dateTime":
+                    date_time_fields.setdefault(list_name, []).append(field_name)
+                elif column_type == "boolean":
+                    boolean_fields.setdefault(list_name, []).append(field_name)
+                else:
+                    return {}
+    except (KeyError, TypeError):
+        return {}
+
+    return {
+        "source_paths_exact": [str(MVP_SCHEMA_PATH), str(FOUNDATION_SCHEMA_PATH)],
+        "text_fields_by_list_exact": text_fields,
+        "choice_fields_by_list_exact": choice_fields,
+        "date_time_fields_by_list_exact": date_time_fields,
+        "boolean_fields_by_list_exact": boolean_fields,
+        "boolean_as_text_or_integer_allowed": False,
+        "date_time_format_exact": "ISO-8601 timezone-aware",
+    }
 
 
 def _load(path: Path) -> dict[str, Any]:

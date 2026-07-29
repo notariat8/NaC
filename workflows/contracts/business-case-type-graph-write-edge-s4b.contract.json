@@ -418,59 +418,66 @@
     "tenant_writes_allowed": 0
   },
   "field_schema": {
-    "source_exact": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
-    "text_fields_exact": [
-      "NacCaseId",
-      "Aktenzeichen",
-      "NacWorkflowVersion",
-      "KgVersion",
-      "NacTaskId",
-      "BpmnStepCode",
-      "BlockedReason"
+    "source_paths_exact": [
+      "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+      "deploy/m365/teams-sharepoint/nac-business-case-type-foundation.notary-team-01.json"
     ],
-    "choice_fields_exact": {
-      "Vorgangstyp": [
-        "immobilienkaufvertrag",
-        "unterschriftsbeglaubigung",
-        "online-gmbh-gruendung",
-        "handelsregisteranmeldung"
-      ],
-      "VorgangstypId": [
-        "immobilienkaufvertrag",
-        "unterschriftsbeglaubigung",
-        "online-gmbh-gruendung",
-        "handelsregisteranmeldung"
-      ],
-      "Akten.Status": [
-        "Entwurf",
-        "InPrüfung",
-        "Beurkundung",
-        "Vollzug",
-        "Abgeschlossen",
-        "Pausiert"
-      ],
-      "NotarTeam": [
-        "NaC-Notar-01",
-        "NaC-Notar-02"
-      ],
-      "Vertraulichkeitsstufe": [
-        "Normal",
-        "Sensibel",
-        "Hoch"
-      ],
-      "AufgabenFristen.Status": [
-        "Offen",
-        "InArbeit",
-        "Blockiert",
-        "Erledigt"
-      ]
+    "text_fields_by_list_exact": {
+      "Akten": {
+        "NacCaseId": 255,
+        "Aktenzeichen": 255,
+        "VorgangstypId": 128,
+        "NacWorkflowVersion": 255,
+        "KgVersion": 255
+      },
+      "AufgabenFristen": {
+        "NacTaskId": 255,
+        "NacCaseId": 255,
+        "BpmnStepCode": 255,
+        "BlockedReason": 255
+      }
     },
-    "date_time_fields_exact": [
-      "DueDate"
-    ],
-    "boolean_fields_exact": [
-      "RequiresNotaryApproval"
-    ],
+    "choice_fields_by_list_exact": {
+      "Akten": {
+        "Vorgangstyp": [
+          "immobilienkaufvertrag",
+          "unterschriftsbeglaubigung",
+          "online-gmbh-gruendung",
+          "handelsregisteranmeldung"
+        ],
+        "Status": [
+          "Entwurf",
+          "InPrüfung",
+          "Beurkundung",
+          "Vollzug",
+          "Abgeschlossen",
+          "Pausiert"
+        ],
+        "NotarTeam": [
+          "NaC-Notar-01",
+          "NaC-Notar-02"
+        ],
+        "Vertraulichkeitsstufe": [
+          "Normal",
+          "Sensibel",
+          "Hoch"
+        ]
+      },
+      "AufgabenFristen": {
+        "Status": [
+          "Offen",
+          "InArbeit",
+          "Blockiert",
+          "Erledigt"
+        ]
+      }
+    },
+    "date_time_fields_by_list_exact": {
+      "AufgabenFristen": ["DueDate"]
+    },
+    "boolean_fields_by_list_exact": {
+      "AufgabenFristen": ["RequiresNotaryApproval"]
+    },
     "boolean_as_text_or_integer_allowed": false,
     "date_time_format_exact": "ISO-8601 timezone-aware"
   }
