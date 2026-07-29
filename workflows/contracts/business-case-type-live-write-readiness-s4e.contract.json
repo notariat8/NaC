@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "nac.business-case-type-live-write-readiness-s4e/v0.1",
+  "title": "BusinessCaseType production adapter readiness S4e",
+  "issue": "https://github.com/notariat8/NaC/issues/702",
+  "status": "BLOCKED",
+  "acceptanceIdsExact": [
+    "AC-S4E-01",
+    "AC-S4E-02",
+    "AC-S4E-03",
+    "AC-S4E-04",
+    "AC-S4E-05",
+    "AC-S4E-06",
+    "AC-S4E-07"
+  ],
+  "extendsContractExact": "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+  "identityBoundary": {
+    "workspaceIdExact": "notary_team_01",
+    "provisioningAppExecutesBusinessWrites": false,
+    "threePrincipalsPairwiseDistinct": true,
+    "writeIdentityPermissionExact": [
+      "Sites.Selected"
+    ],
+    "writeSiteRoleExact": [
+      "write"
+    ],
+    "bffPermissionExact": [
+      "Sites.Selected"
+    ],
+    "bffSiteRoleExact": [
+      "read"
+    ],
+    "businessWriteExecutorExact": "dedicated_write_principal"
+  },
+  "requiredProductionAdaptersExact": [
+    "owner_verifier",
+    "write_token_provider",
+    "redirect_free_graph_http",
+    "azure_blob_worm_transport",
+    "durable_outbox",
+    "broker",
+    "signature_anchor",
+    "reconciliation_store"
+  ],
+  "wormBoundary": {
+    "policyBindingRequired": true,
+    "policyLockedRequired": true,
+    "productionWormClaimCurrent": false
+  },
+  "offlineCompletion": {
+    "currentStatusExact": "BLOCKED",
+    "completeSyntheticShapeStatusExact": "S4E_READY_OFFLINE",
+    "liveWriteAuthorized": false,
+    "liveRunnerIncluded": false,
+    "productionAdaptersImplemented": false,
+    "socketOrDnsCallsExact": 0,
+    "externalCredentialStoreReadsExact": 0,
+    "graphCallsExact": 0,
+    "azureCallsExact": 0,
+    "tenantWritesExact": 0,
+    "assessmentSourceExact": "contract_pinned_repository_snapshot",
+    "liveStateInspected": false
+  },
+  "outOfScopeExact": [
+    "credential_or_certificate_change",
+    "entra_permission_or_site_grant_change",
+    "infrastructure_deployment_or_deletion",
+    "live_graph_or_azure_call",
+    "tenant_write",
+    "workspace_other_than_notary_team_01"
+  ],
+  "requiredBindingsExact": [
+    "toolchain_binding_sha256",
+    "provisioner_bootstrap_binding_sha256",
+    "public_certificate_sha256",
+    "worm_target_binding_sha256",
+    "worm_cmk_binding_sha256",
+    "worm_encryption_scope_binding_sha256",
+    "worm_policy_sha256"
+  ]
+}
