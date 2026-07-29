@@ -186,16 +186,24 @@
     "dedupe_projection_equals_create_field_allowlist": true,
     "one_match_requires_exact_create_payload": true,
     "zero_matches_behavior": "continue_to_intent_and_single_post",
-    "one_match_behavior": "deduplicated_without_post",
+    "one_match_behavior": "fresh_item_readback_then_deduplicated_without_post",
     "http_409_exact_readback_behavior": "deduplicated_without_post_retry",
     "multiple_matches_behavior": "sticky_reconciliation_without_post",
     "one_match_payload_drift_behavior": "sticky_reconciliation_without_post",
     "unique_sharepoint_columns_required": true,
-    "dedupe_top_exact": 2,
     "maximum_followed_pages": 0,
     "odata_next_link_behavior": "sticky_reconciliation_without_post",
     "dedupe_response_shape_and_actual_fields_required": true,
-    "dedupe_transport_failure_behavior": "structured_redacted_block_before_post"
+    "dedupe_transport_failure_behavior": "structured_redacted_block_before_post",
+    "dedupe_query_options_exact": [
+      "expand",
+      "$filter"
+    ],
+    "dedupe_top_level_select_allowed": false,
+    "dedupe_top_allowed": false,
+    "dedupe_maximum_rows_accepted": 2,
+    "dedupe_match_requires_fresh_item_readback_after_intent": true,
+    "dedupe_fresh_readback_binds_item_id_etag_and_fields": true
   },
   "concurrency": {
     "patch_fresh_item_get_required": true,
@@ -268,7 +276,8 @@
       "closed_generation"
     ],
     "safe_start_intent_states_exact": [
-      "absent"
+      "absent",
+      "retryable"
     ],
     "closed_intent_is_terminal": true,
     "closed_intent_replay_behavior": "block_before_transport",
@@ -280,7 +289,15 @@
     "closure_proof_exact": "closed_generation_equals_intent_generation",
     "failed_reconciliation_ack_keeps_intent_open": true,
     "fresh_hook_shared_store_restart_must_block_open_intent": true,
-    "reconciliation_clear_alone_sufficient": false
+    "reconciliation_clear_alone_sufficient": false,
+    "execution_key_components_exact": [
+      "target_binding_hash",
+      "mutation_id"
+    ],
+    "persistent_state_key_exact": "execution_key",
+    "legacy_mutation_id_state_lookup_allowed": false,
+    "retryable_intent_is_terminal": false,
+    "retryable_intent_requires_new_authorized_run": true
   },
   "offline_boundary": {
     "transport_is_injected_protocol_only": true,
@@ -295,7 +312,7 @@
   "acceptance_criteria": [
     {
       "id": "AC-S4B-01",
-      "requirement": "Every operation and every execution canonically bind and revalidate the exact Graph REST v1.0 method, target, field set, authorization, approval, dedupe/freshness request and workspace, site and both list identities; inactive-list drift also blocks."
+      "requirement": "Every operation and execution canonically bind and revalidate the exact Graph REST v1.0 method, target, field schema, authorization, approval, dedupe/freshness request and workspace, site and both list identities; persistent state is keyed by target binding plus mutation ID."
     },
     {
       "id": "AC-S4B-02",
@@ -303,7 +320,7 @@
     },
     {
       "id": "AC-S4B-03",
-      "requirement": "Case and task creates use a bounded one-page dedupe query and treat nextLink as ambiguity; PATCH requires the fresh exact ETag and never retries HTTP 412."
+      "requirement": "Case and task creates use only documented expand and $filter query options, require a fresh item-ID/ETag/field readback for a dedupe hit, and PATCH requires the fresh exact ETag without retrying HTTP 412."
     },
     {
       "id": "AC-S4B-04",
@@ -311,7 +328,7 @@
     },
     {
       "id": "AC-S4B-05",
-      "requirement": "Durably read-back intent generations precede writes; failed reconciliation acknowledgement leaves the intent open, while an atomically persisted closure is terminal for that mutation ID even when its downstream confirmation fails, so every fresh hook blocks replay before transport."
+      "requirement": "Durable execution-key-bound intents precede writes; transient 401/403/408/429 outcomes become retryable only after verified-not-applied readback, while uncertain outcomes remain sticky and terminal closures block replay."
     },
     {
       "id": "AC-S4B-06",
@@ -370,7 +387,17 @@
     ],
     "exception_type_message_url_body_or_headers_exposed": false,
     "structured_result_required": true,
-    "write_attempts_on_preflight_error": 0
+    "write_attempts_on_preflight_error": 0,
+    "retryable_http_statuses_exact": [
+      401,
+      403,
+      408,
+      429
+    ],
+    "automatic_retry_within_execution_allowed": false,
+    "later_authorized_retry_after_verified_not_applied": true,
+    "authentication_refresh_required_for_401_403": true,
+    "uncertain_retryable_readback_behavior": "sticky_reconciliation"
   },
   "offline_cli": {
     "command_exact": "nac m365 teams-sharepoint business-case-type-write-dry-run",
@@ -389,5 +416,62 @@
     "credentials_allowed": false,
     "live_graph_calls_allowed": 0,
     "tenant_writes_allowed": 0
+  },
+  "field_schema": {
+    "source_exact": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+    "text_fields_exact": [
+      "NacCaseId",
+      "Aktenzeichen",
+      "NacWorkflowVersion",
+      "KgVersion",
+      "NacTaskId",
+      "BpmnStepCode",
+      "BlockedReason"
+    ],
+    "choice_fields_exact": {
+      "Vorgangstyp": [
+        "immobilienkaufvertrag",
+        "unterschriftsbeglaubigung",
+        "online-gmbh-gruendung",
+        "handelsregisteranmeldung"
+      ],
+      "VorgangstypId": [
+        "immobilienkaufvertrag",
+        "unterschriftsbeglaubigung",
+        "online-gmbh-gruendung",
+        "handelsregisteranmeldung"
+      ],
+      "Akten.Status": [
+        "Entwurf",
+        "InPrüfung",
+        "Beurkundung",
+        "Vollzug",
+        "Abgeschlossen",
+        "Pausiert"
+      ],
+      "NotarTeam": [
+        "NaC-Notar-01",
+        "NaC-Notar-02"
+      ],
+      "Vertraulichkeitsstufe": [
+        "Normal",
+        "Sensibel",
+        "Hoch"
+      ],
+      "AufgabenFristen.Status": [
+        "Offen",
+        "InArbeit",
+        "Blockiert",
+        "Erledigt"
+      ]
+    },
+    "date_time_fields_exact": [
+      "DueDate"
+    ],
+    "boolean_fields_exact": [
+      "RequiresNotaryApproval"
+    ],
+    "boolean_as_text_or_integer_allowed": false,
+    "date_time_format_exact": "ISO-8601 timezone-aware"
   }
 }

@@ -245,7 +245,10 @@
             "scripts/validate_business_case_type_graph_write_edge.py",
             "tests/test_business_case_type_graph_write_edge.py",
             "tests/test_business_case_type_graph_write_edge_cli.py",
-            "tests/test_business_case_type_graph_write_edge_contract.py"
+            "tests/test_business_case_type_graph_write_edge_contract.py",
+            "tests/test_business_case_type_graph_write_edge_graph_contract.py",
+            "tests/test_business_case_type_graph_write_edge_reconciliation.py",
+            "tests/test_business_case_type_graph_write_edge_schema.py"
           ]
         },
         {

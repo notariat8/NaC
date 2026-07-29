@@ -21,18 +21,25 @@ Das Review verlangte zusätzlich den GET auf die bereits als eindeutig
 definierten SharePoint-Felder `NacCaseId` und `NacTaskId`; Mehrdeutigkeit wird
 sticky reconciled. Außerdem schließt ein erfolgreicher Readback nach unklarem
 Write die Reconciliation nicht automatisch. Diese Korrekturen sind im
-Contract und in Negativtests gebunden. Der Safety-Fixpass ergänzt die vollständige kanonische Execute-Revalidierung, `$top=2` mit `nextLink` als Ambiguität, strikte tatsächliche Readbacks, dauerhaft bestätigte prozessweite Reconciliation und feste redigierte
+Contract und in Negativtests gebunden. Der Safety-Fixpass ergänzt die vollständige kanonische Execute-Revalidierung,
+einen dokumentierten Graph-Dedupe-Query mit lokalem Zwei-Treffer-Limit und
+`nextLink` als Ambiguität, strikte frische Item-Readbacks, dauerhaft bestätigte prozessweite Reconciliation und feste redigierte
 Transportfehler. Der erneute Fixpass ersetzt `clear` als alleinige Freigabe
 durch persistente Intent-Generationen samt Closure-Proof und bindet
 PATCH-5xx-Readbacks ausschließlich an `plan.mutation.item_id`. Der finale Safety-Fixpass macht persistiertes `closed` auch bei fehlgeschlagener
 nachgelagerter Closure-Bestätigung terminal und bindet jeden Target-Hash
 unabhängig von der aktiven Operation an Workspace, Site und beide Listen-IDs.
+Das unabhängige Integrationsreview ergänzt zielgebundene Execution-Keys,
+verifiziertes `retryable` für 401/403/408/429 ohne In-Run-Retry,
+SharePoint-Schema-Validierung und den frischen konkreten Item-Readback vor
+`DEDUPLICATED`.
 
 ## Arbeitspakete
 
 - [x] **WP1 – Tests first:** synthetische Fixtures und rote Tests für fünf
   Operationen, Binding-Drift, Legacy-Gate, S5-Hash, Dedupe, ETag, 412 und
-  Reconciliation, Paging, 409/412, Plan-Manipulation, Restart-Fail-closed und
+  Reconciliation, Paging, 401/403/408/409/412/429, Plan-Manipulation,
+  zielgebundene Persistenz, Schema-Drift, Restart-Fail-closed und
   Fehlerredaktion, frische Hook-Instanz über gemeinsamem Store, physisch
   geschlossenes Intent mit verlorener Bestätigung, inaktive Listen-Drift in
   beide Richtungen und fremde PATCH-5xx-Response-ID.
@@ -51,8 +58,10 @@ unabhängig von der aktiven Operation an Workspace, Site und beide Listen-IDs.
 - [x] **WP6 – Review/Fix:** vollständige Scope-Diff, fokussierte Tests,
   Validator, `compileall`, Traceability, Sprachparität und Linkprüfung; alle
   Safety-Findings behoben.
-- [ ] **WP7 – Integration:** Hauptagent ergänzt gemeinsame
+- [x] **WP7 – Integration:** Hauptagent ergänzt gemeinsame
   Index-/Quality-Gate-/CLI-Flächen und führt Protected-PR-Gates aus.
+- [ ] **WP8 – Re-Review/Delivery:** vollständige Gates, unabhängiger
+  Safety-Re-Review, Protected-PR-CI, Merge und Branch-/Worktree-Cleanup.
 
 ## Nicht Enthalten
 

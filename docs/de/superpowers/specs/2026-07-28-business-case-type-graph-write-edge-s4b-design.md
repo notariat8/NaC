@@ -23,9 +23,9 @@ acceptance_ids:
   - AC-S4B-06
   - AC-S4B-07
 validation_commands:
-  - python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract
+  - python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli tests.test_business_case_type_graph_write_edge_graph_contract tests.test_business_case_type_graph_write_edge_reconciliation tests.test_business_case_type_graph_write_edge_schema
   - python3 scripts/validate_business_case_type_graph_write_edge.py
-  - python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py
+  - python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py tests/test_business_case_type_graph_write_edge_graph_contract.py tests/test_business_case_type_graph_write_edge_reconciliation.py tests/test_business_case_type_graph_write_edge_schema.py
   - python3 scripts/nac.py contracts verify
   - python3 scripts/validate_spec_traceability.py
   - python3 scripts/validate_language_parity.py
@@ -56,6 +56,12 @@ In-Memory-Fakes.
 | `task_update` | `PATCH` | `AufgabenFristen` | nichtleere Teilmenge aus `Status`, `DueDate`, `RequiresNotaryApproval`, `BlockedReason` |
 | `business_case_type_backfill` | `PATCH` | `Akten` | ausschließlich `VorgangstypId` |
 
+Alle Feldwerte werden vor der Planung gegen das produktive SharePoint-Schema
+validiert. Choice-Werte müssen in der jeweiligen geschlossenen Auswahl liegen,
+`RequiresNotaryApproval` ist das einzige Boolean-Feld und `DueDate` muss ein
+zeitzonenbehafteter ISO-Zeitpunkt sein. Insbesondere darf `bool` nicht als
+Integer- oder Textwert andere Feldtypen passieren.
+
 Alle Ziele liegen exakt unter
 `https://graph.microsoft.com/v1.0/sites/{site-id}/lists/{list-id}/items`.
 Beta, Graph SDK, SharePoint REST und PnP sind nicht zulässig.
@@ -83,16 +89,17 @@ erteilt keine Permission und erzeugt keine Credentials.
 ## Idempotenz Und Concurrency
 
 `case_create` prüft vor dem Intent per GET den eindeutigen `NacCaseId`;
-`task_create` entsprechend `NacTaskId`. Der Dedupe-GET projiziert die
-vollständige Create-Allowlist und fordert mit `$top=2` höchstens die zur
-Ambiguitätserkennung nötigen Treffer an. Es wird keine Folgeseite geladen;
-jedes `@odata.nextLink` ist selbst eine Ambiguität und erzwingt Reconciliation
-ohne POST. Kein Treffer erlaubt genau einen POST-Versuch.
-Nur ein Treffer mit exakt identischem Create-Payload liefert `DEDUPLICATED`
-ohne POST. Mehrere Treffer oder Payload-Drift erzeugen sticky Reconciliation
-ohne POST. Liefert ein konkurrierender POST HTTP 409, entscheidet ein exakter
-Dedupe-Readback ohne POST-Retry zwischen `DEDUPLICATED`, Ablehnung und
-Reconciliation.
+`task_create` entsprechend `NacTaskId`. Der Dedupe-GET verwendet ausschließlich
+die dokumentierten Query-Optionen `expand` und `$filter`; top-level
+`$select` und `$top` werden nicht gesendet. Der lokale Parser akzeptiert
+höchstens zwei Treffer. Jedes `@odata.nextLink` ist eine Ambiguität und
+erzwingt Reconciliation ohne POST. Kein Treffer erlaubt genau einen
+POST-Versuch. Ein exakter Treffer löst nach dauerhaft eröffnetem Intent einen
+frischen GET des konkreten Items aus. Erst dessen gebundene Item-ID, nichtleerer
+ETag und exakte Felder liefern `DEDUPLICATED` ohne POST. Mehrere Treffer,
+Payload-Drift oder fehlerhafter frischer Readback erzeugen sticky
+Reconciliation. Bei HTTP 409 entscheidet derselbe Dedupe- und konkrete
+Item-Readback ohne POST-Retry.
 
 Vor jedem PATCH wird das Zielitem frisch und nur mit den Mutationsfeldern
 gelesen. Nur wenn dessen exakter ETag
@@ -121,12 +128,13 @@ SHA-256 der vollständigen S5-Operation mit `record_ref_hash`, `field`,
 ## Evidence Und Reconciliation
 
 Der Evidence-Hook und sein autoritativer, prozessübergreifend persistenter
-State-Store werden injiziert. Der Store führt für jede Mutation
-`reconciliation_state`, `intent_state`, `intent_generation` und
-`closed_generation`. Vor dem Write muss der Edge die atomar eröffnete nächste
-Intent-Generation dauerhaft als `open` zurücklesen. Ein Start ist nur bei
-`clear + absent` zulässig. `closed` ist für diese Mutation-ID terminal und darf
-nie wieder geöffnet oder erneut ausgeführt werden.
+State-Store werden injiziert. Der Store führt für jeden Execution-Key aus
+`target_binding_hash` und `mutation_id` `reconciliation_state`,
+`intent_state`, `intent_generation` und `closed_generation`. Ein Lookup nur
+über die Mutation-ID ist verboten. Vor dem Write muss der Edge die atomar
+eröffnete nächste Intent-Generation dauerhaft als `open` zurücklesen. Ein
+Start ist nur bei `clear + absent` oder zuvor verifiziertem `retryable`
+zulässig. `closed` ist für diesen Execution-Key terminal.
 
 Im normalen Pfad gilt exakt `intent -> write -> outcome -> readback`. Nur ein
 atomar bestätigter verifizierter Readback darf dieselbe Intent-Generation mit
@@ -155,20 +163,29 @@ nicht exponiert. Evidence enthält nur Operationsname, Mutation-/Target-Hashes, 
 Result-Codes und optional den S5-Operationshash, keine rohen Site-, Listen-,
 Item- oder Feldwerte.
 
+HTTP 401, 403, 408 und 429 werden im selben Lauf nicht automatisch wiederholt.
+Nur wenn ein strikter Readback beweist, dass der Write nicht angewendet wurde,
+wird die Generation als `retryable` geschlossen. Ein späterer, separat
+autorisierter Lauf darf nach erneuerter Authentisierung für 401/403 neu starten.
+Unklare Ergebnisse bleiben sticky offen; HTTP 412 bleibt terminal ohne Retry.
+
 ## Akzeptanzkriterien
 
 - **AC-S4B-01:** Exakte Graph-v1.0-Methode, Ziel-, Feld-, Authorization-,
   Approval-, Request-, Workspace-, Site- und beide Listenbindungen werden vor
-  jedem Execute kanonisch revalidiert; auch Drift der inaktiven Liste blockiert.
+  jedem Execute kanonisch revalidiert; Feldtypen und Choices entsprechen dem
+  produktiven SharePoint-Schema und auch Drift der inaktiven Liste blockiert.
 - **AC-S4B-02:** Drift bei Rolle, Zweck, Approval, Site, Liste oder
   Write-Grant blockiert vor Transport.
-- **AC-S4B-03:** Bounded Dedupe mit `nextLink` als Ambiguität, frischer exakter
+- **AC-S4B-03:** Dokumentierter Dedupe-Query, lokales Zwei-Treffer-Limit,
+  `nextLink` als Ambiguität, frischer konkreter Item-Readback, frischer exakter
   PATCH-ETag, strikter Readback und kein Retry auf HTTP 412.
 - **AC-S4B-04:** Backfill schreibt nur `VorgangstypId` und bindet die
   kanonische S5-Einzeloperation.
-- **AC-S4B-05:** Persistente Intent-Generationen und Closure-Proofs bleiben
-  über frische Hook-Instanzen fail-closed: `clear + open` und terminales `closed`
-  blockieren Replay, auch nach fehlender nachgelagerter Closure-Bestätigung.
+- **AC-S4B-05:** Zielgebundene Execution-Keys, persistente Intent-Generationen
+  und Closure-Proofs bleiben über frische Hook-Instanzen fail-closed:
+  `clear + open` und terminales `closed` blockieren Replay; verifiziertes
+  `retryable` erlaubt nur einen später separat autorisierten Lauf.
 - **AC-S4B-06:** Null Live-Calls, Credentials, Factories und Tenant-Writes;
   BFF-UAMI bleibt `Sites.Selected/read`.
 - **AC-S4B-07:** Contract, Validator, Fake-Graph-Tests, DE/EN-Traceability und

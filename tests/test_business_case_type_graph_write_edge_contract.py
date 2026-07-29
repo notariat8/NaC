@@ -104,13 +104,38 @@ class BusinessCaseTypeGraphWriteEdgeContractTests(unittest.TestCase):
         self.assertTrue(validate_verification_contract(payload))
 
         payload = copy.deepcopy(self.verification)
-        payload["checks"].remove(
-            "python3 -m unittest "
-            "tests.test_business_case_type_graph_write_edge "
-            "tests.test_business_case_type_graph_write_edge_contract "
-            "tests.test_business_case_type_graph_write_edge_cli"
+        focused_check = next(
+            check
+            for check in payload["checks"]
+            if check.startswith(
+                "python3 -m unittest tests.test_business_case_type_graph_write_edge "
+            )
         )
+        payload["checks"].remove(focused_check)
         self.assertTrue(validate_verification_contract(payload))
+
+    def test_review_safety_contract_drift_is_rejected(self) -> None:
+        payload = copy.deepcopy(self.domain)
+        payload["evidence"]["persistent_state_key_exact"] = "mutation_id"
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["create_idempotency"][
+            "dedupe_match_requires_fresh_item_readback_after_intent"
+        ] = False
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["error_handling"]["retryable_http_statuses_exact"].remove(429)
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["field_schema"]["boolean_as_text_or_integer_allowed"] = True
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["create_idempotency"]["dedupe_top_allowed"] = True
+        self.assertTrue(validate_domain_contract(payload))
 
     def test_write_identity_cannot_drift_to_bff_read_identity(self) -> None:
         payload = copy.deepcopy(self.domain)

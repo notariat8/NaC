@@ -51,9 +51,9 @@
     ]
   },
   "checks": [
-    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli",
+    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli tests.test_business_case_type_graph_write_edge_graph_contract tests.test_business_case_type_graph_write_edge_reconciliation tests.test_business_case_type_graph_write_edge_schema",
     "python3 scripts/validate_business_case_type_graph_write_edge.py",
-    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py",
+    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py tests/test_business_case_type_graph_write_edge_graph_contract.py tests/test_business_case_type_graph_write_edge_reconciliation.py tests/test_business_case_type_graph_write_edge_schema.py",
     "python3 scripts/nac.py contracts verify",
     "python3 scripts/validate_spec_traceability.py",
     "python3 scripts/validate_language_parity.py",
@@ -61,11 +61,11 @@
     "git diff --check"
   ],
   "invariants": [
-    "AC-S4B-01: Five operations and every execution canonically revalidate exact Graph REST v1.0 methods, targets, field allowlists, authorization, approval, S5 and request bindings, including workspace, site and both lists for every operation.",
+    "AC-S4B-01: Five operations bind exact Graph REST v1.0 methods, targets, SharePoint field schema, authorization, approval and target-scoped execution keys across workspace, site and both lists.",
     "AC-S4B-02: Role, purpose, approval, target and separate write-identity drift blocks before transport.",
-    "AC-S4B-03: Creates use one bounded dedupe page, treat nextLink as ambiguity, resolve HTTP 409 by strict readback, and PATCH uses one freshly read exact ETag without retrying HTTP 412.",
+    "AC-S4B-03: Creates use documented expand and $filter only, require a fresh stable item readback after a dedupe hit, and PATCH uses one freshly read exact ETag without retrying HTTP 412.",
     "AC-S4B-04: Backfill writes only VorgangstypId and verifies the canonical S5 operation and idempotency hashes.",
-    "AC-S4B-05: Persistent intent generations are read back before write; failed marker acknowledgement remains open, and a physically closed generation is terminal across fresh hooks even when downstream closure confirmation fails.",
+    "AC-S4B-05: Persistent target-scoped intent generations precede writes; verified transient rejection may become retryable while uncertain outcomes remain sticky and terminal closures block replay.",
     "AC-S4B-06: No live factory, credentials, network or tenant writes exist and BFF UAMI remains Sites.Selected/read.",
     "AC-S4B-07: Contract, validator, all safety paths, compileall, DE/EN traceability and review evidence agree."
   ],
@@ -80,8 +80,9 @@
     "allowed_tenant_writes": 0,
     "allowed_credential_reads": 0,
     "allowed_live_factories": 0,
-    "dedupe_top_exact": 2,
-    "maximum_dedupe_pages_followed": 0
+    "maximum_dedupe_pages_followed": 0,
+    "dedupe_maximum_rows_accepted": 2,
+    "retryable_http_statuses": 4
   },
   "required_evidence": [
     "Canonical S4b domain and verification contracts",
@@ -95,7 +96,12 @@
     "Canonical S5 backfill operation-hash fixture",
     "Standalone validator, focused unit tests and compileall",
     "DE/EN spec and implementation plan with AC-S4B-01..07",
-    "Redacted offline CLI dry-run evidence for all five operations with zero live calls, credential reads and tenant writes"
+    "Redacted offline CLI dry-run evidence for all five operations with zero live calls, credential reads and tenant writes",
+    "Target-scoped execution-key isolation across identical mutations in two workspaces",
+    "Fresh stable item-ID, ETag and field readback after create dedupe hits",
+    "Explicit 401, 403, 408 and 429 retryable-state traces with no automatic retry",
+    "Provisioned SharePoint choice, dateTime, boolean and text field-shape rejection traces",
+    "Documented Graph v1.0 expand plus $filter query contract without top-level $select or $top"
   ],
   "evidence_policy": {
     "synthetic_only": true,
@@ -108,7 +114,7 @@
   "exit_conditions": [
     "All seven acceptance criteria are covered by executable checks.",
     "All five operations match and revalidate their exact method, target, fields, authorization, approval and request contract.",
-    "Plan manipulation, cross-list target drift, paging, HTTP 409/412/5xx, strict readback, shared-store restart, terminal persistent closure and error-redaction paths pass.",
+    "Plan manipulation, cross-workspace execution-key isolation, documented dedupe query, fresh dedupe readback, field schema, HTTP 401/403/408/409/412/429/5xx, strict readback and persistent retry/reconciliation paths pass.",
     "No live factory, credential path, HTTP client or tenant write is introduced.",
     "Protected PR review and required checks are green."
   ],
@@ -137,6 +143,11 @@
     "failed_reconciliation_ack": "keep_durable_intent_open_across_hook_restart",
     "patch_5xx_foreign_response_item_id": "ignore_and_read_exact_mutation_item",
     "inactive_list_binding_drift": "block_before_transport",
-    "post_close_confirmation_unavailable": "closed_intent_blocks_fresh_process_replay"
+    "post_close_confirmation_unavailable": "closed_intent_blocks_fresh_process_replay",
+    "cross_workspace_execution_key_collision": "impossible_by_target_binding_hash_plus_mutation_id",
+    "dedupe_hit_without_fresh_stable_readback": "sticky_reconciliation_without_post",
+    "retryable_401_403_408_429": "no_automatic_retry_and_later_authorized_retry_only_after_verified_not_applied",
+    "invalid_sharepoint_field_value": "block_before_transport",
+    "unsupported_dedupe_query_option": "block_contract_completion"
   }
 }

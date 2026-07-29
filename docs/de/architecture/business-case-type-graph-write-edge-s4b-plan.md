@@ -31,7 +31,7 @@ Site-, Listen-, Identitäts- und fachliche Feldwerte werden nicht ausgegeben. De
 
 ## Identitäts- Und Sicherheitsgrenze
 
-Ein späterer produktiver Write-Pfad benötigt eine von der BFF-UAMI getrennte Identität. Der [S4b-Domain-Contract](../../../workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json) begrenzt sie auf `Sites.Selected` mit Site-Grant `write`; die BFF-UAMI bleibt auf `Sites.Selected` mit Site-Grant `read`. Create-Operationen sind über eindeutige Schlüssel dedupliziert, Patch-Operationen verlangen frische ETags, Backfill bindet die kanonischen S5-Hashes und unklare Ergebnisse bleiben in persistenter Reconciliation gesperrt.
+Ein späterer produktiver Write-Pfad benötigt eine von der BFF-UAMI getrennte Identität. Der [S4b-Domain-Contract](../../../workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json) begrenzt sie auf `Sites.Selected` mit Site-Grant `write`; die BFF-UAMI bleibt auf `Sites.Selected` mit Site-Grant `read`. Create-Operationen nutzen einen dokumentierten Graph-Dedupe-Query und einen frischen konkreten Item-Readback, Patch-Operationen verlangen frische ETags, alle Feldwerte werden gegen das SharePoint-Schema geprüft, Backfill bindet die kanonischen S5-Hashes und unklare Ergebnisse bleiben zielgebunden in persistenter Reconciliation gesperrt. Verifiziert nicht angewendete 401/403/408/429-Ergebnisse dürfen nur in einem späteren, separat autorisierten Lauf erneut versucht werden.
 
 ## Noch Offen
 

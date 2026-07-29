@@ -31,7 +31,7 @@ Site, list, identity, and domain field values are not emitted. The dry run plans
 
 ## Identity And Safety Boundary
 
-A later production write path requires an identity separate from the BFF UAMI. The [S4b domain contract](../../../workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json) limits it to `Sites.Selected` with site grant `write`; the BFF UAMI remains at `Sites.Selected` with site grant `read`. Create operations are deduplicated through unique keys, patch operations require fresh ETags, backfill binds canonical S5 hashes, and uncertain outcomes remain blocked in persistent reconciliation.
+A later production write path requires an identity separate from the BFF UAMI. The [S4b domain contract](../../../workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json) limits it to `Sites.Selected` with site grant `write`; the BFF UAMI remains at `Sites.Selected` with site grant `read`. Create operations use a documented Graph dedupe query and a fresh concrete-item readback, patch operations require fresh ETags, all field values are checked against the SharePoint schema, backfill binds canonical S5 hashes, and uncertain outcomes remain target-bound in persistent reconciliation. Verified-not-applied 401/403/408/429 results may be attempted again only in a later, separately authorized run.
 
 ## Still Open
 

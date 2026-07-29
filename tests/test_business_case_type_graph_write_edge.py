@@ -632,20 +632,15 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
     def test_create_deduplicates_without_post_and_emits_complete_evidence(self) -> None:
         mutation = _case_create()
         plan = self.builder.build(mutation, self.authorization)
+        item = {
+            "id": "71",
+            "eTag": "synthetic-etag-71",
+            "fields": dict(mutation.fields),
+        }
         transport = _FakeTransport(
             [
-                GraphResponse(
-                    200,
-                    {
-                        "value": [
-                            {
-                                "id": "71",
-                                "eTag": "synthetic-etag-71",
-                                "fields": dict(mutation.fields),
-                            }
-                        ]
-                    },
-                )
+                GraphResponse(200, {"value": [item]}),
+                GraphResponse(200, item),
             ]
         )
         evidence = _EvidenceHook()
@@ -654,7 +649,10 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
 
         self.assertEqual(result.status, "DEDUPLICATED")
         self.assertEqual(result.write_attempts, 0)
-        self.assertEqual([request.method for request in transport.requests], ["GET"])
+        self.assertEqual(
+            [request.method for request in transport.requests], ["GET", "GET"]
+        )
+        self.assertIn("/items/71?", transport.requests[1].url)
         self.assertEqual(evidence.phases, ["intent", "outcome", "readback"])
 
     def test_create_identity_with_divergent_fields_requires_reconciliation(self) -> None:
@@ -905,10 +903,10 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
 
         self.assertEqual(first.status, "RECONCILIATION_PERSISTENCE_FAILED")
         self.assertEqual(
-            store.state(mutation.mutation_id).reconciliation_state, "clear"
+            store.state(_execution_key(plan)).reconciliation_state, "clear"
         )
         self.assertEqual(
-            store.state(mutation.mutation_id).intent_state, "open"
+            store.state(_execution_key(plan)).intent_state, "open"
         )
 
         second_transport = _FakeTransport(
@@ -961,7 +959,7 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
         ).execute(plan)
 
         self.assertEqual(first.status, "RECONCILIATION_PERSISTENCE_FAILED")
-        self.assertEqual(store.state(mutation.mutation_id).intent_state, "closed")
+        self.assertEqual(store.state(_execution_key(plan)).intent_state, "closed")
 
         fresh_builder = BusinessCaseTypeWritePlanBuilder(self.target)
         fresh_plan = fresh_builder.build(mutation, authorization)
@@ -1131,9 +1129,9 @@ class _PersistentEvidenceStore:
     def __init__(self) -> None:
         self.states: dict[str, MutationPersistenceState] = {}
 
-    def state(self, mutation_id: str) -> MutationPersistenceState:
+    def state(self, execution_key: str) -> MutationPersistenceState:
         return self.states.get(
-            mutation_id,
+            execution_key,
             MutationPersistenceState(
                 reconciliation_state="clear",
                 intent_state="absent",
@@ -1143,19 +1141,19 @@ class _PersistentEvidenceStore:
         )
 
     def open_intent(self, evidence) -> bool:
-        mutation_id = evidence["mutation_id"]
-        state = self.state(mutation_id)
+        execution_key = evidence["execution_key"]
+        state = self.state(execution_key)
         expected = evidence["expected_intent_generation"]
         generation = evidence["intent_generation"]
         if (
             state.reconciliation_state != "clear"
-            or state.intent_state != "absent"
+            or state.intent_state not in {"absent", "retryable"}
             or state.intent_generation != expected
             or state.closed_generation != expected
             or generation != expected + 1
         ):
             return False
-        self.states[mutation_id] = MutationPersistenceState(
+        self.states[execution_key] = MutationPersistenceState(
             reconciliation_state="clear",
             intent_state="open",
             intent_generation=generation,
@@ -1164,12 +1162,12 @@ class _PersistentEvidenceStore:
         return True
 
     def require_reconciliation(self, evidence) -> bool:
-        mutation_id = evidence["mutation_id"]
-        state = self.state(mutation_id)
+        execution_key = evidence["execution_key"]
+        state = self.state(execution_key)
         generation = evidence["intent_generation"]
         if state.intent_state != "open" or state.intent_generation != generation:
             return False
-        self.states[mutation_id] = MutationPersistenceState(
+        self.states[execution_key] = MutationPersistenceState(
             reconciliation_state="required",
             intent_state="open",
             intent_generation=generation,
@@ -1178,17 +1176,21 @@ class _PersistentEvidenceStore:
         return True
 
     def accept_readback(self, evidence) -> bool:
-        mutation_id = evidence["mutation_id"]
-        state = self.state(mutation_id)
+        execution_key = evidence["execution_key"]
+        state = self.state(execution_key)
         generation = evidence["intent_generation"]
         if state.intent_state != "open" or state.intent_generation != generation:
             return False
         if evidence["close_intent"]:
             if state.reconciliation_state != "clear":
                 return False
-            self.states[mutation_id] = MutationPersistenceState(
+            self.states[execution_key] = MutationPersistenceState(
                 reconciliation_state="clear",
-                intent_state="closed",
+                intent_state=(
+                    "retryable"
+                    if evidence.get("completion_state") == "retryable"
+                    else "closed"
+                ),
                 intent_generation=generation,
                 closed_generation=generation,
             )
@@ -1208,7 +1210,7 @@ class _EvidenceHook:
         self.store = store or _PersistentEvidenceStore()
         self.fail_on = fail_on or set()
 
-    def persistence_state(self, mutation_id: str) -> MutationPersistenceState:
+    def persistence_state(self, execution_key: str) -> MutationPersistenceState:
         if "persistence_state" in self.fail_on:
             return MutationPersistenceState(
                 reconciliation_state="unavailable",
@@ -1216,7 +1218,7 @@ class _EvidenceHook:
                 intent_generation=0,
                 closed_generation=0,
             )
-        return self.store.state(mutation_id)
+        return self.store.state(execution_key)
 
     def intent(self, evidence) -> bool:
         self._ensure_available("intent")
@@ -1260,8 +1262,8 @@ class _ClosureConfirmationLostHook(_EvidenceHook):
         super().__init__(store=store)
         self.failed_closed_confirmation = False
 
-    def persistence_state(self, mutation_id: str) -> MutationPersistenceState:
-        state = super().persistence_state(mutation_id)
+    def persistence_state(self, execution_key: str) -> MutationPersistenceState:
+        state = super().persistence_state(execution_key)
         if state.intent_state == "closed" and not self.failed_closed_confirmation:
             self.failed_closed_confirmation = True
             return MutationPersistenceState(
@@ -1275,6 +1277,15 @@ class _ClosureConfirmationLostHook(_EvidenceHook):
 
 def _load_json(name: str) -> dict:
     return json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
+
+
+def _execution_key(plan) -> str:
+    return canonical_hash(
+        {
+            "target_binding_hash": plan.target_binding_hash,
+            "mutation_id": plan.mutation.mutation_id,
+        }
+    )
 
 
 def _case_create() -> BusinessCaseTypeMutation:

@@ -833,21 +833,7 @@ class BusinessCaseTypeGraphWriteEdge:
             state = self._evidence.persistence_state(_execution_key(plan))
         except Exception:
             return None
-        validated = _validated_persistence_state(state)
-        if validated is not None and validated.intent_state == "absent":
-            # Compatibility for pre-S4b test hooks. Runtime persistence hooks
-            # must key state by execution_key from the evidence payload.
-            try:
-                legacy = _validated_persistence_state(
-                    self._evidence.persistence_state(
-                        plan.mutation.mutation_id
-                    )
-                )
-            except Exception:
-                legacy = None
-            if legacy is not None and legacy.intent_state != "absent":
-                return legacy
-        return validated
+        return _validated_persistence_state(state)
 
     def _persist_reconciliation(
         self,

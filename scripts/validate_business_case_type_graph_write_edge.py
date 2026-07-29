@@ -32,6 +32,7 @@ DOMAIN_KEYS = {
     "leading_issue",
     "slice",
     "operations",
+    "field_schema",
     "binding",
     "plan_integrity",
     "identity_boundary",
@@ -85,9 +86,9 @@ REQUIRED_PATHS = {
     "docs/en/architecture/business-case-type-id.md",
 }
 REQUIRED_CHECKS = {
-    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli",
+    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli tests.test_business_case_type_graph_write_edge_graph_contract tests.test_business_case_type_graph_write_edge_reconciliation tests.test_business_case_type_graph_write_edge_schema",
     "python3 scripts/validate_business_case_type_graph_write_edge.py",
-    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py",
+    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py tests/test_business_case_type_graph_write_edge_graph_contract.py tests/test_business_case_type_graph_write_edge_reconciliation.py tests/test_business_case_type_graph_write_edge_schema.py",
     "python3 scripts/nac.py contracts verify",
     "python3 scripts/validate_spec_traceability.py",
     "python3 scripts/validate_language_parity.py",
@@ -101,7 +102,8 @@ EXPECTED_THRESHOLDS = {
     "patch_operations": 3,
     "legacy_case_create_types": 4,
     "maximum_patch_attempts": 1,
-    "dedupe_top_exact": 2,
+    "dedupe_maximum_rows_accepted": 2,
+    "retryable_http_statuses": 4,
     "maximum_dedupe_pages_followed": 0,
     "allowed_live_graph_calls": 0,
     "allowed_tenant_writes": 0,
@@ -147,6 +149,33 @@ REQUIRED_RUNTIME_TEST_METHODS = {
     "test_target_hash_binds_both_lists_for_every_operation",
     "test_patch_5xx_ignores_foreign_response_id_for_readback",
     "test_successful_create_orders_intent_write_outcome_and_readback",
+}
+
+
+REQUIRED_SAFETY_TEST_MODULES = {
+    "tests/test_business_case_type_graph_write_edge.py": REQUIRED_RUNTIME_TEST_METHODS,
+    "tests/test_business_case_type_graph_write_edge_reconciliation.py": {
+        "test_execution_key_isolates_identical_mutation_across_targets",
+        "test_retryable_statuses_allow_later_authorized_run",
+        "test_unclear_retryable_response_remains_sticky_without_retry",
+        "test_terminal_rejection_closes_and_blocks_replay",
+        "test_412_remains_terminal_no_retry",
+        "test_dedupe_requires_fresh_stable_item_readback",
+    },
+    "tests/test_business_case_type_graph_write_edge_schema.py": {
+        "test_validator_shape_matches_provisioned_mutation_columns",
+        "test_case_choices_match_provisioned_akten_schema",
+        "test_status_choices_are_scoped_to_the_target_list",
+        "test_datetime_requires_valid_iso_8601_value_with_timezone",
+        "test_boolean_and_text_fields_reject_substitute_types",
+        "test_dry_run_mutations_use_deployable_synthetic_values",
+        "test_contract_gate_covers_complete_cli_safety_shape",
+    },
+    "tests/test_business_case_type_graph_write_edge_graph_contract.py": {
+        "test_case_create_uses_only_documented_list_query_options",
+        "test_task_create_uses_only_documented_list_query_options",
+        "test_odata_literal_quotes_are_doubled_then_percent_encoded",
+    },
 }
 
 EXPECTED_OPERATION_SHAPES = {
@@ -358,6 +387,39 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
     }:
         errors.append("domain contract separate write/BFF identity boundary mismatch")
 
+    field_schema = contract.get("field_schema", {})
+    if field_schema != {
+        "source_exact": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+        "text_fields_exact": [
+            "NacCaseId", "Aktenzeichen", "NacWorkflowVersion", "KgVersion",
+            "NacTaskId", "BpmnStepCode", "BlockedReason",
+        ],
+        "choice_fields_exact": {
+            "Vorgangstyp": [
+                "immobilienkaufvertrag", "unterschriftsbeglaubigung",
+                "online-gmbh-gruendung", "handelsregisteranmeldung",
+            ],
+            "VorgangstypId": [
+                "immobilienkaufvertrag", "unterschriftsbeglaubigung",
+                "online-gmbh-gruendung", "handelsregisteranmeldung",
+            ],
+            "Akten.Status": [
+                "Entwurf", "InPrüfung", "Beurkundung", "Vollzug",
+                "Abgeschlossen", "Pausiert",
+            ],
+            "NotarTeam": ["NaC-Notar-01", "NaC-Notar-02"],
+            "Vertraulichkeitsstufe": ["Normal", "Sensibel", "Hoch"],
+            "AufgabenFristen.Status": [
+                "Offen", "InArbeit", "Blockiert", "Erledigt",
+            ],
+        },
+        "date_time_fields_exact": ["DueDate"],
+        "boolean_fields_exact": ["RequiresNotaryApproval"],
+        "boolean_as_text_or_integer_allowed": False,
+        "date_time_format_exact": "ISO-8601 timezone-aware",
+    }:
+        errors.append("domain contract SharePoint field schema mismatch")
+
     authorization = contract.get("authorization", {})
     roles = authorization.get("operation_role_bindings", {})
     purposes = authorization.get("operation_purpose_bindings", {})
@@ -388,16 +450,21 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "dedupe_projection_equals_create_field_allowlist": True,
         "one_match_requires_exact_create_payload": True,
         "zero_matches_behavior": "continue_to_intent_and_single_post",
-        "one_match_behavior": "deduplicated_without_post",
+        "one_match_behavior": "fresh_item_readback_then_deduplicated_without_post",
         "http_409_exact_readback_behavior": "deduplicated_without_post_retry",
         "multiple_matches_behavior": "sticky_reconciliation_without_post",
         "one_match_payload_drift_behavior": "sticky_reconciliation_without_post",
         "unique_sharepoint_columns_required": True,
-        "dedupe_top_exact": 2,
         "maximum_followed_pages": 0,
         "odata_next_link_behavior": "sticky_reconciliation_without_post",
         "dedupe_response_shape_and_actual_fields_required": True,
         "dedupe_transport_failure_behavior": "structured_redacted_block_before_post",
+        "dedupe_query_options_exact": ["expand", "$filter"],
+        "dedupe_top_level_select_allowed": False,
+        "dedupe_top_allowed": False,
+        "dedupe_maximum_rows_accepted": 2,
+        "dedupe_match_requires_fresh_item_readback_after_intent": True,
+        "dedupe_fresh_readback_binds_item_id_etag_and_fields": True,
     }:
         errors.append("domain contract create deduplication mismatch")
 
@@ -474,7 +541,7 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
             "intent_generation",
             "closed_generation",
         ],
-        "safe_start_intent_states_exact": ["absent"],
+        "safe_start_intent_states_exact": ["absent", "retryable"],
         "closed_intent_is_terminal": True,
         "closed_intent_replay_behavior": "block_before_transport",
         "same_mutation_id_reopen_allowed": False,
@@ -488,6 +555,11 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "failed_reconciliation_ack_keeps_intent_open": True,
         "fresh_hook_shared_store_restart_must_block_open_intent": True,
         "reconciliation_clear_alone_sufficient": False,
+        "execution_key_components_exact": ["target_binding_hash", "mutation_id"],
+        "persistent_state_key_exact": "execution_key",
+        "legacy_mutation_id_state_lookup_allowed": False,
+        "retryable_intent_is_terminal": False,
+        "retryable_intent_requires_new_authorized_run": True,
     }:
         errors.append("domain contract evidence order or sticky reconciliation mismatch")
 
@@ -520,6 +592,11 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "exception_type_message_url_body_or_headers_exposed": False,
         "structured_result_required": True,
         "write_attempts_on_preflight_error": 0,
+        "retryable_http_statuses_exact": [401, 403, 408, 429],
+        "automatic_retry_within_execution_allowed": False,
+        "later_authorized_retry_after_verified_not_applied": True,
+        "authentication_refresh_required_for_401_403": True,
+        "uncertain_retryable_readback_behavior": "sticky_reconciliation",
     }:
         errors.append("domain contract redacted transport errors mismatch")
 
@@ -613,6 +690,17 @@ def validate_verification_contract(
         "post_close_confirmation_unavailable": (
             "closed_intent_blocks_fresh_process_replay"
         ),
+        "cross_workspace_execution_key_collision": (
+            "impossible_by_target_binding_hash_plus_mutation_id"
+        ),
+        "dedupe_hit_without_fresh_stable_readback": (
+            "sticky_reconciliation_without_post"
+        ),
+        "retryable_401_403_408_429": (
+            "no_automatic_retry_and_later_authorized_retry_only_after_verified_not_applied"
+        ),
+        "invalid_sharepoint_field_value": "block_before_transport",
+        "unsupported_dedupe_query_option": "block_contract_completion",
     }
     if any(
         failure_behavior.get(name) != expected
@@ -799,41 +887,46 @@ def validate_implementation() -> list[str]:
     except WritePlanBlocked:
         pass
 
-    try:
-        runtime_path = ROOT / "tests/test_business_case_type_graph_write_edge.py"
-        runtime_spec = importlib.util.spec_from_file_location(
-            "nac_s4b_runtime_validator_tests", runtime_path
-        )
-        if runtime_spec is None or runtime_spec.loader is None:
-            raise ImportError("runtime safety test module is unavailable")
-        runtime_module = importlib.util.module_from_spec(runtime_spec)
-        runtime_spec.loader.exec_module(runtime_module)
-        runtime_cases = [
-            candidate
-            for _, candidate in inspect.getmembers(runtime_module, inspect.isclass)
-            if issubclass(candidate, unittest.TestCase)
-            and candidate.__module__ == runtime_module.__name__
-        ]
-        runtime_methods = {
-            name
-            for runtime_case in runtime_cases
-            for name, _ in inspect.getmembers(runtime_case, inspect.isfunction)
-            if name.startswith("test_")
-        }
-        missing = REQUIRED_RUNTIME_TEST_METHODS - runtime_methods
-        if missing:
-            errors.append("implementation safety test matrix incomplete")
-        suite = unittest.defaultTestLoader.loadTestsFromModule(runtime_module)
-        result = unittest.TestResult()
-        suite.run(result)
-        if result.failures or result.errors or result.testsRun < len(
-            REQUIRED_RUNTIME_TEST_METHODS
-        ):
-            errors.append("implementation safety test matrix failed")
-    except Exception as exc:
-        errors.append(
-            f"implementation safety validation failed: {type(exc).__name__}"
-        )
+    for module_index, (relative_path, required_methods) in enumerate(
+        REQUIRED_SAFETY_TEST_MODULES.items()
+    ):
+        try:
+            runtime_path = ROOT / relative_path
+            runtime_spec = importlib.util.spec_from_file_location(
+                f"nac_s4b_safety_validator_tests_{module_index}", runtime_path
+            )
+            if runtime_spec is None or runtime_spec.loader is None:
+                raise ImportError("runtime safety test module is unavailable")
+            runtime_module = importlib.util.module_from_spec(runtime_spec)
+            runtime_spec.loader.exec_module(runtime_module)
+            runtime_cases = [
+                candidate
+                for _, candidate in inspect.getmembers(runtime_module, inspect.isclass)
+                if issubclass(candidate, unittest.TestCase)
+                and candidate.__module__ == runtime_module.__name__
+            ]
+            runtime_methods = {
+                name
+                for runtime_case in runtime_cases
+                for name, _ in inspect.getmembers(runtime_case, inspect.isfunction)
+                if name.startswith("test_")
+            }
+            if required_methods - runtime_methods:
+                errors.append(f"implementation safety test matrix incomplete: {relative_path}")
+            suite = unittest.defaultTestLoader.loadTestsFromModule(runtime_module)
+            result = unittest.TestResult()
+            suite.run(result)
+            if (
+                result.failures
+                or result.errors
+                or result.testsRun < len(required_methods)
+            ):
+                errors.append(f"implementation safety test matrix failed: {relative_path}")
+        except Exception as exc:
+            errors.append(
+                f"implementation safety validation failed for {relative_path}: "
+                f"{type(exc).__name__}"
+            )
 
     constructor = inspect.signature(BusinessCaseTypeGraphWriteEdge)
     if list(constructor.parameters) != ["transport", "evidence_hook", "plan_builder"]:

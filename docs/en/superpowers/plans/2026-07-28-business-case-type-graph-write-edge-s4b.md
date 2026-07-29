@@ -21,18 +21,24 @@ review required an additional GET against the already unique SharePoint
 fields `NacCaseId` and `NacTaskId`; ambiguity becomes sticky reconciliation.
 It also established that a successful readback after an uncertain write does
 not close reconciliation automatically. Contract and negative tests bind
-these corrections. The safety fix pass adds complete canonical execute-time revalidation, `$top=2` with `nextLink` as ambiguity, strict actual-field readbacks, durably acknowledged process-wide reconciliation, and fixed redacted
+these corrections. The safety fix pass adds complete canonical execute-time
+revalidation, a documented Graph dedupe query with a local two-match limit and
+`nextLink` as ambiguity, strict fresh item readbacks, durably acknowledged process-wide reconciliation, and fixed redacted
 transport errors. The renewed fix pass replaces plain `clear` as a release
 condition with persistent intent generations plus closure proof and binds PATCH
 5xx readback exclusively to `plan.mutation.item_id`. The final safety pass makes persisted `closed` terminal even when downstream
 closure confirmation fails and binds every target hash to workspace, site, and
-both list IDs regardless of the active operation.
+both list IDs regardless of the active operation. The independent integration
+review adds target-bound execution keys, verified `retryable` handling for
+401/403/408/429 without in-run retry, SharePoint schema validation, and a
+fresh concrete-item readback before `DEDUPLICATED`.
 
 ## Work Packages
 
 - [x] **WP1 – Tests first:** synthetic fixtures and red tests for five
   operations, binding drift, legacy gate, S5 hash, dedupe, ETag, 412, and
-  reconciliation, paging, 409/412, plan manipulation, restart fail-closed, and
+  reconciliation, paging, 401/403/408/409/412/429, plan manipulation,
+  target-bound persistence, schema drift, restart fail-closed, and
   error redaction, a fresh hook instance over a shared store, a physically
   closed intent with lost confirmation, inactive-list drift in both directions,
   and a foreign PATCH 5xx response ID.
@@ -51,8 +57,10 @@ both list IDs regardless of the active operation.
 - [x] **WP6 – Review/Fix:** full scope diff, focused tests, validator,
   `compileall`, traceability, language parity, and link checks; all safety
   findings fixed.
-- [ ] **WP7 – Integration:** the lead agent updates shared index, quality
+- [x] **WP7 – Integration:** the lead agent updates shared index, quality
   gate, and CLI surfaces and runs protected-PR gates.
+- [ ] **WP8 – Re-review/delivery:** full gates, independent safety re-review,
+  protected-PR CI, merge, and branch/worktree cleanup.
 
 ## Not Included
 
