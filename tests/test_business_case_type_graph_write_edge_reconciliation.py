@@ -93,7 +93,7 @@ class BusinessCaseTypeWriteEdgeReconciliationTests(unittest.TestCase):
             state.intent_state == "closed" for state in store.states.values()
         ))
 
-    def test_retryable_statuses_allow_later_authorized_run(self) -> None:
+    def test_retryable_statuses_require_new_authorization_run(self) -> None:
         mutation, authorization, builder, plan = self._task_update_plan()
         for status in (408, 429, 401, 403):
             with self.subTest(status=status):
@@ -111,21 +111,50 @@ class BusinessCaseTypeWriteEdgeReconciliationTests(unittest.TestCase):
                 self.assertEqual(first.write_attempts, 1)
                 self.assertEqual(first.transport_calls, 3)
                 self.assertFalse(first.reconciliation_required)
-                self.assertEqual(len(first_transport.requests), 3)
                 execution_key = first_evidence.records[0][1]["execution_key"]
-                self.assertEqual(store.state(execution_key).intent_state, "retryable")
+                first_run_identity = first_evidence.records[0][1][
+                    "authorization_run_identity"
+                ]
+                self.assertEqual(
+                    store.state(execution_key).authorization_run_identity,
+                    first_run_identity,
+                )
 
+                identical_transport = _Transport([])
+                identical = BusinessCaseTypeGraphWriteEdge(
+                    identical_transport, _EvidenceHook(store), builder
+                ).execute(plan)
+                self.assertEqual(
+                    identical.status, "BLOCKED_RETRY_AUTHORIZATION"
+                )
+                self.assertEqual(identical.write_attempts, 0)
+                self.assertEqual(identical_transport.requests, [])
+
+                later_authorization = replace(
+                    authorization,
+                    approval_ref=f"synthetic-approval-retry-{status}",
+                )
+                later_plan = builder.build(mutation, later_authorization)
+                later_evidence = _EvidenceHook(store)
                 resumed_transport = _Transport([
                     _item("23", "etag-23", {"Status": "InArbeit"}),
                     GraphResponse(200, {}),
                     _item("23", "etag-24", mutation.fields),
                 ])
                 resumed = BusinessCaseTypeGraphWriteEdge(
-                    resumed_transport, _EvidenceHook(store), builder
-                ).execute(plan)
+                    resumed_transport, later_evidence, builder
+                ).execute(later_plan)
                 self.assertEqual(resumed.status, "APPLIED")
                 self.assertEqual(resumed.write_attempts, 1)
+                later_run_identity = later_evidence.records[0][1][
+                    "authorization_run_identity"
+                ]
+                self.assertNotEqual(later_run_identity, first_run_identity)
                 self.assertEqual(store.state(execution_key).intent_state, "closed")
+                self.assertEqual(
+                    store.state(execution_key).authorization_run_identity,
+                    later_run_identity,
+                )
 
     def test_unclear_retryable_response_remains_sticky_without_retry(self) -> None:
         _, _, builder, plan = self._task_update_plan()
@@ -229,6 +258,77 @@ class BusinessCaseTypeWriteEdgeReconciliationTests(unittest.TestCase):
                 self.assertEqual(result.write_attempts, 0)
                 self.assertEqual(len(transport.requests), 2)
 
+    def test_409_requires_fresh_concrete_readback_and_stays_sticky_on_drift(
+        self,
+    ) -> None:
+        mutation = _case_create()
+        builder = BusinessCaseTypeWritePlanBuilder(self.target)
+        plan = builder.build(mutation, self.authorization)
+        collection_match = GraphResponse(
+            200,
+            {
+                "value": [
+                    {
+                        "id": "81",
+                        "eTag": "etag-81",
+                        "fields": dict(mutation.fields),
+                    }
+                ]
+            },
+        )
+
+        good_transport = _Transport([
+            GraphResponse(200, {"value": []}),
+            GraphResponse(409, {}),
+            collection_match,
+            _item("81", "etag-81", mutation.fields),
+        ])
+        good = BusinessCaseTypeGraphWriteEdge(
+            good_transport, _EvidenceHook(_ExecutionKeyStore()), builder
+        ).execute(plan)
+        self.assertEqual(good.status, "DEDUPLICATED")
+        self.assertEqual(good.write_attempts, 1)
+        self.assertEqual(good.transport_calls, 4)
+        self.assertEqual(
+            [request.method for request in good_transport.requests],
+            ["GET", "POST", "GET", "GET"],
+        )
+        self.assertIn("/items/81?", good_transport.requests[-1].url)
+
+        bad_fresh_readbacks = {
+            "deleted": GraphResponse(404, {}),
+            "empty_etag": _item("81", "", mutation.fields),
+            "etag_drift": _item("81", "etag-82", mutation.fields),
+            "field_drift": _item(
+                "81", "etag-81", {**dict(mutation.fields), "Status": "Vollzug"}
+            ),
+            "item_drift": _item("82", "etag-81", mutation.fields),
+        }
+        for name, fresh_response in bad_fresh_readbacks.items():
+            with self.subTest(name=name):
+                store = _ExecutionKeyStore()
+                transport = _Transport([
+                    GraphResponse(200, {"value": []}),
+                    GraphResponse(409, {}),
+                    collection_match,
+                    fresh_response,
+                ])
+                result = BusinessCaseTypeGraphWriteEdge(
+                    transport, _EvidenceHook(store), builder
+                ).execute(plan)
+                self.assertEqual(result.status, "RECONCILIATION_REQUIRED")
+                self.assertTrue(result.reconciliation_required)
+                self.assertEqual(result.write_attempts, 1)
+                self.assertEqual(len(transport.requests), 4)
+                self.assertIn("/items/81?", transport.requests[-1].url)
+
+                replay_transport = _Transport([])
+                replay = BusinessCaseTypeGraphWriteEdge(
+                    replay_transport, _EvidenceHook(store), builder
+                ).execute(plan)
+                self.assertEqual(replay.status, "BLOCKED_RECONCILIATION")
+                self.assertEqual(replay_transport.requests, [])
+
     def _task_update_plan(self):
         mutation = BusinessCaseTypeMutation.task_update(
             item_id="23", expected_etag="etag-23", fields={"Status": "Erledigt"}
@@ -260,7 +360,7 @@ class _ExecutionKeyStore:
 
     def state(self, execution_key: str) -> MutationPersistenceState:
         return self.states.get(
-            execution_key, MutationPersistenceState("clear", "absent", 0, 0)
+            execution_key, MutationPersistenceState("clear", "absent", 0, 0, None)
         )
 
     def open_intent(self, evidence) -> bool:
@@ -276,7 +376,19 @@ class _ExecutionKeyStore:
             or generation != expected + 1
         ):
             return False
-        self.states[key] = MutationPersistenceState("clear", "open", generation, expected)
+        run_identity = evidence["authorization_run_identity"]
+        prior_run_identity = evidence["prior_authorization_run_identity"]
+        if (
+            state.authorization_run_identity != prior_run_identity
+            or (
+                state.intent_state == "retryable"
+                and run_identity == prior_run_identity
+            )
+        ):
+            return False
+        self.states[key] = MutationPersistenceState(
+            "clear", "open", generation, expected, run_identity
+        )
         return True
 
     def require_reconciliation(self, evidence) -> bool:
@@ -286,7 +398,11 @@ class _ExecutionKeyStore:
         if state.intent_state != "open" or state.intent_generation != generation:
             return False
         self.states[key] = MutationPersistenceState(
-            "required", "open", generation, state.closed_generation
+            "required",
+            "open",
+            generation,
+            state.closed_generation,
+            state.authorization_run_identity,
         )
         return True
 
@@ -300,7 +416,11 @@ class _ExecutionKeyStore:
             completion = evidence.get("completion_state", "terminal")
             intent_state = "retryable" if completion == "retryable" else "closed"
             self.states[key] = MutationPersistenceState(
-                "clear", intent_state, generation, generation
+                "clear",
+                intent_state,
+                generation,
+                generation,
+                state.authorization_run_identity,
             )
         return True
 

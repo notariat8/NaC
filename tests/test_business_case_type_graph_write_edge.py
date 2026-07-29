@@ -709,6 +709,14 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
                         ]
                     },
                 ),
+                GraphResponse(
+                    200,
+                    {
+                        "id": "81",
+                        "eTag": "synthetic-etag-81",
+                        "fields": dict(mutation.fields),
+                    },
+                ),
             ]
         )
         evidence = _EvidenceHook()
@@ -717,7 +725,11 @@ class BusinessCaseTypeGraphWriteEdgeTests(unittest.TestCase):
 
         self.assertEqual(result.status, "DEDUPLICATED")
         self.assertEqual(result.write_attempts, 1)
-        self.assertEqual([request.method for request in transport.requests], ["GET", "POST", "GET"])
+        self.assertEqual(
+            [request.method for request in transport.requests],
+            ["GET", "POST", "GET", "GET"],
+        )
+        self.assertIn("/items/81?", transport.requests[-1].url)
         self.assertEqual(evidence.phases, ["intent", "outcome", "readback"])
 
     def test_409_ambiguous_readback_requires_reconciliation_without_retry(self) -> None:
@@ -1137,6 +1149,7 @@ class _PersistentEvidenceStore:
                 intent_state="absent",
                 intent_generation=0,
                 closed_generation=0,
+                authorization_run_identity=None,
             ),
         )
 
@@ -1153,11 +1166,22 @@ class _PersistentEvidenceStore:
             or generation != expected + 1
         ):
             return False
+        run_identity = evidence["authorization_run_identity"]
+        prior_run_identity = evidence["prior_authorization_run_identity"]
+        if (
+            state.authorization_run_identity != prior_run_identity
+            or (
+                state.intent_state == "retryable"
+                and run_identity == prior_run_identity
+            )
+        ):
+            return False
         self.states[execution_key] = MutationPersistenceState(
             reconciliation_state="clear",
             intent_state="open",
             intent_generation=generation,
             closed_generation=expected,
+            authorization_run_identity=run_identity,
         )
         return True
 
@@ -1172,6 +1196,7 @@ class _PersistentEvidenceStore:
             intent_state="open",
             intent_generation=generation,
             closed_generation=state.closed_generation,
+            authorization_run_identity=state.authorization_run_identity,
         )
         return True
 
@@ -1193,6 +1218,7 @@ class _PersistentEvidenceStore:
                 ),
                 intent_generation=generation,
                 closed_generation=generation,
+                authorization_run_identity=state.authorization_run_identity,
             )
         return True
 

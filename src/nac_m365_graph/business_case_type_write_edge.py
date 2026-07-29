@@ -21,6 +21,7 @@ PersistentIntentState = Literal[
 ]
 CompletionState = Literal["terminal", "retryable"]
 _ITEM_ID = re.compile(r"[1-9][0-9]{0,18}\Z")
+_CANONICAL_HASH = re.compile(r"[0-9a-f]{64}\Z")
 _RETRYABLE_HTTP_STATUSES = frozenset({401, 403, 408, 429})
 
 
@@ -30,6 +31,7 @@ class MutationPersistenceState:
     intent_state: PersistentIntentState
     intent_generation: int
     closed_generation: int
+    authorization_run_identity: str | None = None
 
 
 class GraphWriteTransport(Protocol):
@@ -114,6 +116,19 @@ class BusinessCaseTypeGraphWriteEdge:
                 write_attempts=0,
                 reconciliation_required=False,
                 reason_code="persistent_closure_blocks_replay",
+            )
+        if (
+            persistence_state.intent_state == "retryable"
+            and persistence_state.authorization_run_identity
+            == _authorization_run_identity(plan)
+        ):
+            return _result(
+                plan,
+                status="BLOCKED_RETRY_AUTHORIZATION",
+                transport_calls=0,
+                write_attempts=0,
+                reconciliation_required=False,
+                reason_code="new_authorization_run_required",
             )
         if (
             persistence_state.reconciliation_state == "required"
@@ -560,30 +575,62 @@ class BusinessCaseTypeGraphWriteEdge:
             409,
             intent_generation=intent_generation,
         )
-        observation, calls = self._observe_after_write(plan, item_id=None)
-        transport_calls += calls
-        needs_reconciliation = (
-            not outcome_ok
-            or observation.state not in {"applied", "not_applied"}
+        collection_response = self._request(plan.collection_readback_request())
+        transport_calls += 1
+        collection_observation = (
+            _dedupe_observation(plan, collection_response)
+            if collection_response is not None
+            else _Observation("invalid", 0)
         )
+        candidate_id = (
+            _dedupe_candidate_item_id(collection_response)
+            if collection_response is not None
+            and collection_observation.state == "applied"
+            else None
+        )
+        candidate_etag = (
+            _dedupe_candidate_etag(collection_response)
+            if collection_response is not None
+            and collection_observation.state == "applied"
+            else None
+        )
+        fresh_observation = _Observation(
+            "invalid", collection_observation.http_status
+        )
+        if candidate_id is not None and candidate_etag is not None:
+            fresh_response = self._request(
+                plan.item_readback_request(candidate_id)
+            )
+            transport_calls += 1
+            if fresh_response is not None:
+                fresh_observation = _item_observation(
+                    plan,
+                    fresh_response,
+                    expected_item_id=candidate_id,
+                )
+                if _response_etag(fresh_response) != candidate_etag:
+                    fresh_observation = _Observation(
+                        "invalid", fresh_observation.http_status
+                    )
+        verified = outcome_ok and fresh_observation.state == "applied"
         persisted = True
-        if needs_reconciliation:
+        if not verified:
             persisted = self._persist_reconciliation(
                 plan, "create_conflict_readback_uncertain", intent_generation
             )
         readback_ok = self._record_readback(
             plan,
-            _readback_result_code(observation),
-            observation.http_status,
+            _readback_result_code(fresh_observation),
+            fresh_observation.http_status,
             intent_generation=intent_generation,
-            close_intent=not needs_reconciliation,
+            close_intent=verified,
         )
-        if not readback_ok and not needs_reconciliation:
-            needs_reconciliation = True
+        if not readback_ok and verified:
+            verified = False
             persisted = self._persist_reconciliation(
                 plan, "create_conflict_evidence_incomplete", intent_generation
             )
-        if needs_reconciliation:
+        if not verified:
             return self._reconciliation_result(
                 plan,
                 persisted=persisted,
@@ -591,22 +638,13 @@ class BusinessCaseTypeGraphWriteEdge:
                 write_attempts=write_attempts,
                 reason_code="create_conflict_readback_uncertain",
             )
-        if observation.state == "applied":
-            return _result(
-                plan,
-                status="DEDUPLICATED",
-                transport_calls=transport_calls,
-                write_attempts=write_attempts,
-                reconciliation_required=False,
-                reason_code="concurrent_create_identity",
-            )
         return _result(
             plan,
-            status="WRITE_REJECTED",
+            status="DEDUPLICATED",
             transport_calls=transport_calls,
             write_attempts=write_attempts,
             reconciliation_required=False,
-            reason_code="provider_rejected_create",
+            reason_code="concurrent_create_identity",
         )
 
     def _handle_negative(
@@ -860,6 +898,8 @@ class BusinessCaseTypeGraphWriteEdge:
             and state.intent_state == "open"
             and state.intent_generation == intent_generation
             and state.closed_generation < intent_generation
+            and state.authorization_run_identity
+            == _authorization_run_identity(plan)
         )
 
     def _record_intent(
@@ -876,6 +916,9 @@ class BusinessCaseTypeGraphWriteEdge:
                     result_code="planned",
                     intent_generation=intent_generation,
                     expected_intent_generation=expected_generation,
+                    prior_authorization_run_identity=(
+                        prior_state.authorization_run_identity
+                    ),
                 )
             )
         except Exception:
@@ -889,6 +932,8 @@ class BusinessCaseTypeGraphWriteEdge:
             or state.intent_state != "open"
             or state.intent_generation != intent_generation
             or state.closed_generation != expected_generation
+            or state.authorization_run_identity
+            != _authorization_run_identity(plan)
         ):
             return None
         return intent_generation
@@ -942,6 +987,8 @@ class BusinessCaseTypeGraphWriteEdge:
         state = self._persistence_state(plan)
         if state is None or state.intent_generation != intent_generation:
             return False
+        if state.authorization_run_identity != _authorization_run_identity(plan):
+            return False
         if close_intent:
             return bool(
                 state.reconciliation_state == "clear"
@@ -972,17 +1019,25 @@ def _validated_persistence_state(
         or not 0 <= state.closed_generation <= state.intent_generation < 2**63
     ):
         return None
+    has_run_identity = (
+        type(state.authorization_run_identity) is str
+        and _CANONICAL_HASH.fullmatch(state.authorization_run_identity)
+        is not None
+    )
     valid_shape = (
         state.intent_state == "absent"
         and state.intent_generation == 0
         and state.closed_generation == 0
+        and state.authorization_run_identity is None
     ) or (
         state.intent_state == "open"
         and state.intent_generation == state.closed_generation + 1
+        and has_run_identity
     ) or (
         state.intent_state in {"retryable", "closed"}
         and state.intent_generation > 0
         and state.closed_generation == state.intent_generation
+        and has_run_identity
     )
     if not valid_shape:
         return None
@@ -1046,6 +1101,7 @@ def _evidence(
     http_status: int | None = None,
     intent_generation: int | None = None,
     expected_intent_generation: int | None = None,
+    prior_authorization_run_identity: str | None = None,
     close_intent: bool | None = None,
     completion_state: CompletionState | None = None,
 ) -> dict[str, Any]:
@@ -1056,6 +1112,7 @@ def _evidence(
         "operation": plan.mutation.operation,
         "target_binding_hash": plan.target_binding_hash,
         "plan_sha256": plan.plan_sha256,
+        "authorization_run_identity": _authorization_run_identity(plan),
         "result_code": result_code,
     }
     if plan.mutation.s5_operation_hash is not None:
@@ -1066,6 +1123,9 @@ def _evidence(
         payload["intent_generation"] = intent_generation
     if expected_intent_generation is not None:
         payload["expected_intent_generation"] = expected_intent_generation
+        payload["prior_authorization_run_identity"] = (
+            prior_authorization_run_identity
+        )
     if close_intent is not None:
         payload["close_intent"] = close_intent
     if completion_state is not None:
@@ -1078,6 +1138,15 @@ def _execution_key(plan: BusinessCaseTypeWritePlan) -> str:
         {
             "target_binding_hash": plan.target_binding_hash,
             "mutation_id": plan.mutation.mutation_id,
+        }
+    )
+
+
+def _authorization_run_identity(plan: BusinessCaseTypeWritePlan) -> str:
+    return canonical_hash(
+        {
+            "plan_sha256": plan.plan_sha256,
+            "approval_ref": plan.authorization.approval_ref,
         }
     )
 
