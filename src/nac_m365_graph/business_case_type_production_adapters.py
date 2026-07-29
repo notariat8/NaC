@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
+import selectors
 import stat
 import subprocess
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -18,6 +21,9 @@ from notary_kg.business_case_type_mutation import canonical_hash
 from .auth import (
     CertificateClientCredentialsTokenProvider,
     CertificateGraphConfig,
+    _build_client_assertion_from_bytes,
+    _post_token_form,
+    _token_endpoint,
 )
 from .business_case_type_live_write_boundary import principal_binding_sha256
 from .business_case_type_live_write_gate import (
@@ -140,7 +146,7 @@ class GhCliIssueCommentPort:
         binary: Path,
         expected_binary_sha256: str,
         environ: Mapping[str, str] | None = None,
-        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
         descriptor = _open_trusted_executable(binary, expected_binary_sha256)
         os.close(descriptor)
@@ -152,7 +158,7 @@ class GhCliIssueCommentPort:
             for key, value in source.items()
             if key in {"GH_CONFIG_DIR", "HOME", "LANG"} and value
         }
-        self._runner = runner
+        self._runner = runner or _run_bounded_process
 
     def comments(self) -> tuple[Mapping[str, Any], ...]:
         descriptor: int | None = None
@@ -169,17 +175,14 @@ class GhCliIssueCommentPort:
                     _S4D_ISSUE_API_PATH,
                 ],
                 check=False,
-                capture_output=True,
-                text=True,
                 shell=False,
                 stdin=subprocess.DEVNULL,
                 timeout=30,
                 env=self._env,
                 pass_fds=(descriptor,),
+                max_stdout_bytes=_MAX_GITHUB_OUTPUT_BYTES,
             )
-            if result.returncode != 0 or len(
-                result.stdout.encode("utf-8")
-            ) > _MAX_GITHUB_OUTPUT_BYTES:
+            if result.returncode != 0:
                 raise ProductionAdapterError(
                     "owner_comment_snapshot_unavailable"
                 )
@@ -332,22 +335,29 @@ class CertificateWriteIdentityFactory:
         *,
         config: CertificateGraphConfig,
         write_principal_id: str,
+        expected_tenant_id: str,
+        expected_certificate_sha256: str,
+        expected_private_key_sha256: str,
         workspace_id: str,
         site_binding_sha256: str,
         bff_principal_binding_sha256: str,
         inspection_principal_binding_sha256: str,
         inspection_approval_sha256: str,
         provider_factory: Callable[
-            [CertificateGraphConfig],
+            [CertificateGraphConfig, bytes, bytes],
             CertificateClientCredentialsTokenProvider,
-        ] = CertificateClientCredentialsTokenProvider,
+        ]
+        | None = None,
         now_provider: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     ) -> None:
         if (
             not isinstance(config, CertificateGraphConfig)
             or config.graph_base_url != GRAPH_BASE_URL
+            or config.tenant_id != expected_tenant_id
             or principal_binding_sha256(config.client_id)
             != principal_binding_sha256(write_principal_id)
+            or not _is_sha256(expected_certificate_sha256)
+            or not _is_sha256(expected_private_key_sha256)
         ):
             raise ValueError("write_identity_config_binding_invalid")
         self._config = config
@@ -356,12 +366,16 @@ class CertificateWriteIdentityFactory:
         self._write_principal_binding_sha256 = principal_binding_sha256(
             write_principal_id
         )
+        self._expected_certificate_sha256 = expected_certificate_sha256
+        self._expected_private_key_sha256 = expected_private_key_sha256
         self._bff_principal_binding_sha256 = bff_principal_binding_sha256
         self._inspection_principal_binding_sha256 = (
             inspection_principal_binding_sha256
         )
         self._inspection_approval_sha256 = inspection_approval_sha256
-        self._provider_factory = provider_factory
+        self._provider_factory = (
+            provider_factory or _build_bound_certificate_provider
+        )
         self._now_provider = now_provider
 
     def build(
@@ -392,7 +406,55 @@ class CertificateWriteIdentityFactory:
             ) from None
         if validated is not context:
             raise ProductionAdapterError("write_identity_context_rejected")
-        return self._provider_factory(self._config)
+        certificate_bytes = _read_bound_credential(
+            self._config.certificate_path,
+            self._expected_certificate_sha256,
+        )
+        private_key_bytes = _read_bound_credential(
+            self._config.private_key_path,
+            self._expected_private_key_sha256,
+        )
+        return self._provider_factory(
+            self._config,
+            certificate_bytes,
+            private_key_bytes,
+        )
+
+
+class BoundCertificateClientCredentialsTokenProvider(
+    CertificateClientCredentialsTokenProvider
+):
+    """Use credential bytes already verified by the writer factory."""
+
+    def __init__(
+        self,
+        config: CertificateGraphConfig,
+        certificate_bytes: bytes,
+        private_key_bytes: bytes,
+    ) -> None:
+        super().__init__(config)
+        self._certificate_bytes = bytes(certificate_bytes)
+        self._private_key_bytes = bytes(private_key_bytes)
+
+    def fetch_access_token(self) -> str:
+        endpoint = _token_endpoint(self.config.tenant_id)
+        return _post_token_form(
+            endpoint,
+            {
+                "client_id": self.config.client_id,
+                "scope": "https://graph.microsoft.com/.default",
+                "grant_type": "client_credentials",
+                "client_assertion_type": (
+                    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                ),
+                "client_assertion": _build_client_assertion_from_bytes(
+                    self.config,
+                    endpoint,
+                    certificate_bytes=self._certificate_bytes,
+                    private_key_bytes=self._private_key_bytes,
+                ),
+            },
+        )
 
 
 def build_s4f_offline_composition_status() -> dict[str, object]:
@@ -449,13 +511,17 @@ def format_s4f_offline_composition_status(result: Mapping[str, object]) -> str:
 
 
 def _bound_graph_url(value: object) -> bool:
-    if type(value) is not str:
+    if (
+        type(value) is not str
+        or any(not 0x21 <= ord(character) <= 0x7E for character in value)
+    ):
         return False
     parsed = urllib.parse.urlsplit(value)
     return bool(
         parsed.scheme == "https"
         and parsed.netloc == "graph.microsoft.com"
         and parsed.path.startswith("/v1.0/")
+        and _canonical_graph_path(parsed.path)
         and parsed.username is None
         and parsed.password is None
         and parsed.fragment == ""
@@ -507,9 +573,99 @@ def _open_trusted_executable(path: Path, expected_sha256: str) -> int:
         or not _is_sha256(expected_sha256)
         or os.name != "posix"
         or not Path("/proc/self/fd").is_dir()
+        or not hasattr(os, "memfd_create")
+        or not hasattr(fcntl, "F_ADD_SEALS")
     ):
         raise ValueError("github_cli_binding_invalid")
-    descriptor: int | None = None
+    source_descriptor: int | None = None
+    sealed_descriptor: int | None = None
+    try:
+        source_descriptor = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
+        metadata = os.fstat(source_descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.geteuid()
+            or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            or not metadata.st_mode & stat.S_IXUSR
+            or metadata.st_size > 128 * 1024 * 1024
+        ):
+            raise ValueError("github_cli_binding_invalid")
+        payload = bytearray()
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(source_descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            payload.extend(chunk)
+        if digest.hexdigest() != expected_sha256:
+            raise ValueError("github_cli_binding_invalid")
+        sealed_descriptor = os.memfd_create(
+            "nac-gh-sealed",
+            getattr(os, "MFD_CLOEXEC", 0)
+            | getattr(os, "MFD_ALLOW_SEALING", 0),
+        )
+        offset = 0
+        while offset < len(payload):
+            offset += os.write(sealed_descriptor, payload[offset:])
+        os.fchmod(sealed_descriptor, 0o500)
+        required_seals = (
+            fcntl.F_SEAL_WRITE
+            | fcntl.F_SEAL_GROW
+            | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_SEAL
+        )
+        fcntl.fcntl(sealed_descriptor, fcntl.F_ADD_SEALS, required_seals)
+        if fcntl.fcntl(sealed_descriptor, fcntl.F_GET_SEALS) != required_seals:
+            raise ValueError("github_cli_binding_invalid")
+        os.lseek(sealed_descriptor, 0, os.SEEK_SET)
+    except (OSError, ValueError):
+        if sealed_descriptor is not None:
+            os.close(sealed_descriptor)
+        raise ValueError("github_cli_binding_invalid") from None
+    finally:
+        if source_descriptor is not None:
+            os.close(source_descriptor)
+    return sealed_descriptor
+
+
+def _canonical_graph_path(path: str) -> bool:
+    if "\\" in path or "//" in path:
+        return False
+    if any(segment in {".", ".."} for segment in path.split("/")):
+        return False
+    index = 0
+    while index < len(path):
+        if path[index] != "%":
+            index += 1
+            continue
+        if index + 2 >= len(path):
+            return False
+        pair = path[index + 1 : index + 3]
+        if any(character not in "0123456789abcdefABCDEF" for character in pair):
+            return False
+        decoded_octet = int(pair, 16)
+        if (
+            decoded_octet <= 0x20
+            or decoded_octet == 0x7F
+            or pair.lower() in {"25", "2e", "2f", "5c"}
+        ):
+            return False
+        index += 3
+    decoded = urllib.parse.unquote(path)
+    return "\\" not in decoded and all(
+        segment not in {".", ".."} for segment in decoded.split("/")
+    )
+
+
+def _read_bound_credential(path: Path, expected_sha256: str) -> bytes:
+    if not isinstance(path, Path) or not path.is_absolute():
+        raise ProductionAdapterError("write_identity_credential_rejected")
     try:
         descriptor = os.open(
             path,
@@ -517,30 +673,108 @@ def _open_trusted_executable(path: Path, expected_sha256: str) -> int:
             | getattr(os, "O_CLOEXEC", 0)
             | getattr(os, "O_NOFOLLOW", 0),
         )
-        metadata = os.fstat(descriptor)
-        if metadata.st_size > 128 * 1024 * 1024:
-            raise ValueError("github_cli_binding_invalid")
-        digest = hashlib.sha256()
+        try:
+            metadata = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_uid != os.geteuid()
+                or metadata.st_mode & (stat.S_IRWXG | stat.S_IRWXO)
+                or metadata.st_size > 1024 * 1024
+            ):
+                raise OSError("credential_metadata_invalid")
+            payload = bytearray()
+            while True:
+                chunk = os.read(descriptor, 64 * 1024)
+                if not chunk:
+                    break
+                payload.extend(chunk)
+        finally:
+            os.close(descriptor)
+    except OSError:
+        raise ProductionAdapterError(
+            "write_identity_credential_rejected"
+        ) from None
+    result = bytes(payload)
+    if not result or hashlib.sha256(result).hexdigest() != expected_sha256:
+        raise ProductionAdapterError("write_identity_credential_rejected")
+    return result
+
+
+def _build_bound_certificate_provider(
+    config: CertificateGraphConfig,
+    certificate_bytes: bytes,
+    private_key_bytes: bytes,
+) -> BoundCertificateClientCredentialsTokenProvider:
+    return BoundCertificateClientCredentialsTokenProvider(
+        config,
+        certificate_bytes,
+        private_key_bytes,
+    )
+
+
+def _run_bounded_process(
+    command: list[str],
+    *,
+    check: bool,
+    shell: bool,
+    stdin: int,
+    timeout: int,
+    env: Mapping[str, str],
+    pass_fds: tuple[int, ...],
+    max_stdout_bytes: int,
+) -> subprocess.CompletedProcess[str]:
+    del check
+    process = subprocess.Popen(
+        command,
+        shell=shell,
+        stdin=stdin,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env=dict(env),
+        pass_fds=pass_fds,
+    )
+    if process.stdout is None:
+        process.kill()
+        raise ProductionAdapterError("owner_comment_snapshot_unavailable")
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ)
+    deadline = time.monotonic() + timeout
+    payload = bytearray()
+    try:
         while True:
-            chunk = os.read(descriptor, 1024 * 1024)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(command, timeout)
+            events = selector.select(min(remaining, 0.25))
+            if not events:
+                if process.poll() is not None:
+                    break
+                continue
+            chunk = os.read(
+                process.stdout.fileno(),
+                min(64 * 1024, max_stdout_bytes + 1 - len(payload)),
+            )
             if not chunk:
                 break
-            digest.update(chunk)
-        os.lseek(descriptor, 0, os.SEEK_SET)
-    except (OSError, ValueError):
-        if descriptor is not None:
-            os.close(descriptor)
-        raise ValueError("github_cli_binding_invalid") from None
-    if (
-        not stat.S_ISREG(metadata.st_mode)
-        or metadata.st_uid != os.geteuid()
-        or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
-        or not metadata.st_mode & stat.S_IXUSR
-        or digest.hexdigest() != expected_sha256
-    ):
-        os.close(descriptor)
-        raise ValueError("github_cli_binding_invalid")
-    return descriptor
+            payload.extend(chunk)
+            if len(payload) > max_stdout_bytes:
+                raise ProductionAdapterError(
+                    "owner_comment_snapshot_unavailable"
+                )
+        returncode = process.wait(max(0.0, deadline - time.monotonic()))
+        return subprocess.CompletedProcess(
+            command,
+            returncode,
+            payload.decode("utf-8"),
+            "",
+        )
+    except Exception:
+        process.kill()
+        process.wait()
+        raise
+    finally:
+        selector.close()
+        process.stdout.close()
 
 
 def _safe_login(value: object) -> bool:

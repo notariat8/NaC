@@ -245,16 +245,53 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
                 (b"{}", CORRELATION_ID),
             )
 
-        for outbox in (
-            self.outbox,
-            SqliteEvidenceStagingOutbox(self.database_path),
+        with self.assertRaisesRegex(
+            ImmutableEvidenceError,
+            r"^event hash is invalid$",
         ):
-            with self.subTest(outbox=outbox):
+            self.outbox.records(CORRELATION_ID)
+        with self.assertRaisesRegex(
+            ImmutableEvidenceError,
+            r"^event hash is invalid$",
+        ):
+            SqliteEvidenceStagingOutbox(self.database_path)
+
+    def test_persisted_routing_column_tamper_is_detected_globally(
+        self,
+    ) -> None:
+        record = _append(self.outbox, "intent")
+        mutations = (
+            ("correlation_id", "tampered-correlation", CORRELATION_ID),
+            ("sequence", 7, 1),
+            ("previous_event_sha256", "f" * 64, ZERO_HASH),
+        )
+        for column, tampered, original in mutations:
+            with self.subTest(column=column):
+                with sqlite3.connect(self.database_path) as connection:
+                    connection.execute(
+                        f"UPDATE evidence_staging_outbox SET {column} = ?",
+                        (tampered,),
+                    )
+                for correlation_id in (CORRELATION_ID, "tampered-correlation"):
+                    with self.assertRaisesRegex(
+                        ImmutableEvidenceError,
+                        r"^staged evidence routing is invalid$",
+                    ):
+                        self.outbox.records(correlation_id)
                 with self.assertRaisesRegex(
                     ImmutableEvidenceError,
-                    r"^event hash is invalid$",
+                    r"^staged evidence routing is invalid$",
                 ):
-                    outbox.records(CORRELATION_ID)
+                    SqliteEvidenceStagingOutbox(self.database_path)
+                with sqlite3.connect(self.database_path) as connection:
+                    connection.execute(
+                        f"UPDATE evidence_staging_outbox SET {column} = ?",
+                        (original,),
+                    )
+                self.assertEqual(
+                    self.outbox.records(CORRELATION_ID),
+                    (record,),
+                )
 
     def test_database_schema_failure_is_stable_and_does_not_leak_path(
         self,

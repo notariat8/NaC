@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.error
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -36,6 +37,7 @@ from nac_m365_graph.business_case_type_production_adapters import (  # noqa: E40
     GitHubS4dOwnerApprovalVerifier,
     ProductionAdapterError,
     UrllibNoRedirectGraphHttpPort,
+    _run_bounded_process,
     build_s4f_offline_composition_status,
     format_s4f_offline_composition_status,
 )
@@ -262,6 +264,17 @@ class GraphHttpAdapterTests(unittest.TestCase):
             {"url": "https://graph.microsoft.com.evil/v1.0/sites/site-id"},
             {"url": "http://graph.microsoft.com/v1.0/sites/site-id"},
             {"url": GRAPH_URL + "#fragment"},
+            {"url": "https://graph.microsoft.com/v1.0/../beta/sites/x"},
+            {"url": "https://graph.microsoft.com/v1.0/%2e%2e/beta/sites/x"},
+            {"url": "https://graph.microsoft.com/v1.0/%252e%252e/beta/sites/x"},
+            {"url": "https://graph.microsoft.com/v1.0/sites%2fx"},
+            {"url": "https://graph.microsoft.com/v1.0//sites/x"},
+            {"url": "https://graph.microsoft.com/v1.0\\..\\beta"},
+            {"url": "https://graph.microsoft.com/v1.0/sites/x\r\n"},
+            {"url": "https://graph.microsoft.com/v1.0/sites/x\t"},
+            {"url": "https://graph.microsoft.com/v1.0/sites/x\x00"},
+            {"url": "https://graph.microsoft.com/v1.0/sites/%00x"},
+            {"url": "https://graph.microsoft.com/v1.0/sites/%0d%0ax"},
             {"follow_redirects": True},
             {"automatic_retries": 1},
             {"max_response_bytes": 0},
@@ -591,30 +604,137 @@ class GitHubOwnerVerifierTests(unittest.TestCase):
 
         self.assertEqual(runner_calls, [])
 
+    def test_gh_cli_executes_sealed_copy_when_source_changes_in_place(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "gh"
+            original = b"synthetic-gh-original"
+            binary.write_bytes(original)
+            os.chmod(binary, 0o700)
+            digest = hashlib.sha256(original).hexdigest()
+            executed_payloads: list[bytes] = []
+
+            def runner(*args: object, **kwargs: object) -> Any:
+                descriptor = kwargs["pass_fds"][0]
+                binary.write_bytes(b"mutated-in-place-after-sealing")
+                os.chmod(binary, 0o700)
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                executed_payloads.append(os.read(descriptor, len(original) + 64))
+                with self.assertRaises(OSError):
+                    os.write(descriptor, b"x")
+                return subprocess.CompletedProcess(
+                    args=[],
+                    returncode=0,
+                    stdout="[[]]",
+                    stderr="",
+                )
+
+            port = GhCliIssueCommentPort(
+                binary=binary,
+                expected_binary_sha256=digest,
+                environ={"HOME": directory},
+                runner=runner,
+            )
+
+            self.assertEqual(port.comments(), ())
+
+        self.assertEqual(executed_payloads, [original])
+
+    def test_bounded_runner_reads_only_limit_plus_one_and_reaps_process(
+        self,
+    ) -> None:
+        original_read = os.read
+        read_sizes: list[int] = []
+        captured_processes: list[Any] = []
+        real_popen = subprocess.Popen
+
+        def tracked_read(descriptor: int, size: int) -> bytes:
+            chunk = original_read(descriptor, size)
+            read_sizes.append(len(chunk))
+            return chunk
+
+        def tracked_popen(*args: object, **kwargs: object) -> Any:
+            process = real_popen(*args, **kwargs)
+            captured_processes.append(process)
+            return process
+
+        with mock.patch(
+            "nac_m365_graph.business_case_type_production_adapters.os.read",
+            side_effect=tracked_read,
+        ), mock.patch(
+            "nac_m365_graph.business_case_type_production_adapters.subprocess.Popen",
+            side_effect=tracked_popen,
+        ):
+            with self.assertRaisesRegex(
+                ProductionAdapterError,
+                r"^owner_comment_snapshot_unavailable$",
+            ):
+                _run_bounded_process(
+                    ["/usr/bin/head", "-c", "4096", "/dev/zero"],
+                    check=False,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=5,
+                    env={"LANG": "C"},
+                    pass_fds=(),
+                    max_stdout_bytes=1024,
+                )
+
+        self.assertEqual(sum(read_sizes), 1025)
+        self.assertEqual(len(captured_processes), 1)
+        self.assertIsNotNone(captured_processes[0].poll())
+
 
 class CertificateWriteIdentityFactoryTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        root = Path(self.directory.name)
+        self.certificate_bytes = b"synthetic-certificate"
+        self.private_key_bytes = b"synthetic-private-key"
+        self.certificate_path = root / "writer.crt"
+        self.private_key_path = root / "writer.key"
+        self.certificate_path.write_bytes(self.certificate_bytes)
+        self.private_key_path.write_bytes(self.private_key_bytes)
+        os.chmod(self.certificate_path, 0o600)
+        os.chmod(self.private_key_path, 0o600)
+        self.certificate_sha256 = hashlib.sha256(
+            self.certificate_bytes
+        ).hexdigest()
+        self.private_key_sha256 = hashlib.sha256(
+            self.private_key_bytes
+        ).hexdigest()
         self.write_principal_id = "writer-principal-id"
         self.config = CertificateGraphConfig(
             tenant_id="tenant-id",
             client_id=self.write_principal_id,
-            certificate_path=Path("/synthetic/writer.crt"),
-            private_key_path=Path("/synthetic/writer.key"),
+            certificate_path=self.certificate_path,
+            private_key_path=self.private_key_path,
         )
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
 
     def test_provider_is_constructed_only_after_exact_write_identity_binding(
         self,
     ) -> None:
-        calls: list[CertificateGraphConfig] = []
+        calls: list[tuple[CertificateGraphConfig, bytes, bytes]] = []
         provider = object()
 
-        def provider_factory(config: CertificateGraphConfig) -> Any:
-            calls.append(config)
+        def provider_factory(
+            config: CertificateGraphConfig,
+            certificate_bytes: bytes,
+            private_key_bytes: bytes,
+        ) -> Any:
+            calls.append((config, certificate_bytes, private_key_bytes))
             return provider
 
         factory = CertificateWriteIdentityFactory(
             config=self.config,
             write_principal_id=self.write_principal_id,
+            expected_tenant_id="tenant-id",
+            expected_certificate_sha256=self.certificate_sha256,
+            expected_private_key_sha256=self.private_key_sha256,
             workspace_id="notary_team_01",
             site_binding_sha256="1" * 64,
             bff_principal_binding_sha256="2" * 64,
@@ -629,15 +749,21 @@ class CertificateWriteIdentityFactoryTests(unittest.TestCase):
         result = factory.build(_identity_context(self.write_principal_id))
 
         self.assertIs(result, provider)
-        self.assertEqual(calls, [self.config])
+        self.assertEqual(
+            calls,
+            [(self.config, self.certificate_bytes, self.private_key_bytes)],
+        )
 
     def test_any_write_identity_scope_or_role_drift_fails_before_factory(
         self,
     ) -> None:
-        calls: list[CertificateGraphConfig] = []
+        calls: list[tuple[CertificateGraphConfig, bytes, bytes]] = []
         factory = CertificateWriteIdentityFactory(
             config=self.config,
             write_principal_id=self.write_principal_id,
+            expected_tenant_id="tenant-id",
+            expected_certificate_sha256=self.certificate_sha256,
+            expected_private_key_sha256=self.private_key_sha256,
             workspace_id="notary_team_01",
             site_binding_sha256="1" * 64,
             bff_principal_binding_sha256="2" * 64,
@@ -646,7 +772,9 @@ class CertificateWriteIdentityFactoryTests(unittest.TestCase):
             ),
             inspection_approval_sha256=INSPECTION_APPROVAL_SHA256,
             now_provider=lambda: IDENTITY_NOW,
-            provider_factory=lambda config: calls.append(config),
+            provider_factory=lambda config, certificate, private_key: calls.append(
+                (config, certificate, private_key)
+            ),
         )
         drifted_contexts = (
             _identity_context(
@@ -709,8 +837,8 @@ class CertificateWriteIdentityFactoryTests(unittest.TestCase):
         mismatched = CertificateGraphConfig(
             tenant_id="tenant-id",
             client_id="different-writer-client",
-            certificate_path=Path("/synthetic/writer.crt"),
-            private_key_path=Path("/synthetic/writer.key"),
+            certificate_path=self.certificate_path,
+            private_key_path=self.private_key_path,
         )
 
         with self.assertRaisesRegex(
@@ -719,6 +847,9 @@ class CertificateWriteIdentityFactoryTests(unittest.TestCase):
             CertificateWriteIdentityFactory(
                 config=mismatched,
                 write_principal_id=self.write_principal_id,
+                expected_tenant_id="tenant-id",
+                expected_certificate_sha256=self.certificate_sha256,
+                expected_private_key_sha256=self.private_key_sha256,
                 workspace_id="notary_team_01",
                 site_binding_sha256="1" * 64,
                 bff_principal_binding_sha256="2" * 64,
@@ -728,6 +859,103 @@ class CertificateWriteIdentityFactoryTests(unittest.TestCase):
                 inspection_approval_sha256=INSPECTION_APPROVAL_SHA256,
                 now_provider=lambda: IDENTITY_NOW,
             )
+
+    def test_tenant_and_credential_drift_fail_closed(self) -> None:
+        drifted_configs = (
+            replace(self.config, tenant_id="other-tenant"),
+            self.config,
+            self.config,
+        )
+        bindings = (
+            ("tenant-id", self.certificate_sha256, self.private_key_sha256),
+            ("tenant-id", "a" * 64, self.private_key_sha256),
+            ("tenant-id", self.certificate_sha256, "b" * 64),
+        )
+        for config, binding in zip(drifted_configs, bindings, strict=True):
+            with self.subTest(config=config, binding=binding):
+                expected_tenant, certificate_hash, private_key_hash = binding
+                if config.tenant_id != expected_tenant:
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        r"^write_identity_config_binding_invalid$",
+                    ):
+                        CertificateWriteIdentityFactory(
+                            config=config,
+                            write_principal_id=self.write_principal_id,
+                            expected_tenant_id=expected_tenant,
+                            expected_certificate_sha256=certificate_hash,
+                            expected_private_key_sha256=private_key_hash,
+                            workspace_id="notary_team_01",
+                            site_binding_sha256="1" * 64,
+                            bff_principal_binding_sha256="2" * 64,
+                            inspection_principal_binding_sha256=(
+                                INSPECTION_PRINCIPAL_BINDING
+                            ),
+                            inspection_approval_sha256=(
+                                INSPECTION_APPROVAL_SHA256
+                            ),
+                            now_provider=lambda: IDENTITY_NOW,
+                        )
+                    continue
+                factory = CertificateWriteIdentityFactory(
+                    config=config,
+                    write_principal_id=self.write_principal_id,
+                    expected_tenant_id=expected_tenant,
+                    expected_certificate_sha256=certificate_hash,
+                    expected_private_key_sha256=private_key_hash,
+                    workspace_id="notary_team_01",
+                    site_binding_sha256="1" * 64,
+                    bff_principal_binding_sha256="2" * 64,
+                    inspection_principal_binding_sha256=(
+                        INSPECTION_PRINCIPAL_BINDING
+                    ),
+                    inspection_approval_sha256=INSPECTION_APPROVAL_SHA256,
+                    now_provider=lambda: IDENTITY_NOW,
+                )
+                with self.assertRaisesRegex(
+                    ProductionAdapterError,
+                    r"^write_identity_credential_rejected$",
+                ):
+                    factory.build(_identity_context(self.write_principal_id))
+
+    def test_bound_provider_receives_credential_bytes_not_reopenable_paths(
+        self,
+    ) -> None:
+        captured: list[tuple[bytes, bytes]] = []
+        provider = object()
+
+        def provider_factory(
+            config: CertificateGraphConfig,
+            certificate_bytes: bytes,
+            private_key_bytes: bytes,
+        ) -> Any:
+            self.certificate_path.write_bytes(b"mutated-after-read")
+            captured.append((certificate_bytes, private_key_bytes))
+            return provider
+
+        factory = CertificateWriteIdentityFactory(
+            config=self.config,
+            write_principal_id=self.write_principal_id,
+            expected_tenant_id="tenant-id",
+            expected_certificate_sha256=self.certificate_sha256,
+            expected_private_key_sha256=self.private_key_sha256,
+            workspace_id="notary_team_01",
+            site_binding_sha256="1" * 64,
+            bff_principal_binding_sha256="2" * 64,
+            inspection_principal_binding_sha256=INSPECTION_PRINCIPAL_BINDING,
+            inspection_approval_sha256=INSPECTION_APPROVAL_SHA256,
+            now_provider=lambda: IDENTITY_NOW,
+            provider_factory=provider_factory,
+        )
+
+        self.assertIs(
+            factory.build(_identity_context(self.write_principal_id)),
+            provider,
+        )
+        self.assertEqual(
+            captured,
+            [(self.certificate_bytes, self.private_key_bytes)],
+        )
 
 
 class S4fCompositionStatusTests(unittest.TestCase):

@@ -154,7 +154,14 @@ class SqliteEvidenceStagingOutbox:
             self._validate_database_size(connection)
             if connection.execute("PRAGMA integrity_check(1)").fetchone() != ("ok",):
                 raise RuntimeError("integrity_check_failed")
+            self._validate_all_records(connection)
             return connection
+        except ImmutableEvidenceError:
+            try:
+                connection.close()
+            except (UnboundLocalError, sqlite3.Error):
+                pass
+            raise
         except Exception:
             try:
                 connection.close()
@@ -234,26 +241,49 @@ class SqliteEvidenceStagingOutbox:
     ) -> tuple[EvidenceRecord, ...]:
         rows = connection.execute(
             """
-            SELECT event_json, event_sha256
+            SELECT
+                correlation_id,
+                sequence,
+                previous_event_sha256,
+                event_json,
+                event_sha256
             FROM evidence_staging_outbox
             WHERE correlation_id = ?
             ORDER BY sequence
             """,
             (correlation_id,),
         ).fetchall()
-        records: list[EvidenceRecord] = []
-        for payload, event_sha256 in rows:
-            if type(payload) is not bytes or type(event_sha256) is not str:
-                raise ImmutableEvidenceError("staged evidence record is invalid")
-            try:
-                event = json.loads(payload.decode("ascii"))
-            except Exception:
-                raise ImmutableEvidenceError("staged evidence record is invalid") from None
-            records.append(EvidenceRecord(event=event, event_sha256=event_sha256))
-        result = tuple(records)
-        if result:
-            verify_chain(result)
-        return result
+        records = tuple(
+            _record_from_row(row, expected_correlation_id=correlation_id)
+            for row in rows
+        )
+        if records:
+            verify_chain(records)
+        return records
+
+    def _validate_all_records(self, connection: sqlite3.Connection) -> None:
+        rows = connection.execute(
+            """
+            SELECT
+                correlation_id,
+                sequence,
+                previous_event_sha256,
+                event_json,
+                event_sha256
+            FROM evidence_staging_outbox
+            ORDER BY correlation_id, sequence
+            """
+        ).fetchall()
+        chains: dict[str, list[EvidenceRecord]] = {}
+        for row in rows:
+            correlation_id = row[0]
+            if type(correlation_id) is not str or not correlation_id:
+                raise ImmutableEvidenceError("staged evidence routing is invalid")
+            chains.setdefault(correlation_id, []).append(
+                _record_from_row(row, expected_correlation_id=correlation_id)
+            )
+        for records in chains.values():
+            verify_chain(tuple(records))
 
     def _validate_parent(self) -> None:
         parent = self._database_path.parent
@@ -324,6 +354,37 @@ class SqliteEvidenceStagingOutbox:
             or self._database_path.stat().st_size > _MAX_DATABASE_BYTES
         ):
             raise RuntimeError("database_size_invalid")
+
+
+def _record_from_row(
+    row: tuple[Any, ...], *, expected_correlation_id: str
+) -> EvidenceRecord:
+    if len(row) != 5:
+        raise ImmutableEvidenceError("staged evidence record is invalid")
+    correlation_id, sequence, previous_event_sha256, payload, event_sha256 = row
+    if (
+        type(correlation_id) is not str
+        or correlation_id != expected_correlation_id
+        or type(sequence) is not int
+        or type(previous_event_sha256) is not str
+        or type(payload) is not bytes
+        or type(event_sha256) is not str
+    ):
+        raise ImmutableEvidenceError("staged evidence routing is invalid")
+    try:
+        event = json.loads(payload.decode("ascii"))
+    except Exception:
+        raise ImmutableEvidenceError("staged evidence record is invalid") from None
+    if hashlib.sha256(payload).hexdigest() != event_sha256:
+        raise ImmutableEvidenceError("event hash is invalid")
+    if (
+        type(event) is not dict
+        or event.get("correlation_id") != correlation_id
+        or event.get("sequence") != sequence
+        or event.get("previous_event_sha256") != previous_event_sha256
+    ):
+        raise ImmutableEvidenceError("staged evidence routing is invalid")
+    return EvidenceRecord(event=event, event_sha256=event_sha256)
 
 
 def _copy_record(record: EvidenceRecord) -> EvidenceRecord:

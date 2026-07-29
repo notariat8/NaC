@@ -44,14 +44,18 @@ Anspruch auf Produktionsreife.
 ## Implementierte Adapter
 
 1. Ein GitHub-Issue-Kommentar-Verifier bindet Owner, Association, unveränderten
-   kanonischen Kommentar, Issue und alle S4d-Hashes.
-2. Eine zertifikatsbasierte Write-Identity-Factory nutzt den vorhandenen
-   `CertificateClientCredentialsTokenProvider`, konstruiert ihn aber erst nach
-   erfolgreicher Identitätsprüfung.
+   kanonischen Kommentar, Issue und alle S4d-Hashes. Das hashgeprüfte `gh`-Abbild
+   wird als versiegeltes Linux-`memfd` ausgeführt; stdout ist vor Abschluss
+   begrenzt und stderr wird verworfen.
+2. Eine zertifikatsbasierte Write-Identity-Factory bindet Tenant, Client-ID,
+   Zertifikats- und Private-Key-Inhalt und übergibt nur bereits geprüfte Bytes
+   an den Tokenprovider.
 3. Ein `urllib`-HTTP-Port blockiert Redirects, fremde Hosts, Nicht-v1.0-Pfade,
-   nicht erlaubte Methoden, automatische Retries und unredigierte Fehlerkörper.
+   Dot-Segmente, kodierte Separatoren, nicht erlaubte Methoden, automatische
+   Retries und unredigierte Fehlerkörper.
 4. Eine lokale SQLite-Staging-Outbox persistiert kanonische Evidence-Ereignisse
-   atomar, restartfest und hash-/sequenzgebunden. Sie darf eine Mutation nicht
+   atomar, restartfest und hash-/sequenzgebunden. Routing-Spalten werden beim
+   Öffnen global gegen den signierten Ereignisinhalt geprüft. Sie darf eine Mutation nicht
    abschließen und ist keine zentrale Wahrheit.
 
 ## Bewusst offene Adapter
@@ -90,11 +94,15 @@ Der Abschlussstatus lautet deshalb
 
 - **AC-S4F-01:** Provisioning-, Writer- und BFF-Identitäten bleiben getrennt.
 - **AC-S4F-02:** Der Graph-HTTP-Port blockiert jede Abweichung von der
-  gebundenen Graph-v1.0-Schreibkante.
+  gebundenen Graph-v1.0-Schreibkante einschließlich Normalisierungs- und
+  Percent-Encoding-Umgehungen sowie rohe und kodierte Kontrollzeichen.
 - **AC-S4F-03:** Der Owner-Verifier akzeptiert genau einen unveränderten,
-  kanonischen Owner-Kommentar und gibt keine Rohdaten aus.
+  kanonischen Owner-Kommentar, führt ausschließlich ein versiegeltes
+  hashgeprüftes Binärabbild mit begrenzter Ausgabe aus und gibt keine Rohdaten
+  aus.
 - **AC-S4F-04:** Die lokale SQLite-Staging-Outbox überlebt Neustarts und
-  erzwingt Sequenz, Hashkette, Deduplizierung und atomare Transaktionen. Sie
+  erzwingt Sequenz, Hashkette, Routing-Spaltenbindung, Deduplizierung und
+  atomare Transaktionen. Sie
   enthält keine Abschluss-, Ack-, Promotions- oder Cleanup-Operation.
   Datei und Verzeichnis erfordern exakt `0600` beziehungsweise `0700`. Nur
   explizit erlaubte lokale Linux-Dateisysteme werden akzeptiert; unbekannte

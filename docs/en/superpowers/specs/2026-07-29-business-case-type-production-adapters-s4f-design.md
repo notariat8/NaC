@@ -44,14 +44,18 @@ readiness claim.
 ## Implemented Adapters
 
 1. A GitHub issue-comment verifier binds owner, association, immutable
-   canonical comment, issue, and every S4d hash.
-2. A certificate write-identity factory reuses
-   `CertificateClientCredentialsTokenProvider`, but constructs it only after
-   successful identity verification.
-3. A `urllib` HTTP port blocks redirects, foreign hosts, non-v1.0 paths,
-   disallowed methods, automatic retries, and raw provider error bodies.
+   canonical comment, issue, and every S4d hash. The SHA-256 verified `gh` image
+   executes as a sealed Linux `memfd`; stdout is bounded before completion and
+   stderr is discarded.
+2. A certificate write-identity factory binds tenant, client ID, certificate
+   content, and private-key content and passes only verified bytes to the token
+   provider.
+3. A `urllib` HTTP port blocks redirects, foreign hosts, non-v1.0 paths, dot
+   segments, encoded separators, disallowed methods, automatic retries, and raw
+   provider error bodies.
 4. A SQLite outbox persists canonical evidence events atomically, across
-   restarts, and with sequence/hash binding.
+   restarts, and with sequence/hash binding. On open, routing columns are
+   checked globally against signed event content.
 
 ## Deliberately Open Adapters
 
@@ -86,11 +90,14 @@ The completion status is therefore
 
 - **AC-S4F-01:** Provisioning, writer, and BFF identities remain separate.
 - **AC-S4F-02:** The Graph HTTP port blocks every deviation from the bound
-  Graph-v1.0 write edge.
+  Graph-v1.0 write edge, including path-normalization and percent-encoding
+  bypasses and raw or encoded control characters.
 - **AC-S4F-03:** The owner verifier accepts exactly one immutable canonical
-  owner comment and returns no raw data.
+  owner comment, executes only a sealed hash-verified binary image with bounded
+  output, and returns no raw data.
 - **AC-S4F-04:** The local SQLite staging outbox survives restarts and enforces
-  sequence, hash chain, deduplication, and atomic transactions. It exposes no
+  sequence, hash chain, routing-column binding, deduplication, and atomic
+  transactions. It exposes no
   completion, acknowledgement, promotion, or cleanup operation.
   File and directory require exact `0600` and `0700` modes. Only explicitly
   allowlisted local Linux filesystems are accepted; unknown filesystems are
