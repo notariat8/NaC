@@ -171,6 +171,7 @@ REQUIRED_SAFETY_TEST_MODULES = {
         "test_terminal_rejection_closes_and_blocks_replay",
         "test_412_remains_terminal_no_retry",
         "test_dedupe_requires_fresh_stable_item_readback",
+        "test_409_requires_fresh_concrete_readback_and_stays_sticky_on_drift",
     },
     "tests/test_business_case_type_graph_write_edge_schema.py": {
         "test_validator_shape_matches_provisioned_mutation_columns",
@@ -437,6 +438,8 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "zero_matches_behavior": "continue_to_intent_and_single_post",
         "one_match_behavior": "fresh_item_readback_then_deduplicated_without_post",
         "http_409_exact_readback_behavior": "deduplicated_without_post_retry",
+        "http_409_requires_collection_dedupe_then_fresh_item_readback": True,
+        "http_409_fresh_readback_binds_item_id_etag_and_fields": True,
         "multiple_matches_behavior": "sticky_reconciliation_without_post",
         "one_match_payload_drift_behavior": "sticky_reconciliation_without_post",
         "unique_sharepoint_columns_required": True,
@@ -525,11 +528,12 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
             "intent_state",
             "intent_generation",
             "closed_generation",
+            "authorization_run_identity",
         ],
         "safe_start_intent_states_exact": ["absent", "retryable"],
         "closed_intent_is_terminal": True,
         "closed_intent_replay_behavior": "block_before_transport",
-        "same_mutation_id_reopen_allowed": False,
+        "terminal_same_execution_key_reopen_allowed": False,
         "post_close_confirmation_failure_behavior": (
             "return_persistence_failed_and_block_fresh_process_replay"
         ),
@@ -545,6 +549,13 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "legacy_mutation_id_state_lookup_allowed": False,
         "retryable_intent_is_terminal": False,
         "retryable_intent_requires_new_authorized_run": True,
+        "retryable_same_execution_key_requires_distinct_authorization_run_identity": True,
+        "authorization_run_identity_components_exact": [
+            "plan_sha256",
+            "approval_ref",
+        ],
+        "authorization_run_identity_format_exact": "canonical_sha256",
+        "prior_authorization_run_identity_must_match_persisted_state": True,
     }:
         errors.append("domain contract evidence order or sticky reconciliation mismatch")
 

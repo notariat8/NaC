@@ -65,9 +65,9 @@
   "invariants": [
     "AC-S4B-01: Five operations bind exact Graph REST v1.0 methods, targets, both provisioned SharePoint field schemas including per-column text maxLength, authorization, approval and target-scoped execution keys across workspace, site and both lists.",
     "AC-S4B-02: Role, purpose, approval, target and separate write-identity drift blocks before transport.",
-    "AC-S4B-03: Creates use documented expand and $filter only, require a fresh stable item readback after a dedupe hit, and PATCH uses one freshly read exact ETag without retrying HTTP 412.",
+    "AC-S4B-03: Creates use documented expand and $filter only, require a fresh stable concrete-item readback after an initial dedupe hit and after HTTP 409 collection reconciliation, and PATCH uses one freshly read exact ETag without retrying HTTP 412.",
     "AC-S4B-04: Backfill writes only VorgangstypId and verifies the canonical S5 operation and idempotency hashes.",
-    "AC-S4B-05: Persistent target-scoped intent generations precede writes; verified transient rejection may become retryable while uncertain outcomes remain sticky and terminal closures block replay.",
+    "AC-S4B-05: Persistent target-scoped intent generations precede writes; verified transient rejection may become retryable only for a later run with a distinct canonical authorization-run identity, while uncertain outcomes remain sticky and terminal closures block replay.",
     "AC-S4B-06: No live factory, credentials, network or tenant writes exist and BFF UAMI remains Sites.Selected/read.",
     "AC-S4B-07: Contract, validator, all safety paths, compileall, DE/EN traceability and review evidence agree."
   ],
@@ -103,7 +103,9 @@
     "Fresh stable item-ID, ETag and field readback after create dedupe hits",
     "Explicit 401, 403, 408 and 429 retryable-state traces with no automatic retry",
     "Both provisioned SharePoint schema files loaded with legacy Vorgangstyp choice preservation, VorgangstypId text maxLength 128, and per-column boundary/overflow rejection traces",
-    "Documented Graph v1.0 expand plus $filter query contract without top-level $select or $top"
+    "Documented Graph v1.0 expand plus $filter query contract without top-level $select or $top",
+    "Persisted authorization-run identity binds plan SHA-256 plus approval reference; identical retry authorization blocks before transport",
+    "HTTP 409 create reconciliation performs collection dedupe followed by fresh concrete item-ID, ETag and field verification"
   ],
   "evidence_policy": {
     "synthetic_only": true,
@@ -116,7 +118,7 @@
   "exit_conditions": [
     "All seven acceptance criteria are covered by executable checks.",
     "All five operations match and revalidate their exact method, target, fields, authorization, approval and request contract.",
-    "Plan manipulation, cross-workspace execution-key isolation, documented dedupe query, fresh dedupe readback, both provisioned field schemas and text maxLength boundaries, HTTP 401/403/408/409/412/429/5xx, strict readback and persistent retry/reconciliation paths pass.",
+    "Plan manipulation, cross-workspace execution-key isolation, distinct retry authorization-run identity, documented dedupe query, fresh concrete-item readback including HTTP 409, both provisioned field schemas and text maxLength boundaries, HTTP 401/403/408/409/412/429/5xx, strict readback and persistent retry/reconciliation paths pass.",
     "No live factory, credential path, HTTP client or tenant write is introduced.",
     "Protected PR review and required checks are green."
   ],

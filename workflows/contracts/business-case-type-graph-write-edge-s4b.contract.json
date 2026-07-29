@@ -203,7 +203,9 @@
     "dedupe_top_allowed": false,
     "dedupe_maximum_rows_accepted": 2,
     "dedupe_match_requires_fresh_item_readback_after_intent": true,
-    "dedupe_fresh_readback_binds_item_id_etag_and_fields": true
+    "dedupe_fresh_readback_binds_item_id_etag_and_fields": true,
+    "http_409_requires_collection_dedupe_then_fresh_item_readback": true,
+    "http_409_fresh_readback_binds_item_id_etag_and_fields": true
   },
   "concurrency": {
     "patch_fresh_item_get_required": true,
@@ -273,7 +275,8 @@
       "reconciliation_state",
       "intent_state",
       "intent_generation",
-      "closed_generation"
+      "closed_generation",
+      "authorization_run_identity"
     ],
     "safe_start_intent_states_exact": [
       "absent",
@@ -281,7 +284,6 @@
     ],
     "closed_intent_is_terminal": true,
     "closed_intent_replay_behavior": "block_before_transport",
-    "same_mutation_id_reopen_allowed": false,
     "post_close_confirmation_failure_behavior": "return_persistence_failed_and_block_fresh_process_replay",
     "intent_open_requires_durable_readback_before_write": true,
     "reconciliation_clear_with_open_intent_behavior": "block_before_transport",
@@ -297,7 +299,15 @@
     "persistent_state_key_exact": "execution_key",
     "legacy_mutation_id_state_lookup_allowed": false,
     "retryable_intent_is_terminal": false,
-    "retryable_intent_requires_new_authorized_run": true
+    "retryable_intent_requires_new_authorized_run": true,
+    "terminal_same_execution_key_reopen_allowed": false,
+    "retryable_same_execution_key_requires_distinct_authorization_run_identity": true,
+    "authorization_run_identity_components_exact": [
+      "plan_sha256",
+      "approval_ref"
+    ],
+    "authorization_run_identity_format_exact": "canonical_sha256",
+    "prior_authorization_run_identity_must_match_persisted_state": true
   },
   "offline_boundary": {
     "transport_is_injected_protocol_only": true,
@@ -320,7 +330,7 @@
     },
     {
       "id": "AC-S4B-03",
-      "requirement": "Case and task creates use only documented expand and $filter query options, require a fresh item-ID/ETag/field readback for a dedupe hit, and PATCH requires the fresh exact ETag without retrying HTTP 412."
+      "requirement": "Case and task creates use only documented expand and $filter query options, require a fresh item-ID/ETag/field readback for an initial dedupe hit and after HTTP 409 collection reconciliation, and PATCH requires the fresh exact ETag without retrying HTTP 412."
     },
     {
       "id": "AC-S4B-04",
@@ -328,7 +338,7 @@
     },
     {
       "id": "AC-S4B-05",
-      "requirement": "Durable execution-key-bound intents precede writes; transient 401/403/408/429 outcomes become retryable only after verified-not-applied readback, while uncertain outcomes remain sticky and terminal closures block replay."
+      "requirement": "Durable execution-key-bound intents precede writes; transient 401/403/408/429 outcomes become retryable only after verified-not-applied readback and require a distinct canonical authorization-run identity for a later run, while uncertain outcomes remain sticky and terminal closures block replay."
     },
     {
       "id": "AC-S4B-06",
@@ -473,10 +483,14 @@
       }
     },
     "date_time_fields_by_list_exact": {
-      "AufgabenFristen": ["DueDate"]
+      "AufgabenFristen": [
+        "DueDate"
+      ]
     },
     "boolean_fields_by_list_exact": {
-      "AufgabenFristen": ["RequiresNotaryApproval"]
+      "AufgabenFristen": [
+        "RequiresNotaryApproval"
+      ]
     },
     "boolean_as_text_or_integer_allowed": false,
     "date_time_format_exact": "ISO-8601 timezone-aware"

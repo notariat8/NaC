@@ -55,10 +55,12 @@ are protocols; tests use synthetic in-memory fakes only.
 | `task_update` | `PATCH` | `AufgabenFristen` | a non-empty subset of `Status`, `DueDate`, `RequiresNotaryApproval`, `BlockedReason` |
 | `business_case_type_backfill` | `PATCH` | `Akten` | `VorgangstypId` only |
 
-All field values are validated against the production SharePoint schema before
-planning. Choice values must be members of their closed choice sets,
-`RequiresNotaryApproval` is the only Boolean field, and `DueDate` must be a
-timezone-aware ISO timestamp. In particular, `bool` must not pass as an
+All field values are validated against both the base schema and the additive
+BusinessCaseType foundation before planning. `VorgangstypId` is text with
+`maxLength: 128`, while only the legacy `Vorgangstyp` field carries the four
+choices. All other text lengths and choice values must also match the
+provisioned schema; `RequiresNotaryApproval` is the only Boolean field, and
+`DueDate` must be a timezone-aware ISO timestamp. `bool` must not pass as an
 integer or text value for other field types.
 
 All targets are exactly below
@@ -160,8 +162,9 @@ operation hash, never raw site, list, item, or field values.
 
 HTTP 401, 403, 408, and 429 are not retried automatically in the same run. Only
 when strict readback proves that the write was not applied is the generation
-closed as `retryable`. A later, separately authorized run may restart after
-authentication refresh for 401/403. Uncertain results remain sticky open; HTTP
+closed as `retryable`. A later, separately authorized run may restart only with a new canonical
+authorization-run identity derived from plan SHA-256 and approval reference;
+401/403 additionally require authentication refresh. Uncertain results remain sticky open; HTTP
 412 remains terminal without retry.
 
 ## Acceptance Criteria

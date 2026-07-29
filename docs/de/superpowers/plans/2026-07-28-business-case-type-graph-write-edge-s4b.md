@@ -30,9 +30,10 @@ PATCH-5xx-Readbacks ausschließlich an `plan.mutation.item_id`. Der finale Safet
 nachgelagerter Closure-Bestätigung terminal und bindet jeden Target-Hash
 unabhängig von der aktiven Operation an Workspace, Site und beide Listen-IDs.
 Das unabhängige Integrationsreview ergänzt zielgebundene Execution-Keys,
-verifiziertes `retryable` für 401/403/408/429 ohne In-Run-Retry,
-SharePoint-Schema-Validierung und den frischen konkreten Item-Readback vor
-`DEDUPLICATED`.
+verifiziertes `retryable` für 401/403/408/429 ohne In-Run-Retry und mit
+neuer Authorization-Run-Identity, die Bindung beider realen SharePoint-
+Schemadateien einschließlich Textlängen sowie den frischen konkreten
+Item-Readback vor `DEDUPLICATED` und nach HTTP 409.
 
 ## Arbeitspakete
 

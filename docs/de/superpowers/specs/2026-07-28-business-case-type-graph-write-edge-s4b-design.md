@@ -56,11 +56,13 @@ In-Memory-Fakes.
 | `task_update` | `PATCH` | `AufgabenFristen` | nichtleere Teilmenge aus `Status`, `DueDate`, `RequiresNotaryApproval`, `BlockedReason` |
 | `business_case_type_backfill` | `PATCH` | `Akten` | ausschließlich `VorgangstypId` |
 
-Alle Feldwerte werden vor der Planung gegen das produktive SharePoint-Schema
-validiert. Choice-Werte müssen in der jeweiligen geschlossenen Auswahl liegen,
-`RequiresNotaryApproval` ist das einzige Boolean-Feld und `DueDate` muss ein
-zeitzonenbehafteter ISO-Zeitpunkt sein. Insbesondere darf `bool` nicht als
-Integer- oder Textwert andere Feldtypen passieren.
+Alle Feldwerte werden vor der Planung gegen das Basis-Schema und die additive
+BusinessCaseType-Foundation validiert. `VorgangstypId` ist Text mit
+`maxLength: 128`, während nur das Legacy-Feld `Vorgangstyp` die vier Choices
+trägt. Auch die übrigen Textlängen und Choice-Werte müssen dem provisionierten
+Schema entsprechen; `RequiresNotaryApproval` ist das einzige Boolean-Feld und
+`DueDate` muss ein zeitzonenbehafteter ISO-Zeitpunkt sein. `bool` darf nicht
+als Integer- oder Textwert andere Feldtypen passieren.
 
 Alle Ziele liegen exakt unter
 `https://graph.microsoft.com/v1.0/sites/{site-id}/lists/{list-id}/items`.
@@ -166,7 +168,9 @@ Item- oder Feldwerte.
 HTTP 401, 403, 408 und 429 werden im selben Lauf nicht automatisch wiederholt.
 Nur wenn ein strikter Readback beweist, dass der Write nicht angewendet wurde,
 wird die Generation als `retryable` geschlossen. Ein späterer, separat
-autorisierter Lauf darf nach erneuerter Authentisierung für 401/403 neu starten.
+autorisierter Lauf darf nur mit einer neuen kanonischen
+Authorization-Run-Identity aus Plan-SHA-256 und Approval-Referenz neu starten;
+für 401/403 ist zusätzlich die Authentisierung zu erneuern.
 Unklare Ergebnisse bleiben sticky offen; HTTP 412 bleibt terminal ohne Retry.
 
 ## Akzeptanzkriterien

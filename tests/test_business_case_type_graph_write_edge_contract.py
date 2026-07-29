@@ -126,6 +126,24 @@ class BusinessCaseTypeGraphWriteEdgeContractTests(unittest.TestCase):
         self.assertTrue(validate_domain_contract(payload))
 
         payload = copy.deepcopy(self.domain)
+        payload["create_idempotency"][
+            "http_409_requires_collection_dedupe_then_fresh_item_readback"
+        ] = False
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["evidence"][
+            "authorization_run_identity_components_exact"
+        ] = ["approval_ref"]
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["evidence"][
+            "retryable_same_execution_key_requires_distinct_authorization_run_identity"
+        ] = False
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
         payload["error_handling"]["retryable_http_statuses_exact"].remove(429)
         self.assertTrue(validate_domain_contract(payload))
 

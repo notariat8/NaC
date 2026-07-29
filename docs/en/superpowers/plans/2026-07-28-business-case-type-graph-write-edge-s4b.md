@@ -30,8 +30,9 @@ condition with persistent intent generations plus closure proof and binds PATCH
 closure confirmation fails and binds every target hash to workspace, site, and
 both list IDs regardless of the active operation. The independent integration
 review adds target-bound execution keys, verified `retryable` handling for
-401/403/408/429 without in-run retry, SharePoint schema validation, and a
-fresh concrete-item readback before `DEDUPLICATED`.
+401/403/408/429 without in-run retry and with a new authorization-run identity,
+binding to both actual SharePoint schema files including text lengths, and a
+fresh concrete-item readback before `DEDUPLICATED` and after HTTP 409.
 
 ## Work Packages
 
