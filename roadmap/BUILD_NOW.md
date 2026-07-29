@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-07-14
+Last update: 2026-07-29
 Branch: `main`
 
 ## What Is Being Built
@@ -30,6 +30,7 @@ for Fachpersonal without exposing `value` fields.
 | BusinessCaseType S3 runtime | Done offline (#614) | Completion requires `business_case_type_get`, content-based catalog version, purpose-bound aliases, isolated caches, contracts, negative tests and strict validation; no Graph or tenant access in S3. |
 | BusinessCaseType S4b Graph Write Edge | Done offline (#694) | Five bounded operations, separate `Sites.Selected`/`write` identity contract, dedupe, ETags, S5 hash binding, persistent reconciliation, and `business-case-type-write-dry-run`; live Graph calls and tenant writes remain zero, production composition and live write remain owner-gated. |
 | BusinessCaseType S4c Graph Write Composition | Done offline (#698) | SQLite generation-CAS/evidence state, injected Graph REST v1.0 transport and synthetic credential port compose all five operations with crash/restart blocking; socket/DNS, external credential reads, live Graph and tenant writes remain zero. |
+| BusinessCaseType S4d-S4g Production Edge | S4g ready for Protected PR (#700/#702/#704/#708) | Owner-bound live boundary, production-adapter readiness, exact identity inspection, trusted-local replay/evidence separation and create-only Azure Blob WORM REST are composed and verified offline. Central PostgreSQL evidence, broker, signature anchor, durable reconciliation, irreversible WORM lock and live activation remain blocked. |
 | KG CLI | Implemented | `scripts/notary_kg.py`, `notary-kg` after package install |
 | KG editor view | Implemented | `src/notary_kg/editor.py`, `schemas/kg-editor-patch.schema.json`, `workflows/contracts/kg-editor.contract.json` |
 | Workflow contract draft generator | Implemented | `src/notary_kg/workflow_contract.py`, `nac kg workflow-contract <slug>`, `tests/test_notary_kg.py` |
@@ -81,6 +82,9 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0024 | BusinessCaseType S4b bounded Graph Write Edge | Done offline (#694) | Exactly five operations, separate `Sites.Selected`/`write` identity boundary, create deduplication, fresh ETags, S5 hash binding, persistent reconciliation, synthetic redacted CLI, contracts, validator and tests pass with zero credential reads, live factories, Graph calls or tenant writes. Production composition and live write remain owner-gated. |
 | DEV-0025 | BusinessCaseType S4c offline write composition | Done offline (#698) | Local SQLite generation-CAS and redacted evidence, injected exact Graph REST v1.0 transport, credential port, five-operation composition smoke and crash/restart tests pass with zero socket/DNS, external credential reads, live Graph calls or tenant writes. Live identity, central durability and tenant execution remain owner-gated. |
 | DEV-0026 | BusinessCaseType S4d live write boundary | Done offline (#700) | Owner/hash/target/principal gate, separate read-only inspection and `Sites.Selected/write` token factory ports, S6-v0.2 operation evidence, S6b Azure WORM composition and five-operation one-shot smoke pass offline. Production adapters and the first synthetic tenant write remain owner-gated. |
+| DEV-0027 | BusinessCaseType S4e live write readiness | Done offline (#702) | Exact provisioning, writer and BFF identity requirements plus required production ports are executable as a fail-closed readiness assessment; no live authorization is produced. |
+| DEV-0028 | BusinessCaseType S4f partial production adapters | Done offline (#704) | Exact owner verifier, certificate writer factory, redirect-free Graph REST and trusted-local SQLite evidence staging are implemented without central completion authority. |
+| DEV-0029 | BusinessCaseType S4g production edge composition | Ready for Protected PR (#708) | Redacted identity inspection, exact site roles, trusted-local database separation and strict Azure Blob WORM REST transport are composed; live activation remains blocked on the enumerated central controls. |
 
 ## Roadmap Review Notes
 

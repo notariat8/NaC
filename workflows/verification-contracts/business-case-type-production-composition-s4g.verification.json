@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "nac.verification-contract/v0.1",
+  "id": "business-case-type-production-composition-s4g",
+  "title": "BusinessCaseType production edge composition S4g verification",
+  "issue": "https://github.com/notariat8/NaC/issues/708",
+  "appliesWhen": {
+    "paths": [
+      "src/nac_m365_graph/business_case_type_production_composition.py",
+      "src/nac_m365_graph/business_case_type_write_identity_inspection.py",
+      "src/nac_runtime/azure_blob_worm_rest_transport.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_production_composition.py",
+      "tests/test_business_case_type_production_composition.py",
+      "tests/test_business_case_type_write_identity_inspection.py",
+      "tests/test_azure_blob_worm_rest_transport.py",
+      "tests/test_business_case_type_production_composition_cli.py",
+      "tests/test_business_case_type_production_composition_contract.py",
+      "workflows/contracts/business-case-type-production-composition-s4g.contract.json",
+      "workflows/verification-contracts/business-case-type-production-composition-s4g.verification.json",
+      "docs/de/superpowers/specs/2026-07-29-business-case-type-production-composition-s4g-design.md",
+      "docs/de/superpowers/plans/2026-07-29-business-case-type-production-composition-s4g.md",
+      "docs/en/superpowers/specs/2026-07-29-business-case-type-production-composition-s4g-design.md",
+      "docs/en/superpowers/plans/2026-07-29-business-case-type-production-composition-s4g.md",
+      "agent-context/index.json",
+      "docs/de/cli.md",
+      "docs/en/cli.md",
+      "roadmap/BUILD_NOW.md",
+      "roadmap/GANTT.md",
+      "scripts/quality_gate.py",
+      "workflows/contracts/README.md",
+      "workflows/verification-contracts/README.md"
+    ]
+  },
+  "requiredContext": [
+    "AGENTS.md",
+    "docs/de/superpowers/specs/2026-07-29-business-case-type-production-composition-s4g-design.md",
+    "docs/de/superpowers/plans/2026-07-29-business-case-type-production-composition-s4g.md",
+    "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+    "workflows/contracts/business-case-type-production-adapters-s4f.contract.json",
+    "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json"
+  ],
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_production_composition tests.test_business_case_type_write_identity_inspection tests.test_azure_blob_worm_rest_transport tests.test_business_case_type_production_composition_cli tests.test_business_case_type_production_composition_contract",
+    "python3 scripts/validate_business_case_type_production_composition.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check",
+    "python3 -m compileall -q src scripts tests",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "requiredEvidence": [
+    "Offline composition derives domain-separated hashes from the actual S4d, S4f and S6b contract files and implementation files for the identity inspector, owner verifier, token factory, Graph transport and Azure WORM REST transport; the separately bound identity snapshot attestation is produced only by the exact in-memory SnapshotIdentityInspectionPort, and the WORM target remains explicitly offline-unconfigured.",
+    "Provisioner, writer and BFF app_id values are pairwise distinct; their service_principal_object_id values are independently pairwise distinct; the complete app-ID and object-ID namespaces are disjoint.",
+    "Writer remains exactly Sites.Selected/write and BFF remains exactly Sites.Selected/read; only writer may be the business writer and token source.",
+    "Mutation state and evidence staging use exact, distinct canonical SQLite paths under a trusted local 0700 root; existing files must be regular, owner-only 0600 files with st_nlink equal to one and distinct device/inode identities; weak-mode, hardlink, symlink, synced, remote and unknown filesystems fail closed.",
+    "Azure Blob WORM REST uses owner-bound HTTPS hosts, pinned API versions, injected token and HTTP ports, GET/PUT only, bounded bodies, no redirects or retries, If-None-Match create, exact-version readback and no policy lock or delete operation.",
+    "PostgreSQL promotion/ack/retention/cleanup, broker decision, signature anchor decision, durable reconciliation, irreversible WORM lock and owner-gated live activation remain explicit blockers.",
+    "Output is exactly S4G_PRODUCTION_EDGE_COMPOSITION_VERIFIED_OFFLINE with live status BLOCKED_PENDING_CENTRAL_EVIDENCE_AND_OWNER_GATED_ACTIVATION and makes no production-readiness, durability or live-authorization claim.",
+    "Independent base...head review has no unresolved P1 or P2 findings."
+  ],
+  "invariants": [
+    "Provisioner, writer and BFF remain separate by app ID, service-principal object ID and hash-bound principal evidence.",
+    "Local SQLite mutation state and evidence staging are separate single-host stores, are not central truth and cannot close a mutation.",
+    "The Azure transport can read policy evidence and create/read exact blob versions but can never mutate or lock an immutability policy.",
+    "No live Graph, Entra, SharePoint, Teams, Azure, credential-store or infrastructure action occurs.",
+    "S4G_PRODUCTION_EDGE_COMPOSITION_VERIFIED_OFFLINE is not production readiness or live authorization."
+  ],
+  "thresholds": {
+    "socketOrDnsCalls": 0,
+    "externalCredentialStoreReads": 0,
+    "graphCalls": 0,
+    "azureCalls": 0,
+    "tenantWrites": 0,
+    "wormLockActions": 0,
+    "unresolvedP1OrP2Findings": 0
+  },
+  "passCondition": {
+    "allChecksPass": true,
+    "statusExact": "S4G_PRODUCTION_EDGE_COMPOSITION_VERIFIED_OFFLINE",
+    "liveStatusExact": "BLOCKED_PENDING_CENTRAL_EVIDENCE_AND_OWNER_GATED_ACTIVATION",
+    "productionReadinessClaimed": false,
+    "productionDurabilityClaimed": false,
+    "runtimeFactoryConstructed": false,
+    "liveWriteAuthorized": false
+  },
+  "failureBehavior": {
+    "mode": "fail_closed",
+    "mergeAllowed": false,
+    "runtimeConstructionAllowed": false,
+    "writerCredentialReadAllowed": false,
+    "liveRetryAllowed": false,
+    "ownerInputRequiredForLiveActivation": true
+  }
+}
