@@ -1058,3 +1058,11 @@ nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-
 ## Offline S6b Azure Blob WORM Readiness
 
 `nac kg business-case-type-azure-worm-readiness` reports only provider-free S6b readiness. It binds the on-prem evidence publisher to the authoritative tenant-bound Azure Blob WORM copy, at least 3653 days, version-bound receipts and the delete-free writer role. Network, credential, tenant-write, deployment and lock counters remain zero; the irreversible lock remains `PREPARED_OFFLINE_NOT_EXECUTED` and requires S7 plus an owner gate.
+
+## BusinessCaseType Live Write Boundary S4d
+
+`nac m365 teams-sharepoint business-case-type-live-write-smoke` checks all five write operations strictly synthetically with an independent owner verifier plus plan, target and principal gates, separate `Sites.Selected/write` and `Sites.Selected/read` identities, SQLite replay safety and S6/S6b WORM publication before local closure. External credentials, network, live Graph, Azure and tenant writes remain zero.
+
+```bash
+nac m365 teams-sharepoint business-case-type-live-write-smoke --database-path /tmp/nac-s4d-smoke/state.sqlite --format json
+```

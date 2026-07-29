@@ -74,6 +74,7 @@ class MutationExecutionResult:
 class _Observation:
     state: str
     http_status: int
+    provider_state_sha256: str | None = None
 
 
 class BusinessCaseTypeGraphWriteEdge:
@@ -229,6 +230,7 @@ class BusinessCaseTypeGraphWriteEdge:
                     plan,
                     _readback_result_code(fresh_observation),
                     fresh_observation.http_status,
+                    provider_state_sha256=fresh_observation.provider_state_sha256,
                     intent_generation=intent_generation,
                     close_intent=verified,
                 )
@@ -333,6 +335,7 @@ class BusinessCaseTypeGraphWriteEdge:
                 plan,
                 _readback_result_code(observation),
                 observation.http_status,
+                provider_state_sha256=observation.provider_state_sha256,
                 intent_generation=intent_generation,
                 close_intent=False,
             )
@@ -390,6 +393,7 @@ class BusinessCaseTypeGraphWriteEdge:
                 plan,
                 _readback_result_code(observation),
                 observation.http_status,
+                provider_state_sha256=observation.provider_state_sha256,
                 intent_generation=intent_generation,
                 close_intent=False,
             )
@@ -456,6 +460,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             _readback_result_code(observation),
             observation.http_status,
+            provider_state_sha256=observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=not needs_reconciliation,
             completion_state=(
@@ -527,6 +532,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             _readback_result_code(observation),
             observation.http_status,
+            provider_state_sha256=observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=not needs_reconciliation,
         )
@@ -622,6 +628,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             _readback_result_code(fresh_observation),
             fresh_observation.http_status,
+            provider_state_sha256=fresh_observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=verified,
         )
@@ -676,6 +683,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             _readback_result_code(observation),
             observation.http_status,
+            provider_state_sha256=observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=not needs_reconciliation,
         )
@@ -750,6 +758,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             _readback_result_code(observation),
             observation.http_status,
+            provider_state_sha256=observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=not needs_reconciliation,
         )
@@ -799,6 +808,7 @@ class BusinessCaseTypeGraphWriteEdge:
             plan,
             "not_verified",
             observation.http_status,
+            provider_state_sha256=observation.provider_state_sha256,
             intent_generation=intent_generation,
             close_intent=False,
         )
@@ -965,6 +975,7 @@ class BusinessCaseTypeGraphWriteEdge:
         result_code: str,
         http_status: int,
         *,
+        provider_state_sha256: str | None,
         intent_generation: int,
         close_intent: bool,
         completion_state: CompletionState = "terminal",
@@ -975,6 +986,7 @@ class BusinessCaseTypeGraphWriteEdge:
                     plan,
                     result_code=result_code,
                     http_status=http_status,
+                    provider_state_sha256=provider_state_sha256,
                     intent_generation=intent_generation,
                     close_intent=close_intent,
                     completion_state=completion_state,
@@ -1102,6 +1114,7 @@ def _evidence(
     intent_generation: int | None = None,
     expected_intent_generation: int | None = None,
     prior_authorization_run_identity: str | None = None,
+    provider_state_sha256: str | None = None,
     close_intent: bool | None = None,
     completion_state: CompletionState | None = None,
 ) -> dict[str, Any]:
@@ -1119,6 +1132,8 @@ def _evidence(
         payload["s5_operation_hash"] = plan.mutation.s5_operation_hash
     if http_status is not None:
         payload["http_status"] = http_status
+    if provider_state_sha256 is not None:
+        payload["provider_state_sha256"] = provider_state_sha256
     if intent_generation is not None:
         payload["intent_generation"] = intent_generation
     if expected_intent_generation is not None:
@@ -1131,6 +1146,23 @@ def _evidence(
     if completion_state is not None:
         payload["completion_state"] = completion_state
     return payload
+
+
+def mutation_evidence_binding(plan: BusinessCaseTypeWritePlan) -> dict[str, Any]:
+    evidence = _evidence(plan, result_code="planned")
+    return {
+        field: evidence[field]
+        for field in (
+            "mutation_id",
+            "execution_key",
+            "operation",
+            "target_binding_hash",
+            "plan_sha256",
+            "authorization_run_identity",
+            "s5_operation_hash",
+        )
+        if field in evidence
+    }
 
 
 def _execution_key(plan: BusinessCaseTypeWritePlan) -> str:
@@ -1215,6 +1247,7 @@ def _dedupe_observation(
     return _Observation(
         "divergent" if states[0] == "not_applied" else states[0],
         status,
+        canonical_hash(response.body),
     )
 
 
@@ -1227,14 +1260,16 @@ def _item_observation(
     status = _status(response)
     if status != 200 or not isinstance(response.body, Mapping):
         return _Observation("invalid", status)
+    state = _row_state(
+        plan,
+        response.body,
+        expected_item_id=expected_item_id,
+        require_dedupe_identity=False,
+    )
     return _Observation(
-        _row_state(
-            plan,
-            response.body,
-            expected_item_id=expected_item_id,
-            require_dedupe_identity=False,
-        ),
+        state,
         status,
+        canonical_hash(response.body) if state != "invalid" else None,
     )
 
 

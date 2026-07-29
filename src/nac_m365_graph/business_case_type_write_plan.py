@@ -51,6 +51,7 @@ _OPERATION_PURPOSE = {
     "business_case_type_backfill": "business_case_type_migration",
 }
 _BOUND_VALUE = re.compile(r"[^\x00-\x20\x7f]{1,256}\Z")
+_OWNER_APPROVAL_REF = re.compile(r"owner-approval-v1-[0-9a-f]{64}\Z")
 _ITEM_ID = re.compile(r"[1-9][0-9]{0,18}\Z")
 
 
@@ -335,10 +336,14 @@ class BusinessCaseTypeWritePlanBuilder:
             raise WritePlanBlocked("role binding drift")
         if authorization.write_approved is not True:
             raise WritePlanBlocked("write approval is absent")
+        approval_ref = authorization.approval_ref
         if (
-            type(authorization.approval_ref) is not str
-            or not authorization.approval_ref.startswith("synthetic-approval-")
-            or _BOUND_VALUE.fullmatch(authorization.approval_ref) is None
+            type(approval_ref) is not str
+            or _BOUND_VALUE.fullmatch(approval_ref) is None
+            or not (
+                approval_ref.startswith("synthetic-approval-")
+                or _OWNER_APPROVAL_REF.fullmatch(approval_ref) is not None
+            )
         ):
             raise WritePlanBlocked("approval reference binding drift")
         if authorization.write_identity_id == authorization.bff_uami_identity_id:
@@ -349,6 +354,17 @@ class BusinessCaseTypeWritePlanBuilder:
 
 def plan_snapshot(plan: BusinessCaseTypeWritePlan) -> dict[str, Any]:
     return _plan_snapshot(plan, include_plan_hash=True)
+
+
+def approval_plan_binding_sha256(
+    plan: BusinessCaseTypeWritePlan,
+) -> str:
+    """Bind the complete plan without creating an approval/hash cycle."""
+    if not isinstance(plan, BusinessCaseTypeWritePlan):
+        raise WritePlanBlocked("plan type is invalid")
+    payload = _plan_snapshot(plan)
+    payload["authorization"]["approval_ref"] = "owner-approval-bound"
+    return canonical_hash(payload)
 
 
 def _plan_snapshot(

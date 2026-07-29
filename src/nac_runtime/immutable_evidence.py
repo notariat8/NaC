@@ -56,9 +56,19 @@ _RECONCILIATION_PHASE_ORDERS = (
     ),
 )
 _LEGAL_PHASE_ORDERS = (_NORMAL_PHASE_ORDER, *_RECONCILIATION_PHASE_ORDERS)
-MUTATION_ACTIONS = frozenset(
+S6_V1_MUTATION_ACTIONS = frozenset(
     {"schema_apply", "backfill", "correction", "cutover", "rollback"}
 )
+S4D_LIVE_WRITE_ACTIONS = frozenset(
+    {
+        "case_create",
+        "case_status_update",
+        "task_create",
+        "task_update",
+        "business_case_type_backfill",
+    }
+)
+MUTATION_ACTIONS = S6_V1_MUTATION_ACTIONS | S4D_LIVE_WRITE_ACTIONS
 S6_STATUS = "S6_OFFLINE_FOUNDATION"
 LIVE_STATUS = "BLOCKED_PENDING_S7_APPROVAL"
 MINIMUM_RETENTION_YEARS = 10
@@ -1155,6 +1165,8 @@ def build_event(
     etags: Mapping[str, str] | None = None,
     etag_hmac_key: bytes,
     etag_hmac_key_version: int,
+    operation_binding_sha256: str | None = None,
+    provider_state_sha256: str | None = None,
     retention_years: int = MINIMUM_RETENTION_YEARS,
     legal_hold: bool = True,
     reconciliation_reason_code: str | None = None,
@@ -1217,8 +1229,22 @@ def build_event(
     idempotency_key_sha256 = hashlib.sha256(
         canonical_json_bytes(operation_binding)
     ).hexdigest()
+    s4d_operation_binding = None
+    if action in S4D_LIVE_WRITE_ACTIONS:
+        s4d_operation_binding = _sha256(
+            operation_binding_sha256,
+            "operation_binding_sha256",
+        )
+    elif operation_binding_sha256 is not None:
+        raise ImmutableEvidenceError(
+            "v0.1 event cannot carry an operation binding"
+        )
     event: dict[str, Any] = {
-        "schema_version": "nac.immutable-evidence-event/v0.1",
+        "schema_version": (
+            "nac.immutable-evidence-event/v0.2"
+            if action in S4D_LIVE_WRITE_ACTIONS
+            else "nac.immutable-evidence-event/v0.1"
+        ),
         "idempotency_key_sha256": idempotency_key_sha256,
         "correlation_id": str(correlation),
         "phase": phase,
@@ -1253,6 +1279,21 @@ def build_event(
             actor_value._tenant_binding_sha256,
         ),
     }
+    if action in S4D_LIVE_WRITE_ACTIONS:
+        event["operation_binding_sha256"] = s4d_operation_binding
+        if provider_state_sha256 is not None:
+            if phase != "readback":
+                raise ImmutableEvidenceError(
+                    "provider state binding is readback-only"
+                )
+            event["provider_state_sha256"] = _sha256(
+                provider_state_sha256,
+                "provider_state_sha256",
+            )
+    elif provider_state_sha256 is not None:
+        raise ImmutableEvidenceError(
+            "v0.1 event cannot carry a provider state binding"
+        )
     if phase == "intent":
         if result_code is not None or reconciliation_reason_code is not None:
             raise ImmutableEvidenceError("intent cannot contain an outcome")
@@ -2119,12 +2160,19 @@ def _validate_transition(
             ),
             None,
         )
-        if not event.get("etags"):
+        if event.get("schema_version") == "nac.immutable-evidence-event/v0.1":
+            if not event.get("etags"):
+                raise ImmutableEvidenceError(
+                    "successful readback requires provider ETags"
+                )
+        elif event.get("provider_state_sha256") is None:
             raise ImmutableEvidenceError(
-                "successful readback requires provider ETags"
+                "successful readback requires provider state binding"
             )
         if (
-            outcome is not None
+            event.get("schema_version")
+            == "nac.immutable-evidence-event/v0.1"
+            and outcome is not None
             and outcome.get("result_code") != _UNCERTAIN_OUTCOME_CODE
             and event.get("etags") != outcome.get("etags")
         ):
@@ -2134,6 +2182,7 @@ def _validate_transition(
     if records:
         first = records[0].event
         for key in (
+            "schema_version",
             "correlation_id",
             "actor_ref",
             "actor_principal_ref",
@@ -2151,6 +2200,13 @@ def _validate_transition(
         ):
             if event.get(key) != first.get(key):
                 raise ImmutableEvidenceError(f"evidence binding changed: {key}")
+        if event.get("schema_version") == "nac.immutable-evidence-event/v0.2":
+            if event.get("operation_binding_sha256") != first.get(
+                "operation_binding_sha256"
+            ):
+                raise ImmutableEvidenceError(
+                    "evidence binding changed: operation_binding_sha256"
+                )
 
 
 def _validate_event_shape(event: Mapping[str, Any]) -> None:
@@ -2178,6 +2234,17 @@ def _validate_event_shape(event: Mapping[str, Any]) -> None:
             }
         ),
     }
+    schema_version = event.get("schema_version")
+    if schema_version not in {
+        "nac.immutable-evidence-event/v0.1",
+        "nac.immutable-evidence-event/v0.2",
+    }:
+        raise ImmutableEvidenceError("evidence schema version is invalid")
+    version_fields = frozenset()
+    if schema_version == "nac.immutable-evidence-event/v0.2":
+        version_fields = frozenset({"operation_binding_sha256"})
+        if phase == "readback" and "provider_state_sha256" in event:
+            version_fields |= frozenset({"provider_state_sha256"})
     base_fields = frozenset(
         {
             "schema_version",
@@ -2204,10 +2271,8 @@ def _validate_event_shape(event: Mapping[str, Any]) -> None:
             "etags",
         }
     )
-    if frozenset(event) != base_fields | phase_fields[phase]:
+    if frozenset(event) != base_fields | phase_fields[phase] | version_fields:
         raise ImmutableEvidenceError("evidence envelope fields are invalid")
-    if event["schema_version"] != "nac.immutable-evidence-event/v0.1":
-        raise ImmutableEvidenceError("evidence schema version is invalid")
     correlation = _correlation_ref(event["correlation_id"], "correlation_id")
     sequence = event["sequence"]
     if type(sequence) is not int or sequence < 1:
@@ -2228,6 +2293,15 @@ def _validate_event_shape(event: Mapping[str, Any]) -> None:
     role = _registered_identifier(event["role_id"], "role_id", _ROLE_ID, REGISTERED_ROLE_IDS)
     if event["action"] not in MUTATION_ACTIONS:
         raise ImmutableEvidenceError("action is invalid")
+    expected_schema_version = (
+        "nac.immutable-evidence-event/v0.2"
+        if event["action"] in S4D_LIVE_WRITE_ACTIONS
+        else "nac.immutable-evidence-event/v0.1"
+    )
+    if schema_version != expected_schema_version:
+        raise ImmutableEvidenceError(
+            "evidence schema version does not match action"
+        )
     business_case_type_id = _pattern_identifier(
         event["business_case_type_id"],
         "business_case_type_id",
@@ -2310,6 +2384,10 @@ def _validate_event_shape(event: Mapping[str, Any]) -> None:
     ).hexdigest()
     if event["idempotency_key_sha256"] != expected_idempotency:
         raise ImmutableEvidenceError("idempotency binding is invalid")
+    if schema_version == "nac.immutable-evidence-event/v0.2":
+        _sha256(event["operation_binding_sha256"], "operation_binding_sha256")
+        if "provider_state_sha256" in event:
+            _sha256(event["provider_state_sha256"], "provider_state_sha256")
     expected_delivery = _delivery_key(event)
     if event["delivery_key_sha256"] != expected_delivery:
         raise ImmutableEvidenceError("delivery binding is invalid")

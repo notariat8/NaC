@@ -321,6 +321,55 @@
         "tests/test_business_case_type_migration_cli.py",
         "workflows/verification-contracts/business-case-type-migration-s5.verification.json"
       ]
+    },
+    {
+      "id": "invariant.business_case_type.live_write_identity_separation",
+      "domain": "business_case_type_live_write",
+      "severity": "critical",
+      "statement": "The business-data write identity remains distinct and limited to Sites.Selected with site role write while the BFF UAMI remains Sites.Selected with site role read; the broad provisioning app is never reused for business writes.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "docs/en/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_live_write_boundary.py",
+        "tests/test_business_case_type_live_write_boundary.py",
+        "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.live_write_closure_after_worm",
+      "domain": "business_case_type_live_write",
+      "severity": "critical",
+      "statement": "Local mutation state may close only after complete canonical evidence publication, including broker acknowledgements, signature-anchor readback, Azure WORM version readback and persisted publication completion; failures remain sticky and block automatic mutation replay.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "docs/en/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json"
+      ],
+      "enforced_by": [
+        "src/nac_m365_graph/business_case_type_live_write_evidence.py",
+        "scripts/validate_business_case_type_live_write_boundary.py",
+        "tests/test_business_case_type_live_write_boundary.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.live_write_independent_owner_and_operation_binding",
+      "domain": "business_case_type_live_write",
+      "severity": "critical",
+      "statement": "An approval candidate is never self-authorizing: an independent owner-verifier must validate the bound GitHub owner comment before identity access, final plan drift stops before that verifier, and every S6 v0.2 chain is bound to the exact mutation and provider readback; a foreign chain cannot close local state.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "docs/en/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+        "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json"
+      ],
+      "enforced_by": [
+        "src/nac_m365_graph/business_case_type_live_write_gate.py",
+        "src/nac_m365_graph/business_case_type_live_write_evidence.py",
+        "scripts/validate_business_case_type_live_write_boundary.py",
+        "tests/test_business_case_type_live_write_boundary.py"
+      ]
     }
   ]
 }

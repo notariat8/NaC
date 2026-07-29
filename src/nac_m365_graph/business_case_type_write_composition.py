@@ -64,7 +64,7 @@ def build_offline_business_case_type_write_composition(
     transport = GraphRestV1WriteTransport(
         token_provider,
         http_port,
-        allowed_collection_urls=_collection_urls(target),
+        allowed_collection_urls=collection_urls(target),
     )
     edge = BusinessCaseTypeGraphWriteEdge(transport, state, builder)
     return BusinessCaseTypeWriteComposition(
@@ -75,7 +75,7 @@ def build_offline_business_case_type_write_composition(
     )
 
 
-def _collection_urls(target: BoundWriteTarget) -> tuple[str, str]:
+def collection_urls(target: BoundWriteTarget) -> tuple[str, str]:
     site = urllib.parse.quote(target.site_id, safe=",")
     akten = urllib.parse.quote(target.akten_list_id, safe="")
     aufgaben = urllib.parse.quote(target.aufgaben_list_id, safe="")
@@ -83,3 +83,6 @@ def _collection_urls(target: BoundWriteTarget) -> tuple[str, str]:
         f"{GRAPH_BASE_URL}/sites/{site}/lists/{akten}/items",
         f"{GRAPH_BASE_URL}/sites/{site}/lists/{aufgaben}/items",
     )
+
+
+_collection_urls = collection_urls

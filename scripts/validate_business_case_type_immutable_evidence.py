@@ -18,7 +18,7 @@ from nac_runtime.immutable_evidence import (  # noqa: E402
     ETAG_KEYS,
     LIVE_STATUS,
     MINIMUM_RETENTION_YEARS,
-    MUTATION_ACTIONS,
+    S6_V1_MUTATION_ACTIONS,
     PHASES,
     ReconciliationStorePort,
     REGISTERED_BUSINESS_CASE_TYPE_IDS,
@@ -174,7 +174,7 @@ def main() -> int:
         errors,
     )
     _expect(
-        set(domain.get("mutation_boundary", {}).get("actions_exact", [])) == MUTATION_ACTIONS,
+        set(domain.get("mutation_boundary", {}).get("actions_exact", [])) == S6_V1_MUTATION_ACTIONS,
         "mutation action drift",
         errors,
     )

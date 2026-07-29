@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "nac.verification-contract/v0.1",
+  "id": "business-case-type-live-write-boundary-s4d",
+  "title": "BusinessCaseType owner-gated live write boundary S4d verification",
+  "issue": "https://github.com/notariat8/NaC/issues/700",
+  "appliesWhen": {
+    "paths": [
+      "src/nac_m365_graph/business_case_type_live_write_boundary.py",
+      "src/nac_m365_graph/business_case_type_live_write_evidence.py",
+      "src/nac_m365_graph/business_case_type_live_write_gate.py",
+      "src/nac_m365_graph/business_case_type_live_write_smoke.py",
+      "src/nac_m365_graph/business_case_type_write_plan.py",
+      "src/nac_runtime/immutable_evidence.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_live_write_boundary.py",
+      "tests/test_business_case_type_live_write_boundary.py",
+      "tests/test_business_case_type_live_write_boundary_contract.py",
+      "tests/test_business_case_type_live_write_boundary_cli.py",
+      "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+      "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json"
+    ]
+  },
+  "requiredContext": [
+    "AGENTS.md",
+    "docs/de/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+    "docs/de/superpowers/plans/2026-07-29-business-case-type-live-write-boundary-s4d.md",
+    "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json",
+    "workflows/contracts/business-case-type-immutable-evidence-s6.contract.json",
+    "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json",
+    "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json"
+  ],
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_live_write_boundary tests.test_business_case_type_live_write_boundary_contract tests.test_business_case_type_live_write_boundary_cli",
+    "python3 scripts/validate_business_case_type_live_write_boundary.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check",
+    "python3 -m compileall -q src scripts tests",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "requiredEvidence": [
+    "All eight AC-S4D acceptance IDs are present in spec, contract, validator and tests.",
+    "Static owner, plan, target and principal drift causes zero inspection, write credential and transport calls.",
+    "Fresh read-only identity inspection proves exact Sites.Selected/write and separate Sites.Selected/read bindings before write-token construction.",
+    "S6 v0.2 preserves the five exact business write operation names and operation binding digest.",
+    "Local S4c closure occurs only after all broker acknowledgements, signature readback, WORM version readback and persisted publication completion validate.",
+    "S6 intent and every post-write failure remain sticky and block automatic mutation replay.",
+    "The offline one-shot smoke covers all five operations using the S6b Azure Blob WORM adapter with all live counters at zero.",
+    "Independent base...head review has no unresolved findings."
+  ],
+  "invariants": [
+    "The BFF UAMI remains read-only.",
+    "The provisioning app is not reused as business-data write identity.",
+    "No live Graph, SharePoint, Teams, Entra or Azure write is performed.",
+    "No production durability or live readiness is claimed.",
+    "No automatic mutation retry, rollback or cleanup is introduced."
+  ],
+  "thresholds": {
+    "liveGraphCalls": 0,
+    "azureLiveCalls": 0,
+    "tenantWrites": 0,
+    "automaticRetries": 0,
+    "unresolvedReviewFindings": 0,
+    "socketOrDnsCalls": 0,
+    "externalCredentialStoreReads": 0
+  },
+  "passCondition": {
+    "allChecksPass": true,
+    "statusExact": "S4D_READY_OFFLINE"
+  },
+  "failureBehavior": {
+    "mode": "fail_closed",
+    "mergeAllowed": false,
+    "liveRetryAllowed": false,
+    "ownerInputRequiredForLiveBoundary": true
+  }
+}

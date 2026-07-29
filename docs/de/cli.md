@@ -60,7 +60,7 @@ python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py kg cost-view immobilienkaufvertrag
 python scripts/nac.py kg workflow-contract immobilienkaufvertrag
-python scripts/nac.py kg pilot-checklist online-gmbh-gruendung
+python scripts/nac.py kg pilot-checklist online-gmbh-gründung
 python scripts/nac.py legal-graph status
 python scripts/nac.py legal-graph model-card-proposal
 python scripts/nac.py legal-graph ai-sbom-delta-proposal
@@ -135,7 +135,7 @@ nac kg first-wave-process-deep-model --format json
 nac kg first-wave-gap-review-artifact --format json
 nac kg cost-view immobilienkaufvertrag
 nac kg workflow-contract immobilienkaufvertrag
-nac kg pilot-checklist online-gmbh-gruendung
+nac kg pilot-checklist online-gmbh-gründung
 nac legal-graph status
 nac legal-graph model-card-proposal
 nac legal-graph ai-sbom-delta-proposal
@@ -1096,3 +1096,11 @@ nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-
 ## S6b Azure-Blob-WORM-Readiness Offline
 
 `nac kg business-case-type-azure-worm-readiness` meldet ausschließlich den providerfreien S6b-Stand. Die Ausgabe bindet den on-prem Evidence-Publisher an die autoritative tenantgebundene Azure-Blob-WORM-Kopie, mindestens 3653 Tage, versionsgebundene Receipts und die delete-freie Writer-Rolle. Netzwerk-, Credential-, Tenant-Write-, Deployment- und Lock-Zähler bleiben null; der irreversible Lock bleibt `PREPARED_OFFLINE_NOT_EXECUTED` und benötigt S7 plus Owner-Gate.
+
+## BusinessCaseType Live-Write-Grenze S4d
+
+`nac m365 teams-sharepoint business-case-type-live-write-smoke` prüft alle fünf Schreiboperationen strikt synthetisch mit unabhängigem Owner-Verifier sowie Plan-/Target-/Principal-Gates, getrennten `Sites.Selected/write`- und `Sites.Selected/read`-Identitäten, SQLite-Replay-Sicherung und S6/S6b-WORM-Publikation vor lokaler Closure. Externe Credentials, Netzwerk, Live-Graph, Azure und Tenant-Writes bleiben null.
+
+```bash
+nac m365 teams-sharepoint business-case-type-live-write-smoke --database-path /tmp/nac-s4d-smoke/state.sqlite --format json
+```

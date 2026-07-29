@@ -67,6 +67,10 @@ from nac_m365_graph.business_case_type_write_composition_smoke import (
     build_business_case_type_write_composition_smoke,
     format_business_case_type_write_composition_smoke,
 )
+from nac_m365_graph.business_case_type_live_write_smoke import (
+    build_business_case_type_live_write_smoke,
+    format_business_case_type_live_write_smoke,
+)
 from nac_m365_graph.business_case_type_live_foundation import (
     FoundationApplyRequest,
     WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
@@ -738,6 +742,7 @@ def build_parser() -> argparse.ArgumentParser:
             "business-case-type-read-plan",
             "business-case-type-write-dry-run",
             "business-case-type-write-composition-smoke",
+            "business-case-type-live-write-smoke",
             "business-case-type-live-foundation-plan",
             "business-case-type-live-foundation-apply",
             "bpmn-viewer-plan",
@@ -2660,6 +2665,16 @@ def command_m365(args: argparse.Namespace) -> int:
                 if result["status"] == "S4C_COMPOSITION_READY_OFFLINE"
                 else 2
             )
+
+        if args.teams_sharepoint_command == "business-case-type-live-write-smoke":
+            result = build_business_case_type_live_write_smoke(
+                database_path=args.database_path,
+            )
+            if args.format == "json":
+                print_json(result)
+            else:
+                print(format_business_case_type_live_write_smoke(result).rstrip())
+            return 0 if result["status"] == "S4D_READY_OFFLINE" else 2
 
         if args.teams_sharepoint_command == "runtime-env-bootstrap":
             runtime_state_path = _resolve_m365_release_gate_path(
@@ -7811,6 +7826,13 @@ def main(argv: list[str] | None = None) -> int:
         return _run_business_case_type_write_composition_smoke_command(
             effective_argv, composition_smoke_index
         )
+    live_write_smoke_index = (
+        _business_case_type_live_write_smoke_command_index(effective_argv)
+    )
+    if live_write_smoke_index is not None:
+        return _run_business_case_type_live_write_smoke_command(
+            effective_argv, live_write_smoke_index
+        )
     command_index = _business_case_type_read_plan_command_index(effective_argv)
     if command_index is not None:
         return _run_business_case_type_read_plan_command(effective_argv, command_index)
@@ -8274,6 +8296,63 @@ def _run_business_case_type_write_composition_smoke_command(
         teams_sharepoint_command=(
             "business-case-type-write-composition-smoke"
         ),
+    )
+    return command_m365(args)
+
+
+def _business_case_type_live_write_smoke_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "business-case-type-live-write-smoke",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_business_case_type_live_write_smoke_command(
+    argv: list[str], command_index: int
+) -> int:
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    if command_argv in (["-h"], ["--help"]):
+        print(
+            "usage: nac m365 teams-sharepoint "
+            "business-case-type-live-write-smoke "
+            "--database-path ABSOLUTE_PATH [--format text|json]"
+        )
+        return 0
+    values: dict[str, str] = {}
+    index = 0
+    while index < len(command_argv):
+        option = command_argv[index]
+        if option not in {"--repo-root", "--database-path", "--format"}:
+            raise ValueError(f"unsupported S4d smoke option: {option}")
+        if index + 1 >= len(command_argv):
+            raise ValueError(f"missing value for S4d smoke option: {option}")
+        if option in values:
+            raise ValueError(f"duplicate S4d smoke option: {option}")
+        values[option] = command_argv[index + 1]
+        index += 2
+    if "--database-path" not in values:
+        raise ValueError("--database-path is required")
+    repo_root_value = values.get("--repo-root")
+    if repo_root_value is not None and (
+        "~" in repo_root_value or not Path(repo_root_value).is_absolute()
+    ):
+        raise ValueError("--repo-root must be absolute and must not contain ~")
+    output_format = values.get("--format", "text")
+    if output_format not in {"text", "json"}:
+        raise ValueError("--format must be text or json")
+    args = argparse.Namespace(
+        repo_root=Path(values.get("--repo-root", str(Path.cwd()))),
+        database_path=Path(values["--database-path"]),
+        format=output_format,
+        m365_command="teams-sharepoint",
+        teams_sharepoint_command="business-case-type-live-write-smoke",
     )
     return command_m365(args)
 

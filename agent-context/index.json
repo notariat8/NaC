@@ -337,6 +337,21 @@
             "tests/test_azure_blob_worm.py",
             "tests/test_azure_blob_worm_contract.py"
           ]
+        },
+        {
+          "id": "business_case_type_live_write_boundary_s4d",
+          "description": "Issue #700 offline S4d production boundary: cycle-free owner and target binding, separate Sites.Selected/write identity, S4c SQLite replay safety and complete S6/S6b evidence publication before local closure; production adapters and tenant writes remain owner-gated.",
+          "paths": [
+            "docs/de/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+            "docs/en/superpowers/specs/2026-07-29-business-case-type-live-write-boundary-s4d-design.md",
+            "docs/de/superpowers/plans/2026-07-29-business-case-type-live-write-boundary-s4d.md",
+            "docs/en/superpowers/plans/2026-07-29-business-case-type-live-write-boundary-s4d.md",
+            "src/nac_m365_graph/business_case_type_live_write_*.py",
+            "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+            "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json",
+            "scripts/validate_business_case_type_live_write_boundary.py",
+            "tests/test_business_case_type_live_write_boundary*.py"
+          ]
         }
       ]
     },
@@ -368,6 +383,7 @@
     "workflows/verification-contracts/codex-worktree-operating-model.verification.json",
     "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json",
     "workflows/verification-contracts/m365-matter-access-apply-live-smoke-retention.verification.json",
-    "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+    "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
+    "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json"
   ]
 }

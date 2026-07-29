@@ -63,7 +63,7 @@ _OPTIONAL_PHASE_FIELDS = {
     "intent": frozenset(),
     "outcome": frozenset({"http_status"}),
     "reconciliation": frozenset(),
-    "readback": frozenset(),
+    "readback": frozenset({"provider_state_sha256"}),
 }
 _RESULT_CODES = {
     "intent": frozenset({"planned"}),
@@ -783,6 +783,11 @@ def _validated_evidence(
     if "http_status" in record and (
         type(record["http_status"]) is not int
         or not 0 <= record["http_status"] <= 599
+    ):
+        return None
+    if (
+        "provider_state_sha256" in record
+        and not _is_hash(record["provider_state_sha256"])
     ):
         return None
     if phase == "readback" and (

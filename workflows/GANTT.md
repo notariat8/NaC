@@ -17,6 +17,7 @@ gantt
     BusinessCaseType-S4-Graph-Adapter           :done,   w3d, 2026-07-11, 1d
     BusinessCaseType-S4b-Graph-Write-Edge       :done,   w3h, 2026-07-29, 1d
     BusinessCaseType-S4c-Write-Composition      :done,   w3i, 2026-07-29, 1d
+    BusinessCaseType-S4d-Live-Write-Boundary    :done,   w3j, 2026-07-29, 1d
     BusinessCaseType-S5-Offline-Migration      :done,   w3e, 2026-07-12, 7d
     BusinessCaseType-S6a-Evidence-Foundation    :active, w3f, 2026-07-20, 7d
     BusinessCaseType-S6b-Azure-WORM           :done,   w3g, 2026-07-28, 1d

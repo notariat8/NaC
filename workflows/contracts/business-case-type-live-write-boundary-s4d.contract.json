@@ -1,0 +1,181 @@
+{
+  "schemaVersion": "nac.business-case-type-live-write-boundary-s4d/v0.1",
+  "title": "BusinessCaseType owner-gated live write boundary S4d",
+  "issue": "https://github.com/notariat8/NaC/issues/700",
+  "status": "S4D_READY_OFFLINE",
+  "extendsContractsExact": [
+    "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json",
+    "workflows/contracts/business-case-type-immutable-evidence-s6.contract.json",
+    "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json"
+  ],
+  "acceptanceIdsExact": [
+    "AC-S4D-01",
+    "AC-S4D-02",
+    "AC-S4D-03",
+    "AC-S4D-04",
+    "AC-S4D-05",
+    "AC-S4D-06",
+    "AC-S4D-07",
+    "AC-S4D-08"
+  ],
+  "ownerGate": {
+    "approvalRefPatternExact": "owner-approval-v1-<sha256>",
+    "bindingsExact": [
+      "commit_sha",
+      "tree_sha",
+      "domain_contract_sha256",
+      "verification_contract_sha256",
+      "plan_binding_sha256",
+      "toolchain_sha256",
+      "step_sequence_sha256",
+      "evidence_policy_sha256",
+      "target_binding_sha256",
+      "write_principal_binding_sha256",
+      "bff_principal_binding_sha256",
+      "owner_verifier_binding_sha256",
+      "owner_allowlist_sha256",
+      "inspection_principal_binding_sha256"
+    ],
+    "planApprovalCycleAvoidedByExact": "normalized_approval_reference_plan_binding",
+    "finalPlanShaRevalidated": true,
+    "staticDriftCredentialCalls": 0,
+    "liveRunnerIncluded": false,
+    "approvalVerificationRequiredBeforeIdentityReadback": true,
+    "approvalCandidateSelfAuthorizing": false,
+    "verificationSourceExact": "github_issue_owner_comment",
+    "issueRefExact": "https://github.com/notariat8/NaC/issues/700",
+    "finalPlanRevalidationBeforeOwnerVerification": true
+  },
+  "targetBinding": {
+    "workspaceIdExact": "notary_team_01",
+    "fieldsExact": [
+      "tenant_binding_sha256",
+      "workspace_id",
+      "site_id",
+      "akten_list_id",
+      "aufgaben_list_id",
+      "graph_base_url"
+    ],
+    "graphBaseUrlExact": "https://graph.microsoft.com/v1.0"
+  },
+  "identityBoundary": {
+    "inspectionCredentialBoundaryExact": "owner_bound_read_only",
+    "writeIdentityPermissionExact": [
+      "Sites.Selected"
+    ],
+    "writeSiteRoleExact": [
+      "write"
+    ],
+    "bffPermissionExact": [
+      "Sites.Selected"
+    ],
+    "bffSiteRoleExact": [
+      "read"
+    ],
+    "writeAndBffPrincipalsDistinct": true,
+    "broaderRolesAllowed": false,
+    "provisioningAppReuseAllowed": false,
+    "writeTokenFactoryAfterFreshReadback": true,
+    "inspectionSourceExact": "synthetic-offline-owner-bound-readback",
+    "inspectionObservedAtRequired": true,
+    "inspectionPrincipalOwnerBound": true,
+    "inspectionApprovalDigestRequired": true
+  },
+  "evidenceComposition": {
+    "localAdapterExact": "SqliteMutationEvidenceHook",
+    "canonicalPublisherExact": "ImmutableEvidencePublisher",
+    "wormAdapterExact": "AzureBlobWormJournal",
+    "eventSchemaExact": "nac.immutable-evidence-event/v0.2",
+    "operationsExact": [
+      "case_create",
+      "case_status_update",
+      "task_create",
+      "task_update",
+      "business_case_type_backfill"
+    ],
+    "sequenceExact": [
+      "static_owner_target_principal_gate",
+      "fresh_identity_permission_readback",
+      "dedupe_or_etag_preflight",
+      "sqlite_intent_generation_cas",
+      "canonical_s6_intent_outbox_readback",
+      "single_graph_write_attempt",
+      "local_and_canonical_outcome",
+      "graph_and_canonical_readback",
+      "broker_anchor_worm_complete_publication",
+      "local_closure"
+    ],
+    "localClosureRequiresExact": [
+      "event_count_3",
+      "broker_ack_count_3",
+      "anchor_binding_verified",
+      "signature_binding_verified",
+      "worm_receipt_binding_verified",
+      "worm_readback_verified",
+      "complete_publication_persisted"
+    ],
+    "distributedAtomicityClaimed": false,
+    "automaticMutationReplay": false,
+    "operationBindingFieldsExact": [
+      "mutation_id",
+      "execution_key",
+      "operation",
+      "target_binding_hash",
+      "plan_sha256",
+      "authorization_run_identity",
+      "s5_operation_hash"
+    ],
+    "successfulReadbackProviderStateSha256Required": true,
+    "existingPhaseReuseExact": "byte_identical_event_only",
+    "foreignCorrelationChainClosesLocalIntent": false
+  },
+  "failureBehavior": {
+    "s6IntentFailureExact": "sticky_reconciliation_required_zero_write",
+    "postWriteFailureExact": "sticky_reconciliation_required_no_automatic_replay",
+    "providerErrorTextReturnedOrPersisted": false,
+    "automaticRetries": 0,
+    "automaticRollback": false,
+    "automaticCleanup": false,
+    "foreignOutboxChainExact": "sticky_reconciliation_required_zero_write",
+    "ownerVerificationFailureExact": "zero_identity_zero_credentials_zero_transport",
+    "planShaDriftExact": "zero_owner_verification_zero_identity_zero_credentials_zero_transport"
+  },
+  "offlineCompletion": {
+    "statusExact": "S4D_READY_OFFLINE",
+    "liveStatusExact": "BLOCKED_PENDING_OWNER_GATED_PRODUCTION_ADAPTERS",
+    "syntheticOperationsExact": 5,
+    "socketOrDnsCallsExact": 0,
+    "externalCredentialStoreReadsExact": 0,
+    "liveGraphCallsExact": 0,
+    "azureLiveCallsExact": 0,
+    "tenantWritesExact": 0,
+    "productionDurabilityClaimed": false,
+    "productionIdentityAdapterIncluded": false,
+    "productionOutboxAdapterIncluded": false,
+    "productionBrokerAdapterIncluded": false,
+    "productionSignatureAdapterIncluded": false,
+    "productionReconciliationAdapterIncluded": false,
+    "productionOwnerVerifierIncluded": false,
+    "syntheticOwnerVerifierIncluded": true
+  },
+  "outOfScopeExact": [
+    "credential_or_certificate_change",
+    "entra_permission_or_site_grant_change",
+    "infrastructure_deployment_or_deletion",
+    "live_azure_blob_write",
+    "live_graph_write",
+    "production_data",
+    "production_live_factory",
+    "workspace_other_than_notary_team_01"
+  ],
+  "verificationMatrix": {
+    "staticPlanDrift": true,
+    "ownerVerificationFailure": true,
+    "identityProvenanceDrift": true,
+    "foreignOutboxChain": true,
+    "s6IntentFailureSticky": true,
+    "publisherFailureSticky": true,
+    "providerStateBinding": true,
+    "recursiveRedaction": true
+  }
+}
