@@ -203,6 +203,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "business_case_type_production_adapters",
+                    "Business Case Type Production Adapters S4f",
+                    [
+                        sys.executable,
+                        "scripts/validate_business_case_type_production_adapters.py",
+                    ],
+                ),
+                (
                     "business_case_type_live_foundation",
                     "Business Case Type Live Foundation",
                     [sys.executable, "scripts/validate_business_case_type_live_foundation.py"],

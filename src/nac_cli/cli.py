@@ -76,6 +76,11 @@ from nac_m365_graph.business_case_type_live_write_readiness import (
     current_business_case_type_live_write_readiness,
     format_business_case_type_live_write_readiness,
 )
+from nac_m365_graph.business_case_type_production_adapters import (
+    S4F_STATUS as BUSINESS_CASE_TYPE_PRODUCTION_ADAPTERS_STATUS,
+    build_s4f_offline_composition_status,
+    format_s4f_offline_composition_status,
+)
 from nac_m365_graph.business_case_type_live_foundation import (
     FoundationApplyRequest,
     WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
@@ -747,6 +752,7 @@ def build_parser() -> argparse.ArgumentParser:
             "business-case-type-read-plan",
             "business-case-type-write-dry-run",
             "business-case-type-write-composition-smoke",
+            "business-case-type-production-adapters",
             "business-case-type-live-write-smoke",
             "business-case-type-live-write-readiness",
             "business-case-type-live-foundation-plan",
@@ -2669,6 +2675,22 @@ def command_m365(args: argparse.Namespace) -> int:
             return (
                 0
                 if result["status"] == "S4C_COMPOSITION_READY_OFFLINE"
+                else 2
+            )
+
+        if (
+            args.teams_sharepoint_command
+            == "business-case-type-production-adapters"
+        ):
+            result = build_s4f_offline_composition_status()
+            if args.format == "json":
+                print_json(result)
+            else:
+                print(format_s4f_offline_composition_status(result).rstrip())
+            return (
+                0
+                if result["status"]
+                == BUSINESS_CASE_TYPE_PRODUCTION_ADAPTERS_STATUS
                 else 2
             )
 
