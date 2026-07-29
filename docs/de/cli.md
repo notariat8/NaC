@@ -1097,6 +1097,14 @@ nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-
 nac m365 teams-sharepoint business-case-type-production-adapters --format json
 ```
 
+## S4g-Produktionskanten-Komposition Offline
+
+`nac m365 teams-sharepoint business-case-type-production-composition --s4g-runtime-root <pfad>` prüft die S4g-Kompositionshülle aus Issue #708. Der Befehl bindet drei getrennte Entra-Identitäten, validiert `Sites.Selected/write` für den Writer und `Sites.Selected/read` für den BFF, erzwingt zwei getrennte Datenbanken auf einem vertrauenswürdigen lokalen Linux-Dateisystem und prüft den create-only Azure-Blob-WORM-REST-Adapter. Die Prüfung nutzt synthetische Snapshots, lädt keine Credentials und erzeugt keine Netzwerk-, Graph-, Azure- oder Tenant-Aktion. Zentrale PostgreSQL-Evidence, Broker, Signatur-Anchor, durable Reconciliation, irreversibler WORM-Lock und Live-Aktivierung bleiben geblockt.
+
+```bash
+nac m365 teams-sharepoint business-case-type-production-composition --s4g-runtime-root /tmp/nac-s4g-runtime --format json
+```
+
 ## S6a Immutable-Evidence-Foundation Offline
 
 `nac kg business-case-type-evidence-dry-run` prüft die S6a-Immutable-Evidence-Foundation ausschließlich mit synthetischen In-Memory-Adaptern. Der Befehl erzeugt kanonische Intent-, Outcome-, Readback- und Reconciliation-Ketten, lädt keine Credentials und führt keine Netzwerk-, Provider-, Tenant- oder Live-Mutationsaktion aus. Das Ergebnis bleibt `S6_OFFLINE_FOUNDATION` und `BLOCKED_PENDING_S7_APPROVAL`; es behauptet weder PostgreSQL-Durability noch Signatur, Anchor oder WORM-Speicherung.

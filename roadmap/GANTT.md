@@ -53,8 +53,11 @@ gantt
     BusinessCaseType-S4b-Graph-Write-Edge       :done,    b1an, 2026-07-29, 1d
     BusinessCaseType-S4c-Write-Composition      :done,    b1ao, 2026-07-29, 1d
     BusinessCaseType-S4d-Live-Write-Boundary    :done,    b1ap, 2026-07-29, 1d
+    BusinessCaseType-S4e-Live-Write-Readiness   :done,    b1aq, 2026-07-29, 1d
+    BusinessCaseType-S4f-Production-Adapters    :done,    b1ar, 2026-07-29, 1d
+    BusinessCaseType-S4g-Edge-Composition       :active,    b1as, 2026-07-29, 1d
     BusinessCaseType-S5-Offline-Migration      :done,    b1ak, 2026-07-12, 7d
-    BusinessCaseType-S6a-Evidence-Foundation    :active,  b1al, 2026-07-20, 7d
+    BusinessCaseType-S6a-Evidence-Foundation    :done,    b1al, 2026-07-20, 7d
     BusinessCaseType-S6b-Azure-WORM           :done,    b1am, 2026-07-28, 1d
     Projektstimme und Aktivbau-Doku bereinigen   :done,    b1b, 2026-05-15, 1d
     START_HERE-Betriebseinstieg bereinigen       :done,    b1c, 2026-05-15, 1d

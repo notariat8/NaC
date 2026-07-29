@@ -81,6 +81,11 @@ from nac_m365_graph.business_case_type_production_adapters import (
     build_s4f_offline_composition_status,
     format_s4f_offline_composition_status,
 )
+from nac_m365_graph.business_case_type_production_composition import (
+    S4G_STATUS as BUSINESS_CASE_TYPE_PRODUCTION_COMPOSITION_STATUS,
+    assess_synthetic_offline_composition,
+    format_production_composition,
+)
 from nac_m365_graph.business_case_type_live_foundation import (
     FoundationApplyRequest,
     WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
@@ -753,6 +758,7 @@ def build_parser() -> argparse.ArgumentParser:
             "business-case-type-write-dry-run",
             "business-case-type-write-composition-smoke",
             "business-case-type-production-adapters",
+            "business-case-type-production-composition",
             "business-case-type-live-write-smoke",
             "business-case-type-live-write-readiness",
             "business-case-type-live-foundation-plan",
@@ -806,6 +812,11 @@ def build_parser() -> argparse.ArgumentParser:
         ],
     )
     teams_sharepoint.add_argument("--schema", type=Path, help="Optionales Teams/SharePoint-Schema.")
+    teams_sharepoint.add_argument(
+        "--s4g-runtime-root",
+        type=Path,
+        help="Absoluter lokaler 0700-Runtime-Root fuer das Offline-S4g-Assessment.",
+    )
     teams_sharepoint.add_argument(
         "--bpmn-viewer-config",
         type=Path,
@@ -2044,6 +2055,11 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
             ("Business Case Type Graph Read Edge", "validate_business_case_type_graph_read_edge.py"),
             ("Business Case Type Graph Write Edge", "validate_business_case_type_graph_write_edge.py"),
+            ("Business Case Type Graph Write Composition", "validate_business_case_type_graph_write_composition.py"),
+            ("Business Case Type Live Write Boundary", "validate_business_case_type_live_write_boundary.py"),
+            ("Business Case Type Live Write Readiness", "validate_business_case_type_live_write_readiness.py"),
+            ("Business Case Type Production Adapters", "validate_business_case_type_production_adapters.py"),
+            ("Business Case Type Production Composition", "validate_business_case_type_production_composition.py"),
             ("Business Case Type Migration S5", "validate_business_case_type_migration.py"),
             ("Business Case Type Immutable Evidence S6", "validate_business_case_type_immutable_evidence.py"),
             ("Business Case Type Azure Blob WORM S6b", "validate_business_case_type_azure_blob_worm.py"),
@@ -2081,6 +2097,11 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_business_case_type_runtime.py",
             "scripts/validate_business_case_type_graph_read_edge.py",
             "scripts/validate_business_case_type_graph_write_edge.py",
+            "scripts/validate_business_case_type_graph_write_composition.py",
+            "scripts/validate_business_case_type_live_write_boundary.py",
+            "scripts/validate_business_case_type_live_write_readiness.py",
+            "scripts/validate_business_case_type_production_adapters.py",
+            "scripts/validate_business_case_type_production_composition.py",
             "scripts/validate_business_case_type_migration.py",
             "scripts/validate_business_case_type_immutable_evidence.py",
             "scripts/validate_business_case_type_azure_blob_worm.py",
@@ -2691,6 +2712,27 @@ def command_m365(args: argparse.Namespace) -> int:
                 0
                 if result["status"]
                 == BUSINESS_CASE_TYPE_PRODUCTION_ADAPTERS_STATUS
+                else 2
+            )
+
+        if (
+            args.teams_sharepoint_command
+            == "business-case-type-production-composition"
+        ):
+            if args.s4g_runtime_root is None:
+                raise ValueError("--s4g-runtime-root is required")
+            result = assess_synthetic_offline_composition(
+                repo_root,
+                args.s4g_runtime_root,
+            )
+            if args.format == "json":
+                print_json(result)
+            else:
+                print(format_production_composition(result).rstrip())
+            return (
+                0
+                if result["status"]
+                == BUSINESS_CASE_TYPE_PRODUCTION_COMPOSITION_STATUS
                 else 2
             )
 

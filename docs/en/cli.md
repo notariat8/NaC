@@ -1059,6 +1059,14 @@ nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-
 nac m365 teams-sharepoint business-case-type-production-adapters --format json
 ```
 
+## Offline S4g Production Edge Composition
+
+`nac m365 teams-sharepoint business-case-type-production-composition --s4g-runtime-root <path>` validates the S4g composition envelope from Issue #708. It binds three distinct Entra identities, validates `Sites.Selected/write` for the writer and `Sites.Selected/read` for the BFF, requires two separate databases on a trusted local Linux filesystem, and checks the create-only Azure Blob WORM REST adapter. The assessment uses synthetic snapshots, loads no credentials, and performs no network, Graph, Azure, or tenant action. Central PostgreSQL evidence, broker, signature anchor, durable reconciliation, irreversible WORM lock, and live activation remain blocked.
+
+```bash
+nac m365 teams-sharepoint business-case-type-production-composition --s4g-runtime-root /tmp/nac-s4g-runtime --format json
+```
+
 ## Offline S6a Immutable Evidence Foundation
 
 `nac kg business-case-type-evidence-dry-run` validates the S6a immutable-evidence foundation using synthetic in-memory adapters only. It creates canonical intent, outcome, readback and reconciliation chains, loads no credentials, and performs no network, provider, tenant or live-mutation action. The result remains `S6_OFFLINE_FOUNDATION` and `BLOCKED_PENDING_S7_APPROVAL`; it claims neither PostgreSQL durability nor signature, anchor or WORM storage.

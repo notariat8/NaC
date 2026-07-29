@@ -1,0 +1,169 @@
+{
+  "schemaVersion": "nac.business-case-type-production-composition-s4g/v0.1",
+  "title": "BusinessCaseType production edge composition S4g",
+  "issue": "https://github.com/notariat8/NaC/issues/708",
+  "status": "S4G_PRODUCTION_EDGE_COMPOSITION_VERIFIED_OFFLINE",
+  "liveStatus": "BLOCKED_PENDING_CENTRAL_EVIDENCE_AND_OWNER_GATED_ACTIVATION",
+  "extendsContractsExact": [
+    "workflows/contracts/business-case-type-live-write-boundary-s4d.contract.json",
+    "workflows/contracts/business-case-type-production-adapters-s4f.contract.json",
+    "workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json"
+  ],
+  "acceptanceIdsExact": [
+    "AC-S4G-01",
+    "AC-S4G-02",
+    "AC-S4G-03",
+    "AC-S4G-04",
+    "AC-S4G-05",
+    "AC-S4G-06",
+    "AC-S4G-07",
+    "AC-S4G-08"
+  ],
+  "compositionEnvelope": {
+    "workspaceIdExact": "notary_team_01",
+    "offlineOnly": true,
+    "ancestorContractsSha256BoundExact": [
+      "s4d_contract_sha256",
+      "s4f_contract_sha256",
+      "s6b_contract_sha256"
+    ],
+    "componentBindingsSha256Exact": [
+      "identity_inspector_implementation_sha256",
+      "owner_verifier_sha256",
+      "write_token_factory_sha256",
+      "graph_http_transport_sha256",
+      "azure_worm_transport_sha256",
+      "worm_target_binding_sha256"
+    ],
+    "runtimeFactoryConstructed": false,
+    "writerCredentialsRead": false,
+    "bindingSourceExact": "domain_separated_repository_file_sha256",
+    "wormTargetBindingStateExact": "offline_unconfigured",
+    "attestationBindingsSha256Exact": [
+      "identity_inspection_sha256"
+    ]
+  },
+  "identityInspector": {
+    "adapterExact": "BusinessCaseTypeWriteIdentityInspectionAdapter",
+    "portExact": "SnapshotIdentityInspectionPort",
+    "modeExact": "read_only_snapshot_validation",
+    "principalsExact": [
+      "provisioner",
+      "writer",
+      "bff"
+    ],
+    "applicationIdFieldExact": "app_id",
+    "servicePrincipalObjectIdFieldExact": "service_principal_object_id",
+    "applicationIdsPairwiseDistinctRequired": true,
+    "servicePrincipalObjectIdsPairwiseDistinctRequired": true,
+    "applicationIdAndObjectIdNamespacesSeparateRequired": true,
+    "principalBindingsSha256Required": true,
+    "siteBindingSha256Required": true,
+    "businessWriterPrincipalExact": "writer",
+    "writeTokenSourcePrincipalExact": "writer",
+    "writerGraphApplicationRolesExact": [
+      "Sites.Selected"
+    ],
+    "writerSiteRolesExact": [
+      "write"
+    ],
+    "bffGraphApplicationRolesExact": [
+      "Sites.Selected"
+    ],
+    "bffSiteRolesExact": [
+      "read"
+    ],
+    "provisionerBusinessWriteAllowed": false,
+    "providerMutationAllowed": false,
+    "plaintextIdentifiersReturned": false
+  },
+  "localSqliteLayout": {
+    "scopeExact": "trusted_local_single_host_only",
+    "mutationStoreRoleExact": "mutation_state",
+    "mutationDatabaseNameExact": "mutation-state.sqlite3",
+    "evidenceStoreRoleExact": "evidence_staging",
+    "evidenceDatabaseNameExact": "evidence-staging.sqlite3",
+    "distinctCanonicalPathsRequired": true,
+    "sameDatabaseFileAllowed": false,
+    "sameRoleAllowed": false,
+    "absolutePathsRequired": true,
+    "commonTrustedRootRequired": true,
+    "rootModeOctalExact": "0700",
+    "databaseModeOctalExact": "0600",
+    "symlinkedRootOrDatabaseAllowed": false,
+    "syncedRootAllowed": false,
+    "remoteFilesystemAllowed": false,
+    "unknownFilesystemAllowed": false,
+    "centralTruth": false,
+    "canCloseMutation": false,
+    "databasePrecreationAllowed": true,
+    "existingDatabaseModeOctalExact": "0600",
+    "existingDatabaseHardlinkCountExact": 1
+  },
+  "azureWormRestTransport": {
+    "adapterExact": "AzureBlobWormRestTransport",
+    "portExact": "AzureBlobWormTransport",
+    "managementHostExact": "management.azure.com",
+    "blobHostOwnerBound": true,
+    "httpsOnly": true,
+    "managementApiVersionExact": "2023-05-01",
+    "subscriptionApiVersionExact": "2022-12-01",
+    "blobApiVersionExact": "2023-11-03",
+    "methodsExact": [
+      "GET",
+      "PUT"
+    ],
+    "managementTokenProviderInjected": true,
+    "blobTokenProviderInjected": true,
+    "httpPortInjected": true,
+    "foreignHostsAllowed": false,
+    "redirectsAllowed": false,
+    "automaticRetries": 0,
+    "maximumRequestBytes": 4194304,
+    "maximumResponseBytes": 4194304,
+    "createPreconditionHeaderExact": "If-None-Match: *",
+    "createSuccessStatusExact": 201,
+    "createConflictStatusExact": 412,
+    "createVersionHeaderExact": "x-ms-version-id",
+    "idempotencyBoundToS6bOperationKey": true,
+    "exactVersionReadbackRequired": true,
+    "providerContextReadbackRequired": true,
+    "lockedPolicyReadbackRequired": true,
+    "policyMutationAllowed": false,
+    "irreversibleLockOperationAllowed": false,
+    "deleteOperationAllowed": false,
+    "rawTokenUrlOrProviderBodyReturned": false
+  },
+  "remainingBlockersExact": [
+    "central_postgresql_promotion_ack_retention_cleanup",
+    "broker_product_owner_decision",
+    "signature_anchor_owner_decision",
+    "durable_reconciliation_store",
+    "irreversible_worm_policy_lock",
+    "owner_gated_live_activation"
+  ],
+  "offlineCompletion": {
+    "statusExact": "S4G_PRODUCTION_EDGE_COMPOSITION_VERIFIED_OFFLINE",
+    "liveStatusExact": "BLOCKED_PENDING_CENTRAL_EVIDENCE_AND_OWNER_GATED_ACTIVATION",
+    "productionReadinessClaimed": false,
+    "productionDurabilityClaimed": false,
+    "runtimeFactoryConstructed": false,
+    "liveWriteAuthorized": false,
+    "socketOrDnsCallsExact": 0,
+    "externalCredentialStoreReadsExact": 0,
+    "graphCallsExact": 0,
+    "azureCallsExact": 0,
+    "tenantWritesExact": 0,
+    "wormLockActionsExact": 0
+  },
+  "outOfScopeExact": [
+    "broker_selection_or_deployment",
+    "central_postgresql_promotion_ack_retention_or_cleanup",
+    "credential_permission_or_site_grant_change",
+    "durable_reconciliation_implementation",
+    "irreversible_worm_policy_lock",
+    "live_graph_azure_or_tenant_action",
+    "owner_gated_live_activation",
+    "signature_anchor_selection_or_deployment"
+  ]
+}
