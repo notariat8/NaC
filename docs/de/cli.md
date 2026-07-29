@@ -1071,7 +1071,15 @@ nac kg business-case-type-get immobilienkaufvertrag --site-id synthetic-site-01 
 
 ## S4 Graph-Read-Plan Offline
 
-`nac m365 teams-sharepoint business-case-type-read-plan` erzeugt ausschließlich einen redigierten Offline-Request-Plan für den BusinessCaseType-Read-Edge aus Issue #616. Der Befehl lädt keine Credentials, führt keine HTTP-, DNS- oder Live-Graph-Aufrufe aus und plant nur Graph REST v1.0 `GET` mit `Sites.Selected` und Site-Grant `read`. S4b-Writes bleiben offen.
+`nac m365 teams-sharepoint business-case-type-read-plan` erzeugt ausschließlich einen redigierten Offline-Request-Plan für den BusinessCaseType-Read-Edge aus Issue #616. Der Befehl lädt keine Credentials, führt keine HTTP-, DNS- oder Live-Graph-Aufrufe aus und plant nur Graph REST v1.0 `GET` mit `Sites.Selected` und Site-Grant `read`.
+
+## S4b Graph-Write-Edge Dry-Run Offline
+
+`nac m365 teams-sharepoint business-case-type-write-dry-run` prüft die offline implementierte S4b-Write-Edge aus Issue #694 ausschließlich mit synthetischen Eingaben und redigierter Ausgabe. `--operation` akzeptiert exakt `case_create`, `case_status_update`, `task_create`, `task_update` und `business_case_type_backfill`. Der Dry-Run plant Graph REST v1.0, Dedupe beziehungsweise frische ETags, Write und Readback, führt aber keinen Request aus. Credential-, Live-Factory-, HTTP-, DNS-, Graph- und Tenant-Write-Zähler bleiben null; Site-, Listen-, Identitäts- und Feldwerte werden nicht ausgegeben. Der Vertragsrand sieht für einen späteren Write-Pfad eine separate `Sites.Selected`-Identität mit Site-Grant `write` vor, während die BFF-UAMI unverändert `Sites.Selected` mit Site-Grant `read` behält. Produktive Komposition und jeder Live-Write bleiben separat owner-gated.
+
+```bash
+nac m365 teams-sharepoint business-case-type-write-dry-run --operation case_create --format json
+```
 
 ## S6a Immutable-Evidence-Foundation Offline
 
