@@ -71,6 +71,11 @@ from nac_m365_graph.business_case_type_live_write_smoke import (
     build_business_case_type_live_write_smoke,
     format_business_case_type_live_write_smoke,
 )
+from nac_m365_graph.business_case_type_live_write_readiness import (
+    READY_STATUS as BUSINESS_CASE_TYPE_LIVE_WRITE_READY_STATUS,
+    current_business_case_type_live_write_readiness,
+    format_business_case_type_live_write_readiness,
+)
 from nac_m365_graph.business_case_type_live_foundation import (
     FoundationApplyRequest,
     WORKSPACE_ID as BUSINESS_CASE_TYPE_FOUNDATION_WORKSPACE_ID,
@@ -743,6 +748,7 @@ def build_parser() -> argparse.ArgumentParser:
             "business-case-type-write-dry-run",
             "business-case-type-write-composition-smoke",
             "business-case-type-live-write-smoke",
+            "business-case-type-live-write-readiness",
             "business-case-type-live-foundation-plan",
             "business-case-type-live-foundation-apply",
             "bpmn-viewer-plan",
@@ -2675,6 +2681,24 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 print(format_business_case_type_live_write_smoke(result).rstrip())
             return 0 if result["status"] == "S4D_READY_OFFLINE" else 2
+
+        if (
+            args.teams_sharepoint_command
+            == "business-case-type-live-write-readiness"
+        ):
+            result = current_business_case_type_live_write_readiness()
+            if args.format == "json":
+                print_json(result)
+            else:
+                print(
+                    format_business_case_type_live_write_readiness(result).rstrip()
+                )
+            return (
+                0
+                if result["status"]
+                == BUSINESS_CASE_TYPE_LIVE_WRITE_READY_STATUS
+                else 2
+            )
 
         if args.teams_sharepoint_command == "runtime-env-bootstrap":
             runtime_state_path = _resolve_m365_release_gate_path(
