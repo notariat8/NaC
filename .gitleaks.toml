@@ -9,4 +9,6 @@ regexTarget = "match"
 regexes = [
   '''ElsterAuthenticator,\s*Sicherheitsstick/Signaturkarte''',
   '''idempotency_key"\s*:\s*"invoice-acme-20260301"''',
+  '''idempotency_key=mutation\.s5_idempotency_key or ""''',
+  '''idempotency_key"\s*:\s*"30927974be4fd41f6c90c62be62aeab5a75abedd247762527afa92f0c77df060"''',
 ]
