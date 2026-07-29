@@ -43,6 +43,7 @@ DOMAIN_KEYS = {
     "readback",
     "error_handling",
     "offline_boundary",
+    "offline_cli",
     "acceptance_criteria",
 }
 VERIFICATION_KEYS = {
@@ -68,16 +69,25 @@ REQUIRED_PATHS = {
     "src/notary_kg/business_case_type_mutation.py",
     "src/nac_m365_graph/business_case_type_write_edge.py",
     "src/nac_m365_graph/business_case_type_write_plan.py",
+    "src/nac_m365_graph/business_case_type_write_dry_run.py",
+    "src/nac_cli/cli.py",
+    "scripts/quality_gate.py",
     "scripts/validate_business_case_type_graph_write_edge.py",
     "tests/test_business_case_type_graph_write_edge*.py",
+    "tests/test_business_case_type_graph_write_edge_cli.py",
     "tests/fixtures/business-case-type-graph-write-edge/**",
     "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
     "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json",
+    "agent-context/index.json",
+    "docs/de/cli.md",
+    "docs/en/cli.md",
+    "docs/de/architecture/business-case-type-id.md",
+    "docs/en/architecture/business-case-type-id.md",
 }
 REQUIRED_CHECKS = {
-    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract",
+    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli",
     "python3 scripts/validate_business_case_type_graph_write_edge.py",
-    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py",
+    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py",
     "python3 scripts/nac.py contracts verify",
     "python3 scripts/validate_spec_traceability.py",
     "python3 scripts/validate_language_parity.py",
@@ -98,6 +108,25 @@ EXPECTED_THRESHOLDS = {
     "allowed_credential_reads": 0,
     "allowed_live_factories": 0,
 }
+EXPECTED_OFFLINE_CLI = {
+    "command_exact": "nac m365 teams-sharepoint business-case-type-write-dry-run",
+    "operations_exact": [
+        "case_create",
+        "case_status_update",
+        "task_create",
+        "task_update",
+        "business_case_type_backfill",
+    ],
+    "synthetic_only": True,
+    "redacted_output_only": True,
+    "resource_identifiers_or_urls_in_output_allowed": False,
+    "field_values_in_output_allowed": False,
+    "live_factory_allowed": False,
+    "credentials_allowed": False,
+    "live_graph_calls_allowed": 0,
+    "tenant_writes_allowed": 0,
+}
+
 REQUIRED_RUNTIME_TEST_METHODS = {
     "test_all_five_operations_execute_with_canonical_revalidation",
     "test_execute_rejects_forged_plan_components_before_transport",
@@ -187,6 +216,42 @@ EXPECTED_OPERATION_SHAPES = {
     },
 }
 
+EXPECTED_DRY_RUN_SHAPES = {
+    "case_create": {
+        "method": "POST",
+        "logical_list_name": "Akten",
+        "field_names": list(EXPECTED_OPERATION_SHAPES["case_create"]["fields_required_exact"]),
+        "request_phases": ["dedupe", "write", "readback"],
+    },
+    "case_status_update": {
+        "method": "PATCH",
+        "logical_list_name": "Akten",
+        "field_names": ["Status"],
+        "request_phases": ["freshness", "write", "readback"],
+    },
+    "task_create": {
+        "method": "POST",
+        "logical_list_name": "AufgabenFristen",
+        "field_names": [
+            *EXPECTED_OPERATION_SHAPES["task_create"]["fields_required_exact"],
+            *EXPECTED_OPERATION_SHAPES["task_create"]["fields_optional_exact"],
+        ],
+        "request_phases": ["dedupe", "write", "readback"],
+    },
+    "task_update": {
+        "method": "PATCH",
+        "logical_list_name": "AufgabenFristen",
+        "field_names": ["Status"],
+        "request_phases": ["freshness", "write", "readback"],
+    },
+    "business_case_type_backfill": {
+        "method": "PATCH",
+        "logical_list_name": "Akten",
+        "field_names": ["VorgangstypId"],
+        "request_phases": ["freshness", "write", "readback"],
+    },
+}
+
 
 def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
@@ -195,7 +260,7 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
     expected_scalars = {
         "schema_version": "nac.business-case-type-graph-write-edge-s4b/v0.1",
         "contract_id": "m365.business_case_type_graph_write_edge_s4b",
-        "status": "implemented_offline_pending_protected_pr",
+        "status": "implemented_offline",
         "leading_issue": "https://github.com/notariat8/NaC/issues/694",
     }
     for name, expected in expected_scalars.items():
@@ -212,6 +277,8 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("domain contract offline S4b slice mismatch")
     if contract.get("operations") != EXPECTED_OPERATION_SHAPES:
         errors.append("domain contract operation target or field allowlist mismatch")
+    if contract.get("offline_cli") != EXPECTED_OFFLINE_CLI:
+        errors.append("domain contract offline CLI boundary mismatch")
 
     binding = contract.get("binding", {})
     if binding != {
@@ -464,7 +531,7 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
         "credential_environment_token_or_certificate_reads_allowed": False,
         "dns_network_graph_sharepoint_entra_calls_allowed": False,
         "tenant_schema_permission_or_data_writes_allowed": False,
-        "cli_changes_in_scope": False,
+        "cli_changes_in_scope": True,
         "production_composition_in_scope": False,
     }:
         errors.append("domain contract offline no-factory boundary mismatch")
@@ -495,7 +562,7 @@ def validate_verification_contract(
         "schema_version": "nac.verification-contract/v0.1",
         "contract_id": "verification.business_case_type_graph_write_edge_s4b",
         "domain_contract_id": "m365.business_case_type_graph_write_edge_s4b",
-        "status": "implemented_offline_pending_protected_pr",
+        "status": "implemented_offline",
         "leading_issue": "https://github.com/notariat8/NaC/issues/694",
     }
     for name, expected in expected_scalars.items():
@@ -568,6 +635,10 @@ def validate_implementation() -> list[str]:
         from nac_m365_graph.business_case_type_write_edge import (
             BusinessCaseTypeGraphWriteEdge,
         )
+        from nac_m365_graph.business_case_type_write_dry_run import (
+            WRITE_DRY_RUN_OPERATIONS,
+            build_business_case_type_write_dry_run,
+        )
         from nac_m365_graph.business_case_type_write_plan import (
             BoundWriteTarget,
             BusinessCaseTypeWritePlanBuilder,
@@ -580,6 +651,81 @@ def validate_implementation() -> list[str]:
         )
     except Exception as exc:
         return [f"implementation import failed: {type(exc).__name__}"]
+
+    if tuple(EXPECTED_OFFLINE_CLI["operations_exact"]) != tuple(
+        WRITE_DRY_RUN_OPERATIONS
+    ):
+        errors.append("implementation offline CLI operation registry mismatch")
+    for operation, expected_shape in EXPECTED_DRY_RUN_SHAPES.items():
+        try:
+            dry_run = build_business_case_type_write_dry_run(
+                ROOT, operation=operation
+            )
+        except Exception as exc:
+            errors.append(
+                f"implementation offline CLI dry run failed for {operation}: "
+                f"{type(exc).__name__}"
+            )
+            continue
+        gates = dry_run.get("gate_results", {})
+        actual_shape = {
+            name: dry_run.get(name)
+            for name in (
+                "method",
+                "logical_list_name",
+                "field_names",
+                "request_phases",
+            )
+        }
+        if actual_shape != expected_shape:
+            errors.append(
+                f"implementation offline CLI shape mismatch for {operation}"
+            )
+        if (
+            dry_run.get("status") != "PASSED"
+            or dry_run.get("mode") != "offline_dry_run"
+            or dry_run.get("operation") != operation
+            or dry_run.get("graph_version") != "v1.0"
+            or dry_run.get("preflight_method") != "GET"
+            or dry_run.get("write_request_prepared") is not True
+            or dry_run.get("write_request_executed") is not False
+            or dry_run.get("contract_version")
+            != "nac.business-case-type-graph-write-edge-s4b/v0.1"
+            or len(str(dry_run.get("plan_sha256", ""))) != 64
+            or len(str(dry_run.get("target_binding_sha256", ""))) != 64
+            or gates
+            != {
+                "contract_valid": True,
+                "operation_allowed": True,
+                "synthetic_input_only": True,
+                "graph_rest_v1_only": True,
+                "separate_write_identity": True,
+                "bff_read_identity_unchanged": True,
+                "credentials_loaded": False,
+                "live_factory_instantiated": False,
+                "graph_calls": 0,
+                "tenant_writes": 0,
+            }
+        ):
+            errors.append(
+                f"implementation offline CLI boundary failed for {operation}"
+            )
+        serialized = json.dumps(dry_run, sort_keys=True)
+        forbidden_output_markers = (
+            "https://graph.microsoft.com/",
+            "synthetic-workspace-dry-run",
+            "synthetic.example,dry-run,site",
+            "synthetic-write-identity-dry-run",
+            "synthetic-bff-read-identity-dry-run",
+            "SYN-DRY-RUN",
+            "synthetic-case-dry-run",
+            "synthetic-task-dry-run",
+            "synthetic-etag",
+        )
+        if any(marker in serialized for marker in forbidden_output_markers):
+            errors.append(
+                f"implementation offline CLI output is not redacted for {operation}"
+            )
 
     target = BoundWriteTarget(
         workspace_id="synthetic-workspace-validator",
@@ -707,6 +853,7 @@ def validate_implementation() -> list[str]:
         Path("src/notary_kg/business_case_type_mutation.py"),
         Path("src/nac_m365_graph/business_case_type_write_plan.py"),
         Path("src/nac_m365_graph/business_case_type_write_edge.py"),
+        Path("src/nac_m365_graph/business_case_type_write_dry_run.py"),
     ):
         text = (ROOT / relative).read_text(encoding="utf-8")
         for marker in forbidden_markers:

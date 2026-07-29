@@ -3,7 +3,7 @@
   "contract_id": "verification.business_case_type_graph_write_edge_s4b",
   "domain_contract_id": "m365.business_case_type_graph_write_edge_s4b",
   "title": "BusinessCaseType bounded Graph write edge S4b verification",
-  "status": "implemented_offline_pending_protected_pr",
+  "status": "implemented_offline",
   "leading_issue": "https://github.com/notariat8/NaC/issues/694",
   "acceptance_ids": [
     "AC-S4B-01",
@@ -23,7 +23,16 @@
       "tests/test_business_case_type_graph_write_edge*.py",
       "tests/fixtures/business-case-type-graph-write-edge/**",
       "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
-      "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json"
+      "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json",
+      "src/nac_m365_graph/business_case_type_write_dry_run.py",
+      "src/nac_cli/cli.py",
+      "scripts/quality_gate.py",
+      "tests/test_business_case_type_graph_write_edge_cli.py",
+      "agent-context/index.json",
+      "docs/de/cli.md",
+      "docs/en/cli.md",
+      "docs/de/architecture/business-case-type-id.md",
+      "docs/en/architecture/business-case-type-id.md"
     ]
   },
   "required_context": {
@@ -42,9 +51,9 @@
     ]
   },
   "checks": [
-    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract",
+    "python3 -m unittest tests.test_business_case_type_graph_write_edge tests.test_business_case_type_graph_write_edge_contract tests.test_business_case_type_graph_write_edge_cli",
     "python3 scripts/validate_business_case_type_graph_write_edge.py",
-    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py",
+    "python3 -m compileall -q src/notary_kg/business_case_type_mutation.py src/nac_m365_graph/business_case_type_write_plan.py src/nac_m365_graph/business_case_type_write_edge.py src/nac_m365_graph/business_case_type_write_dry_run.py scripts/validate_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge.py tests/test_business_case_type_graph_write_edge_contract.py tests/test_business_case_type_graph_write_edge_cli.py",
     "python3 scripts/nac.py contracts verify",
     "python3 scripts/validate_spec_traceability.py",
     "python3 scripts/validate_language_parity.py",
@@ -85,7 +94,8 @@
     "PATCH 5xx foreign response-item ID is ignored in favor of the exact mutation target",
     "Canonical S5 backfill operation-hash fixture",
     "Standalone validator, focused unit tests and compileall",
-    "DE/EN spec and implementation plan with AC-S4B-01..07"
+    "DE/EN spec and implementation plan with AC-S4B-01..07",
+    "Redacted offline CLI dry-run evidence for all five operations with zero live calls, credential reads and tenant writes"
   ],
   "evidence_policy": {
     "synthetic_only": true,

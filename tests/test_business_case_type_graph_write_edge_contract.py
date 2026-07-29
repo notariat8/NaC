@@ -32,11 +32,85 @@ class BusinessCaseTypeGraphWriteEdgeContractTests(unittest.TestCase):
         )
 
     def test_contracts_and_implementation_pass_validator(self) -> None:
+        self.assertEqual("implemented_offline", self.domain["status"])
+        self.assertEqual("implemented_offline", self.verification["status"])
         self.assertEqual([], validate_domain_contract(copy.deepcopy(self.domain)))
         self.assertEqual(
             [], validate_verification_contract(copy.deepcopy(self.verification))
         )
         self.assertEqual([], validate_implementation())
+
+    def test_offline_cli_contract_is_exact_and_bounded(self) -> None:
+        self.assertEqual(
+            {
+                "command_exact": (
+                    "nac m365 teams-sharepoint "
+                    "business-case-type-write-dry-run"
+                ),
+                "operations_exact": [
+                    "case_create",
+                    "case_status_update",
+                    "task_create",
+                    "task_update",
+                    "business_case_type_backfill",
+                ],
+                "synthetic_only": True,
+                "redacted_output_only": True,
+                "resource_identifiers_or_urls_in_output_allowed": False,
+                "field_values_in_output_allowed": False,
+                "live_factory_allowed": False,
+                "credentials_allowed": False,
+                "live_graph_calls_allowed": 0,
+                "tenant_writes_allowed": 0,
+            },
+            self.domain["offline_cli"],
+        )
+        self.assertTrue(self.domain["offline_boundary"]["cli_changes_in_scope"])
+
+    def test_offline_cli_contract_drift_is_rejected(self) -> None:
+        payload = copy.deepcopy(self.domain)
+        payload["offline_cli"]["command_exact"] = (
+            "nac m365 teams-sharepoint business-case-type-write"
+        )
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["offline_cli"]["operations_exact"].remove("task_update")
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["offline_cli"]["live_graph_calls_allowed"] = 1
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["offline_cli"]["field_values_in_output_allowed"] = True
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.domain)
+        payload["offline_boundary"]["cli_changes_in_scope"] = False
+        self.assertTrue(validate_domain_contract(payload))
+
+    def test_final_status_or_verification_adoption_drift_is_rejected(self) -> None:
+        payload = copy.deepcopy(self.domain)
+        payload["status"] = "implemented_offline_pending_protected_pr"
+        self.assertTrue(validate_domain_contract(payload))
+
+        payload = copy.deepcopy(self.verification)
+        payload["status"] = "implemented_offline_pending_protected_pr"
+        self.assertTrue(validate_verification_contract(payload))
+
+        payload = copy.deepcopy(self.verification)
+        payload["applies_when"]["paths"].remove("src/nac_cli/cli.py")
+        self.assertTrue(validate_verification_contract(payload))
+
+        payload = copy.deepcopy(self.verification)
+        payload["checks"].remove(
+            "python3 -m unittest "
+            "tests.test_business_case_type_graph_write_edge "
+            "tests.test_business_case_type_graph_write_edge_contract "
+            "tests.test_business_case_type_graph_write_edge_cli"
+        )
+        self.assertTrue(validate_verification_contract(payload))
 
     def test_write_identity_cannot_drift_to_bff_read_identity(self) -> None:
         payload = copy.deepcopy(self.domain)

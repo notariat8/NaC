@@ -2,7 +2,7 @@
   "schema_version": "nac.business-case-type-graph-write-edge-s4b/v0.1",
   "contract_id": "m365.business_case_type_graph_write_edge_s4b",
   "title": "BusinessCaseType bounded Graph write edge S4b",
-  "status": "implemented_offline_pending_protected_pr",
+  "status": "implemented_offline",
   "leading_issue": "https://github.com/notariat8/NaC/issues/694",
   "slice": {
     "id": "S4b",
@@ -289,7 +289,7 @@
     "credential_environment_token_or_certificate_reads_allowed": false,
     "dns_network_graph_sharepoint_entra_calls_allowed": false,
     "tenant_schema_permission_or_data_writes_allowed": false,
-    "cli_changes_in_scope": false,
+    "cli_changes_in_scope": true,
     "production_composition_in_scope": false
   },
   "acceptance_criteria": [
@@ -371,5 +371,23 @@
     "exception_type_message_url_body_or_headers_exposed": false,
     "structured_result_required": true,
     "write_attempts_on_preflight_error": 0
+  },
+  "offline_cli": {
+    "command_exact": "nac m365 teams-sharepoint business-case-type-write-dry-run",
+    "operations_exact": [
+      "case_create",
+      "case_status_update",
+      "task_create",
+      "task_update",
+      "business_case_type_backfill"
+    ],
+    "synthetic_only": true,
+    "redacted_output_only": true,
+    "resource_identifiers_or_urls_in_output_allowed": false,
+    "field_values_in_output_allowed": false,
+    "live_factory_allowed": false,
+    "credentials_allowed": false,
+    "live_graph_calls_allowed": 0,
+    "tenant_writes_allowed": 0
   }
 }
