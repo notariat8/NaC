@@ -2,7 +2,7 @@
   "schemaVersion": "nac.business-case-type-graph-write-composition-s4c/v0.1",
   "title": "BusinessCaseType offline Graph write composition S4c",
   "issue": "https://github.com/notariat8/NaC/issues/698",
-  "status": "S4C_DESIGN",
+  "status": "S4C_COMPOSITION_READY_OFFLINE",
   "extendsContract": "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
   "acceptanceIdsExact": [
     "AC-S4C-01",

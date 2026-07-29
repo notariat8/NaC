@@ -1081,6 +1081,14 @@ nac kg business-case-type-get immobilienkaufvertrag --site-id synthetic-site-01 
 nac m365 teams-sharepoint business-case-type-write-dry-run --operation case_create --format json
 ```
 
+## Offline S4c Graph-Write-Kompositions-Smoke
+
+`nac m365 teams-sharepoint business-case-type-write-composition-smoke` prüft die produktionsnahe lokale Komposition aus Issue #698 mit einer neuen absoluten `--database-path`-SQLite-Datei, injiziertem synthetischem Token-Provider und injiziertem HTTP-Port. Alle fünf S4b-Operationen durchlaufen Plan, persistenten Intent, synthetischen Transport, Outcome und Readback. Der Smoke führt weder Socket-/DNS- noch externe Credential-, Live-Graph- oder Tenant-Zugriffe aus; synthetische Token-Provider-Aufrufe werden separat gezählt. SQLite ist nur für lokale Single-Host-Prozess-Restarts zugesichert. Live-Identität, zentrale Multi-Instance-Durability und jeder Tenant-Write bleiben owner-gated.
+
+```bash
+nac m365 teams-sharepoint business-case-type-write-composition-smoke --database-path /tmp/nac-s4c-smoke/state.sqlite --format json
+```
+
 ## S6a Immutable-Evidence-Foundation Offline
 
 `nac kg business-case-type-evidence-dry-run` prüft die S6a-Immutable-Evidence-Foundation ausschließlich mit synthetischen In-Memory-Adaptern. Der Befehl erzeugt kanonische Intent-, Outcome-, Readback- und Reconciliation-Ketten, lädt keine Credentials und führt keine Netzwerk-, Provider-, Tenant- oder Live-Mutationsaktion aus. Das Ergebnis bleibt `S6_OFFLINE_FOUNDATION` und `BLOCKED_PENDING_S7_APPROVAL`; es behauptet weder PostgreSQL-Durability noch Signatur, Anchor oder WORM-Speicherung.

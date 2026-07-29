@@ -1,29 +1,29 @@
 # BusinessCaseType Graph Write Composition S4c Implementation Plan
 
-**Issue:** [#698](https://github.com/notariat8/NaC/issues/698)  
-**Spec:** [S4c Design](../specs/2026-07-29-business-case-type-graph-write-composition-s4c-design.md)  
-**Status:** Plan review
+**Issue:** [#698](https://github.com/notariat8/NaC/issues/698)
+**Spec:** [S4c Design](../specs/2026-07-29-business-case-type-graph-write-composition-s4c-design.md)
+**Status:** Implemented offline; live write owner-gated
 
 ## Work Packages
 
-- [ ] **WP1 – Contracts:** S4c domain and verification contracts, validator and
+- [x] **WP1 – Contracts:** S4c domain and verification contracts, validator and
   spec traceability for `AC-S4C-01` through `AC-S4C-08`.
-- [ ] **WP2 – State:** SQLite adapter with atomic state/event commit,
+- [x] **WP2 – State:** SQLite adapter with atomic state/event commit,
   full transition matrix, two-connection CAS, authorization-run binding and a
   local POSIX process-restart envelope.
-- [ ] **WP3 – Transport:** Graph v1.0 adapter with injected token and HTTP ports,
+- [x] **WP3 – Transport:** Graph v1.0 adapter with injected token and HTTP ports,
   redirect/host/method/body limits and no automatic retry.
-- [ ] **WP4 – Composition:** pure DI root without environment, credential or
+- [x] **WP4 – Composition:** pure DI root without environment, credential or
   live factory.
-- [ ] **WP5 – Offline Smoke:** temporary state and fake HTTP for all five
+- [x] **WP5 – Offline Smoke:** temporary state and fake HTTP for all five
   operations with zero socket/DNS, external credential, live Graph and tenant
   activity; synthetic token-provider calls are reported separately.
-- [ ] **WP6 – Crash/Negative Tests:** restart windows, corruption, CAS
+- [x] **WP6 – Crash/Negative Tests:** restart windows, corruption, CAS
   conflicts, busy/timeout, pre-transport blocks without token-provider calls
   and redacted provider failures.
-- [ ] **WP7 – Docs/Context:** synchronize DE/EN CLI, architecture, contract
+- [x] **WP7 – Docs/Context:** synchronize DE/EN CLI, architecture, contract
   indexes, agent context and roadmap.
-- [ ] **WP8 – Completion:** focused tests, validator, contracts, compileall,
+- [x] **WP8 – Completion:** focused tests, validator, contracts, compileall,
   spec traceability, language parity, links, strict gate and independent review.
 
 ## Order

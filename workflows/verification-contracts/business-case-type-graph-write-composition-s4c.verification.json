@@ -9,6 +9,16 @@
       "src/nac_m365_graph/business_case_type_write_state.py",
       "src/nac_m365_graph/business_case_type_write_transport.py",
       "src/nac_m365_graph/business_case_type_write_composition_smoke.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_graph_write_composition.py",
+      "tests/fixtures/business-case-type-graph-write-composition/sitecustomize.py",
+      "tests/test_business_case_type_graph_write_composition.py",
+      "tests/test_business_case_type_graph_write_state_store.py",
+      "tests/test_business_case_type_graph_write_http_transport.py",
+      "tests/test_business_case_type_graph_write_credentials.py",
+      "tests/test_business_case_type_graph_write_crash_recovery.py",
+      "tests/test_business_case_type_graph_write_composition_contract.py",
+      "tests/test_business_case_type_graph_write_composition_cli.py",
       "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json",
       "workflows/verification-contracts/business-case-type-graph-write-composition-s4c.verification.json"
     ]
@@ -27,7 +37,9 @@
     "python3 scripts/validate_spec_traceability.py",
     "python3 scripts/validate_language_parity.py",
     "python3 scripts/validate_doc_links.py",
-    "git diff --check"
+    "git diff --check",
+    "python3 -m compileall -q src scripts tests",
+    "python3 scripts/quality_gate.py --profile strict"
   ],
   "requiredEvidence": [
     "All eight AC-S4C acceptance IDs are present in spec, contract, validator and tests.",

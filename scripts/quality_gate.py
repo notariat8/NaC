@@ -179,6 +179,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_business_case_type_graph_write_edge.py"],
                 ),
                 (
+                    "business_case_type_graph_write_composition",
+                    "Business Case Type Graph Write Composition",
+                    [
+                        sys.executable,
+                        "scripts/validate_business_case_type_graph_write_composition.py",
+                    ],
+                ),
+                (
                     "business_case_type_live_foundation",
                     "Business Case Type Live Foundation",
                     [sys.executable, "scripts/validate_business_case_type_live_foundation.py"],

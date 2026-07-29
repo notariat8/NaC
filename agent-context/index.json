@@ -252,6 +252,31 @@
           ]
         },
         {
+          "id": "business_case_type_graph_write_composition_s4c",
+          "description": "Issue #698 offline S4c composition of the bounded S4b write edge with local SQLite generation-CAS/evidence state, an injected Graph REST v1.0 transport and synthetic token provider, five-operation smoke, crash/restart blocking and zero live Graph calls or tenant writes; live identity, central durability and tenant execution remain owner-gated.",
+          "paths": [
+            "docs/de/superpowers/specs/2026-07-29-business-case-type-graph-write-composition-s4c-design.md",
+            "docs/en/superpowers/specs/2026-07-29-business-case-type-graph-write-composition-s4c-design.md",
+            "docs/de/superpowers/plans/2026-07-29-business-case-type-graph-write-composition-s4c.md",
+            "docs/en/superpowers/plans/2026-07-29-business-case-type-graph-write-composition-s4c.md",
+            "docs/de/cli.md",
+            "docs/en/cli.md",
+            "src/nac_m365_graph/business_case_type_write_composition.py",
+            "src/nac_m365_graph/business_case_type_write_composition_smoke.py",
+            "src/nac_m365_graph/business_case_type_write_state.py",
+            "src/nac_m365_graph/business_case_type_write_transport.py",
+            "src/nac_cli/cli.py",
+            "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json",
+            "workflows/verification-contracts/business-case-type-graph-write-composition-s4c.verification.json",
+            "scripts/validate_business_case_type_graph_write_composition.py",
+            "tests/test_business_case_type_graph_write_composition*.py",
+            "tests/test_business_case_type_graph_write_state_store.py",
+            "tests/test_business_case_type_graph_write_http_transport.py",
+            "tests/test_business_case_type_graph_write_credentials.py",
+            "tests/test_business_case_type_graph_write_crash_recovery.py"
+          ]
+        },
+        {
           "id": "business_case_type_migration_s5",
           "description": "Issue #618 S5 deterministic synthetic-only offline migration: exact seven-class inventory, typed four-row mapping, idempotent backfill plan, process-serialized persistent local quarantine, independently captured stable scans and hash-pinned N/N-1 profile evaluation; READY is S5_OFFLINE_ONLY with no live calls or tenant writes.",
           "paths": [
@@ -329,6 +354,7 @@
   "verification_contracts": [
     "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json",
     "workflows/verification-contracts/business-case-type-graph-write-edge-s4b.verification.json",
+    "workflows/verification-contracts/business-case-type-graph-write-composition-s4c.verification.json",
     "workflows/verification-contracts/business-case-type-immutable-evidence-s6.verification.json",
     "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json",
     "workflows/verification-contracts/business-case-type-migration-s5.verification.json",
