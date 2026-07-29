@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, Protocol
 
+from notary_kg.business_case_type_mutation import canonical_hash
+
 from .business_case_type_write_plan import (
     MAX_DEDUPE_ROWS,
     BusinessCaseTypeWritePlan,
@@ -14,8 +16,12 @@ from .business_case_type_write_plan import (
 
 
 ReconciliationState = Literal["clear", "required", "unavailable"]
-PersistentIntentState = Literal["absent", "open", "closed", "unavailable"]
+PersistentIntentState = Literal[
+    "absent", "open", "retryable", "closed", "unavailable"
+]
+CompletionState = Literal["terminal", "retryable"]
 _ITEM_ID = re.compile(r"[1-9][0-9]{0,18}\Z")
+_RETRYABLE_HTTP_STATUSES = frozenset({401, 403, 408, 429})
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +38,7 @@ class GraphWriteTransport(Protocol):
 
 class MutationEvidenceHook(Protocol):
     def persistence_state(
-        self, mutation_id: str
+        self, execution_key: str
     ) -> MutationPersistenceState: ...
 
     def intent(self, evidence: Mapping[str, Any]) -> bool: ...
@@ -90,9 +96,7 @@ class BusinessCaseTypeGraphWriteEdge:
                 reason_code="plan_revalidation_failed",
             )
 
-        persistence_state = self._persistence_state(
-            plan.mutation.mutation_id
-        )
+        persistence_state = self._persistence_state(plan)
         if persistence_state is None:
             return _result(
                 plan,
@@ -153,6 +157,17 @@ class BusinessCaseTypeGraphWriteEdge:
                     reason_code="dedupe_response_invalid",
                 )
             if observation.state == "applied":
+                candidate_id = _dedupe_candidate_item_id(response)
+                candidate_etag = _dedupe_candidate_etag(response)
+                if candidate_id is None or candidate_etag is None:
+                    return _result(
+                        plan,
+                        status="BLOCKED_DEDUPE_READ",
+                        transport_calls=transport_calls,
+                        write_attempts=0,
+                        reconciliation_required=False,
+                        reason_code="dedupe_response_invalid",
+                    )
                 intent_generation = self._record_intent(
                     plan, persistence_state
                 )
@@ -168,14 +183,41 @@ class BusinessCaseTypeGraphWriteEdge:
                         "dedupe_evidence_incomplete",
                         intent_generation,
                     )
+                fresh_response = self._request(
+                    plan.item_readback_request(candidate_id)
+                )
+                transport_calls += 1
+                fresh_observation = (
+                    _item_observation(
+                        plan,
+                        fresh_response,
+                        expected_item_id=candidate_id,
+                    )
+                    if fresh_response is not None
+                    else _Observation("invalid", 0)
+                )
+                if (
+                    fresh_response is not None
+                    and _response_etag(fresh_response) != candidate_etag
+                ):
+                    fresh_observation = _Observation(
+                        "invalid", fresh_observation.http_status
+                    )
+                verified = outcome_ok and fresh_observation.state == "applied"
+                if not verified:
+                    persisted = self._persist_reconciliation(
+                        plan,
+                        "dedupe_fresh_readback_uncertain",
+                        intent_generation,
+                    )
                 readback_ok = self._record_readback(
                     plan,
-                    "verified_applied",
-                    observation.http_status,
+                    _readback_result_code(fresh_observation),
+                    fresh_observation.http_status,
                     intent_generation=intent_generation,
-                    close_intent=outcome_ok,
+                    close_intent=verified,
                 )
-                if outcome_ok and readback_ok:
+                if verified and readback_ok:
                     return _result(
                         plan,
                         status="DEDUPLICATED",
@@ -184,7 +226,7 @@ class BusinessCaseTypeGraphWriteEdge:
                         reconciliation_required=False,
                         reason_code="existing_create_identity",
                     )
-                if not readback_ok and outcome_ok:
+                if not readback_ok and verified:
                     persisted = self._persist_reconciliation(
                         plan,
                         "dedupe_evidence_incomplete",
@@ -195,7 +237,7 @@ class BusinessCaseTypeGraphWriteEdge:
                     persisted=persisted,
                     transport_calls=transport_calls,
                     write_attempts=0,
-                    reason_code="dedupe_evidence_incomplete",
+                    reason_code="dedupe_fresh_readback_uncertain",
                 )
             if observation.state != "not_applied":
                 return self._reconcile_observation_without_write(
@@ -302,6 +344,14 @@ class BusinessCaseTypeGraphWriteEdge:
                 write_attempts=write_attempts,
                 intent_generation=intent_generation,
             )
+        if status in _RETRYABLE_HTTP_STATUSES:
+            return self._handle_retryable_negative(
+                plan,
+                status=status,
+                transport_calls=transport_calls,
+                write_attempts=write_attempts,
+                intent_generation=intent_generation,
+            )
         if 500 <= status <= 599:
             self._record_outcome(
                 plan,
@@ -356,6 +406,82 @@ class BusinessCaseTypeGraphWriteEdge:
             transport_calls=transport_calls,
             write_attempts=write_attempts,
             intent_generation=intent_generation,
+        )
+
+    def _handle_retryable_negative(
+        self,
+        plan: BusinessCaseTypeWritePlan,
+        *,
+        status: int,
+        transport_calls: int,
+        write_attempts: int,
+        intent_generation: int,
+    ) -> MutationExecutionResult:
+        outcome_ok = self._record_outcome(
+            plan,
+            "retryable_rejected",
+            status,
+            intent_generation=intent_generation,
+        )
+        observation, calls = self._observe_after_write(
+            plan, item_id=_default_readback_item_id(plan)
+        )
+        transport_calls += calls
+        safely_not_applied = outcome_ok and observation.state == "not_applied"
+        already_applied = outcome_ok and observation.state == "applied"
+        needs_reconciliation = not (safely_not_applied or already_applied)
+        persisted = True
+        if needs_reconciliation:
+            persisted = self._persist_reconciliation(
+                plan,
+                "retryable_response_readback_uncertain",
+                intent_generation,
+            )
+        readback_ok = self._record_readback(
+            plan,
+            _readback_result_code(observation),
+            observation.http_status,
+            intent_generation=intent_generation,
+            close_intent=not needs_reconciliation,
+            completion_state=(
+                "retryable" if safely_not_applied else "terminal"
+            ),
+        )
+        if not readback_ok and not needs_reconciliation:
+            needs_reconciliation = True
+            persisted = self._persist_reconciliation(
+                plan,
+                "retryable_response_evidence_incomplete",
+                intent_generation,
+            )
+        if needs_reconciliation:
+            return self._reconciliation_result(
+                plan,
+                persisted=persisted,
+                transport_calls=transport_calls,
+                write_attempts=write_attempts,
+                reason_code="retryable_response_readback_uncertain",
+            )
+        if already_applied:
+            return _result(
+                plan,
+                status="RETRYABLE_RESPONSE_STATE_ALREADY_APPLIED",
+                transport_calls=transport_calls,
+                write_attempts=write_attempts,
+                reconciliation_required=False,
+                reason_code="retryable_response_state_already_applied",
+            )
+        return _result(
+            plan,
+            status="RETRYABLE_NOT_APPLIED",
+            transport_calls=transport_calls,
+            write_attempts=write_attempts,
+            reconciliation_required=False,
+            reason_code=(
+                "authentication_refresh_required"
+                if status in {401, 403}
+                else "later_authorized_retry_required"
+            ),
         )
 
     def _handle_412(
@@ -701,13 +827,27 @@ class BusinessCaseTypeGraphWriteEdge:
         return response if isinstance(response, GraphResponse) else None
 
     def _persistence_state(
-        self, mutation_id: str
+        self, plan: BusinessCaseTypeWritePlan
     ) -> MutationPersistenceState | None:
         try:
-            state = self._evidence.persistence_state(mutation_id)
+            state = self._evidence.persistence_state(_execution_key(plan))
         except Exception:
             return None
-        return _validated_persistence_state(state)
+        validated = _validated_persistence_state(state)
+        if validated is not None and validated.intent_state == "absent":
+            # Compatibility for pre-S4b test hooks. Runtime persistence hooks
+            # must key state by execution_key from the evidence payload.
+            try:
+                legacy = _validated_persistence_state(
+                    self._evidence.persistence_state(
+                        plan.mutation.mutation_id
+                    )
+                )
+            except Exception:
+                legacy = None
+            if legacy is not None and legacy.intent_state != "absent":
+                return legacy
+        return validated
 
     def _persist_reconciliation(
         self,
@@ -727,7 +867,7 @@ class BusinessCaseTypeGraphWriteEdge:
             return False
         if acknowledged is not True:
             return False
-        state = self._persistence_state(plan.mutation.mutation_id)
+        state = self._persistence_state(plan)
         return bool(
             state is not None
             and state.reconciliation_state == "required"
@@ -756,7 +896,7 @@ class BusinessCaseTypeGraphWriteEdge:
             return None
         if acknowledged is not True:
             return None
-        state = self._persistence_state(plan.mutation.mutation_id)
+        state = self._persistence_state(plan)
         if (
             state is None
             or state.reconciliation_state != "clear"
@@ -796,6 +936,7 @@ class BusinessCaseTypeGraphWriteEdge:
         *,
         intent_generation: int,
         close_intent: bool,
+        completion_state: CompletionState = "terminal",
     ) -> bool:
         try:
             acknowledged = self._evidence.readback(
@@ -805,19 +946,25 @@ class BusinessCaseTypeGraphWriteEdge:
                     http_status=http_status,
                     intent_generation=intent_generation,
                     close_intent=close_intent,
+                    completion_state=completion_state,
                 )
             )
         except Exception:
             return False
         if acknowledged is not True:
             return False
-        state = self._persistence_state(plan.mutation.mutation_id)
+        state = self._persistence_state(plan)
         if state is None or state.intent_generation != intent_generation:
             return False
         if close_intent:
             return bool(
                 state.reconciliation_state == "clear"
-                and state.intent_state == "closed"
+                and state.intent_state
+                == (
+                    "retryable"
+                    if completion_state == "retryable"
+                    else "closed"
+                )
                 and state.closed_generation == intent_generation
             )
         return bool(
@@ -833,7 +980,7 @@ def _validated_persistence_state(
         return None
     if (
         state.reconciliation_state not in {"clear", "required"}
-        or state.intent_state not in {"absent", "open", "closed"}
+        or state.intent_state not in {"absent", "open", "retryable", "closed"}
         or type(state.intent_generation) is not int
         or type(state.closed_generation) is not int
         or not 0 <= state.closed_generation <= state.intent_generation < 2**63
@@ -847,7 +994,7 @@ def _validated_persistence_state(
         state.intent_state == "open"
         and state.intent_generation == state.closed_generation + 1
     ) or (
-        state.intent_state == "closed"
+        state.intent_state in {"retryable", "closed"}
         and state.intent_generation > 0
         and state.closed_generation == state.intent_generation
     )
@@ -914,10 +1061,12 @@ def _evidence(
     intent_generation: int | None = None,
     expected_intent_generation: int | None = None,
     close_intent: bool | None = None,
+    completion_state: CompletionState | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": "nac.business-case-type-write-evidence-hook/v0.1",
         "mutation_id": plan.mutation.mutation_id,
+        "execution_key": _execution_key(plan),
         "operation": plan.mutation.operation,
         "target_binding_hash": plan.target_binding_hash,
         "plan_sha256": plan.plan_sha256,
@@ -933,7 +1082,50 @@ def _evidence(
         payload["expected_intent_generation"] = expected_intent_generation
     if close_intent is not None:
         payload["close_intent"] = close_intent
+    if completion_state is not None:
+        payload["completion_state"] = completion_state
     return payload
+
+
+def _execution_key(plan: BusinessCaseTypeWritePlan) -> str:
+    return canonical_hash(
+        {
+            "target_binding_hash": plan.target_binding_hash,
+            "mutation_id": plan.mutation.mutation_id,
+        }
+    )
+
+
+def _single_dedupe_row(
+    response: GraphResponse,
+) -> Mapping[str, Any] | None:
+    if not isinstance(response.body, Mapping):
+        return None
+    rows = response.body.get("value")
+    if type(rows) is not list or len(rows) != 1:
+        return None
+    row = rows[0]
+    return row if isinstance(row, Mapping) else None
+
+
+def _dedupe_candidate_item_id(response: GraphResponse) -> str | None:
+    row = _single_dedupe_row(response)
+    if row is None:
+        return None
+    item_id = row.get("id")
+    return (
+        item_id
+        if type(item_id) is str and _ITEM_ID.fullmatch(item_id)
+        else None
+    )
+
+
+def _dedupe_candidate_etag(response: GraphResponse) -> str | None:
+    row = _single_dedupe_row(response)
+    if row is None:
+        return None
+    etag = row.get("eTag")
+    return etag if type(etag) is str and etag else None
 
 
 def _dedupe_observation(
