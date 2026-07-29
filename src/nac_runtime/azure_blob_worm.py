@@ -19,7 +19,7 @@ from nac_runtime.immutable_evidence import (
 
 
 S6B_STATUS = "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE"
-_SCHEMA_VERSION = "nac.azure-blob-worm-object/v0.2"
+_SCHEMA_VERSION = "nac.azure-blob-worm-object/v0.3"
 _PUBLIC_ERROR = "Azure Blob WORM operation rejected"
 _MAX_BLOB_BYTES = 4 * 1024 * 1024
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -41,6 +41,10 @@ _RECEIPT_BODY = re.compile(r"[0-9a-f]{64}\Z")
 _BINDING_128 = re.compile(r"[0-9a-f]{32}\Z")
 _LOCK_ACTOR = re.compile(r"(?:operator|approver)-v1-[0-9a-f]{64}\Z")
 _PROVIDER_CONTEXT_SOURCE = "azure-subscription-resource-tenant-readback"
+_PROVIDER_ATTESTATION_SCHEMA = "nac.azure-provider-context-attestation/v0.1"
+_PROVIDER_ATTESTATION_SOURCE = (
+    "owner-approved-commit-hash-bound-deployment-attestation"
+)
 _LOCK_API_VERSION = "2023-05-01"
 _LOCK_OPERATION = "POST immutabilityPolicies/default/lock"
 _T = TypeVar("_T")
@@ -83,6 +87,17 @@ class AzureBlobProviderContext:
     subscription_resource_id: str
     resource_id: str
     readback_source: str
+
+
+@dataclass(frozen=True, slots=True)
+class AzureProviderContextAttestation:
+    schema_version: str
+    source: str
+    owner_approval_sha256: str
+    deployment_commit_sha256: str
+    deployment_tree_sha256: str
+    deployment_plan_sha256: str
+    provider_context_binding_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,7 +199,8 @@ class AzureBlobWormJournal:
         tenant_binding_sha256: str,
         encryption_scope: str,
         customer_managed_key_ref_sha256: str,
-        expected_provider_context_binding_sha256: str,
+        provider_context_attestation: AzureProviderContextAttestation,
+        approved_provider_context_attestation_sha256: str,
     ) -> None:
         try:
             self._transport = transport
@@ -194,8 +210,22 @@ class AzureBlobWormJournal:
             self._customer_managed_key_ref_sha256 = _sha256(
                 customer_managed_key_ref_sha256
             )
-            self._expected_provider_context_binding_sha256 = _sha256(
-                expected_provider_context_binding_sha256
+            attestation = _copy_provider_context_attestation(
+                provider_context_attestation
+            )
+            approved_attestation_sha256 = _sha256(
+                approved_provider_context_attestation_sha256
+            )
+            actual_attestation_sha256 = _provider_context_attestation_sha256(
+                attestation
+            )
+            if actual_attestation_sha256 != approved_attestation_sha256:
+                raise _Rejected
+            self._provider_context_attestation_sha256 = (
+                approved_attestation_sha256
+            )
+            self._attested_provider_context_binding_sha256 = (
+                attestation.provider_context_binding_sha256
             )
         except Exception:
             raise AzureBlobWormError(_PUBLIC_ERROR) from None
@@ -278,6 +308,9 @@ class AzureBlobWormJournal:
             "idempotency_key_sha256": idempotency_key,
             "tenant_binding_sha256": self._tenant_binding_sha256,
             **provider_evidence,
+            "provider_context_attestation_sha256": (
+                self._provider_context_attestation_sha256
+            ),
             "encryption_scope": self._encryption_scope,
             "encryption_key_source": policy.encryption_key_source,
             "customer_managed_key_ref_sha256": self._customer_managed_key_ref_sha256,
@@ -391,7 +424,7 @@ class AzureBlobWormJournal:
         evidence = _provider_context_evidence(context)
         if (
             evidence["provider_context_binding_sha256"]
-            != self._expected_provider_context_binding_sha256
+            != self._attested_provider_context_binding_sha256
         ):
             raise _Rejected
         return evidence
@@ -503,6 +536,7 @@ class AzureBlobWormJournal:
             "provider_resource_binding_sha256",
             "provider_context_binding_sha256",
             "provider_context_binding_source",
+            "provider_context_attestation_sha256",
             "encryption_scope",
             "encryption_key_source",
             "customer_managed_key_ref_sha256",
@@ -522,6 +556,8 @@ class AzureBlobWormJournal:
             envelope["schema_version"] != _SCHEMA_VERSION
             or envelope["blob_locator"] != blob_locator
             or envelope["tenant_binding_sha256"] != self._tenant_binding_sha256
+            or envelope["provider_context_attestation_sha256"]
+            != self._provider_context_attestation_sha256
             or envelope["encryption_scope"] != self._encryption_scope
             or envelope["encryption_key_source"] != "Microsoft.Keyvault"
             or envelope["customer_managed_key_ref_sha256"]
@@ -918,6 +954,17 @@ class FakeAzureBlobWormTransport:
         return self._results.pop(operation, _NO_RESULT)
 
 
+def azure_provider_context_attestation_sha256(
+    attestation: AzureProviderContextAttestation,
+) -> str:
+    try:
+        return _provider_context_attestation_sha256(
+            _copy_provider_context_attestation(attestation)
+        )
+    except Exception:
+        raise AzureBlobWormError(_PUBLIC_ERROR) from None
+
+
 def azure_provider_context_binding_sha256(
     context: AzureBlobProviderContext,
 ) -> str:
@@ -927,6 +974,23 @@ def azure_provider_context_binding_sha256(
         )["provider_context_binding_sha256"]
     except Exception:
         raise AzureBlobWormError(_PUBLIC_ERROR) from None
+
+
+def _provider_context_attestation_sha256(
+    attestation: AzureProviderContextAttestation,
+) -> str:
+    payload = {
+        "schema_version": attestation.schema_version,
+        "source": attestation.source,
+        "owner_approval_sha256": attestation.owner_approval_sha256,
+        "deployment_commit_sha256": attestation.deployment_commit_sha256,
+        "deployment_tree_sha256": attestation.deployment_tree_sha256,
+        "deployment_plan_sha256": attestation.deployment_plan_sha256,
+        "provider_context_binding_sha256": (
+            attestation.provider_context_binding_sha256
+        ),
+    }
+    return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
 
 
 def _provider_context_evidence(
@@ -1003,6 +1067,28 @@ def _transport_call(call: Callable[[], _T]) -> _T:
     if result is None:
         raise _Rejected
     return result
+
+
+def _copy_provider_context_attestation(
+    value: Any,
+) -> AzureProviderContextAttestation:
+    if (
+        type(value) is not AzureProviderContextAttestation
+        or value.schema_version != _PROVIDER_ATTESTATION_SCHEMA
+        or value.source != _PROVIDER_ATTESTATION_SOURCE
+    ):
+        raise _Rejected
+    return AzureProviderContextAttestation(
+        schema_version=value.schema_version,
+        source=value.source,
+        owner_approval_sha256=_sha256(value.owner_approval_sha256),
+        deployment_commit_sha256=_sha256(value.deployment_commit_sha256),
+        deployment_tree_sha256=_sha256(value.deployment_tree_sha256),
+        deployment_plan_sha256=_sha256(value.deployment_plan_sha256),
+        provider_context_binding_sha256=_sha256(
+            value.provider_context_binding_sha256
+        ),
+    )
 
 
 def _copy_provider_context(value: Any) -> AzureBlobProviderContext:
@@ -1204,6 +1290,7 @@ def _metadata(envelope: Mapping[str, Any], body: bytes) -> dict[str, str]:
         "provider_resource_binding_sha256",
         "provider_context_binding_sha256",
         "provider_context_binding_source",
+        "provider_context_attestation_sha256",
         "encryption_scope",
         "encryption_key_source",
         "customer_managed_key_ref_sha256",

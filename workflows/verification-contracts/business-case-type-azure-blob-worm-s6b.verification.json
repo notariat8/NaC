@@ -51,7 +51,7 @@
     "AC-S6B-01: unchanged WormJournalPort semantics and complete exact-version readback",
     "AC-S6B-02: canonical S6a key, create-only 201 x-ms-version-id and unique 412 List/Get discovery",
     "AC-S6B-03: exact version proves Locked, create-time retention >=3653, legal-hold capability, CMK and provider context",
-    "AC-S6B-04: timestamp, retention, content, provider and version drift fail closed before mutation where applicable and remain redacted",
+    "AC-S6B-04: object schema v0.3 and approved attestation digest are exact across body and metadata; timestamp, retention, content, provider and version drift fail closed and remain redacted",
     "AC-S6B-05: dedicated Bicep uses add/read and exact management reads without write, delete, owner, contributor or existing-identity broadening",
     "AC-S6B-06: zero live actions and S7 remains BLOCKED_PENDING_S7_APPROVAL",
     "AC-S6B-07: contracts, paired docs, tests, validator, lock plan, review and pinned CI compile are required"
@@ -78,6 +78,7 @@
     "201 raw x-ms-version-id followed by raw-versionid GET",
     "412 List Blob Versions and raw-versionid GET with none, ambiguous and foreign negatives",
     "Fresh tenant, subscription and storage resource readback bindings without plaintext evidence",
+    "Object schema nac.azure-blob-worm-object/v0.3 with exact approved attestation digest in canonical body and metadata",
     "Exact-version Locked, retention, legal-hold capability, CMK and canonical-content negatives",
     "Dedicated writer add/read and exact container, policy and encryption-scope management reads",
     "Canonical irreversible lock plan with target, stale-ETag and request-hash negatives",

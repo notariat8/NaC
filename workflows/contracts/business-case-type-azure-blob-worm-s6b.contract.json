@@ -32,7 +32,10 @@
       "commit(records, anchor, *, idempotency_key_sha256)",
       "readback(receipt_ref)"
     ],
-    "commit_receipt_keys_exact": ["receipt_ref", "head_sha256"],
+    "commit_receipt_keys_exact": [
+      "receipt_ref",
+      "head_sha256"
+    ],
     "public_readback_keys_exact": [
       "receipt_ref",
       "head_sha256",
@@ -78,11 +81,15 @@
     "public_readback_exact_version_required": true
   },
   "full_readback": {
+    "object_schema_version_exact": "nac.azure-blob-worm-object/v0.3",
     "canonical_body_required": true,
     "maximum_blob_bytes": 4194304,
     "hash_chain_verified": true,
     "anchor_binding_verified": true,
     "metadata_exact_match_required": true,
+    "provider_context_attestation_sha256_body_required": true,
+    "provider_context_attestation_sha256_metadata_required": true,
+    "provider_context_attestation_sha256_exact_match_required": true,
     "blob_version_id_required": true,
     "blob_created_at_required": true,
     "blob_version_immutability_mode_exact": "Locked",
@@ -93,7 +100,11 @@
   "provider_tenant_evidence": {
     "source_exact": "azure-subscription-resource-tenant-readback",
     "fresh_transport_readback_required": true,
-    "raw_fields_exact": ["tenant_id", "subscription_resource_id", "resource_id"],
+    "raw_fields_exact": [
+      "tenant_id",
+      "subscription_resource_id",
+      "resource_id"
+    ],
     "bindings_exact": [
       "provider_tenant_binding_sha256",
       "provider_subscription_binding_sha256",
@@ -108,7 +119,19 @@
     "tenant_transfer_behavior": "BLOCKED",
     "subscription_or_resource_drift_behavior": "BLOCKED",
     "plaintext_allowed": false,
-    "free_bicep_tenant_binding_parameter_allowed": false
+    "free_bicep_tenant_binding_parameter_allowed": false,
+    "attestation_schema_exact": "nac.azure-provider-context-attestation/v0.1",
+    "attestation_fields_exact": [
+      "schema_version",
+      "source",
+      "owner_approval_sha256",
+      "deployment_commit_sha256",
+      "deployment_tree_sha256",
+      "deployment_plan_sha256",
+      "provider_context_binding_sha256"
+    ],
+    "approved_attestation_digest_required": true,
+    "naked_expected_binding_allowed": false
   },
   "container_policy": {
     "runtime_default_immutability_policy_mode_exact": "Locked",

@@ -100,6 +100,8 @@ Der erwartete `provider_context_binding_sha256` stammt aus einer Owner-approved,
 commit- und hashgebundenen Deployment-Attestation; der tatsächliche Wert stammt
 aus einem davon unabhängigen frischen Azure-Readback. Erwartungs- und Ist-Wert
 dürfen nicht aus demselben Readback abgeleitet werden.
+Der Adapter verlangt die typisierte Attestation und ihren separat gepinnten,
+Owner-approved SHA-256-Digest als Trust Anchor.
 
 Stale Container-Metadaten, Subscription-/Resource-Drift oder Tenant-Transfer
 blockieren fail closed. Keine Klartext-Tenant-, Subscription- oder Resource-ID

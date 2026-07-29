@@ -99,6 +99,8 @@ expected `provider_context_binding_sha256` comes from an owner-approved,
 commit- and hash-bound deployment attestation; the actual value comes from an
 independent fresh Azure readback. Expected and actual values must not be
 derived from the same readback.
+The adapter requires the typed attestation and its separately pinned,
+owner-approved SHA-256 digest as the trust anchor.
 
 Stale container metadata, subscription or resource drift, and tenant transfer
 fail closed. No plaintext tenant, subscription, or resource ID appears in

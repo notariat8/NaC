@@ -46,6 +46,24 @@ class AzureBlobWormContractTests(unittest.TestCase):
         self.assertEqual(domain["slice"]["allowed_azure_calls"], 0)
         self.assertEqual(domain["slice"]["allowed_credential_reads"], 0)
         self.assertEqual(domain["container_policy"]["minimum_retention_days"], 3653)
+        full_readback = domain["full_readback"]
+        self.assertEqual(
+            full_readback["object_schema_version_exact"],
+            "nac.azure-blob-worm-object/v0.3",
+        )
+        self.assertTrue(
+            full_readback["provider_context_attestation_sha256_body_required"]
+        )
+        self.assertTrue(
+            full_readback["provider_context_attestation_sha256_metadata_required"]
+        )
+        self.assertTrue(
+            full_readback["provider_context_attestation_sha256_exact_match_required"]
+        )
+        self.assertIn(
+            "Object schema nac.azure-blob-worm-object/v0.3",
+            " ".join(verification["required_evidence"]),
+        )
         receipt = domain["version_bound_receipt"]
         self.assertEqual(receipt["blob_locator_bits"], 128)
         self.assertEqual(receipt["version_binding_bits"], 128)
@@ -70,6 +88,24 @@ class AzureBlobWormContractTests(unittest.TestCase):
         self.assertFalse(
             provider_tenant["expected_and_actual_same_readback_allowed"]
         )
+        self.assertEqual(
+            provider_tenant["attestation_schema_exact"],
+            "nac.azure-provider-context-attestation/v0.1",
+        )
+        self.assertEqual(
+            provider_tenant["attestation_fields_exact"],
+            [
+                "schema_version",
+                "source",
+                "owner_approval_sha256",
+                "deployment_commit_sha256",
+                "deployment_tree_sha256",
+                "deployment_plan_sha256",
+                "provider_context_binding_sha256",
+            ],
+        )
+        self.assertTrue(provider_tenant["approved_attestation_digest_required"])
+        self.assertFalse(provider_tenant["naked_expected_binding_allowed"])
         baseline = domain["bicep_baseline"]
         self.assertFalse(baseline["immutability_policy_state_property_emitted"])
         self.assertEqual(

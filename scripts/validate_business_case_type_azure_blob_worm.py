@@ -23,9 +23,11 @@ from nac_runtime.azure_blob_worm import (  # noqa: E402
     AzureBlobContainerPolicy,
     AzureBlobImmutabilityPolicySnapshot,
     AzureBlobProviderContext,
+    AzureProviderContextAttestation,
     AzureBlobWormError,
     AzureBlobWormJournal,
     FakeAzureBlobWormTransport,
+    azure_provider_context_attestation_sha256,
     azure_provider_context_binding_sha256,
     minimum_retention_days,
     prepare_irreversible_lock_plan,
@@ -42,6 +44,7 @@ from nac_runtime.immutable_evidence import (  # noqa: E402
     _publication_operation_key,
     actor_ref,
     build_event,
+    canonical_json_bytes,
     correlation_ref,
     typed_identifier_registry,
 )
@@ -93,6 +96,18 @@ PROVIDER_RESOURCE_BINDING_SHA256 = hashlib.sha256(
 ).hexdigest()
 PROVIDER_CONTEXT_BINDING_SHA256 = azure_provider_context_binding_sha256(
     PROVIDER_CONTEXT
+)
+PROVIDER_CONTEXT_ATTESTATION = AzureProviderContextAttestation(
+    schema_version="nac.azure-provider-context-attestation/v0.1",
+    source="owner-approved-commit-hash-bound-deployment-attestation",
+    owner_approval_sha256="6" * 64,
+    deployment_commit_sha256="7" * 64,
+    deployment_tree_sha256="8" * 64,
+    deployment_plan_sha256="9" * 64,
+    provider_context_binding_sha256=PROVIDER_CONTEXT_BINDING_SHA256,
+)
+PROVIDER_CONTEXT_ATTESTATION_SHA256 = azure_provider_context_attestation_sha256(
+    PROVIDER_CONTEXT_ATTESTATION
 )
 EXPECTED_BICEP_MARKERS = [
     "allowBlobPublicAccess: false",
@@ -182,6 +197,34 @@ def _validate_contracts(
     _expect(acceptance == EXPECTED_ACCEPTANCE, "domain acceptance IDs drift", errors)
     _expect(verification.get("acceptance_ids") == EXPECTED_ACCEPTANCE, "verification acceptance IDs drift", errors)
 
+    full_readback = domain.get("full_readback", {})
+    _expect(
+        isinstance(full_readback, dict)
+        and full_readback.get("object_schema_version_exact")
+        == "nac.azure-blob-worm-object/v0.3"
+        and full_readback.get(
+            "provider_context_attestation_sha256_body_required"
+        )
+        is True
+        and full_readback.get(
+            "provider_context_attestation_sha256_metadata_required"
+        )
+        is True
+        and full_readback.get(
+            "provider_context_attestation_sha256_exact_match_required"
+        )
+        is True,
+        "full readback object schema or attestation digest drift",
+        errors,
+    )
+    _expect(
+        any(
+            "Object schema nac.azure-blob-worm-object/v0.3" in item
+            for item in verification.get("required_evidence", [])
+        ),
+        "verification evidence omits object schema v0.3",
+        errors,
+    )
     receipt = domain.get("version_bound_receipt", {})
     _expect(
         isinstance(receipt, dict)
@@ -211,6 +254,11 @@ def _validate_contracts(
         and tenant.get("actual_binding_source_exact")
         == "fresh-runtime-azure-readback"
         and tenant.get("expected_and_actual_same_readback_allowed") is False
+        and tenant.get("attestation_schema_exact")
+        == "nac.azure-provider-context-attestation/v0.1"
+        and len(tenant.get("attestation_fields_exact", [])) == 7
+        and tenant.get("approved_attestation_digest_required") is True
+        and tenant.get("naked_expected_binding_allowed") is False
         and tenant.get("free_bicep_tenant_binding_parameter_allowed") is False,
         "provider tenant evidence drift",
         errors,
@@ -334,9 +382,37 @@ def _validate_port_and_smoke(errors: list[str]) -> None:
         tenant_binding_sha256=tenant_binding,
         encryption_scope="nac-worm-tenant-a",
         customer_managed_key_ref_sha256=CMK_REF_SHA256,
-        expected_provider_context_binding_sha256=(
-            PROVIDER_CONTEXT_BINDING_SHA256
+        provider_context_attestation=PROVIDER_CONTEXT_ATTESTATION,
+        approved_provider_context_attestation_sha256=(
+            PROVIDER_CONTEXT_ATTESTATION_SHA256
         ),
+    )
+    forged_attestation = replace(
+        PROVIDER_CONTEXT_ATTESTATION,
+        deployment_plan_sha256="a" * 64,
+    )
+    try:
+        AzureBlobWormJournal(
+            transport=transport,
+            container_name="nac-worm-tenant-a",
+            tenant_binding_sha256=tenant_binding,
+            encryption_scope="nac-worm-tenant-a",
+            customer_managed_key_ref_sha256=CMK_REF_SHA256,
+            provider_context_attestation=forged_attestation,
+            approved_provider_context_attestation_sha256=(
+                PROVIDER_CONTEXT_ATTESTATION_SHA256
+            ),
+        )
+    except AzureBlobWormError:
+        pass
+    else:
+        errors.append("unapproved provider attestation digest was accepted")
+    _expect(
+        transport.provider_context_calls == 0
+        and transport.policy_calls == 0
+        and transport.put_calls == 0,
+        "unapproved provider attestation reached transport",
+        errors,
     )
     anchor = _anchor(records)
     try:
@@ -380,6 +456,26 @@ def _validate_port_and_smoke(errors: list[str]) -> None:
         "fake transport performed external activity",
         errors,
     )
+    snapshot = transport.blob_snapshot(first["receipt_ref"])
+    payload = json.loads(snapshot.body.decode("utf-8"))
+    payload["provider_context_attestation_sha256"] = "f" * 64
+    foreign_body = canonical_json_bytes(payload)
+    foreign_metadata = {
+        **snapshot.metadata,
+        "nac_provider_context_attestation_sha256": "f" * 64,
+        "nac_body_sha256": hashlib.sha256(foreign_body).hexdigest(),
+    }
+    transport.replace_blob_for_test(
+        first["receipt_ref"],
+        body=foreign_body,
+        metadata=foreign_metadata,
+    )
+    try:
+        journal.readback(first["receipt_ref"])
+    except AzureBlobWormError:
+        pass
+    else:
+        errors.append("foreign attestation digest passed exact readback")
 
 
 def _validate_lock_plan(errors: list[str]) -> None:
@@ -423,6 +519,10 @@ def _validate_source(errors: list[str]) -> None:
         "list_blob_versions(",
         "status_code == 201",
         "provider_context_binding_sha256",
+        "provider_context_attestation_sha256",
+        "AzureProviderContextAttestation",
+        "approved_provider_context_attestation_sha256",
+        "azure_provider_context_attestation_sha256",
         "provider_tenant_binding_sha256",
         "prepare_irreversible_lock_plan",
         "verify_irreversible_lock_evidence",
@@ -430,7 +530,11 @@ def _validate_source(errors: list[str]) -> None:
         "raise AzureBlobWormError(_PUBLIC_ERROR)",
     ):
         _expect(marker in module_text, f"runtime marker missing: {marker}", errors)
-    for forbidden in ("version_id_binding: str", "version_id_binding="):
+    for forbidden in (
+        "version_id_binding: str",
+        "version_id_binding=",
+        "expected_provider_context_binding_sha256",
+    ):
         _expect(
             forbidden not in module_text,
             f"hash selector remains: {forbidden}",

@@ -24,11 +24,13 @@ from nac_runtime.azure_blob_worm import (  # noqa: E402
     AzureBlobContainerPolicy,
     AzureBlobImmutabilityPolicySnapshot,
     AzureBlobProviderContext,
+    AzureProviderContextAttestation,
     AzureBlobPutResult,
     AzureBlobVersionItem,
     AzureBlobWormError,
     AzureBlobWormJournal,
     FakeAzureBlobWormTransport,
+    azure_provider_context_attestation_sha256,
     azure_provider_context_binding_sha256,
     minimum_retention_days,
     prepare_irreversible_lock_plan,
@@ -89,6 +91,19 @@ PROVIDER_CONTEXT = AzureBlobProviderContext(
 PROVIDER_CONTEXT_BINDING_SHA256 = azure_provider_context_binding_sha256(
     PROVIDER_CONTEXT
 )
+PROVIDER_CONTEXT_ATTESTATION = AzureProviderContextAttestation(
+    schema_version="nac.azure-provider-context-attestation/v0.1",
+    source="owner-approved-commit-hash-bound-deployment-attestation",
+    owner_approval_sha256="6" * 64,
+    deployment_commit_sha256="7" * 64,
+    deployment_tree_sha256="8" * 64,
+    deployment_plan_sha256="9" * 64,
+    provider_context_binding_sha256=PROVIDER_CONTEXT_BINDING_SHA256,
+)
+PROVIDER_CONTEXT_ATTESTATION_SHA256 = azure_provider_context_attestation_sha256(
+    PROVIDER_CONTEXT_ATTESTATION
+)
+
 
 class AzureBlobWormJournalTests(unittest.TestCase):
     @classmethod
@@ -142,8 +157,9 @@ class AzureBlobWormJournalTests(unittest.TestCase):
             tenant_binding_sha256=self.tenant_binding,
             encryption_scope=ENCRYPTION_SCOPE,
             customer_managed_key_ref_sha256=CMK_REF_SHA256,
-            expected_provider_context_binding_sha256=(
-                PROVIDER_CONTEXT_BINDING_SHA256
+            provider_context_attestation=PROVIDER_CONTEXT_ATTESTATION,
+            approved_provider_context_attestation_sha256=(
+                PROVIDER_CONTEXT_ATTESTATION_SHA256
             ),
         )
 
@@ -205,6 +221,35 @@ class AzureBlobWormJournalTests(unittest.TestCase):
         self.assertEqual(self.transport.network_calls, 0)
         self.assertEqual(self.transport.azure_calls, 0)
         self.assertEqual(self.transport.credential_reads, 0)
+        self.assertNotIn(
+            "expected_provider_context_binding_sha256",
+            inspect.signature(AzureBlobWormJournal.__init__).parameters,
+        )
+
+    def test_provider_attestation_requires_independent_approved_digest(
+        self,
+    ) -> None:
+        forged = replace(
+            PROVIDER_CONTEXT_ATTESTATION,
+            deployment_plan_sha256="a" * 64,
+        )
+
+        with self.assertRaises(AzureBlobWormError):
+            AzureBlobWormJournal(
+                transport=self.transport,
+                container_name=CONTAINER_NAME,
+                tenant_binding_sha256=self.tenant_binding,
+                encryption_scope=ENCRYPTION_SCOPE,
+                customer_managed_key_ref_sha256=CMK_REF_SHA256,
+                provider_context_attestation=forged,
+                approved_provider_context_attestation_sha256=(
+                    PROVIDER_CONTEXT_ATTESTATION_SHA256
+                ),
+            )
+
+        self.assertEqual(self.transport.provider_context_calls, 0)
+        self.assertEqual(self.transport.policy_calls, 0)
+        self.assertEqual(self.transport.put_calls, 0)
 
     def test_commit_is_create_only_idempotent_and_fully_read_back(self) -> None:
         receipt = self.journal.commit(
@@ -239,7 +284,27 @@ class AzureBlobWormJournalTests(unittest.TestCase):
         stored = json.loads(
             self.transport.blob_snapshot(receipt["receipt_ref"]).body.decode("utf-8")
         )
+        self.assertEqual(
+            stored["schema_version"],
+            "nac.azure-blob-worm-object/v0.3",
+        )
+        self.assertEqual(
+            self.transport.blob_snapshot(receipt["receipt_ref"]).metadata[
+                "nac_schema_version"
+            ],
+            "nac.azure-blob-worm-object/v0.3",
+        )
         self.assertEqual(stored["record_count"], 3)
+        self.assertEqual(
+            stored["provider_context_attestation_sha256"],
+            PROVIDER_CONTEXT_ATTESTATION_SHA256,
+        )
+        self.assertEqual(
+            self.transport.blob_snapshot(receipt["receipt_ref"]).metadata[
+                "nac_provider_context_attestation_sha256"
+            ],
+            PROVIDER_CONTEXT_ATTESTATION_SHA256,
+        )
         self.assertEqual(
             [item["event_sha256"] for item in stored["records"]],
             [record.event_sha256 for record in self.records],
@@ -291,6 +356,23 @@ class AzureBlobWormJournalTests(unittest.TestCase):
         with self.assertRaises(AzureBlobWormError):
             self.journal.readback(receipt["receipt_ref"])
 
+        foreign_digest = "f" * 64
+        foreign_payload = json.loads(original.body.decode("utf-8"))
+        foreign_payload["provider_context_attestation_sha256"] = foreign_digest
+        foreign_body = canonical_json_bytes(foreign_payload)
+        foreign_metadata = {
+            **original.metadata,
+            "nac_provider_context_attestation_sha256": foreign_digest,
+            "nac_body_sha256": hashlib.sha256(foreign_body).hexdigest(),
+        }
+        self.transport.replace_blob_for_test(
+            receipt["receipt_ref"],
+            body=foreign_body,
+            metadata=foreign_metadata,
+        )
+        with self.assertRaises(AzureBlobWormError):
+            self.journal.readback(receipt["receipt_ref"])
+
     def test_policy_retention_legal_hold_encryption_and_tenant_are_fail_closed(
         self,
     ) -> None:
@@ -317,7 +399,7 @@ class AzureBlobWormJournalTests(unittest.TestCase):
                     container_name=CONTAINER_NAME,
                     tenant_binding_sha256=self.tenant_binding,
                     policy=policy,
-            provider_context=PROVIDER_CONTEXT,
+                    provider_context=PROVIDER_CONTEXT,
                 )
                 journal = AzureBlobWormJournal(
                     transport=transport,
@@ -325,9 +407,10 @@ class AzureBlobWormJournalTests(unittest.TestCase):
                     tenant_binding_sha256=self.tenant_binding,
                     encryption_scope=ENCRYPTION_SCOPE,
                     customer_managed_key_ref_sha256=CMK_REF_SHA256,
-            expected_provider_context_binding_sha256=(
-                PROVIDER_CONTEXT_BINDING_SHA256
-            ),
+                    provider_context_attestation=PROVIDER_CONTEXT_ATTESTATION,
+                    approved_provider_context_attestation_sha256=(
+                        PROVIDER_CONTEXT_ATTESTATION_SHA256
+                    ),
                 )
                 with self.assertRaises(AzureBlobWormError):
                     journal.commit(
@@ -366,8 +449,9 @@ class AzureBlobWormJournalTests(unittest.TestCase):
             tenant_binding_sha256="f" * 64,
             encryption_scope=ENCRYPTION_SCOPE,
             customer_managed_key_ref_sha256=CMK_REF_SHA256,
-            expected_provider_context_binding_sha256=(
-                PROVIDER_CONTEXT_BINDING_SHA256
+            provider_context_attestation=PROVIDER_CONTEXT_ATTESTATION,
+            approved_provider_context_attestation_sha256=(
+                PROVIDER_CONTEXT_ATTESTATION_SHA256
             ),
         )
 
@@ -432,8 +516,9 @@ class AzureBlobWormJournalTests(unittest.TestCase):
             tenant_binding_sha256=self.tenant_binding,
             encryption_scope=ENCRYPTION_SCOPE,
             customer_managed_key_ref_sha256=CMK_REF_SHA256,
-            expected_provider_context_binding_sha256=(
-                PROVIDER_CONTEXT_BINDING_SHA256
+            provider_context_attestation=PROVIDER_CONTEXT_ATTESTATION,
+            approved_provider_context_attestation_sha256=(
+                PROVIDER_CONTEXT_ATTESTATION_SHA256
             ),
         )
         return transport, journal
