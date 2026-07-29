@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "nac.verification-contract/v0.1",
+  "id": "business-case-type-graph-write-composition-s4c",
+  "title": "BusinessCaseType offline Graph write composition S4c verification",
+  "issue": "https://github.com/notariat8/NaC/issues/698",
+  "appliesWhen": {
+    "paths": [
+      "src/nac_m365_graph/business_case_type_write_composition.py",
+      "src/nac_m365_graph/business_case_type_write_state.py",
+      "src/nac_m365_graph/business_case_type_write_transport.py",
+      "src/nac_m365_graph/business_case_type_write_composition_smoke.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_graph_write_composition.py",
+      "tests/fixtures/business-case-type-graph-write-composition/sitecustomize.py",
+      "tests/test_business_case_type_graph_write_composition.py",
+      "tests/test_business_case_type_graph_write_state_store.py",
+      "tests/test_business_case_type_graph_write_http_transport.py",
+      "tests/test_business_case_type_graph_write_credentials.py",
+      "tests/test_business_case_type_graph_write_crash_recovery.py",
+      "tests/test_business_case_type_graph_write_composition_contract.py",
+      "tests/test_business_case_type_graph_write_composition_cli.py",
+      "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json",
+      "workflows/verification-contracts/business-case-type-graph-write-composition-s4c.verification.json"
+    ]
+  },
+  "requiredContext": [
+    "AGENTS.md",
+    "docs/de/superpowers/specs/2026-07-29-business-case-type-graph-write-composition-s4c-design.md",
+    "docs/de/superpowers/plans/2026-07-29-business-case-type-graph-write-composition-s4c.md",
+    "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
+    "workflows/contracts/business-case-type-graph-write-composition-s4c.contract.json"
+  ],
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_graph_write_composition tests.test_business_case_type_graph_write_state_store tests.test_business_case_type_graph_write_http_transport tests.test_business_case_type_graph_write_credentials tests.test_business_case_type_graph_write_crash_recovery tests.test_business_case_type_graph_write_composition_contract tests.test_business_case_type_graph_write_composition_cli",
+    "python3 scripts/validate_business_case_type_graph_write_composition.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "git diff --check",
+    "python3 -m compileall -q src scripts tests",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "requiredEvidence": [
+    "All eight AC-S4C acceptance IDs are present in spec, contract, validator and tests.",
+    "SQLite state and event transitions are atomic and generation-CAS protected within the local POSIX single-host process-restart envelope.",
+    "Crash/restart tests prove open and uncertain state blocks automatic replay.",
+    "Two-connection tests cover the complete absent/open/required/retryable/closed transition matrix, busy handling and duplicate phases.",
+    "Graph transport tests prove exact v1.0 origin, both construction-bound collections, methods, headers, response limits, no redirects and one HTTP attempt per transport call.",
+    "Credential tests distinguish token-provider calls from external credential-store reads and prove zero token-provider calls for pre-transport blocks.",
+    "Persistent and returned evidence contains only allowlisted redacted technical fields.",
+    "Offline smoke reports S4C_COMPOSITION_READY_OFFLINE with socket/DNS, external credential-store, live Graph and tenant counters at zero and synthetic token-provider calls separate.",
+    "Independent base...head review has no unresolved findings."
+  ],
+  "invariants": [
+    "The historical S4b zero-live contract remains unchanged.",
+    "Exactly five S4b operations remain allowed.",
+    "No environment, token file, certificate file or credential store is read.",
+    "No live Graph, SharePoint, Teams, Entra or tenant write is performed.",
+    "Local SQLite durability is not represented as central or production durability.",
+    "Live factory, write identity, S6/WORM composition and external reconciliation remain owner-gated."
+  ],
+  "thresholds": {
+    "liveGraphCalls": 0,
+    "tenantWrites": 0,
+    "automaticRetries": 0,
+    "unresolvedReviewFindings": 0,
+    "socketOrDnsCalls": 0,
+    "externalCredentialStoreReads": 0
+  },
+  "passCondition": {
+    "allChecksPass": true,
+    "statusExact": "S4C_COMPOSITION_READY_OFFLINE"
+  },
+  "failureBehavior": {
+    "mode": "fail_closed",
+    "mergeAllowed": false,
+    "liveRetryAllowed": false,
+    "ownerInputRequiredForLiveBoundary": true
+  }
+}

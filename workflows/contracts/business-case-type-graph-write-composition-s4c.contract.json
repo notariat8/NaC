@@ -1,0 +1,171 @@
+{
+  "schemaVersion": "nac.business-case-type-graph-write-composition-s4c/v0.1",
+  "title": "BusinessCaseType offline Graph write composition S4c",
+  "issue": "https://github.com/notariat8/NaC/issues/698",
+  "status": "S4C_COMPOSITION_READY_OFFLINE",
+  "extendsContract": "workflows/contracts/business-case-type-graph-write-edge-s4b.contract.json",
+  "acceptanceIdsExact": [
+    "AC-S4C-01",
+    "AC-S4C-02",
+    "AC-S4C-03",
+    "AC-S4C-04",
+    "AC-S4C-05",
+    "AC-S4C-06",
+    "AC-S4C-07",
+    "AC-S4C-08"
+  ],
+  "composition": {
+    "planBuilderExact": "BusinessCaseTypeWritePlanBuilder",
+    "edgeExact": "BusinessCaseTypeGraphWriteEdge",
+    "stateAdapterExact": "SqliteMutationEvidenceHook",
+    "transportAdapterExact": "GraphRestV1WriteTransport",
+    "credentialPortExact": "GraphWriteAccessTokenProvider",
+    "operationsInheritedUnchanged": true,
+    "liveFactoryIncluded": false,
+    "environmentReads": 0,
+    "credentialFileReads": 0
+  },
+  "stateStore": {
+    "engineExact": "sqlite3",
+    "scopeExact": "local_single_host_runtime",
+    "centralMultiInstanceDurabilityClaimed": false,
+    "transactionModeExact": "BEGIN IMMEDIATE",
+    "journalModeExact": "DELETE",
+    "synchronousModeExact": "FULL",
+    "foreignKeysExact": true,
+    "stateAndEventCommitAtomic": true,
+    "compareAndSwapFieldsExact": [
+      "execution_key",
+      "intent_generation",
+      "closed_generation",
+      "authorization_run_identity"
+    ],
+    "symlinkDatabaseAllowed": false,
+    "requiredFileModeOctal": "0600",
+    "maximumDatabaseBytes": 16777216,
+    "corruptUnreadableOrOversizedBehaviorExact": "fail_closed_unavailable",
+    "rawPayloadStored": false,
+    "trustedSchemaExact": false,
+    "busyTimeoutMillisecondsExact": 0,
+    "directoryModeOctal": "0700",
+    "filesystemEnvelopeExact": "local_posix_single_host_process_restart",
+    "networkOrSyncedFilesystemAllowed": false,
+    "powerKernelHardwareOrHostLossDurabilityClaimed": false,
+    "parentDirectoryFsyncAfterCreate": true,
+    "cleanCloseSidecarsExact": 0,
+    "transitionsExact": [
+      "clear_absent_to_clear_open_intent",
+      "clear_retryable_to_clear_open_new_authorization_intent",
+      "clear_open_outcome_event_only",
+      "clear_open_to_required_open",
+      "clear_open_to_clear_closed_or_retryable_verified_readback",
+      "required_open_non_closing_readback_event_only",
+      "required_open_closure_or_replay_blocked",
+      "closed_terminal_replay_blocked"
+    ]
+  },
+  "transport": {
+    "baseUrlExact": "https://graph.microsoft.com/v1.0",
+    "methodsExact": [
+      "GET",
+      "POST",
+      "PATCH"
+    ],
+    "redirectsAllowed": false,
+    "automaticRetries": 0,
+    "maximumResponseBytes": 1048576,
+    "responseJsonShapeExact": "object_or_empty",
+    "allowedResponseHeadersExact": [
+      "ETag",
+      "Location",
+      "Retry-After"
+    ],
+    "graphBetaAllowed": false,
+    "foreignHostsAllowed": false,
+    "sharePointRestAllowed": false,
+    "graphSdkAllowed": false,
+    "pnpAllowed": false,
+    "networkPortInjected": true,
+    "oneHttpAttemptPerTransportCall": true,
+    "edgeOnlyCallerContract": true,
+    "collectionPathsBoundAtConstruction": 2,
+    "planShaVerifiedByTransport": false
+  },
+  "credentialBoundary": {
+    "tokenProviderCalledOnlyByTransport": true,
+    "environmentProviderIncluded": false,
+    "managedIdentityFactoryIncluded": false,
+    "certificateFactoryIncluded": false,
+    "providerErrorTextPersistedOrReturned": false,
+    "preTransportBlockedTokenProviderCalls": 0,
+    "externalCredentialStoreReads": 0,
+    "syntheticTokenProviderCallsReportedSeparately": true
+  },
+  "redaction": {
+    "allowlistedEvidenceFieldsExact": [
+      "schema_version",
+      "mutation_id",
+      "execution_key",
+      "operation",
+      "target_binding_hash",
+      "plan_sha256",
+      "authorization_run_identity",
+      "result_code",
+      "s5_operation_hash",
+      "http_status",
+      "intent_generation",
+      "expected_intent_generation",
+      "prior_authorization_run_identity",
+      "close_intent",
+      "completion_state"
+    ],
+    "forbiddenPersistedDataExact": [
+      "access_token",
+      "approval_ref",
+      "certificate",
+      "field_values",
+      "headers",
+      "item_id",
+      "private_key",
+      "request_body",
+      "response_body",
+      "site_id",
+      "list_id",
+      "url"
+    ],
+    "recursiveAllowlistRequired": true
+  },
+  "crashRecovery": {
+    "windowsExact": [
+      "intent_before_transport",
+      "transport_before_outcome",
+      "outcome_before_readback",
+      "closure_before_acknowledgement",
+      "corrupt_or_unreadable_state"
+    ],
+    "automaticReplayAfterRestart": false,
+    "openOrUncertainStateBehaviorExact": "block_until_external_reconciliation",
+    "durableClosedStateBehaviorExact": "terminal_replay_block"
+  },
+  "offlineCompletion": {
+    "statusExact": "S4C_COMPOSITION_READY_OFFLINE",
+    "liveGraphCallsExact": 0,
+    "tenantWritesExact": 0,
+    "centralDurabilityClaimed": false,
+    "productionReadyClaimed": false,
+    "socketOrDnsCallsExact": 0,
+    "externalCredentialStoreReadsExact": 0,
+    "syntheticTokenProviderCallsReported": true
+  },
+  "outOfScopeExact": [
+    "central_multi_instance_state",
+    "credential_factory",
+    "entra_permission_change",
+    "live_execute_command",
+    "live_graph_call",
+    "live_reconciliation",
+    "s6_worm_publisher_composition",
+    "tenant_write",
+    "write_identity_provisioning"
+  ]
+}
