@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import fnmatch
 import json
 import py_compile
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+
+if __package__:
+    from scripts.scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
+else:
+    from scoped_repo_glob import path_or_glob_matches as _path_or_glob_matches
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -295,12 +300,6 @@ def _check_prohibited_markers(label: str, text: str) -> list[str]:
         for marker in PROHIBITED_MARKERS
         if marker.lower() in text.lower()
     ]
-
-
-def _path_or_glob_matches(pattern: str) -> bool:
-    if any(char in pattern for char in "*?["):
-        return any(fnmatch.fnmatch(path.relative_to(REPO_ROOT).as_posix(), pattern) for path in REPO_ROOT.rglob("*"))
-    return (REPO_ROOT / pattern).exists()
 
 
 def _string_list(value: object) -> list[str]:
