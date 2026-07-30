@@ -85,6 +85,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             {"controls": [], "IsPublished": True},
             {"controls": [], "Level": "published"},
             {"controls": [], "Level": " Published "},
+            {"controls": [], "Level": 1},
         )
 
         for payload in published_payloads:
@@ -99,6 +100,9 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             {"controls": [], "Published": False},
             {"controls": [], "IsPublished": False},
             {"controls": [], "Level": "draft"},
+            {"controls": [], "Level": 0},
+            {"controls": [], "Level": 2},
+            {"controls": [], "Level": 255},
             {"controls": [], "Level": None},
             {"controls": [], "Level": True},
             {"Published": True},

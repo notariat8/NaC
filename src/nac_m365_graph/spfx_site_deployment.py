@@ -1734,6 +1734,10 @@ def _page_publish_readback_is_ready(payload: Any) -> bool:
     if not _has_field(payload, "Level"):
         return False
     level = _field(payload, "Level")
+    if isinstance(level, bool):
+        return False
+    if isinstance(level, int):
+        return level == 1
     return isinstance(level, str) and level.strip().lower() == "published"
 
 
