@@ -4,6 +4,7 @@
 **Activation Issue:** [#632](https://github.com/notariat8/NaC/issues/632)
 **Parent Context:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Permission Safety Rework:** [#671](https://github.com/notariat8/NaC/issues/671), `AC-001` through `AC-006`
+**Interruption Reconciliation:** [#717](https://github.com/notariat8/NaC/issues/717), `AC-717-01` through `AC-717-08`
 **AC IDs:** `AC-632-01` through `AC-632-08`
 **Delivery Mode:** Protected PR
 **Status:** `OFFLINE_READY`; neither the live runner nor live activation has been proven `PASSED`
@@ -36,6 +37,14 @@ plan is not live approval or proof of success.
 - `AC-632-06`: `healthz` runs before auth and `readyz` only after an authenticated read; denied/manipulated cases fail closed and PASSED requires verified restoration of the synthetic baseline. A process termination before that proof remains non-success and requires read-only reconciliation plus manual recovery; SIGKILL restoration is not claimed.
 - `AC-632-07`: Ledger and evidence are hash-chained, redacted, and constrained by exact field allowlists.
 - `AC-632-08`: The first partial failure stops the run; resume remains disabled for the MVP.
+- `AC-717-01`: `bff-azure-activation-interruption-reconcile` remains strictly separate from the finalization recovery command and is locally read-only without its confirmation flag.
+- `AC-717-02`: Only step 2 `ensure_resource_group` is supported, with step 1 `PASSED`, step 2 `RUNNING`, six valid ledger events, and no later steps.
+- `AC-717-03`: Two complete Azure read snapshots covering the account, three providers, and resource group must produce the same redacted observation hash.
+- `AC-717-04`: A `Succeeded` resource group may neither set step 2 to `PASSED` nor continue the old run.
+- `AC-717-05`: The original live approval is insufficient; terminalization requires a new complete owner binding for action `TERMINALIZE_AND_RELEASE_LOCK_ONLY`.
+- `AC-717-06`: The confirmed action only terminalizes to `FAILED_PARTIAL` with `EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE`; `PASSED` and a success receipt are forbidden.
+- `AC-717-07`: `target`, `legacy`, and `legacy_host` are all verified and released append-only; a torn release is retryable only with the identical binding.
+- `AC-717-08`: Resume, provider write, rollback, delete, and automatic release remain forbidden; any ambiguity retains all three journals as `HELD`.
 
 ## Exact Binding
 
@@ -295,6 +304,14 @@ provider read, and provider write with `RESUME_DISABLED_FOR_MVP`. Later
 enablement requires provider-specific read-only reconciliation for every write
 step and crash window plus independent verification. Ambiguous provider state
 remains `FAILED_PARTIAL` and requires a new human decision.
+
+## Reconciling an Externally Interrupted Step 2
+
+The separate `bff-azure-activation-interruption-reconcile` command handles only the crash window described by Issue #717. Its default form uses the complete persisted #632 live binding and reconciler binding to identify and verify the interrupted run but requires neither `--owner-approved` nor a new #717 owner decision. It reads local state, six ledger events, and the `target`, `legacy`, and `legacy_host` journals without changing a byte.
+
+Each of the two stable Azure snapshots reads `account show`, all three `provider show` results, `group exists`, `group show`, and `resource list`. Tenant, subscription, provider states, ARM ID, `germanywestcentral`, exact tags, and `Succeeded` must match, and `resource_inventory` must be exactly `[]`; both redacted snapshots must produce the same `provider_observation_sha256`. `MIDRUN_RECONCILIATION_REQUIRED` is only an inspection report. Invalid or changed observations return `PROVIDER_OBSERVATION_INVALID` or `PROVIDER_OBSERVATION_DRIFT`, never a synthetic ambiguity code.
+
+The terminalization form additionally requires `--confirm-terminalize-and-release` and a separate immutable owner comment in Issue #717; the old #632 approval remains only the old-run binding. The canonical owner body contains exactly `action`, `activation_hash`, `state_sha256`, `ledger_head_sha256`, `target_lock_sha256`, `legacy_lock_sha256`, `legacy_host_lock_sha256`, `provider_observation_sha256`, `interrupted_step`, `reconciler_commit`, `reconciler_tree`, `reconciler_toolchain_sha256`, and `required_owner_login`. Every check is repeated under an exclusive `flock`. Only then may step 2 finish as `FAILED` with `EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE`, the run become `FAILED_PARTIAL`, `MIDRUN_RELEASE_IN_PROGRESS` be fsynced, and `RELEASED` be appended to all three journals. Unsupported state, invalid/mismatched approval, provider drift, and torn release return the actual stable codes `INTERRUPTION_RECONCILIATION_UNSUPPORTED`, `INTERRUPTION_APPROVAL_INVALID`, `INTERRUPTION_APPROVAL_MISMATCH`, `PROVIDER_OBSERVATION_INVALID`, `PROVIDER_OBSERVATION_DRIFT`, or `INTERRUPTION_TERMINALIZATION_FAILED`. Resume, rollback, delete, and provider writes are forbidden in both forms.
 
 ## Evidence and Negative Tests
 

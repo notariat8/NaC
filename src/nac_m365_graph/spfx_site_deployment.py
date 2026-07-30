@@ -23,6 +23,14 @@ WEB_PART_ID = "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21"
 SOLUTION_PRODUCT_ID = "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58"
 SOLUTION_TITLE = "nac-bpmn-viewer-client-side-solution"
 PACKAGE_NAME = "nac-bpmn-viewer.sppkg"
+# The standalone tenant deployment is bound to the reviewed, reproducible
+# package artifact. PACKAGE_RELATIVE_PATH remains the isolated BFF build output.
+ATTESTED_PACKAGE_RELATIVE_PATH = Path(
+    "assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg"
+)
+ATTESTED_PACKAGE_SHA256 = (
+    "ba85672073f855bf886b7052e95e2a096f26a57c1802b57be27c18086fdd619b"
+)
 PACKAGE_RELATIVE_PATH = Path(
     "spfx/nac-bpmn-viewer/sharepoint/solution/nac-bpmn-viewer.sppkg"
 )
@@ -256,7 +264,7 @@ class SpfxSiteDeploymentPlan:
             "workspace_id": self.workspace_id,
             "site_url": self.site_url,
             "app_catalog_scope": self.app_catalog_scope,
-            "package_path": PACKAGE_RELATIVE_PATH.as_posix(),
+            "package_path": self.package_path.relative_to(self.repo_root).as_posix(),
             "package_sha256": self.package_sha256,
             "page": {
                 "name": self.page_name,
@@ -291,6 +299,7 @@ def build_spfx_site_deployment_plan(
     include_teams: bool = False,
     team_id: str = TEAM_ID,
     expected_package_sha256: str | None = None,
+    package_relative_path: Path = ATTESTED_PACKAGE_RELATIVE_PATH,
 ) -> SpfxSiteDeploymentPlan:
     root = Path(repo_root).resolve()
     if workspace_id != WORKSPACE_ID:
@@ -300,19 +309,31 @@ def build_spfx_site_deployment_plan(
     if team_id != TEAM_ID:
         raise DeploymentPlanError(f"team must be {TEAM_ID}")
 
-    package_path = (root / PACKAGE_RELATIVE_PATH).resolve()
+    package_relative_path = _validate_package_relative_path(package_relative_path)
+    package_path = (root / package_relative_path).resolve()
     config_path = (root / PACKAGE_CONFIG_RELATIVE_PATH).resolve()
     teams_package_path = (root / TEAMS_PACKAGE_RELATIVE_PATH).resolve()
     _validate_package_configuration(config_path)
-    _validate_sppkg(package_path)
+    _validate_sppkg(package_path, relative_path=package_relative_path)
     package_sha256 = _sha256(package_path)
 
+    expected: str | None = None
     if expected_package_sha256 is not None:
         expected = expected_package_sha256.strip().lower()
         if not _SHA256_RE.fullmatch(expected):
             raise DeploymentPlanError("expected package SHA256 must contain 64 lowercase hex characters")
-        if package_sha256 != expected:
-            raise DeploymentPlanError("package SHA256 does not match the approved binding")
+    if package_relative_path == ATTESTED_PACKAGE_RELATIVE_PATH:
+        if expected is not None and expected != ATTESTED_PACKAGE_SHA256:
+            raise DeploymentPlanError(
+                "expected package SHA256 does not match the canonical attested binding"
+            )
+        expected = ATTESTED_PACKAGE_SHA256
+    elif expected is None:
+        raise DeploymentPlanError(
+            "generated SPFx package requires an expected package SHA256 binding"
+        )
+    if package_sha256 != expected:
+        raise DeploymentPlanError("package SHA256 does not match the approved binding")
 
     return SpfxSiteDeploymentPlan(
         repo_root=root,
@@ -983,7 +1004,7 @@ def _new_evidence(plan: SpfxSiteDeploymentPlan) -> dict[str, Any]:
             "team_id": plan.team_id if plan.include_teams else None,
         },
         "package": {
-            "path": PACKAGE_RELATIVE_PATH.as_posix(),
+            "path": plan.package_path.relative_to(plan.repo_root).as_posix(),
             "sha256": plan.package_sha256,
         },
         "steps": [],
@@ -1012,7 +1033,13 @@ def _fail_evidence(
 
 
 def _validate_plan(plan: SpfxSiteDeploymentPlan) -> None:
-    expected_package_path = (plan.repo_root / PACKAGE_RELATIVE_PATH).resolve()
+    try:
+        package_relative_path = plan.package_path.relative_to(plan.repo_root)
+    except ValueError as exc:
+        raise DeploymentPlanError("package path changed") from exc
+    expected_package_path = (
+        plan.repo_root / _validate_package_relative_path(package_relative_path)
+    ).resolve()
     expected_teams_path = (plan.repo_root / TEAMS_PACKAGE_RELATIVE_PATH).resolve()
     if plan.workspace_id != WORKSPACE_ID:
         raise DeploymentPlanError("workspace boundary changed")
@@ -1028,6 +1055,11 @@ def _validate_plan(plan: SpfxSiteDeploymentPlan) -> None:
         raise DeploymentPlanError("Teams package path changed")
     if not _SHA256_RE.fullmatch(plan.package_sha256):
         raise DeploymentPlanError("invalid package SHA256 binding")
+    if (
+        package_relative_path == ATTESTED_PACKAGE_RELATIVE_PATH
+        and plan.package_sha256 != ATTESTED_PACKAGE_SHA256
+    ):
+        raise DeploymentPlanError("attested package SHA256 binding changed")
     if (plan.page_name, plan.page_title, plan.page_layout) != (PAGE_NAME, PAGE_TITLE, PAGE_LAYOUT):
         raise DeploymentPlanError("page boundary changed")
     if plan.web_part_id != WEB_PART_ID:
@@ -1054,9 +1086,24 @@ def _validate_package_configuration(path: Path) -> None:
         raise DeploymentPlanError("SPFx package output path is not approved")
 
 
-def _validate_sppkg(path: Path) -> None:
+def _validate_package_relative_path(value: Path) -> Path:
+    try:
+        relative_path = Path(value)
+    except TypeError as exc:
+        raise DeploymentPlanError("SPFx package path is not approved") from exc
+    if relative_path not in {
+        ATTESTED_PACKAGE_RELATIVE_PATH,
+        PACKAGE_RELATIVE_PATH,
+    }:
+        raise DeploymentPlanError("SPFx package path is not approved")
+    return relative_path
+
+
+def _validate_sppkg(path: Path, *, relative_path: Path) -> None:
     if not path.is_file():
-        raise DeploymentPlanError(f"SPFx package is missing at {PACKAGE_RELATIVE_PATH.as_posix()}")
+        raise DeploymentPlanError(
+            f"SPFx package is missing at {relative_path.as_posix()}"
+        )
     descriptor = f"ea9917ea-2860-45fb-89bd-121120178be3/WebPart_{WEB_PART_ID}.xml"
     try:
         with zipfile.ZipFile(path) as package:

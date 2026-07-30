@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from typing import Any, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol
 import urllib.parse
 import urllib.request
 import uuid
@@ -99,6 +99,7 @@ from .azure_live_commands import (
     FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
     FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
     AzureCliAdapter,
+    AzureCliInterruptionObservationPort,
 )
 from . import graph_activation as _graph_activation
 from .graph_activation import (
@@ -266,7 +267,12 @@ _UUID_RE = re.compile(
 _COMMENT_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
 )
+_TERMINALIZATION_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/717"
+    r"#issuecomment-([1-9][0-9]*)$"
+)
 _APPROVED_OWNER_LOGIN = "ofunk"
+CANONICAL_INTERRUPTION_OWNER_LOGIN = _APPROVED_OWNER_LOGIN
 _APPROVED_OWNER_ASSOCIATIONS = ("OWNER", "MEMBER")
 _MAX_CREDENTIAL_FILE_BYTES = 1024 * 1024
 
@@ -449,6 +455,53 @@ class GitHubApprovalVerifier:
         if payload != expected or body != canonical_body:
             return {"status": "FAILED", "code": "APPROVAL_PAYLOAD_MISMATCH"}
         return {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"}
+
+    def verify_owner_comment(
+        self,
+        *,
+        reference: str,
+        expected_body: str,
+        expected_body_sha256: str,
+    ) -> dict[str, Any]:
+        """Verify an exact immutable owner comment without interpreting its body."""
+
+        match = _TERMINALIZATION_COMMENT_RE.fullmatch(reference)
+        if (
+            self._binary is None
+            or match is None
+            or not isinstance(expected_body, str)
+            or _sha256_text(expected_body) != expected_body_sha256
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
+        comment = self._gh_json(
+            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}")
+        )
+        if comment is None:
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
+        author = comment.get("user")
+        body = comment.get("body")
+        if (
+            not isinstance(author, dict)
+            or author.get("login") != _APPROVED_OWNER_LOGIN
+            or comment.get("author_association")
+            not in _APPROVED_OWNER_ASSOCIATIONS
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
+        if (
+            comment.get("html_url") != reference
+            or comment.get("created_at") != comment.get("updated_at")
+            or body != expected_body
+            or _sha256_text(body) != expected_body_sha256
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_MISMATCH"}
+        return {
+            "status": "VERIFIED",
+            "owner_login": _APPROVED_OWNER_LOGIN,
+            "immutable": True,
+            "reference": reference,
+            "body": body,
+            "body_sha256": expected_body_sha256,
+        }
 
     def _gh_json(self, argv: tuple[str, ...]) -> dict[str, Any] | None:
         try:
@@ -1812,6 +1865,7 @@ class AzureBffLiveExecutionPort:
             workspace_id=WORKSPACE_ID,
             include_teams=True,
             expected_package_sha256=spfx_digest,
+            package_relative_path=PACKAGE_RELATIVE_PATH,
         )
 
     def _prepare_resolved_inputs(self, context: ActivationContext) -> None:
@@ -2867,6 +2921,193 @@ def _bound_provisioner_token_provider(
     )
 
 
+_RECONCILER_TOOLCHAIN_PATHS = (
+    Path("src/nac_bff/azure_interruption_reconciliation.py"),
+    Path("src/nac_bff/azure_activation_runner.py"),
+    Path("src/nac_bff/azure_activation_composition.py"),
+    Path("src/nac_bff/azure_live_commands.py"),
+    Path("src/nac_cli/cli.py"),
+)
+_GIT_READ_BINARY = Path("/usr/bin/git")
+
+
+def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
+    try:
+        result = subprocess.run(
+            [
+                str(_GIT_READ_BINARY),
+                "--no-optional-locks",
+                "-C",
+                str(repo_root),
+                *args,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            timeout=30,
+            env={"LANG": "C", "LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise ActivationStepError(
+            "INTERRUPTION_RECONCILER_GIT_UNAVAILABLE"
+        ) from None
+    if result.returncode != 0:
+        raise ActivationStepError("INTERRUPTION_RECONCILER_GIT_UNAVAILABLE")
+    return result.stdout.rstrip("\n")
+
+
+def _read_interruption_git_snapshot(repo_root: Path) -> dict[str, object]:
+    return {
+        "commit": _run_interruption_git_read(
+            repo_root, "rev-parse", "--verify", "HEAD"
+        ),
+        "tree": _run_interruption_git_read(
+            repo_root, "rev-parse", "--verify", "HEAD^{tree}"
+        ),
+        "dirty": bool(
+            _run_interruption_git_read(
+                repo_root,
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+            )
+        ),
+    }
+
+
+def calculate_interruption_reconciler_toolchain_sha256(
+    repo_root: Path,
+) -> str:
+    files: list[dict[str, str]] = []
+    for relative_path in _RECONCILER_TOOLCHAIN_PATHS:
+        path = repo_root / relative_path
+        try:
+            metadata = path.lstat()
+            if not stat.S_ISREG(metadata.st_mode):
+                raise OSError
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+            ) from None
+        files.append({"path": relative_path.as_posix(), "sha256": digest})
+    return _sha256_json(
+        {
+            "schema_version": "nac-bff-interruption-toolchain-v1",
+            "files": files,
+        }
+    )
+
+
+class InterruptionRuntimeBindingVerifier:
+    # Fail closed unless the local reconciler exactly matches its approval.
+
+    def __init__(
+        self,
+        repo_root: Path,
+        *,
+        expected_commit: str,
+        expected_tree: str,
+        expected_toolchain_sha256: str,
+    ) -> None:
+        self._repo_root = repo_root
+        self._expected_commit = expected_commit
+        self._expected_tree = expected_tree
+        self._expected_toolchain_sha256 = expected_toolchain_sha256
+
+    def verify(self) -> None:
+        before = _read_interruption_git_snapshot(self._repo_root)
+        self._verify_snapshot(before)
+        actual_toolchain_sha256 = (
+            calculate_interruption_reconciler_toolchain_sha256(self._repo_root)
+        )
+        after = _read_interruption_git_snapshot(self._repo_root)
+        self._verify_snapshot(after)
+        if before != after:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_SNAPSHOT_CHANGED"
+            )
+        if actual_toolchain_sha256 != self._expected_toolchain_sha256:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH"
+            )
+
+    def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
+        if snapshot.get("commit") != self._expected_commit:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_COMMIT_MISMATCH"
+            )
+        if snapshot.get("tree") != self._expected_tree:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_TREE_MISMATCH"
+            )
+        if snapshot.get("dirty") is not False:
+            raise ActivationStepError("INTERRUPTION_RECONCILER_WORKTREE_DIRTY")
+
+
+def build_interruption_reconciliation_ports(
+    repo_root: Path,
+    request: LiveActivationRequest,
+    *,
+    reconciler_commit: str,
+    reconciler_tree: str,
+    reconciler_toolchain_sha256: str,
+    require_owner_verifier: bool,
+    environ: Mapping[str, str] | None = None,
+) -> tuple[
+    AzureCliInterruptionObservationPort,
+    GitHubApprovalVerifier | None,
+    Callable[[], None],
+]:
+    """Build the read port and the optional #717 terminalization verifier."""
+
+    source = os.environ if environ is None else environ
+    values = {
+        key: value
+        for key, value in source.items()
+        if key in {
+            "AZURE_CONFIG_DIR",
+            "GH_CONFIG_DIR",
+            "HOME",
+            "LANG",
+            "LC_ALL",
+            "PATH",
+            "TMPDIR",
+        }
+        and isinstance(value, str)
+        and value
+    }
+    azure = AzureCliAdapter(
+        binary=AZURE_CLI_EXECUTION_PATH,
+        expected_binary_sha256=request.azure_cli_toolchain_sha256,
+        environ=values,
+    )
+    runtime_binding = InterruptionRuntimeBindingVerifier(
+        repo_root,
+        expected_commit=reconciler_commit,
+        expected_tree=reconciler_tree,
+        expected_toolchain_sha256=reconciler_toolchain_sha256,
+    )
+    owner_verifier = (
+        GitHubApprovalVerifier(
+            binary=GH_CLI_EXECUTION_PATH,
+            expected_binary_sha256=request.gh_cli_sha256,
+            environ=values,
+        )
+        if require_owner_verifier
+        else None
+    )
+    return (
+        AzureCliInterruptionObservationPort(
+            azure, preflight=runtime_binding.verify
+        ),
+        owner_verifier,
+        runtime_binding.verify,
+    )
+
+
 def build_live_activation_execution_port(
     repo_root: Path,
     request: LiveActivationRequest,
@@ -3906,7 +4147,11 @@ def _sha256_file(path: Path) -> str:
 
 __all__ = [
     "AzureBffLiveExecutionPort",
+    "CANONICAL_INTERRUPTION_OWNER_LOGIN",
+    "InterruptionRuntimeBindingVerifier",
     "GitHubApprovalVerifier",
     "LocalBuildAdapter",
+    "build_interruption_reconciliation_ports",
+    "calculate_interruption_reconciler_toolchain_sha256",
     "build_live_activation_execution_port",
 ]

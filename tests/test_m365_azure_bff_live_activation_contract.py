@@ -56,6 +56,61 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
+    def test_interruption_cli_owner_gate_mutation_fails(self) -> None:
+        path = self.root / validator.CLI_PATH
+        source = path.read_text(encoding="utf-8")
+        mutated = source.replace(
+            "parser, include_owner_gate=False",
+            "parser, include_owner_gate=True",
+            1,
+        )
+        self.assertNotEqual(mutated, source)
+        path.write_text(mutated, encoding="utf-8")
+
+        self.assertIn(
+            "interruption CLI inspection must disable --owner-approved",
+            validator.validate(self.root),
+        )
+
+    def test_interruption_terminalization_regex_and_error_code_mutations_fail(
+        self,
+    ) -> None:
+        path = self.root / validator.INTERRUPTION_RECONCILIATION_PATH
+        source = path.read_text(encoding="utf-8")
+        mutated = source.replace("issues/717", "issues/632", 1).replace(
+            '"INTERRUPTION_TERMINALIZATION_FAILED"',
+            '"INTERRUPTION_TERMINALIZATION_BROKEN"',
+        )
+        self.assertNotEqual(mutated, source)
+        path.write_text(mutated, encoding="utf-8")
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "terminalization approval regex must bind exactly to issue #717",
+            errors,
+        )
+        self.assertIn(
+            "interruption stable error-code set differs from runtime source",
+            errors,
+        )
+
+    def test_nonempty_provider_inventory_guard_mutation_fails(self) -> None:
+        path = self.root / validator.INTERRUPTION_RECONCILIATION_PATH
+        source = path.read_text(encoding="utf-8")
+        mutated = source.replace(
+            'value.get("resource_inventory") != []',
+            'value.get("resource_inventory") == []',
+            1,
+        )
+        self.assertNotEqual(mutated, source)
+        path.write_text(mutated, encoding="utf-8")
+
+        self.assertIn(
+            "interruption runtime must reject every non-empty resource inventory",
+            validator.validate(self.root),
+        )
+
     def test_hermetic_build_evidence_source_omission_fails(self) -> None:
         payload = self._hermetic_build_evidence()
         payload["sourceInputs"].pop(next(iter(payload["sourceInputs"])))
@@ -1050,6 +1105,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         runner.write_text(
             "\n".join(
                 (
+                    "import re",
+                    (
+                        '_APPROVAL_REFERENCE_RE = re.compile(r"^https://github\\.com/notariat8/NaC/issues/632#issuecomment-[1-9][0-9]*$")'
+                    ),
                     f"_EVIDENCE_KEYS = {set(validator.TOP_LEVEL_FIELDS)!r}",
                     f"_STEP_EVIDENCE_KEYS = {set(validator.STEP_FIELDS)!r}",
                     f"_SUMMARY_EVIDENCE_KEYS = {set(validator.SUMMARY_FIELDS)!r}",
@@ -1088,11 +1147,15 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                 continue
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            if relative == validator.COMPOSITION_PATH:
-                source = (REPO_ROOT / relative).read_text(encoding="utf-8")
-            elif relative == validator.AZURE_CLI_SEALED_RUNTIME_PATH:
-                source = (REPO_ROOT / relative).read_text(encoding="utf-8")
-            elif relative == validator.AZURE_LIVE_COMMANDS_PATH:
+            if relative in {
+                validator.COMPOSITION_PATH,
+                validator.AZURE_CLI_SEALED_RUNTIME_PATH,
+                validator.AZURE_LIVE_COMMANDS_PATH,
+                validator.CLI_PATH,
+                validator.INTERRUPTION_RECONCILIATION_PATH,
+                validator.DE_CLI_DOC_PATH,
+                validator.EN_CLI_DOC_PATH,
+            }:
                 source = (REPO_ROOT / relative).read_text(encoding="utf-8")
             else:
                 source = "\n".join(markers) + "\n"

@@ -1623,6 +1623,33 @@ def _recovery_lock_marker_matches(
     )
 
 
+def _interruption_reconciliation_lock_paths(
+    state: dict[str, Any],
+) -> tuple[Path, Path, Path] | None:
+    target = state.get("target_binding_sha256")
+    legacy = state.get("legacy_target_binding_sha256")
+    if (
+        not isinstance(target, str)
+        or not _SHA256_RE.fullmatch(target)
+        or not isinstance(legacy, str)
+        or not _SHA256_RE.fullmatch(legacy)
+        or target == legacy
+    ):
+        return None
+    host_root = _HOST_LOCK_ROOT.expanduser().absolute()
+    legacy_host_root = _LEGACY_HOST_LOCK_ROOT.expanduser().absolute()
+    if (
+        not _existing_host_state_root_is_valid(host_root)
+        or not _existing_host_state_root_is_valid(legacy_host_root)
+    ):
+        return None
+    return (
+        host_root / f"{target}.lock",
+        host_root / f"{legacy}.lock",
+        legacy_host_root / f"{legacy}.lock",
+    )
+
+
 def _read_lock_marker_journal_descriptor(
     descriptor: int,
 ) -> tuple[dict[str, Any], int, bool] | None:

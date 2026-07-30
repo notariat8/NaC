@@ -17,6 +17,8 @@ if str(SRC_ROOT) not in sys.path:
 
 from nac_m365_graph import spfx_site_deployment as deployment_module  # noqa: E402
 from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
+    ATTESTED_PACKAGE_RELATIVE_PATH,
+    ATTESTED_PACKAGE_SHA256,
     INITIAL_PAGE_CONTENT,
     PACKAGE_CONFIG_RELATIVE_PATH,
     PACKAGE_NAME,
@@ -144,6 +146,80 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             with self.assertRaisesRegex(DeploymentPlanError, "SHA256"):
                 build_spfx_site_deployment_plan(repo_root=root, expected_package_sha256="0" * 64)
 
+    def test_attested_package_rejects_matching_caller_hash_after_valid_tamper(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            package_path = root / ATTESTED_PACKAGE_RELATIVE_PATH
+            with zipfile.ZipFile(package_path, "a") as package:
+                package.writestr("tamper-proof.txt", "structurally valid mutation")
+            manipulated_sha256 = deployment_module._sha256(package_path)
+
+            self.assertNotEqual(manipulated_sha256, ATTESTED_PACKAGE_SHA256)
+            with self.assertRaisesRegex(DeploymentPlanError, "canonical attested binding"):
+                build_spfx_site_deployment_plan(
+                    repo_root=root,
+                    expected_package_sha256=manipulated_sha256,
+                )
+
+    def test_plan_prefers_attested_package_and_preserves_isolated_build_path(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            attested_package = root / ATTESTED_PACKAGE_RELATIVE_PATH
+            generated_package = root / PACKAGE_RELATIVE_PATH
+            generated_package.parent.mkdir(parents=True, exist_ok=True)
+            generated_package.write_bytes(b"stale-generated-package")
+            attested_sha256 = deployment_module._sha256(attested_package)
+
+            plan = build_spfx_site_deployment_plan(
+                repo_root=root,
+                expected_package_sha256=attested_sha256,
+            )
+
+            self.assertEqual(plan.package_path, attested_package.resolve())
+            self.assertEqual(
+                plan.to_redacted_dict()["package_path"],
+                ATTESTED_PACKAGE_RELATIVE_PATH.as_posix(),
+            )
+            self.assertEqual(
+                deployment_module._new_evidence(plan)["package"]["path"],
+                ATTESTED_PACKAGE_RELATIVE_PATH.as_posix(),
+            )
+            self.assertNotEqual(
+                deployment_module._sha256(generated_package),
+                plan.package_sha256,
+            )
+
+            attested_package.replace(generated_package)
+            generated_sha256 = deployment_module._sha256(generated_package)
+            with self.assertRaisesRegex(DeploymentPlanError, "package is missing"):
+                build_spfx_site_deployment_plan(
+                    repo_root=root,
+                    expected_package_sha256=generated_sha256,
+                )
+
+            isolated_plan = build_spfx_site_deployment_plan(
+                repo_root=root,
+                expected_package_sha256=generated_sha256,
+                package_relative_path=PACKAGE_RELATIVE_PATH,
+            )
+
+            self.assertEqual(isolated_plan.package_path, generated_package.resolve())
+            self.assertEqual(
+                isolated_plan.to_redacted_dict()["package_path"],
+                PACKAGE_RELATIVE_PATH.as_posix(),
+            )
+            with self.assertRaisesRegex(DeploymentPlanError, "path is not approved"):
+                build_spfx_site_deployment_plan(
+                    repo_root=root,
+                    package_relative_path=Path("unreviewed/package.sppkg"),
+                )
+
     def test_plan_rejects_other_workspaces_sites_teams_and_tenant_wide_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -193,15 +269,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
     def test_plan_accepts_resource_id_permission_from_current_spfx_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_package_fixture(
-                root,
-                embedded_permission_xml=(
-                    '<WebApiPermissionRequests>'
-                    '<WebApiPermissionRequest ResourceId="NaC M365 BFF" '
-                    'Scope="Matter.Read" />'
-                    '</WebApiPermissionRequests>'
-                ),
-            )
+            self._write_package_fixture(root)
 
             plan = build_spfx_site_deployment_plan(repo_root=root)
 
@@ -1948,9 +2016,10 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
         embedded_permission_xml: str | None = None,
     ) -> None:
         config_path = root / PACKAGE_CONFIG_RELATIVE_PATH
-        package_path = root / PACKAGE_RELATIVE_PATH
+        package_path = root / ATTESTED_PACKAGE_RELATIVE_PATH
         config_path.parent.mkdir(parents=True, exist_ok=True)
         package_path.parent.mkdir(parents=True, exist_ok=True)
+        (root / PACKAGE_RELATIVE_PATH).parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(
             json.dumps(
                 {
@@ -1969,6 +2038,12 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        if not embedded_permission and embedded_permission_xml is None:
+            package_path.write_bytes(
+                (REPO_ROOT / ATTESTED_PACKAGE_RELATIVE_PATH).read_bytes()
+            )
+            return
+
         permission_xml = embedded_permission_xml or (
             '<WebApiPermissionRequests>'
             '<WebApiPermissionRequest Resource="Microsoft Graph" Scope="Sites.Read.All" />'

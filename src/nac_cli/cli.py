@@ -7893,6 +7893,13 @@ def main(argv: list[str] | None = None) -> int:
     live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
     if live_activation_index is not None:
         return _run_bff_azure_activate_live_command(effective_argv, live_activation_index)
+    interruption_index = _bff_azure_activation_interruption_command_index(
+        effective_argv
+    )
+    if interruption_index is not None:
+        return _run_bff_azure_activation_interruption_command(
+            effective_argv, interruption_index
+        )
     recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if recovery_index is not None:
         return _run_bff_azure_activation_recovery_command(
@@ -7950,6 +7957,20 @@ def _bff_azure_activate_live_command_index(argv: list[str]) -> int | None:
     return None
 
 
+def _bff_azure_activation_interruption_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "bff-azure-activation-interruption-reconcile",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
 def _bff_azure_activation_recovery_command_index(argv: list[str]) -> int | None:
     command = ("m365", "teams-sharepoint", "bff-azure-activation-recovery")
     for index in range(len(argv) - len(command) + 1):
@@ -7958,11 +7979,18 @@ def _bff_azure_activation_recovery_command_index(argv: list[str]) -> int | None:
     return None
 
 
-def _add_bff_azure_owner_binding_arguments(parser: argparse.ArgumentParser) -> None:
+def _add_bff_azure_owner_binding_arguments(
+    parser: argparse.ArgumentParser, *, include_owner_gate: bool = True
+) -> None:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
-    parser.add_argument("--owner-approved", action="store_true")
+    if include_owner_gate:
+        parser.add_argument("--owner-approved", action="store_true")
     parser.add_argument("--expected-activation-hash", required=True)
-    parser.add_argument("--approval-reference", required=True)
+    parser.add_argument(
+        "--approval-reference",
+        required=True,
+        help="Original immutable live approval reference from issue #632.",
+    )
     parser.add_argument("--approval-body-sha256", required=True)
     parser.add_argument("--approved-commit", required=True)
     parser.add_argument("--approved-tree", required=True)
@@ -8002,10 +8030,199 @@ def _live_activation_request_from_args(args: argparse.Namespace):
         ),
         reason=args.reason,
         correlation_id=args.correlation_id,
-        owner_approved=args.owner_approved,
-        execute_live_activation=True,
+        owner_approved=getattr(args, "owner_approved", False),
+        execute_live_activation=getattr(args, "owner_approved", False),
         resume=False,
     )
+
+
+def _run_bff_azure_activation_interruption_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog=(
+            "nac m365 teams-sharepoint "
+            "bff-azure-activation-interruption-reconcile"
+        ),
+        description=(
+            "Prueft einen unterbrochenen BFF-Schritt read-only oder "
+            "terminalisiert ihn nach einer separaten exakten Owner-Freigabe."
+        ),
+    )
+    _add_bff_azure_owner_binding_arguments(
+        parser, include_owner_gate=False
+    )
+    parser.add_argument("--reconciler-commit", required=True)
+    parser.add_argument("--reconciler-tree", required=True)
+    parser.add_argument("--reconciler-toolchain-sha256", required=True)
+    parser.add_argument("--confirm-terminalize-and-release", action="store_true")
+    parser.add_argument("--terminalization-action")
+    parser.add_argument("--interrupted-step")
+    parser.add_argument(
+        "--terminalization-approval-reference",
+        help="Exact immutable terminalization approval reference from issue #717.",
+    )
+    parser.add_argument("--terminalization-approval-body-sha256")
+    parser.add_argument("--state-sha256")
+    parser.add_argument("--ledger-head-sha256")
+    parser.add_argument("--target-lock-sha256")
+    parser.add_argument("--legacy-lock-sha256")
+    parser.add_argument("--legacy-host-lock-sha256")
+    parser.add_argument("--provider-observation-sha256")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    output_format = (
+        "json"
+        if any(
+            command_argv[index : index + 2] == ["--format", "json"]
+            for index in range(len(command_argv) - 1)
+        )
+        else "text"
+    )
+    args = parser.parse_args(command_argv)
+
+    terminal_fields = (
+        "terminalization_action",
+        "interrupted_step",
+        "terminalization_approval_reference",
+        "terminalization_approval_body_sha256",
+        "state_sha256",
+        "ledger_head_sha256",
+        "target_lock_sha256",
+        "legacy_lock_sha256",
+        "legacy_host_lock_sha256",
+        "provider_observation_sha256",
+    )
+    supplied_terminal_fields = any(
+        getattr(args, field) is not None for field in terminal_fields
+    )
+    if supplied_terminal_fields and not args.confirm_terminalize_and_release:
+        return _emit_bff_azure_interruption_error(
+            "INTERRUPTION_CONFIRMATION_REQUIRED", args.format
+        )
+    if args.confirm_terminalize_and_release and any(
+        getattr(args, field) is None for field in terminal_fields
+    ):
+        return _emit_bff_azure_interruption_error(
+            "INTERRUPTION_APPROVAL_ARGUMENTS_REQUIRED", args.format
+        )
+    if args.confirm_terminalize_and_release and (
+        args.terminalization_action != "TERMINALIZE_AND_RELEASE_LOCK_ONLY"
+        or args.interrupted_step != "ensure_resource_group"
+        or re.fullmatch(
+            r"https://github\.com/notariat8/NaC/issues/717"
+            r"#issuecomment-[1-9][0-9]*",
+            args.terminalization_approval_reference,
+        )
+        is None
+    ):
+        return _emit_bff_azure_interruption_error(
+            "INTERRUPTION_APPROVAL_ARGUMENTS_INVALID", args.format
+        )
+
+    try:
+        from nac_bff.azure_activation_composition import (
+            CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            build_interruption_reconciliation_ports,
+        )
+        from nac_bff.azure_interruption_reconciliation import (
+            InterruptionReconcilerBinding,
+            InterruptionTerminalizationApproval,
+            inspect_azure_bff_step2_interruption,
+            terminalize_azure_bff_step2_interruption,
+        )
+        from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
+    except Exception:
+        return _emit_bff_azure_interruption_error(
+            "INTERRUPTION_RUNTIME_UNAVAILABLE", args.format
+        )
+    try:
+        repo_root = resolve_repo_root(args.repo_root)
+        request = _live_activation_request_from_args(args)
+        binding = InterruptionReconcilerBinding(
+            approved_commit=args.reconciler_commit,
+            approved_tree=args.reconciler_tree,
+            toolchain_sha256=args.reconciler_toolchain_sha256,
+            required_owner_login=CANONICAL_INTERRUPTION_OWNER_LOGIN,
+        )
+        observation_port, owner_verifier, runtime_revalidate = (
+            build_interruption_reconciliation_ports(
+                repo_root,
+                request,
+                reconciler_commit=args.reconciler_commit,
+                reconciler_tree=args.reconciler_tree,
+                reconciler_toolchain_sha256=(
+                    args.reconciler_toolchain_sha256
+                ),
+                require_owner_verifier=(
+                    args.confirm_terminalize_and_release
+                ),
+                environ=dict(os.environ),
+            )
+        )
+        if args.confirm_terminalize_and_release:
+            if owner_verifier is None:
+                return _emit_bff_azure_interruption_error(
+                    "INTERRUPTION_OWNER_VERIFIER_UNAVAILABLE", args.format
+                )
+            approval = InterruptionTerminalizationApproval(
+                owner_approved=True,
+                action=args.terminalization_action,
+                owner_approval_reference=(
+                    args.terminalization_approval_reference
+                ),
+                approval_body_sha256=(
+                    args.terminalization_approval_body_sha256
+                ),
+                activation_hash=args.expected_activation_hash,
+                state_sha256=args.state_sha256,
+                ledger_head_sha256=args.ledger_head_sha256,
+                target_lock_sha256=args.target_lock_sha256,
+                legacy_lock_sha256=args.legacy_lock_sha256,
+                legacy_host_lock_sha256=args.legacy_host_lock_sha256,
+                provider_observation_sha256=(
+                    args.provider_observation_sha256
+                ),
+                interrupted_step=args.interrupted_step,
+                reconciler_commit=args.reconciler_commit,
+                reconciler_tree=args.reconciler_tree,
+                reconciler_toolchain_sha256=(
+                    args.reconciler_toolchain_sha256
+                ),
+                required_owner_login=(
+                    CANONICAL_INTERRUPTION_OWNER_LOGIN
+                ),
+            )
+            result = terminalize_azure_bff_step2_interruption(
+                repo_root=repo_root,
+                request=request,
+                reconciler_binding=binding,
+                observation_port=observation_port,
+                owner_comment_verifier=owner_verifier,
+                approval=approval,
+                pre_mutation_revalidate=runtime_revalidate,
+                output_root=DEFAULT_OUTPUT_ROOT,
+            )
+        else:
+            result = inspect_azure_bff_step2_interruption(
+                repo_root=repo_root,
+                request=request,
+                reconciler_binding=binding,
+                observation_port=observation_port,
+                output_root=DEFAULT_OUTPUT_ROOT,
+            )
+    except Exception:
+        return _emit_bff_azure_interruption_error(
+            "INTERRUPTION_EXECUTION_FAILED", args.format
+        )
+    _print_bff_azure_interruption_result(result, args.format)
+    reconciliation = result.get("reconciliation")
+    return 0 if (
+        result.get("status") == "MIDRUN_RECONCILIATION_REQUIRED"
+        or (
+            isinstance(reconciliation, dict)
+            and reconciliation.get("status") == "MIDRUN_RELEASED"
+        )
+    ) else 2
 
 
 def _run_bff_azure_activation_recovery_command(
@@ -8160,6 +8377,135 @@ def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) ->
         )
     _print_bff_azure_activation_result(result, args.format)
     return 0 if result.get("status") == "PASSED" else 2
+
+
+def _emit_bff_azure_interruption_error(code: str, output_format: str) -> int:
+    payload = {
+        "schema_version": (
+            "nac.m365-azure-bff-interruption-reconciliation-cli/v0.1"
+        ),
+        "status": "BLOCKED",
+        "error": {"code": code},
+        "writes_started": False,
+        "resume_enabled": False,
+        "automatic_rollback_count": 0,
+        "automatic_deletion_count": 0,
+    }
+    _print_bff_azure_interruption_result(payload, output_format)
+    return 2
+
+
+def _print_bff_azure_interruption_result(
+    result: dict[str, Any], output_format: str
+) -> None:
+    payload = _redact_bff_azure_interruption_result(result)
+    if output_format == "json":
+        print_json(payload)
+        return
+    print(f"STATUS: {payload.get('status', 'BLOCKED')}")
+    error = payload.get("error")
+    if isinstance(error, dict) and isinstance(error.get("code"), str):
+        print(f"ERROR: {error['code']}")
+    owner_comment = payload.get("owner_comment")
+    if isinstance(owner_comment, dict) and isinstance(
+        owner_comment.get("body"), str
+    ):
+        print(owner_comment["body"])
+
+
+def _redact_bff_azure_interruption_result(
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    scalar_keys = (
+        "schema_version",
+        "status",
+        "writes_started",
+        "running_step",
+        "resume_enabled",
+        "automatic_rollback_count",
+        "automatic_deletion_count",
+    )
+    redacted = {
+        key: result[key]
+        for key in scalar_keys
+        if (
+            isinstance(result.get(key), (str, bool))
+            or (
+                key in {
+                    "automatic_rollback_count",
+                    "automatic_deletion_count",
+                }
+                and type(result.get(key)) is int
+            )
+        )
+    }
+    error = result.get("error")
+    if isinstance(error, dict) and isinstance(error.get("code"), str):
+        redacted["error"] = {"code": error["code"]}
+
+    provider = result.get("provider_observation")
+    if isinstance(provider, dict):
+        safe_provider = {
+            key: provider[key]
+            for key in ("status", "read_count", "sha256")
+            if isinstance(provider.get(key), (str, int))
+        }
+        if set(safe_provider) == {"status", "read_count", "sha256"}:
+            redacted["provider_observation"] = safe_provider
+
+    bindings = result.get("approval_bindings")
+    binding_keys = {
+        "action",
+        "activation_hash",
+        "state_sha256",
+        "ledger_head_sha256",
+        "target_lock_sha256",
+        "legacy_lock_sha256",
+        "legacy_host_lock_sha256",
+        "provider_observation_sha256",
+        "interrupted_step",
+        "reconciler_commit",
+        "reconciler_tree",
+        "reconciler_toolchain_sha256",
+        "required_owner_login",
+    }
+    if isinstance(bindings, dict) and set(bindings) == binding_keys and all(
+        isinstance(value, str) for value in bindings.values()
+    ):
+        redacted["approval_bindings"] = {
+            key: bindings[key] for key in sorted(binding_keys)
+        }
+
+    owner_comment = result.get("owner_comment")
+    if (
+        isinstance(owner_comment, dict)
+        and set(owner_comment) == {"body", "body_sha256"}
+        and isinstance(owner_comment.get("body"), str)
+        and owner_comment["body"].startswith(
+            "NAC_BFF_INTERRUPTION_RECONCILIATION_APPROVAL\n"
+        )
+        and isinstance(owner_comment.get("body_sha256"), str)
+        and sha256(owner_comment["body"].encode("utf-8")).hexdigest()
+        == owner_comment["body_sha256"]
+    ):
+        redacted["owner_comment"] = dict(owner_comment)
+
+    reconciliation = result.get("reconciliation")
+    if isinstance(reconciliation, dict):
+        safe_reconciliation = {
+            key: reconciliation[key]
+            for key in (
+                "status",
+                "idempotent",
+                "state_sha256",
+                "evidence_sha256",
+                "marker_sha256",
+            )
+            if isinstance(reconciliation.get(key), (str, bool))
+        }
+        if "status" in safe_reconciliation:
+            redacted["reconciliation"] = safe_reconciliation
+    return redacted
 
 
 def _emit_bff_azure_activation_error(code: str, output_format: str) -> int:
