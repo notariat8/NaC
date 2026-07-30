@@ -32,6 +32,17 @@
     "AC-005",
     "AC-006"
   ],
+  "interruption_reconciliation_issue": "https://github.com/notariat8/NaC/issues/717",
+  "interruption_reconciliation_acceptance_ids": [
+    "AC-717-01",
+    "AC-717-02",
+    "AC-717-03",
+    "AC-717-04",
+    "AC-717-05",
+    "AC-717-06",
+    "AC-717-07",
+    "AC-717-08"
+  ],
   "acceptance_ids": [
     "AC-632-01",
     "AC-632-02",
@@ -104,6 +115,163 @@
       "resume_enabled": false,
       "automatic_unlock_allowed": false,
       "output_fields_allowlisted": true
+    },
+    "interruption_reconciliation": {
+      "command": "nac m365 teams-sharepoint bff-azure-activation-interruption-reconcile",
+      "separate_from_finalization_recovery_required": true,
+      "supported_running_step_exact": {
+        "order": 2,
+        "id": "ensure_resource_group",
+        "attempt": 1
+      },
+      "inspection_default": {
+        "owner_approved_required": false,
+        "local_mutations_exact": 0,
+        "original_live_approval_issue_exact": 632,
+        "original_live_binding_arguments_required": true,
+        "new_terminalization_approval_required": false,
+        "provider_write_calls_exact": 0,
+        "resume_attempts_exact": 0,
+        "automatic_rollback_count_exact": 0,
+        "automatic_deletion_count_exact": 0,
+        "azure_read_snapshot_count_exact": 2,
+        "azure_read_operations_exact": [
+          "account show",
+          "provider show",
+          "group exists",
+          "group show",
+          "resource list"
+        ],
+        "stable_observation_hashes_must_match": true,
+        "output_status_exact": "MIDRUN_RECONCILIATION_REQUIRED"
+      },
+      "eligible_local_state_exact": {
+        "state": "LIVE_APPROVED",
+        "finished_at_utc": null,
+        "writes_started": true,
+        "resume_enabled": false,
+        "steps_exact": [
+          {
+            "order": 1,
+            "id": "register_azure_providers",
+            "status": "PASSED",
+            "attempt": 1
+          },
+          {
+            "order": 2,
+            "id": "ensure_resource_group",
+            "status": "RUNNING",
+            "attempt": 1
+          }
+        ],
+        "later_steps_allowed": false,
+        "ledger_events_exact": 6,
+        "ledger_head_must_equal_state_head": true,
+        "ledger_hash_chain_valid_required": true,
+        "success_receipt_allowed": false,
+        "finalization_marker_allowed": false,
+        "competing_recovery_marker_allowed": false
+      },
+      "stable_azure_observation_exact": {
+        "tenant_and_subscription_must_match_owner_binding": true,
+        "providers_exact": [
+          "Microsoft.Web",
+          "Microsoft.Storage",
+          "Microsoft.OperationalInsights"
+        ],
+        "provider_state_exact": "Registered",
+        "resource_group_name_exact": "rg-nac-bff-test",
+        "resource_group_location_exact": "germanywestcentral",
+        "resource_group_arm_id_must_match_bound_subscription": true,
+        "resource_group_provisioning_state_exact": "Succeeded",
+        "resource_group_tags_must_match_contract_exactly": true,
+        "resource_inventory_exact": [],
+        "duplicate_or_unexpected_resources_allowed": false,
+        "raw_provider_payload_emission_allowed": false
+      },
+      "lock_journals_exact": [
+        "target",
+        "legacy",
+        "legacy_host"
+      ],
+      "lock_inspection_policy": {
+        "all_three_last_entries_must_be_HELD_for_activation_hash": true,
+        "all_three_journal_hashes_owner_bound_for_release": true,
+        "active_flock_owner_allowed": false,
+        "lock_files_deleted_allowed": false,
+        "inspection_may_append_RELEASED": false
+      },
+      "terminalize_and_release": {
+        "confirmation_argument_exact": "--confirm-terminalize-and-release",
+        "action_exact": "TERMINALIZE_AND_RELEASE_LOCK_ONLY",
+        "new_owner_approval_required": true,
+        "old_live_approval_sufficient": false,
+        "original_live_approval_issue_exact": 632,
+        "terminalization_approval_issue_exact": 717,
+        "complete_invocation_requires_inspection_arguments": true,
+        "terminalization_arguments_exact": [
+          "--confirm-terminalize-and-release",
+          "--terminalization-action",
+          "--interrupted-step",
+          "--terminalization-approval-reference",
+          "--terminalization-approval-body-sha256",
+          "--state-sha256",
+          "--ledger-head-sha256",
+          "--target-lock-sha256",
+          "--legacy-lock-sha256",
+          "--legacy-host-lock-sha256",
+          "--provider-observation-sha256"
+        ],
+        "owner_binding_fields_exact": [
+          "action",
+          "activation_hash",
+          "state_sha256",
+          "ledger_head_sha256",
+          "target_lock_sha256",
+          "legacy_lock_sha256",
+          "legacy_host_lock_sha256",
+          "provider_observation_sha256",
+          "interrupted_step",
+          "reconciler_commit",
+          "reconciler_tree",
+          "reconciler_toolchain_sha256",
+          "required_owner_login"
+        ],
+        "all_preconditions_rechecked_under_exclusive_flock": true,
+        "terminal_state_exact": "FAILED_PARTIAL",
+        "interrupted_step_status_exact": "FAILED",
+        "interrupted_step_error_exact": "EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE",
+        "later_steps_allowed": false,
+        "resume_enabled": false,
+        "provider_write_calls_exact": 0,
+        "automatic_rollback_count_exact": 0,
+        "automatic_deletion_count_exact": 0,
+        "ledger_events_appended_exact": [
+          "STEP_FAILED",
+          "RUNNER_TERMINAL",
+          "LOCK_RELEASE_AUTHORIZED"
+        ],
+        "release_marker_status_exact": "MIDRUN_RELEASE_IN_PROGRESS",
+        "release_journal_transition_exact": "RELEASED",
+        "release_all_three_journals_required": true,
+        "torn_release_retry_requires_identical_owner_binding": true,
+        "success_receipt_allowed": false,
+        "passed_state_allowed": false
+      },
+      "stable_error_codes_exact": [
+        "INTERRUPTION_CONFIRMATION_REQUIRED",
+        "INTERRUPTION_APPROVAL_ARGUMENTS_REQUIRED",
+        "INTERRUPTION_APPROVAL_ARGUMENTS_INVALID",
+        "INTERRUPTION_APPROVAL_INVALID",
+        "INTERRUPTION_APPROVAL_MISMATCH",
+        "INTERRUPTION_RECONCILIATION_UNSUPPORTED",
+        "PROVIDER_OBSERVATION_INVALID",
+        "PROVIDER_OBSERVATION_DRIFT",
+        "INTERRUPTION_TERMINALIZATION_FAILED"
+      ],
+      "blocked_behavior": "retain_all_three_HELD_journals_and_return_the_actual_stable_error_code",
+      "output_fields_allowlisted": true,
+      "raw_ids_paths_commands_provider_payloads_or_credentials_allowed": false
     },
     "owner_gate_preparation": {
       "command": "nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <absolute-public-certificate-path> --bff-provisioner-state <absolute-state-path> --bff-provisioner-private-key <absolute-private-key-path> --format json",

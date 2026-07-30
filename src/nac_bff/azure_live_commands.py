@@ -11,7 +11,7 @@ import re
 import stat
 import subprocess
 from dataclasses import dataclass
-from typing import Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from nac_bff.azure_activation import FUNCTION_APP, LOCATION, RESOURCE_GROUP
 from nac_bff.azure_cli_sealed_runtime import (
@@ -164,6 +164,105 @@ class AzureCliAdapter:
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
         )
+
+
+class AzureCliInterruptionObservationPort:
+    """Expose only the stable Azure reads required for step-2 reconciliation."""
+
+    def __init__(
+        self, azure: AzureCliAdapter, *, preflight: Callable[[], None]
+    ) -> None:
+        self._azure = azure
+        self._preflight = preflight
+
+    def observe_ensure_resource_group(
+        self, *, tenant_id: str, subscription_id: str, resource_group: str
+    ) -> dict[str, Any]:
+        if (
+            tenant_id != EXPECTED_TENANT_ID
+            or subscription_id != EXPECTED_SUBSCRIPTION_ID
+            or resource_group != RESOURCE_GROUP
+        ):
+            raise ValueError("AZURE_INTERRUPTION_TARGET_MISMATCH")
+
+        account = self._read(("account", "show"), dict)
+        if (
+            account.get("environmentName") != EXPECTED_CLOUD_NAME
+            or account.get("tenantId") != tenant_id
+            or account.get("id") != subscription_id
+            or account.get("state") != "Enabled"
+        ):
+            raise ValueError("AZURE_INTERRUPTION_ACCOUNT_MISMATCH")
+
+        providers: dict[str, str] = {}
+        for namespace in sorted(_PROVIDER_NAMESPACES):
+            provider = self._read(
+                ("provider", "show", "--namespace", namespace), dict
+            )
+            registration_state = provider.get("registrationState")
+            if (
+                provider.get("namespace") != namespace
+                or not isinstance(registration_state, str)
+            ):
+                raise ValueError("AZURE_INTERRUPTION_PROVIDER_INVALID")
+            providers[namespace] = registration_state
+
+        exists = self._read(
+            ("group", "exists", "--name", resource_group), bool
+        )
+        if exists is not True:
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_GROUP_MISSING")
+        group = self._read(("group", "show", "--name", resource_group), dict)
+        properties = group.get("properties")
+        tags = group.get("tags")
+        expected_group_id = (
+            f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}"
+        )
+        if (
+            group.get("id") != expected_group_id
+            or group.get("name") != resource_group
+            or group.get("location") != LOCATION
+            or not isinstance(properties, dict)
+            or not isinstance(properties.get("provisioningState"), str)
+            or not isinstance(tags, dict)
+            or set(tags) != {
+                "dataClassification", "environment", "workload"
+            }
+            or any(not isinstance(value, str) for value in tags.values())
+        ):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_GROUP_INVALID")
+
+        raw_inventory = self._read(
+            ("resource", "list", "--resource-group", resource_group), list
+        )
+        if raw_inventory:
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_INVENTORY_NOT_EMPTY")
+
+        return {
+            "tenant_id": tenant_id,
+            "subscription_id": subscription_id,
+            "providers": providers,
+            "resource_groups": [
+                {
+                    "id": expected_group_id,
+                    "name": resource_group,
+                    "location": group["location"],
+                    "provisioning_state": properties["provisioningState"],
+                    "tags": {key: tags[key] for key in sorted(tags)},
+                }
+            ],
+            "resource_inventory": [],
+        }
+
+    def _read(self, argv: tuple[str, ...], expected_type: type) -> Any:
+        self._preflight()
+        result = self._azure.run(argv)
+        if not isinstance(result, dict):
+            raise ValueError("AZURE_INTERRUPTION_READ_FAILED")
+        value = result.get("data")
+        if result.get("ok") is not True or type(value) is not expected_type:
+            raise ValueError("AZURE_INTERRUPTION_READ_FAILED")
+        return value
 
 
 def resolve_azure_cli_binary(

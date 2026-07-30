@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import os
 import signal
@@ -11,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import nac_bff.azure_cli_sealed_runtime as azure_cli_sealed_runtime
 import nac_bff.azure_live_commands as azure_live_commands
@@ -25,6 +26,7 @@ from nac_bff.azure_live_commands import (
     FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
     FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
     AzureCliAdapter,
+    AzureCliInterruptionObservationPort,
     build_azure_cli_env,
     calculate_azure_cli_toolchain_sha256,
     check_azure_cli_readiness,
@@ -2281,6 +2283,198 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
         )
         self.assertEqual(run.call_args.kwargs["bound_artifacts"], bindings)
+
+
+    def test_interruption_observation_uses_only_exact_read_commands(self) -> None:
+        calls: list[tuple[str, ...]] = []
+        preflight = Mock()
+        group_id = (
+            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+            "/resourceGroups/rg-nac-bff-test"
+        )
+
+        class FakeAzure:
+            def run(self, argv):
+                command = tuple(argv)
+                calls.append(command)
+                if command == ("account", "show"):
+                    data = {
+                        "environmentName": EXPECTED_CLOUD_NAME,
+                        "tenantId": EXPECTED_TENANT_ID,
+                        "id": EXPECTED_SUBSCRIPTION_ID,
+                        "state": "Enabled",
+                    }
+                elif command[:2] == ("provider", "show"):
+                    data = {
+                        "namespace": command[-1],
+                        "registrationState": "Registered",
+                    }
+                elif command[:2] == ("group", "exists"):
+                    data = True
+                elif command[:2] == ("group", "show"):
+                    data = {
+                        "id": group_id,
+                        "name": "rg-nac-bff-test",
+                        "location": "germanywestcentral",
+                        "tags": {
+                            "workload": "nac-bff",
+                            "environment": "test",
+                            "dataClassification": "no-production-data",
+                        },
+                        "properties": {"provisioningState": "Succeeded"},
+                    }
+                else:
+                    data = []
+                return {"ok": True, "code": "AZURE_CLI_OK", "data": data}
+
+        result = AzureCliInterruptionObservationPort(
+            FakeAzure(), preflight=preflight
+        ).observe_ensure_resource_group(
+            tenant_id=EXPECTED_TENANT_ID,
+            subscription_id=EXPECTED_SUBSCRIPTION_ID,
+            resource_group="rg-nac-bff-test",
+        )
+
+        self.assertEqual(
+            calls,
+            [
+                ("account", "show"),
+                ("provider", "show", "--namespace", "Microsoft.OperationalInsights"),
+                ("provider", "show", "--namespace", "Microsoft.Storage"),
+                ("provider", "show", "--namespace", "Microsoft.Web"),
+                ("group", "exists", "--name", "rg-nac-bff-test"),
+                ("group", "show", "--name", "rg-nac-bff-test"),
+                ("resource", "list", "--resource-group", "rg-nac-bff-test"),
+            ],
+        )
+        self.assertEqual(preflight.call_count, len(calls))
+        self.assertEqual(preflight.call_count, 7)
+        self.assertEqual(result["tenant_id"], EXPECTED_TENANT_ID)
+        self.assertEqual(
+            result["providers"],
+            {
+                "Microsoft.OperationalInsights": "Registered",
+                "Microsoft.Storage": "Registered",
+                "Microsoft.Web": "Registered",
+            },
+        )
+        self.assertEqual(result["resource_groups"][0]["provisioning_state"], "Succeeded")
+        self.assertEqual(result["resource_inventory"], [])
+        self.assertNotIn("secret", json.dumps(result))
+
+    def test_interruption_observation_rejects_any_existing_resource(self) -> None:
+        group_id = (
+            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+            "/resourceGroups/rg-nac-bff-test"
+        )
+        port = AzureCliInterruptionObservationPort(
+            Mock(), preflight=lambda: None
+        )
+        port._read = Mock(side_effect=[
+            {
+                "environmentName": EXPECTED_CLOUD_NAME,
+                "tenantId": EXPECTED_TENANT_ID,
+                "id": EXPECTED_SUBSCRIPTION_ID,
+                "state": "Enabled",
+            },
+            {
+                "namespace": "Microsoft.OperationalInsights",
+                "registrationState": "Registered",
+            },
+            {
+                "namespace": "Microsoft.Storage",
+                "registrationState": "Registered",
+            },
+            {
+                "namespace": "Microsoft.Web",
+                "registrationState": "Registered",
+            },
+            True,
+            {
+                "id": group_id,
+                "name": "rg-nac-bff-test",
+                "location": "germanywestcentral",
+                "tags": {
+                    "workload": "nac-bff",
+                    "environment": "test",
+                    "dataClassification": "no-production-data",
+                },
+                "properties": {"provisioningState": "Succeeded"},
+            },
+            [{
+                "id": group_id + "/providers/Microsoft.Web/sites/foreign",
+                "name": "foreign",
+                "resourceGroup": "rg-nac-bff-test",
+                "type": "Microsoft.Web/sites",
+            }],
+        ])
+
+        with self.assertRaisesRegex(
+            ValueError, "AZURE_INTERRUPTION_RESOURCE_INVENTORY_NOT_EMPTY"
+        ):
+            port.observe_ensure_resource_group(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="rg-nac-bff-test",
+            )
+
+    def test_interruption_observation_rejects_wrong_target_without_calls(self) -> None:
+        class NoCallsAzure:
+            def run(self, argv):
+                raise AssertionError(f"unexpected Azure command: {argv}")
+
+        with self.assertRaises(ValueError):
+            AzureCliInterruptionObservationPort(
+                NoCallsAzure(), preflight=lambda: None
+            ).observe_ensure_resource_group(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="wrong",
+            )
+
+    def test_interruption_observation_rejects_invalid_adapter_result(self) -> None:
+        class InvalidAzure:
+            def run(self, argv):
+                return None
+
+        with self.assertRaises(ValueError):
+            AzureCliInterruptionObservationPort(
+                InvalidAzure(), preflight=lambda: None
+            ).observe_ensure_resource_group(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="rg-nac-bff-test",
+            )
+
+    def test_interruption_preflight_failure_stops_before_azure_read(self) -> None:
+        azure = Mock()
+        preflight = Mock(side_effect=RuntimeError("binding mismatch"))
+        port = AzureCliInterruptionObservationPort(
+            azure, preflight=preflight
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "binding mismatch"):
+            port.observe_ensure_resource_group(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="rg-nac-bff-test",
+            )
+
+        preflight.assert_called_once_with()
+        azure.run.assert_not_called()
+
+    def test_interruption_observation_source_has_no_write_command_family(self) -> None:
+        source = inspect.getsource(
+            AzureCliInterruptionObservationPort.observe_ensure_resource_group
+        )
+        for phrase in (
+            "provider register",
+            "group create",
+            "deployment group create",
+            "functionapp deployment",
+            "resource delete",
+        ):
+            self.assertNotIn(phrase, source)
 
 
 def _fake_binary(root: Path) -> Path:

@@ -29,13 +29,16 @@ from nac_bff.azure_activation_composition import (
     AzureBffLiveExecutionPort,
     GitHubApprovalVerifier,
     HttpReadinessAdapter,
+    InterruptionRuntimeBindingVerifier,
     LocalBuildAdapter,
     _bound_provisioner_token_provider,
     _copy_snapshot,
     _deployment_name,
     _normalize_zip_archive,
     _validate_azure_resource_inventory,
+    build_interruption_reconciliation_ports,
     build_live_activation_execution_port,
+    calculate_interruption_reconciler_toolchain_sha256,
     inspect_entra_api_application_prewrite,
 )
 from nac_bff.azure_activation_attestations import (
@@ -72,6 +75,9 @@ COMMIT = "b" * 40
 TREE = "c" * 40
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
+)
+TERMINALIZATION_APPROVAL_REFERENCE = (
+    "https://github.com/notariat8/NaC/issues/717#issuecomment-987654321"
 )
 API_APP_ID = "11111111-1111-4111-8111-111111111111"
 API_SERVICE_PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222"
@@ -1008,6 +1014,65 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             self._verify(request, context, plan, comment),
             {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
         )
+
+    def test_exact_immutable_owner_comment_verification_is_generic(self) -> None:
+        temporary, _request, context, _plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        expected_body = "NAC_BFF_INTERRUPTION_RECONCILIATION_APPROVAL\n{}"
+        comment.update(
+            body=expected_body,
+            html_url=TERMINALIZATION_APPROVAL_REFERENCE,
+        )
+        expected_sha256 = _sha256_text(expected_body)
+        with patch.object(verifier, "_gh_json", return_value=comment):
+            result = verifier.verify_owner_comment(
+                reference=TERMINALIZATION_APPROVAL_REFERENCE,
+                expected_body=expected_body,
+                expected_body_sha256=expected_sha256,
+            )
+        self.assertEqual(
+            result,
+            {
+                "status": "VERIFIED",
+                "owner_login": "ofunk",
+                "immutable": True,
+                "reference": TERMINALIZATION_APPROVAL_REFERENCE,
+                "body": expected_body,
+                "body_sha256": expected_sha256,
+            },
+        )
+
+    def test_terminalization_owner_comment_rejects_issue_632(self) -> None:
+        temporary, _request, context, _plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        expected_body = "new terminalization approval"
+        with patch.object(verifier, "_gh_json") as github:
+            result = verifier.verify_owner_comment(
+                reference=APPROVAL_REFERENCE,
+                expected_body=expected_body,
+                expected_body_sha256=_sha256_text(expected_body),
+            )
+        self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
+        github.assert_not_called()
+
 
     def test_valid_organization_member_snapshot_passes(self) -> None:
         temporary, request, context, plan, comment = self._fixture()
@@ -4607,6 +4672,234 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(
             str(static_token.exception), "PROVISIONER_CERTIFICATE_MODE_REQUIRED"
         )
+
+    def test_interruption_toolchain_digest_is_deterministic_and_content_bound(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo_root = Path(temporary)
+            paths = (
+                "src/nac_bff/azure_interruption_reconciliation.py",
+                "src/nac_bff/azure_activation_runner.py",
+                "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/azure_live_commands.py",
+                "src/nac_cli/cli.py",
+            )
+            for index, relative_path in enumerate(paths):
+                path = repo_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"runtime-{index}\n", encoding="utf-8")
+
+            first = calculate_interruption_reconciler_toolchain_sha256(
+                repo_root
+            )
+            second = calculate_interruption_reconciler_toolchain_sha256(
+                repo_root
+            )
+            (repo_root / paths[-1]).write_text(
+                "runtime-changed\n", encoding="utf-8"
+            )
+            changed = calculate_interruption_reconciler_toolchain_sha256(
+                repo_root
+            )
+
+        self.assertEqual(first, second)
+        self.assertNotEqual(first, changed)
+
+    def _interruption_binding_verifier(self) -> InterruptionRuntimeBindingVerifier:
+        return InterruptionRuntimeBindingVerifier(
+            Path("/repo"),
+            expected_commit=COMMIT,
+            expected_tree=TREE,
+            expected_toolchain_sha256="e" * 64,
+        )
+
+    def test_interruption_binding_rejects_commit_mismatch(self) -> None:
+        snapshot = {"commit": "d" * 40, "tree": TREE, "dirty": False}
+        with patch(
+            "nac_bff.azure_activation_composition."
+            "_read_interruption_git_snapshot",
+            return_value=snapshot,
+        ):
+            with self.assertRaises(ActivationStepError) as raised:
+                self._interruption_binding_verifier().verify()
+        self.assertEqual(
+            raised.exception.code,
+            "INTERRUPTION_RECONCILER_COMMIT_MISMATCH",
+        )
+
+    def test_interruption_binding_rejects_tree_mismatch(self) -> None:
+        snapshot = {"commit": COMMIT, "tree": "d" * 40, "dirty": False}
+        with patch(
+            "nac_bff.azure_activation_composition."
+            "_read_interruption_git_snapshot",
+            return_value=snapshot,
+        ):
+            with self.assertRaises(ActivationStepError) as raised:
+                self._interruption_binding_verifier().verify()
+        self.assertEqual(
+            raised.exception.code,
+            "INTERRUPTION_RECONCILER_TREE_MISMATCH",
+        )
+
+    def test_interruption_binding_rejects_dirty_worktree(self) -> None:
+        snapshot = {"commit": COMMIT, "tree": TREE, "dirty": True}
+        with patch(
+            "nac_bff.azure_activation_composition."
+            "_read_interruption_git_snapshot",
+            return_value=snapshot,
+        ):
+            with self.assertRaises(ActivationStepError) as raised:
+                self._interruption_binding_verifier().verify()
+        self.assertEqual(
+            raised.exception.code,
+            "INTERRUPTION_RECONCILER_WORKTREE_DIRTY",
+        )
+
+    def test_interruption_binding_rejects_toolchain_mismatch(self) -> None:
+        snapshot = {"commit": COMMIT, "tree": TREE, "dirty": False}
+        with (
+            patch(
+                "nac_bff.azure_activation_composition."
+                "_read_interruption_git_snapshot",
+                return_value=snapshot,
+            ),
+            patch(
+                "nac_bff.azure_activation_composition."
+                "calculate_interruption_reconciler_toolchain_sha256",
+                return_value="f" * 64,
+            ),
+            self.assertRaises(ActivationStepError) as raised,
+        ):
+            self._interruption_binding_verifier().verify()
+        self.assertEqual(
+            raised.exception.code,
+            "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH",
+        )
+
+    def test_interruption_inspection_factory_skips_github_and_live_ports(
+        self,
+    ) -> None:
+        request = SimpleNamespace(
+            azure_cli_toolchain_sha256=AZURE_CLI_TOOLCHAIN_SHA256,
+            gh_cli_sha256=GH_CLI_SHA256,
+        )
+        with (
+            patch(
+                "nac_bff.azure_activation_composition.AzureCliAdapter"
+            ) as azure,
+            patch(
+                "nac_bff.azure_activation_composition."
+                "AzureCliInterruptionObservationPort"
+            ) as observation,
+            patch(
+                "nac_bff.azure_activation_composition."
+                "InterruptionRuntimeBindingVerifier"
+            ) as runtime_binding,
+            patch(
+                "nac_bff.azure_activation_composition.GitHubApprovalVerifier"
+            ) as github,
+            patch(
+                "nac_bff.azure_activation_composition.GraphRestClient",
+                side_effect=AssertionError("Graph must not initialize"),
+            ) as graph,
+            patch(
+                "nac_bff.azure_activation_composition."
+                "_bound_provisioner_token_provider",
+                side_effect=AssertionError("credentials must not initialize"),
+            ) as credentials,
+            patch(
+                "nac_bff.azure_activation_composition.M365CliCommandRunner",
+                side_effect=AssertionError("M365 must not initialize"),
+            ) as m365,
+        ):
+            ports = build_interruption_reconciliation_ports(
+                Path("/repo"),
+                request,
+                reconciler_commit=COMMIT,
+                reconciler_tree=TREE,
+                reconciler_toolchain_sha256="e" * 64,
+                require_owner_verifier=False,
+                environ={"AZURE_CLIENT_SECRET": "excluded"},
+            )
+
+        self.assertEqual(
+            ports,
+            (
+                observation.return_value,
+                None,
+                runtime_binding.return_value.verify,
+            ),
+        )
+        self.assertEqual(azure.call_args.kwargs["binary"], AZURE_CLI_EXECUTION_PATH)
+        self.assertNotIn(
+            "AZURE_CLIENT_SECRET", azure.call_args.kwargs["environ"]
+        )
+        github.assert_not_called()
+        self.assertEqual(
+            azure.call_args.kwargs["expected_binary_sha256"],
+            AZURE_CLI_TOOLCHAIN_SHA256,
+        )
+        runtime_binding.assert_called_once_with(
+            Path("/repo"),
+            expected_commit=COMMIT,
+            expected_tree=TREE,
+            expected_toolchain_sha256="e" * 64,
+        )
+        observation.assert_called_once_with(
+            azure.return_value, preflight=runtime_binding.return_value.verify
+        )
+        graph.assert_not_called()
+        credentials.assert_not_called()
+        m365.assert_not_called()
+
+    def test_interruption_terminalization_factory_adds_issue717_verifier(
+        self,
+    ) -> None:
+        request = SimpleNamespace(
+            azure_cli_toolchain_sha256=AZURE_CLI_TOOLCHAIN_SHA256,
+            gh_cli_sha256=GH_CLI_SHA256,
+        )
+        with (
+            patch(
+                "nac_bff.azure_activation_composition.AzureCliAdapter"
+            ) as azure,
+            patch(
+                "nac_bff.azure_activation_composition."
+                "AzureCliInterruptionObservationPort"
+            ) as observation,
+            patch(
+                "nac_bff.azure_activation_composition."
+                "InterruptionRuntimeBindingVerifier"
+            ) as runtime_binding,
+            patch(
+                "nac_bff.azure_activation_composition.GitHubApprovalVerifier"
+            ) as github,
+        ):
+            ports = build_interruption_reconciliation_ports(
+                Path("/repo"),
+                request,
+                reconciler_commit=COMMIT,
+                reconciler_tree=TREE,
+                reconciler_toolchain_sha256="e" * 64,
+                require_owner_verifier=True,
+                environ={},
+            )
+
+        self.assertEqual(
+            ports,
+            (
+                observation.return_value,
+                github.return_value,
+                runtime_binding.return_value.verify,
+            ),
+        )
+        github.assert_called_once_with(
+            binary=GH_CLI_EXECUTION_PATH,
+            expected_binary_sha256=GH_CLI_SHA256,
+            environ={},
+        )
+        azure.assert_called_once()
 
     def test_live_factory_uses_exact_attested_execution_paths(self) -> None:
         request = SimpleNamespace(

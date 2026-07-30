@@ -492,6 +492,310 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
         self.assertNotIn("token", payload["step_results"][0])
 
 
+class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
+    def _argv(self, *extra: str) -> list[str]:
+        return [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "bff-azure-activation-interruption-reconcile",
+            "--expected-activation-hash",
+            HASH,
+            "--approval-reference",
+            APPROVAL_REFERENCE,
+            "--approval-body-sha256",
+            BODY_HASH,
+            "--approved-commit",
+            COMMIT,
+            "--approved-tree",
+            TREE,
+            "--azure-cli-toolchain-sha256",
+            AZURE_TOOLCHAIN_HASH,
+            "--m365-cli-sha256",
+            M365_CLI_HASH,
+            "--m365-node-sha256",
+            M365_NODE_HASH,
+            "--build-python-sha256",
+            BUILD_PYTHON_HASH,
+            "--build-node-sha256",
+            BUILD_NODE_HASH,
+            "--build-npm-cli-sha256",
+            BUILD_NPM_HASH,
+            "--gh-cli-sha256",
+            GH_CLI_HASH,
+            "--provisioner-certificate-sha256",
+            PROVISIONER_CERTIFICATE_HASH,
+            "--provisioner-bootstrap-binding-sha256",
+            PROVISIONER_BOOTSTRAP_BINDING_HASH,
+            "--reason",
+            "Original owner-approved activation.",
+            "--correlation-id",
+            "nac-bff-live-20260730",
+            "--reconciler-commit",
+            COMMIT,
+            "--reconciler-tree",
+            TREE,
+            "--reconciler-toolchain-sha256",
+            "e" * 64,
+            *extra,
+        ]
+
+    def _fake_modules(self):
+        observation = object()
+        verifier = object()
+        runtime_revalidate = Mock()
+        factory = Mock(
+            return_value=(observation, verifier, runtime_revalidate)
+        )
+        inspect = Mock(
+            return_value={
+                "schema_version": (
+                    "nac.m365-azure-bff-interruption-reconciliation/v0.1"
+                ),
+                "status": "MIDRUN_RECONCILIATION_REQUIRED",
+                "error": {"code": "MIDRUN_RECONCILIATION_REQUIRED"},
+                "writes_started": True,
+                "running_step": "ensure_resource_group",
+                "provider_observation": {
+                    "status": "STABLE",
+                    "read_count": 2,
+                    "sha256": "f" * 64,
+                    "provider_secret": "drop-me",
+                },
+                "resume_enabled": False,
+                "automatic_rollback_count": 0,
+                "automatic_deletion_count": 0,
+            }
+        )
+        terminalize = Mock(
+            return_value={
+                "status": "FAILED_PARTIAL",
+                "error": {
+                    "code": "EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE"
+                },
+                "writes_started": True,
+                "resume_enabled": False,
+                "automatic_rollback_count": 0,
+                "automatic_deletion_count": 0,
+                "reconciliation": {
+                    "status": "MIDRUN_RELEASED",
+                    "idempotent": False,
+                    "state_sha256": "1" * 64,
+                    "evidence_sha256": "2" * 64,
+                    "marker_sha256": "3" * 64,
+                    "private_path": "/tmp/drop-me",
+                },
+            }
+        )
+        composition = types.ModuleType("nac_bff.azure_activation_composition")
+        composition.CANONICAL_INTERRUPTION_OWNER_LOGIN = "ofunk"
+        composition.build_interruption_reconciliation_ports = factory
+        reconciliation = types.ModuleType(
+            "nac_bff.azure_interruption_reconciliation"
+        )
+        reconciliation.InterruptionReconcilerBinding = (
+            lambda **kwargs: types.SimpleNamespace(**kwargs)
+        )
+        reconciliation.InterruptionTerminalizationApproval = (
+            lambda **kwargs: types.SimpleNamespace(**kwargs)
+        )
+        reconciliation.inspect_azure_bff_step2_interruption = inspect
+        reconciliation.terminalize_azure_bff_step2_interruption = terminalize
+        runner = types.ModuleType("nac_bff.azure_activation_runner")
+        runner.DEFAULT_OUTPUT_ROOT = Path("out/default")
+        runner.LiveActivationRequest = _FakeRequest
+        return {
+            "nac_bff.azure_activation_composition": composition,
+            "nac_bff.azure_interruption_reconciliation": reconciliation,
+            "nac_bff.azure_activation_runner": runner,
+        }, factory, inspect, terminalize, observation, verifier
+
+    def _terminal_args(self) -> list[str]:
+        return [
+            "--confirm-terminalize-and-release",
+            "--terminalization-action",
+            "TERMINALIZE_AND_RELEASE_LOCK_ONLY",
+            "--interrupted-step",
+            "ensure_resource_group",
+            "--terminalization-approval-reference",
+            "https://github.com/notariat8/NaC/issues/717#issuecomment-987654",
+            "--terminalization-approval-body-sha256",
+            "0" * 64,
+            "--state-sha256",
+            "1" * 64,
+            "--ledger-head-sha256",
+            "2" * 64,
+            "--target-lock-sha256",
+            "3" * 64,
+            "--legacy-lock-sha256",
+            "4" * 64,
+            "--legacy-host-lock-sha256",
+            "5" * 64,
+            "--provider-observation-sha256",
+            "6" * 64,
+        ]
+
+    def test_inspection_forwards_read_only_ports_without_credentials(self) -> None:
+        modules, factory, inspect, terminalize, observation, _verifier = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        original_env = {"AZURE_CONFIG_DIR": "/home/test/.azure"}
+        with (
+            patch.dict(sys.modules, modules),
+            patch.dict(os.environ, original_env, clear=True),
+            redirect_stdout(stdout),
+        ):
+            rc = nac_cli.main(self._argv("--format", "json"))
+
+        self.assertEqual(rc, 0)
+        factory.assert_called_once()
+        self.assertEqual(factory.call_args.args[0], REPO_ROOT)
+        self.assertEqual(
+            factory.call_args.kwargs["reconciler_commit"], COMMIT
+        )
+        self.assertEqual(factory.call_args.kwargs["reconciler_tree"], TREE)
+        self.assertEqual(
+            factory.call_args.kwargs["reconciler_toolchain_sha256"],
+            "e" * 64,
+        )
+        self.assertEqual(factory.call_args.kwargs["environ"], original_env)
+        self.assertFalse(
+            factory.call_args.kwargs["require_owner_verifier"]
+        )
+        kwargs = inspect.call_args.kwargs
+        self.assertEqual(kwargs["repo_root"], REPO_ROOT)
+        self.assertFalse(kwargs["request"].owner_approved)
+        self.assertFalse(kwargs["request"].execute_live_activation)
+        self.assertEqual(
+            kwargs["reconciler_binding"].required_owner_login, "ofunk"
+        )
+        self.assertIs(kwargs["observation_port"], observation)
+        self.assertEqual(kwargs["output_root"], Path("out/default"))
+        terminalize.assert_not_called()
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["provider_observation"]["read_count"], 2)
+        self.assertNotIn("provider_secret", stdout.getvalue())
+        self.assertNotIn("PROVISIONER_STATE", stdout.getvalue())
+
+    def test_interruption_help_documents_632_binding_and_717_approval(self) -> None:
+        stdout = io.StringIO()
+        argv = [
+            "m365",
+            "teams-sharepoint",
+            "bff-azure-activation-interruption-reconcile",
+            "--help",
+        ]
+        with redirect_stdout(stdout), self.assertRaises(SystemExit) as raised:
+            nac_cli.main(argv)
+        self.assertEqual(raised.exception.code, 0)
+        help_text = stdout.getvalue()
+        self.assertIn("#632", help_text)
+        self.assertIn("#717", help_text)
+        self.assertNotIn("--owner-approved", help_text)
+
+    def test_issue632_terminalization_reference_is_rejected_before_factory(self) -> None:
+        modules, factory, inspect, terminalize, _observation, _verifier = (
+            self._fake_modules()
+        )
+        args = self._terminal_args()
+        reference_index = args.index("--terminalization-approval-reference") + 1
+        args[reference_index] = APPROVAL_REFERENCE
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv(*args, "--format", "json"))
+
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            "INTERRUPTION_APPROVAL_ARGUMENTS_INVALID",
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        terminalize.assert_not_called()
+
+    def test_required_owner_login_option_is_not_supported(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+            nac_cli.main(
+                self._argv("--required-owner-login", "attacker")
+            )
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("unrecognized arguments", stderr.getvalue())
+
+    def test_old_live_approval_alone_cannot_terminalize(self) -> None:
+        modules, _factory, inspect, terminalize, _observation, _verifier = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(
+                self._argv(
+                    "--confirm-terminalize-and-release", "--format", "json"
+                )
+            )
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            "INTERRUPTION_APPROVAL_ARGUMENTS_REQUIRED",
+        )
+        inspect.assert_not_called()
+        terminalize.assert_not_called()
+
+    def test_terminalization_forwards_every_emitted_binding(self) -> None:
+        modules, _factory, inspect, terminalize, observation, verifier = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(
+                self._argv(*self._terminal_args(), "--format", "json")
+            )
+
+        self.assertEqual(rc, 0)
+        inspect.assert_not_called()
+        kwargs = terminalize.call_args.kwargs
+        self.assertTrue(
+            _factory.call_args.kwargs["require_owner_verifier"]
+        )
+        self.assertIs(kwargs["observation_port"], observation)
+        self.assertIs(kwargs["owner_comment_verifier"], verifier)
+        self.assertIs(
+            kwargs["pre_mutation_revalidate"],
+            _factory.return_value[2],
+        )
+        approval = kwargs["approval"]
+        self.assertEqual(
+            approval.owner_approval_reference,
+            "https://github.com/notariat8/NaC/issues/717#issuecomment-987654",
+        )
+        self.assertEqual(approval.action, "TERMINALIZE_AND_RELEASE_LOCK_ONLY")
+        self.assertEqual(approval.state_sha256, "1" * 64)
+        self.assertEqual(approval.provider_observation_sha256, "6" * 64)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["reconciliation"]["status"], "MIDRUN_RELEASED")
+        self.assertNotIn("private_path", stdout.getvalue())
+
+    def test_terminalization_fields_without_confirmation_are_rejected(self) -> None:
+        modules, factory, inspect, terminalize, _observation, _verifier = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        args = self._terminal_args()
+        args.remove("--confirm-terminalize-and-release")
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv(*args, "--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            "INTERRUPTION_CONFIRMATION_REQUIRED",
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        terminalize.assert_not_called()
+
+
 class AzureBffLiveActivationRecoveryCliTests(unittest.TestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [

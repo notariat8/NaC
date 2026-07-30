@@ -4,6 +4,7 @@
 **Aktivierungs-Issue:** [#632](https://github.com/notariat8/NaC/issues/632)
 **Parent-Kontext:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Permission-Safety-Rework:** [#671](https://github.com/notariat8/NaC/issues/671), `AC-001` bis `AC-006`
+**Unterbrechungs-Reconciliation:** [#717](https://github.com/notariat8/NaC/issues/717), `AC-717-01` bis `AC-717-08`
 **AC-IDs:** `AC-632-01` bis `AC-632-08`
 **Delivery Mode:** Protected PR
 **Status:** `OFFLINE_READY`; Live-Runner und Live-Aktivierung sind noch nicht als `PASSED` nachgewiesen
@@ -37,6 +38,14 @@ Erfolgsnachweis.
 - `AC-632-06`: `healthz` läuft vor Auth, `readyz` erst nach authentifiziertem Read; Deny-/Manipulationsfälle schließen fail-closed und PASSED erfordert die verifizierte Wiederherstellung des synthetischen Ausgangszustands. Bei Prozessabbruch vor diesem Nachweis bleibt der Lauf ohne Erfolg und benötigt read-only Reconciliation plus manuelle Wiederherstellung; eine SIGKILL-Wiederherstellung wird nicht behauptet.
 - `AC-632-07`: Ledger und Evidence sind hashverkettet, redigiert und durch exakte Feld-Allowlists begrenzt.
 - `AC-632-08`: Der erste Teilfehler stoppt den Lauf; Resume bleibt für den MVP deaktiviert.
+- `AC-717-01`: `bff-azure-activation-interruption-reconcile` bleibt strikt vom Finalization-Recovery-Befehl getrennt und ist ohne Bestätigungsflag lokal read-only.
+- `AC-717-02`: Unterstützt wird nur Schritt 2 `ensure_resource_group` mit Schritt 1 `PASSED`, Schritt 2 `RUNNING`, sechs gültigen Ledger-Ereignissen und ohne spätere Schritte.
+- `AC-717-03`: Zwei vollständige Azure-Read-Snapshots über Account, drei Provider und Ressourcengruppe müssen denselben redigierten Beobachtungshash ergeben.
+- `AC-717-04`: `Succeeded` der Ressourcengruppe darf weder Schritt 2 auf `PASSED` setzen noch den alten Lauf fortsetzen.
+- `AC-717-05`: Die ursprüngliche Live-Freigabe ist unzureichend; Terminalisierung verlangt eine neue, vollständige Owner-Bindung der Aktion `TERMINALIZE_AND_RELEASE_LOCK_ONLY`.
+- `AC-717-06`: Die bestätigte Aktion terminalisiert ausschließlich zu `FAILED_PARTIAL` mit `EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE`; `PASSED` und Success-Receipt sind unzulässig.
+- `AC-717-07`: `target`, `legacy` und `legacy_host` werden vollständig geprüft und ausschließlich append-only freigegeben; ein gerissener Release ist nur mit identischer Bindung wiederholbar.
+- `AC-717-08`: Resume, Provider-Write, Rollback, Delete und automatische Freigabe bleiben verboten; jede Mehrdeutigkeit hält alle drei Journale auf `HELD`.
 
 ## Exakte Bindung
 
@@ -316,6 +325,14 @@ Freischaltung braucht providerspezifische read-only Reconciliation für jeden
 Write-Schritt und jedes Crash-Fenster sowie eine unabhängige Prüfung. Ein
 unklarer Providerzustand bleibt `FAILED_PARTIAL` und braucht eine neue
 menschliche Entscheidung.
+
+## Reconciliation eines extern unterbrochenen Schritts 2
+
+Der getrennte Befehl `bff-azure-activation-interruption-reconcile` behandelt ausschließlich das in Issue #717 beschriebene Crashfenster. Seine Standardform verwendet die vollständige persistierte #632-Live-Bindung und Reconciler-Bindung, um den unterbrochenen Lauf zu identifizieren und zu prüfen, verlangt aber weder `--owner-approved` noch eine neue #717-Owner-Entscheidung. Sie liest lokalen State, sechs Ledger-Ereignisse und die Journale `target`, `legacy` und `legacy_host` ohne Byteänderung.
+
+Jeder der beiden stabilen Azure-Snapshots liest `account show`, alle drei `provider show`-Ergebnisse, `group exists`, `group show` und `resource list`. Tenant, Subscription, Providerstatus, ARM-ID, `germanywestcentral`, exakte Tags und `Succeeded` müssen übereinstimmen und `resource_inventory` muss exakt `[]` sein; beide redigierten Snapshots müssen denselben `provider_observation_sha256` ergeben. `MIDRUN_RECONCILIATION_REQUIRED` ist nur ein Prüfbericht. Ungültige oder geänderte Beobachtungen liefern `PROVIDER_OBSERVATION_INVALID` beziehungsweise `PROVIDER_OBSERVATION_DRIFT`, niemals einen synthetischen Ambiguitätscode.
+
+Die Terminalisierungsform verlangt zusätzlich `--confirm-terminalize-and-release` und einen separaten unveränderlichen Owner-Kommentar in Issue #717; die alte #632-Freigabe bleibt nur die Bindung des alten Laufs. Der kanonische Owner-Body enthält exakt `action`, `activation_hash`, `state_sha256`, `ledger_head_sha256`, `target_lock_sha256`, `legacy_lock_sha256`, `legacy_host_lock_sha256`, `provider_observation_sha256`, `interrupted_step`, `reconciler_commit`, `reconciler_tree`, `reconciler_toolchain_sha256` und `required_owner_login`. Unter exklusivem `flock` werden alle Prüfungen wiederholt. Erst danach darf Schritt 2 als `FAILED` mit `EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE` abgeschlossen, der Lauf auf `FAILED_PARTIAL` gesetzt, `MIDRUN_RELEASE_IN_PROGRESS` fsync-gesichert und `RELEASED` an alle drei Journale angehängt werden. Nicht unterstützter State, ungültige/abweichende Freigabe, Providerdrift und gerissener Release liefern die tatsächlichen stabilen Codes `INTERRUPTION_RECONCILIATION_UNSUPPORTED`, `INTERRUPTION_APPROVAL_INVALID`, `INTERRUPTION_APPROVAL_MISMATCH`, `PROVIDER_OBSERVATION_INVALID`, `PROVIDER_OBSERVATION_DRIFT` oder `INTERRUPTION_TERMINALIZATION_FAILED`. Resume, Rollback, Delete und Provider-Writes sind in beiden Formen verboten.
 
 ## Evidence und Negativtests
 
