@@ -18,10 +18,27 @@ if (styleStart < 0 || styleEnd <= styleStart) {
   throw new Error('NAC_VISUAL_FIXTURE_STYLE_INVALID');
 }
 const componentCss = styleSource.slice(styleStart + prefix.length, styleEnd);
-const diagramCss = fs.readFileSync(
+const diagramStyleSource = fs.readFileSync(
+  path.join(packageRoot, 'src/webparts/nacBpmnViewer/components/DiagramJs.styles.ts'),
+  'utf8'
+);
+const diagramPrefix = 'export const diagramJsStyleSheet = String.raw' + delimiter + '\n';
+const diagramStyleStart = diagramStyleSource.indexOf(diagramPrefix);
+const diagramStyleEnd = diagramStyleSource.lastIndexOf('\n' + delimiter + ';');
+if (diagramStyleStart < 0 || diagramStyleEnd <= diagramStyleStart) {
+  throw new Error('NAC_VISUAL_FIXTURE_DIAGRAM_STYLE_INVALID');
+}
+const diagramCss = diagramStyleSource.slice(
+  diagramStyleStart + diagramPrefix.length,
+  diagramStyleEnd
+);
+const dependencyDiagramCss = fs.readFileSync(
   path.join(packageRoot, 'node_modules/bpmn-js/dist/assets/diagram-js.css'),
   'utf8'
 );
+if (diagramCss !== dependencyDiagramCss) {
+  throw new Error('NAC_VISUAL_FIXTURE_DIAGRAM_STYLE_DRIFT');
+}
 const bpmnBundle = fs.readFileSync(
   path.join(packageRoot, 'node_modules/bpmn-js/dist/bpmn-viewer.production.min.js'),
   'utf8'

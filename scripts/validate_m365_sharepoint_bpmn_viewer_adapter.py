@@ -38,6 +38,30 @@ DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "m365-sharepoint-bpmn-view
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
 SPFX_PACKAGE_JSON = REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "package.json"
 SPFX_SOURCE_ROOT = REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "src"
+CANONICAL_BPMN = REPO_ROOT / "bpmn" / "immobilienkaufvertrag.bpmn"
+SPFX_BPMN_TEST_FIXTURE = (
+    REPO_ROOT
+    / "spfx"
+    / "nac-bpmn-viewer"
+    / "test-fixtures"
+    / "immobilienkaufvertrag.bpmn"
+)
+CANONICAL_BPMN_SHA256 = (
+    "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
+)
+DIAGRAM_JS_STYLE_SOURCE = (
+    REPO_ROOT
+    / "spfx"
+    / "nac-bpmn-viewer"
+    / "src"
+    / "webparts"
+    / "nacBpmnViewer"
+    / "components"
+    / "DiagramJs.styles.ts"
+)
+DIAGRAM_JS_STYLE_SHA256 = (
+    "9aa83050d07b65ef6e11588afbcab82527974881a08af61461d163ceb5ab8468"
+)
 CURRENT_STEP_AST_VALIDATOR = (
     REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "validate-current-step-contract.cjs"
 )
@@ -59,6 +83,7 @@ VISUAL_SOURCE_PATHS = (
     "spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs",
     "spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs",
     "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/DiagramJs.styles.ts",
     "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
     "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts",
 )
@@ -204,6 +229,8 @@ def validate() -> list[str]:
     errors.extend(_validate_quality_gate())
     errors.extend(_validate_spfx_ast_gate())
     errors.extend(_validate_spfx_source_boundary())
+    errors.extend(_validate_bpmn_test_fixture())
+    errors.extend(_validate_diagram_js_styles())
     errors.extend(_validate_visual_evidence_manifest())
     return errors
 
@@ -727,6 +754,61 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _validate_bpmn_test_fixture() -> list[str]:
+    errors: list[str] = []
+    if not CANONICAL_BPMN.is_file():
+        return ["canonical BPMN source is missing"]
+    if SPFX_BPMN_TEST_FIXTURE.is_symlink():
+        return ["SPFx BPMN test fixture must not be a symlink"]
+    if not SPFX_BPMN_TEST_FIXTURE.is_file():
+        return ["SPFx BPMN test fixture is missing"]
+    canonical = CANONICAL_BPMN.read_bytes()
+    fixture = SPFX_BPMN_TEST_FIXTURE.read_bytes()
+    if fixture != canonical:
+        errors.append(
+            "SPFx BPMN test fixture must match the canonical BPMN byte-for-byte"
+        )
+    if hashlib.sha256(canonical).hexdigest() != CANONICAL_BPMN_SHA256:
+        errors.append("canonical BPMN hash does not match the pinned package contract")
+    return errors
+
+
+def _validate_diagram_js_styles() -> list[str]:
+    if not DIAGRAM_JS_STYLE_SOURCE.is_file():
+        return ["embedded diagram-js style source is missing"]
+    source = DIAGRAM_JS_STYLE_SOURCE.read_text(encoding="utf-8")
+    prefix = "export const diagramJsStyleSheet = String.raw`\n"
+    suffix = "`;\n"
+    if not source.startswith(prefix) or not source.endswith(suffix):
+        return ["embedded diagram-js style source has an invalid wrapper"]
+    body = source[len(prefix) : -len(suffix)].removesuffix("\n")
+    errors: list[str] = []
+    if hashlib.sha256(body.encode("utf-8")).hexdigest() != DIAGRAM_JS_STYLE_SHA256:
+        errors.append("embedded diagram-js style hash does not match the pinned asset")
+    component = (
+        SPFX_SOURCE_ROOT
+        / "webparts"
+        / "nacBpmnViewer"
+        / "components"
+        / "NacBpmnViewer.tsx"
+    ).read_text(encoding="utf-8")
+    if "bpmn-js/dist/assets/diagram-js.css" in component:
+        errors.append("SPFx component must not use the nondeterministic CSS loader import")
+    if "<style>{diagramJsStyleSheet}</style>" not in component:
+        errors.append("SPFx component must render the pinned diagram-js style source")
+    visual_generator = VISUAL_FIXTURE_GENERATOR.read_text(encoding="utf-8")
+    for marker in (
+        "DiagramJs.styles.ts",
+        "diagramCss !== dependencyDiagramCss",
+        "NAC_VISUAL_FIXTURE_DIAGRAM_STYLE_DRIFT",
+    ):
+        if marker not in visual_generator:
+            errors.append(
+                f"visual fixture generator must bind production diagram CSS via {marker!r}"
+            )
+    return errors
 
 
 def _validate_visual_evidence_manifest() -> list[str]:

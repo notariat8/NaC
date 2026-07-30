@@ -46,6 +46,7 @@ function sourceInputs() {
     'spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs',
     'spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs',
     'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts',
+    'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/DiagramJs.styles.ts',
     'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx',
     'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts'
   ].map(relativePath => ({

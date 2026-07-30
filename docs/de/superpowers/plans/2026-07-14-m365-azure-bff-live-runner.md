@@ -132,16 +132,31 @@ beziehungsweise evaluieren nur die bei jedem Ladevorgang erneut mit
 `O_NOFOLLOW`, `fstat` und SHA-256 geprüften exakten Bytes. Auch manifestierte
 WASM- und sonstige Nichtmodul-Assets werden bei jedem Lesezugriff erneut so
 geprüft. Der SPFx-Build ruft direkte, manifestierte Heft-Einstiege auf und
-verwendet weder `node_modules/.bin` noch npm-Lifecycle-Shims. Der nach `npm ci
---ignore-scripts --force` erzeugte vollständige Input-Baum einschließlich
-Projektkonfiguration wird vor, zwischen und nach den Build-Schritten geprüft.
-Das exakt gepinnte `unrs`-Resolverpaket wird über `NAPI_RS_FORCE_WASI=error`
+verwendet weder `node_modules/.bin` noch npm-Lifecycle-Shims. Der Repository-Input wird vor `npm ci --ignore-scripts --force` versiegelt. Das
+CPU-inkompatible optionale Paket `@unrs/resolver-binding-wasm32-wasi@1.12.2`
+wird anschließend über einen getrennten Lauf von `npm install --no-save
+--ignore-scripts --force --cpu=wasm32` materialisiert, nachdem Version, URL, Integrität,
+CPU-Marker und die Optional-Dependency-Kante von `unrs-resolver` im
+`package-lock.json` geprüft wurden. Die Source-Versiegelung wird danach erneut
+geprüft; der vollständige resultierende Input-Baum wird vor, zwischen und nach
+den Build-Schritten verifiziert. Das `--force` des zusätzlichen
+Reifikationsaufrufs ist erforderlich, weil npm 10 das lock-attestierte
+WASI-Paket auf einem x64-Host andernfalls mit `EBADPLATFORM` ablehnt; dies
+ändert den bereits bestehenden `--force`-Parameter von `npm ci` nicht. Das
+exakt gepinnte `unrs`-Resolverpaket wird
+über `NAPI_RS_FORCE_WASI=error`
 zwingend mit seinem WASI- statt Native-Backend betrieben; Worker erhalten
 explizite, auf den lebenden Elternprozess gepinnte versiegelte Loader-
 Argumente. Nur deklarierte Output-Verzeichnisse, die nicht aus dem Repository
 in den isolierten Build kopiert werden, dürfen über stabile
 `O_NOFOLLOW`-/`fstat`-Reads gelesen werden; das finale `.sppkg` wird
-SHA-256-gebunden. Synchrone, Callback-, Promise-, Stream- und `openAsBlob`-
+SHA-256-gebunden. Das versiegelte Read-only-AST-Gate läuft vor den direkten
+Heft-Schritten; der reale npm-10-Doppelbuild ist unter
+`assets/docs/spfx-hermetic-build/HERMETIC-715-manifest.json`
+source- und toolchaingebunden nachgewiesen; das darin referenzierte normalisierte
+SPPKG wird als 78-KB-Evidence-Artefakt byteweise gegen den Doppelbuild-Hash
+geprüft. Synchrone, Callback-, Promise-,
+Stream- und `openAsBlob`-
 Lesewege innerhalb des manifestierten Baums verwenden dieselbe
 `O_NOFOLLOW`-/`fstat`-/SHA-256-Prüfung. Die vom Guard verwendeten Hash-, Buffer-,
 Object-, Reflect-, JSON-, Map- und Set-Operationen werden beim Preload als

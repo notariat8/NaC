@@ -11,8 +11,9 @@ const BFF_CLIENT = 'webparts/nacBpmnViewer/services/NacBffClient.ts';
 const WEB_PART = 'webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts';
 const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
   ['webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts', '30e111316f4c9c0a2460b2d13b00c1042c5de4b59c6788954c3ae9302f2fc217'],
+  ['webparts/nacBpmnViewer/components/DiagramJs.styles.ts', 'c4bebc30c09d05152daa641df90e26ea8ce1311c421d3d3ec6730e5d1cdfdea0'],
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts', 'ab7265b95a38764177036e59babc80c7e44bb301ba43460326ed66c4e0839838'],
-  ['webparts/nacBpmnViewer/components/NacBpmnViewer.tsx', '1f52f331b87b9314e118ab0606b269e79b4b691632c0488a4226716a7832447a'],
+  ['webparts/nacBpmnViewer/components/NacBpmnViewer.tsx', '2e5e3bd8fcc4563ddb3d9a31b8aa8e841e10e74cafe9b17f410ede3028e55eac'],
   ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87'],
   ['webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts', 'd5b357e7b60f4de60152908d0356fab7233c73fe9e59584ec3f8ef4c2d324f4f'],
   ['webparts/nacBpmnViewer/services/NacBffClient.ts', '2af29f10107074f4fe0c303082fa3186b2fd8b9dfac9e8766eda44449970bfcd']
@@ -32,8 +33,7 @@ const ALLOWED_EXTERNAL_IMPORTS = new Set([
   '@microsoft/sp-core-library',
   '@microsoft/sp-http',
   '@microsoft/sp-webpart-base',
-  'bpmn-js/lib/Viewer',
-  'bpmn-js/dist/assets/diagram-js.css'
+  'bpmn-js/lib/Viewer'
 ]);
 const FORBIDDEN_LITERAL_PARTS = ['graph.microsoft.com', '/_api/'];
 const MUTATION_METHODS = new Set(['post', 'put', 'patch', 'delete', 'saveXML']);

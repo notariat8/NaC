@@ -1,7 +1,7 @@
 {
   "schemaVersion": "nac.spfx-role-deadline-visual-evidence/v0.2",
   "browser": "Chromium 140.0.7339.16",
-  "nodeVersion": "v22.14.0",
+  "nodeVersion": "v22.23.1",
   "playwrightVersion": "1.55.0",
   "embeddedAssets": [
     {
@@ -18,7 +18,7 @@
   "tenantAccess": false,
   "componentE2e": false,
   "evidenceKind": "offline_visual_contract",
-  "aggregateSourceSha256": "2d16c8e4a8a7d3129db6b2d41dfb4e8d8d361ff589b281d017eded33232031a0",
+  "aggregateSourceSha256": "6c00a74d7dcaa7534708b3f5ac27bb9fc9466e956c077d33ce5fbecf9f9178c0",
   "sourceInputs": [
     {
       "path": "bpmn/immobilienkaufvertrag.bpmn",
@@ -34,19 +34,23 @@
     },
     {
       "path": "spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs",
-      "sha256": "c615fd9f936d4bac495f210fc86e2da9de0c9e3a1097e6661f9a5c8800e82d04"
+      "sha256": "04e21f54c52c77f8b5ebdd44f44749b29c462cda4adf58d892033b8db92641f5"
     },
     {
       "path": "spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs",
-      "sha256": "93bb68106fa5643983e22a7fa7731a20e55d75c7940395653b23f41a53242e36"
+      "sha256": "671ea32c7d2655514d0ee22eae14c9b504feb07c2e84680923d18c475abb6a6c"
     },
     {
       "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts",
       "sha256": "ab7265b95a38764177036e59babc80c7e44bb301ba43460326ed66c4e0839838"
     },
     {
+      "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/DiagramJs.styles.ts",
+      "sha256": "c4bebc30c09d05152daa641df90e26ea8ce1311c421d3d3ec6730e5d1cdfdea0"
+    },
+    {
       "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
-      "sha256": "1f52f331b87b9314e118ab0606b269e79b4b691632c0488a4226716a7832447a"
+      "sha256": "2e5e3bd8fcc4563ddb3d9a31b8aa8e841e10e74cafe9b17f410ede3028e55eac"
     },
     {
       "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts",

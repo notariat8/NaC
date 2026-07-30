@@ -113,6 +113,49 @@ STEPS = (
 )
 
 
+def _write_spfx_lock_fixture(path: Path) -> None:
+    payload = {
+        "packages": {
+            "node_modules/@unrs/resolver-binding-wasm32-wasi": {
+                "version": "1.12.2",
+                "resolved": (
+                    "https://registry.npmjs.org/@unrs/resolver-binding-wasm32-wasi/"
+                    "-/resolver-binding-wasm32-wasi-1.12.2.tgz"
+                ),
+                "integrity": (
+                    "sha512-tYFDIkMxSflfEc/h92ZWNsZlHSwgimbNHSO3PL2JWQHfCuC2q316jMy"
+                    "YU9TIWZsFK2bQwyK5VAdYgn8ygPj69A=="
+                ),
+                "cpu": ["wasm32"],
+                "optional": True,
+            },
+            "node_modules/unrs-resolver": {
+                "optionalDependencies": {
+                    "@unrs/resolver-binding-wasm32-wasi": "1.12.2"
+                }
+            },
+        }
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_spfx_wasi_package_fixture(root: Path) -> None:
+    package_root = root / "node_modules/@unrs/resolver-binding-wasm32-wasi"
+    package_root.mkdir(parents=True)
+    (package_root / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@unrs/resolver-binding-wasm32-wasi",
+                "version": "1.12.2",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (package_root / "resolver.wasm32-wasi.wasm").write_bytes(
+        b"trusted-wasi-resolver"
+    )
+
+
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -1211,7 +1254,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             )
 
     def test_zip_normalization_rejects_noncanonical_and_colliding_names(self) -> None:
-        for names in (("a/./b",), ("a//b",), ("a/b", "a/./b")):
+        for names in (("a/./b",), ("a//b",), ("a/b", "a/./b"), ("fixture.bpmn",)):
             with self.subTest(names=names), tempfile.TemporaryDirectory() as temporary:
                 package = Path(temporary) / "unsafe.sppkg"
                 with zipfile.ZipFile(package, "w") as archive:
@@ -1255,7 +1298,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             (source / "package.json").write_text(
                 '{"scripts":{"build":"noop"}}\n'
             )
-            (source / "package-lock.json").write_text("{}\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
             config = source / "config/package-solution.json"
             config.parent.mkdir(parents=True)
             config.write_text("{}\n")
@@ -1283,7 +1326,9 @@ class LocalActivationAdapterTests(unittest.TestCase):
                     (heft.parent.parent / "package.json").write_text(
                         '{"name":"@rushstack/heft"}\n'
                     )
-                if len(build_calls) == 3:
+                if len(build_calls) == 2:
+                    _write_spfx_wasi_package_fixture(cwd)
+                if len(build_calls) == 5:
                     package = cwd / "sharepoint/solution/nac-bpmn-viewer.sppkg"
                     package.parent.mkdir(parents=True, exist_ok=True)
                     with zipfile.ZipFile(package, "w") as archive:
@@ -1319,7 +1364,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertTrue((isolated / "node_modules").is_dir())
             self.assertEqual(ignored.read_text(), "preserve")
             self.assertFalse((source / "sharepoint").exists())
-            self.assertEqual(run.call_count, 3)
+            self.assertEqual(run.call_count, 5)
             self.assertEqual(
                 run.call_args_list[0].args[0],
                 [str(node), str(npm_cli), "ci", "--ignore-scripts", "--force"],
@@ -1327,21 +1372,193 @@ class LocalActivationAdapterTests(unittest.TestCase):
             heft_entry = isolated / "node_modules/@rushstack/heft/bin/heft"
             self.assertEqual(
                 run.call_args_list[1].args[0],
-                [str(node), str(heft_entry), "test", "--clean", "--production"],
+                [
+                    str(node),
+                    str(npm_cli),
+                    "install",
+                    "--no-save",
+                    "--ignore-scripts",
+                    "--force",
+                    "--cpu=wasm32",
+                    "@unrs/resolver-binding-wasm32-wasi@1.12.2",
+                ],
             )
             self.assertEqual(
                 run.call_args_list[2].args[0],
+                [
+                    str(node),
+                    str(isolated / "scripts/validate-read-only-boundary.cjs"),
+                ],
+            )
+            self.assertEqual(
+                run.call_args_list[3].args[0],
+                [str(node), str(heft_entry), "test", "--clean", "--production"],
+            )
+            self.assertEqual(
+                run.call_args_list[4].args[0],
                 [str(node), str(heft_entry), "package-solution", "--production"],
             )
             self.assertTrue(
-                run.call_args_list[1].kwargs["force_wasi_native_fallback"]
+                run.call_args_list[3].kwargs["force_wasi_native_fallback"]
             )
             self.assertTrue(
-                run.call_args_list[2].kwargs["force_wasi_native_fallback"]
+                run.call_args_list[4].kwargs["force_wasi_native_fallback"]
             )
             self.assertNotIn(".bin", " ".join(" ".join(call) for call in build_calls))
             combined_commands = " ".join(" ".join(call) for call in build_calls)
             self.assertNotIn("run build", combined_commands)
+
+    def test_spfx_rejects_unbound_wasi_lock_before_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            node = root / "node/bin/node"
+            npm_cli = root / "node/lib/node_modules/npm/bin/npm-cli.js"
+            node.parent.mkdir(parents=True)
+            npm_cli.parent.mkdir(parents=True)
+            node.write_bytes(b"trusted-node")
+            npm_cli.write_bytes(b"trusted-npm")
+            node.chmod(0o700)
+            source = root / "spfx/nac-bpmn-viewer"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text("{}\n")
+            (source / "package-lock.json").write_text("{}\n")
+            adapter = LocalBuildAdapter(
+                node_binary=node,
+                npm_cli=npm_cli,
+                node_sha256=hashlib.sha256(node.read_bytes()).hexdigest(),
+                npm_cli_sha256=build_node_runtime_manifest(
+                    npm_cli.parent.parent
+                ).digest,
+                environ={},
+            )
+
+            with (
+                patch.object(adapter, "_run") as run,
+                self.assertRaises(ActivationStepError) as raised,
+            ):
+                adapter.build_spfx(root, root / "isolated")
+
+            self.assertEqual(
+                raised.exception.code, "SPFX_WASI_LOCK_ATTESTATION_FAILED"
+            )
+            run.assert_not_called()
+
+    def test_spfx_wasi_lock_rejects_non_object_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            lock_path = root / "package-lock.json"
+            _write_spfx_lock_fixture(lock_path)
+            lock = json.loads(lock_path.read_text())
+            lock["packages"][
+                "node_modules/@unrs/resolver-binding-wasm32-wasi"
+            ] = None
+            lock_path.write_text(json.dumps(lock))
+
+            with self.assertRaises(ActivationStepError) as raised:
+                LocalBuildAdapter._validate_spfx_wasi_lock(root)
+
+            self.assertEqual(
+                raised.exception.code, "SPFX_WASI_LOCK_ATTESTATION_FAILED"
+            )
+
+    def test_spfx_wasi_package_rejects_non_object_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package_root = (
+                root
+                / "node_modules"
+                / "@unrs"
+                / "resolver-binding-wasm32-wasi"
+            )
+            package_root.mkdir(parents=True)
+            (package_root / "package.json").write_text("null\n")
+            (package_root / "resolver.wasm32-wasi.wasm").write_bytes(b"wasm")
+
+            with self.assertRaises(ActivationStepError) as raised:
+                LocalBuildAdapter._validate_spfx_wasi_package(root)
+
+            self.assertEqual(
+                raised.exception.code, "SPFX_WASI_PACKAGE_ATTESTATION_FAILED"
+            )
+
+    def test_spfx_rejects_source_mutation_during_wasi_install(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            node = root / "node/bin/node"
+            npm_cli = root / "node/lib/node_modules/npm/bin/npm-cli.js"
+            node.parent.mkdir(parents=True)
+            npm_cli.parent.mkdir(parents=True)
+            node.write_bytes(b"trusted-node")
+            npm_cli.write_bytes(b"trusted-npm")
+            node.chmod(0o700)
+            source = root / "spfx/nac-bpmn-viewer"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text("{}\n")
+            (source / "source.ts").write_text("trusted\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
+            adapter = LocalBuildAdapter(
+                node_binary=node,
+                npm_cli=npm_cli,
+                node_sha256=hashlib.sha256(node.read_bytes()).hexdigest(),
+                npm_cli_sha256=build_node_runtime_manifest(
+                    npm_cli.parent.parent
+                ).digest,
+                environ={},
+            )
+            calls = 0
+
+            def fake_run(_argv, *, cwd, **_kwargs):
+                nonlocal calls
+                calls += 1
+                heft = cwd / "node_modules/@rushstack/heft/bin/heft"
+                if calls == 1:
+                    heft.parent.mkdir(parents=True)
+                    heft.write_bytes(b"trusted-heft")
+                if calls == 2:
+                    _write_spfx_wasi_package_fixture(cwd)
+                    (cwd / "source.ts").write_text("mutated\n")
+
+            with (
+                patch.object(adapter, "_run", side_effect=fake_run),
+                self.assertRaises(ActivationStepError) as raised,
+            ):
+                adapter.build_spfx(root, root / "isolated")
+
+            self.assertEqual(raised.exception.code, "SPFX_SOURCE_ATTESTATION_FAILED")
+
+    def test_spfx_rejects_missing_wasi_package_after_install(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            node = root / "node/bin/node"
+            npm_cli = root / "node/lib/node_modules/npm/bin/npm-cli.js"
+            node.parent.mkdir(parents=True)
+            npm_cli.parent.mkdir(parents=True)
+            node.write_bytes(b"trusted-node")
+            npm_cli.write_bytes(b"trusted-npm")
+            node.chmod(0o700)
+            source = root / "spfx/nac-bpmn-viewer"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text("{}\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
+            adapter = LocalBuildAdapter(
+                node_binary=node,
+                npm_cli=npm_cli,
+                node_sha256=hashlib.sha256(node.read_bytes()).hexdigest(),
+                npm_cli_sha256=build_node_runtime_manifest(
+                    npm_cli.parent.parent
+                ).digest,
+                environ={},
+            )
+
+            with (
+                patch.object(adapter, "_run"),
+                self.assertRaises(ActivationStepError) as raised,
+            ):
+                adapter.build_spfx(root, root / "isolated")
+
+            self.assertEqual(
+                raised.exception.code, "SPFX_WASI_PACKAGE_ATTESTATION_FAILED"
+            )
 
     def test_function_build_rejects_python_mutation_before_process(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1391,7 +1608,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             source = root / "spfx/nac-bpmn-viewer"
             source.mkdir(parents=True)
             (source / "package.json").write_text("{}\n")
-            (source / "package-lock.json").write_text("{}\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
             adapter = LocalBuildAdapter(
                 node_binary=node,
                 npm_cli=npm_cli,
@@ -1435,7 +1652,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             source = root / "spfx/nac-bpmn-viewer"
             source.mkdir(parents=True)
             (source / "package.json").write_text("{}\n")
-            (source / "package-lock.json").write_text("{}\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
             adapter = LocalBuildAdapter(
                 node_binary=node,
                 npm_cli=npm_cli,
@@ -1452,6 +1669,8 @@ class LocalActivationAdapterTests(unittest.TestCase):
                     heft.parent.mkdir(parents=True)
                     heft.write_bytes(b"trusted-heft")
                 elif len(calls) == 2:
+                    _write_spfx_wasi_package_fixture(cwd)
+                elif len(calls) == 3:
                     heft.write_bytes(b"tampered-heft")
 
             with (
@@ -1463,7 +1682,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertEqual(
                 raised.exception.code, "SPFX_DEPENDENCY_ATTESTATION_FAILED"
             )
-            self.assertEqual(len(calls), 2)
+            self.assertEqual(len(calls), 3)
             self.assertNotIn(".bin", " ".join(" ".join(call) for call in calls))
 
     def test_node_runtime_loader_is_inherited_by_real_child_process(self) -> None:
