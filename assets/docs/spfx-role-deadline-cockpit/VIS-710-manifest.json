@@ -1,0 +1,300 @@
+{
+  "schemaVersion": "nac.spfx-role-deadline-visual-evidence/v0.2",
+  "browser": "Chromium 140.0.7339.16",
+  "nodeVersion": "v22.14.0",
+  "playwrightVersion": "1.55.0",
+  "embeddedAssets": [
+    {
+      "path": "spfx/nac-bpmn-viewer/node_modules/bpmn-js/dist/assets/diagram-js.css",
+      "sha256": "9aa83050d07b65ef6e11588afbcab82527974881a08af61461d163ceb5ab8468"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/node_modules/bpmn-js/dist/bpmn-viewer.production.min.js",
+      "sha256": "61354f152b558e14d23bd536b45c2a1b71650564c90b8738828c9aedd8f712e1"
+    }
+  ],
+  "evaluationTimestamp": "2026-08-25T16:00:00Z",
+  "containsOnlySyntheticData": true,
+  "tenantAccess": false,
+  "componentE2e": false,
+  "evidenceKind": "offline_visual_contract",
+  "aggregateSourceSha256": "2d16c8e4a8a7d3129db6b2d41dfb4e8d8d361ff589b281d017eded33232031a0",
+  "sourceInputs": [
+    {
+      "path": "bpmn/immobilienkaufvertrag.bpmn",
+      "sha256": "02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/package.json",
+      "sha256": "8646499abc49481c759ebeeec018901915f98bb8088ab4539245d8a93397154f"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/package-lock.json",
+      "sha256": "0e8c78fa2a6e3d0b064a44c7ca0e876c4a4b9f463c6e824b35b0d576f274d019"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs",
+      "sha256": "c615fd9f936d4bac495f210fc86e2da9de0c9e3a1097e6661f9a5c8800e82d04"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs",
+      "sha256": "93bb68106fa5643983e22a7fa7731a20e55d75c7940395653b23f41a53242e36"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts",
+      "sha256": "ab7265b95a38764177036e59babc80c7e44bb301ba43460326ed66c4e0839838"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
+      "sha256": "1f52f331b87b9314e118ab0606b269e79b4b691632c0488a4226716a7832447a"
+    },
+    {
+      "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts",
+      "sha256": "1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "VIS-710-01",
+      "file": "VIS-710-01-desktop-light.png",
+      "sha256": "2643246809d562fd4252ddcaf191cc5d5f21d89d99924210fef082c96683f6fe",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "containerWidth": null,
+      "query": "?selected=deadline",
+      "elementCrop": true,
+      "recoveryVerified": false,
+      "checks": {
+        "rootWidth": 1392,
+        "rootHeight": 867,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 41,
+        "currentStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedStepCodes": [
+          "Task_NachweiseNachhalten"
+        ],
+        "selectedTaskIds": [
+          "NAC-SYN-DEADLINE-001"
+        ],
+        "detailTitle": "Abschlussfrist überwachen",
+        "diagramStatus": "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: Abschlussfrist überwachen.",
+        "activeFilter": "all",
+        "retryButtons": 0,
+        "dark": false,
+        "syntheticMarkers": {
+          "fixture": true,
+          "noMatterData": true
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": false
+      }
+    },
+    {
+      "id": "VIS-710-02",
+      "file": "VIS-710-02-narrow-light.png",
+      "sha256": "1293bf100440e44fdc349afc06c8298f2f379f0e37f3dad37134095779aaa86f",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "containerWidth": null,
+      "query": "?filter=deadline",
+      "elementCrop": true,
+      "recoveryVerified": false,
+      "checks": {
+        "rootWidth": 390,
+        "rootHeight": 1669,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 41,
+        "currentStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedStepCodes": [
+          "Task_NachweiseNachhalten"
+        ],
+        "selectedTaskIds": [
+          "NAC-SYN-DEADLINE-001"
+        ],
+        "detailTitle": "Abschlussfrist überwachen",
+        "diagramStatus": "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: Abschlussfrist überwachen.",
+        "activeFilter": "deadline",
+        "retryButtons": 0,
+        "dark": false,
+        "syntheticMarkers": {
+          "fixture": true,
+          "noMatterData": true
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": false
+      }
+    },
+    {
+      "id": "VIS-710-03",
+      "file": "VIS-710-03-desktop-dark.png",
+      "sha256": "dee4419cf1e4257bf72d2258a495795571b8f300c9dd185abf0cdd89c584bb2d",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "containerWidth": null,
+      "query": "?theme=dark&filter=notary",
+      "elementCrop": true,
+      "recoveryVerified": false,
+      "checks": {
+        "rootWidth": 1392,
+        "rootHeight": 760,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 41,
+        "currentStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedTaskIds": [
+          "NAC-SYN-TASK-001"
+        ],
+        "detailTitle": "Entwurf prüfen",
+        "diagramStatus": "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: Entwurf prüfen.",
+        "activeFilter": "notary",
+        "retryButtons": 0,
+        "dark": true,
+        "syntheticMarkers": {
+          "fixture": true,
+          "noMatterData": true
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": false
+      }
+    },
+    {
+      "id": "VIS-710-04",
+      "file": "VIS-710-04-narrow-dark-empty.png",
+      "sha256": "09584ea09b65af2f82c55d1523e42d7f506e478f666d27c57151b20589d521e8",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "containerWidth": null,
+      "query": "?theme=dark&state=empty",
+      "elementCrop": true,
+      "recoveryVerified": true,
+      "checks": {
+        "rootWidth": 390,
+        "rootHeight": 1388,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 41,
+        "currentStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedStepCodes": [],
+        "selectedTaskIds": [],
+        "detailTitle": null,
+        "diagramStatus": "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: Keine ausgewählte Aufgabe.",
+        "activeFilter": "notary",
+        "retryButtons": 0,
+        "dark": true,
+        "syntheticMarkers": {
+          "fixture": true,
+          "noMatterData": true
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": false
+      }
+    },
+    {
+      "id": "VIS-710-05",
+      "file": "VIS-710-05-error-retry.png",
+      "sha256": "279cea846cdc544100c81da7aee596f007ccf7006af741d0f93f3cfdec4eb559",
+      "viewport": {
+        "width": 390,
+        "height": 320
+      },
+      "containerWidth": null,
+      "query": "?state=error",
+      "elementCrop": true,
+      "recoveryVerified": true,
+      "checks": {
+        "rootWidth": 390,
+        "rootHeight": 104,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 0,
+        "currentStepCodes": [],
+        "selectedStepCodes": [],
+        "selectedTaskIds": [],
+        "detailTitle": null,
+        "diagramStatus": null,
+        "activeFilter": null,
+        "retryButtons": 1,
+        "dark": false,
+        "syntheticMarkers": {
+          "fixture": false,
+          "noMatterData": false
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": false
+      }
+    },
+    {
+      "id": "VIS-710-06",
+      "file": "VIS-710-06-narrow-container-light.png",
+      "sha256": "d0a67f9e33d62856a7d9534668aabc1beef54250fe2ce28489c665af2cd2decc",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "containerWidth": 390,
+      "query": "?selected=deadline",
+      "elementCrop": true,
+      "recoveryVerified": false,
+      "checks": {
+        "rootWidth": 390,
+        "rootHeight": 1781,
+        "documentOverflow": false,
+        "containerOverflow": false,
+        "containerOverflowElements": [],
+        "clippedText": [],
+        "svgElements": 41,
+        "currentStepCodes": [
+          "Task_EntwurfAbstimmen"
+        ],
+        "selectedStepCodes": [
+          "Task_NachweiseNachhalten"
+        ],
+        "selectedTaskIds": [
+          "NAC-SYN-DEADLINE-001"
+        ],
+        "detailTitle": "Abschlussfrist überwachen",
+        "diagramStatus": "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: Abschlussfrist überwachen.",
+        "activeFilter": "all",
+        "retryButtons": 0,
+        "dark": false,
+        "syntheticMarkers": {
+          "fixture": true,
+          "noMatterData": true
+        },
+        "forbiddenTextMatches": [],
+        "maximumTextLayoutVerified": true
+      }
+    }
+  ]
+}

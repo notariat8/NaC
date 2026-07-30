@@ -84,6 +84,23 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertEqual(lock["lockfileVersion"], 3)
         self.assertEqual(lock["packages"][""]["dependencies"], package["dependencies"])
         self.assertEqual(lock["packages"][""]["devDependencies"], package["devDependencies"])
+        self.assertEqual(
+            package["scripts"]["visual:fixture"],
+            "node scripts/generate-role-deadline-visual-fixture.cjs",
+        )
+        self.assertEqual(
+            package["scripts"]["visual:capture"],
+            "node scripts/capture-role-deadline-visual-evidence.cjs",
+        )
+        self.assertEqual(
+            package["scripts"]["validate:read-only"],
+            "node scripts/validate-read-only-boundary.cjs",
+        )
+        self.assertIn(
+            "npm run visual:fixture -- /tmp/nac-spfx-role-deadline-cockpit.html",
+            package["scripts"]["build"],
+        )
+        self.assertIn("npm run validate:read-only", package["scripts"]["build"])
         self.assertIn("heft test --clean --production", package["scripts"]["build"])
         self.assertIn("heft package-solution --production", package["scripts"]["build"])
         all_dependencies = {**package["dependencies"], **package["devDependencies"]}
@@ -124,6 +141,12 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         component_test = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx"
         ).read_text(encoding="utf-8")
+        view_model = (
+            SPFX_ROOT / "src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts"
+        ).read_text(encoding="utf-8")
+        visual_fixture = (
+            SPFX_ROOT / "scripts/generate-role-deadline-visual-fixture.cjs"
+        ).read_text(encoding="utf-8")
 
         for marker in REQUIRED_DOM_MARKERS.values():
             self.assertIn(marker, component)
@@ -148,6 +171,15 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
             "fails the load after ten seconds even when the loader ignores abort",
             component_test,
         )
+        self.assertIn(
+            "fails closed permanently when the bound deadline evaluation timestamp is invalid",
+            component_test,
+        )
+        self.assertIn("Zugeordnetes Team (assigned)", view_model)
+        self.assertIn("Aktive Vertretung (deputy)", view_model)
+        self.assertNotIn("Date.now(", view_model)
+        self.assertIn("nacBpmnViewer__deadlineState", visual_fixture)
+        self.assertIn("synthetische Evidence", visual_fixture)
 
         combined = "\n".join(path.read_text(encoding="utf-8") for path in _iter_spfx_source_files(SPFX_ROOT))
         self.assertIn("AadHttpClient", combined)
@@ -155,6 +187,15 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
             "MSGraphClient",
             "graph.microsoft.com",
             "@microsoft/microsoft-graph-client",
+            "MSGraphClient",
+            "fetch(",
+            "XMLHttpRequest",
+            "/_api/",
+            "@pnp/",
+            ".post(",
+            ".put(",
+            ".patch(",
+            ".delete(",
             "bpmn-js/lib/Modeler",
             "saveXML",
         ):

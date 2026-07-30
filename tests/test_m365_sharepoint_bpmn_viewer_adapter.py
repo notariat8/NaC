@@ -4,12 +4,16 @@ import copy
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import scripts.validate_m365_sharepoint_bpmn_viewer_adapter as adapter_validator
 from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import (
     _validate_contract,
     _validate_spfx_ast_gate,
+    _validate_visual_evidence_manifest,
 )
 
 
@@ -237,6 +241,41 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_spfx_build_is_bound_to_the_typescript_ast_validator(self) -> None:
         self.assertEqual(_validate_spfx_ast_gate(), [])
+
+    def test_visual_evidence_manifest_is_bound_to_sources_and_screenshots(self) -> None:
+        self.assertEqual(_validate_visual_evidence_manifest(), [])
+
+    def test_visual_evidence_manifest_rejects_a_stale_source_hash(self) -> None:
+        manifest = json.loads(
+            adapter_validator.VISUAL_EVIDENCE_MANIFEST.read_text(encoding="utf-8")
+        )
+        manifest["sourceInputs"][0]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "VIS-710-manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch.object(adapter_validator, "VISUAL_EVIDENCE_MANIFEST", manifest_path):
+                errors = _validate_visual_evidence_manifest()
+
+        self.assertTrue(
+            any("source hash mismatch" in error for error in errors),
+            errors,
+        )
+
+    def test_visual_evidence_manifest_rejects_a_stale_screenshot_hash(self) -> None:
+        manifest = json.loads(
+            adapter_validator.VISUAL_EVIDENCE_MANIFEST.read_text(encoding="utf-8")
+        )
+        manifest["evidence"][0]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "VIS-710-manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch.object(adapter_validator, "VISUAL_EVIDENCE_MANIFEST", manifest_path):
+                errors = _validate_visual_evidence_manifest()
+
+        self.assertTrue(
+            any("screenshot hash mismatch" in error for error in errors),
+            errors,
+        )
 
 
 if __name__ == "__main__":

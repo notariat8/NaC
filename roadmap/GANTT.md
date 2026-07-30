@@ -55,7 +55,7 @@ gantt
     BusinessCaseType-S4d-Live-Write-Boundary    :done,    b1ap, 2026-07-29, 1d
     BusinessCaseType-S4e-Live-Write-Readiness   :done,    b1aq, 2026-07-29, 1d
     BusinessCaseType-S4f-Production-Adapters    :done,    b1ar, 2026-07-29, 1d
-    BusinessCaseType-S4g-Edge-Composition       :active,    b1as, 2026-07-29, 1d
+    BusinessCaseType-S4g-Edge-Composition       :done,      b1as, 2026-07-29, 1d
     BusinessCaseType-S5-Offline-Migration      :done,    b1ak, 2026-07-12, 7d
     BusinessCaseType-S6a-Evidence-Foundation    :done,    b1al, 2026-07-20, 7d
     BusinessCaseType-S6b-Azure-WORM           :done,    b1am, 2026-07-28, 1d
@@ -92,6 +92,7 @@ gantt
     Durable-Workflow-Kandidatenspitze             :         b1wc, after b1wb, 42d
     M365-MVP-Testumgebung-Live-One-Shot           :done,    b1we, 2026-07-14, 1d
     SPFx Read-only Workspace-Arbeitsfläche        :active,  b1wd, 2026-07-14, 28d
+    SPFx Rollen-/Fristen-Cockpit                 :done,    b1wde, 2026-07-29, 1d
     Legal-Graph-Domänen-MVP planen              :active,  b1z, 2026-06-12, 14d
     Legal-Graph-Primärquellenpilot ohne Kommentarzugriff :done,   b1za, 2026-06-12, 7d
     Legal-Nemotron-Finetuning-Gates planen       :done,    b1zb, 2026-06-28, 2d

@@ -155,6 +155,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
           userDisplayName="Test User"
           hostName="SharePoint"
           isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
           loadWorkspace={() => new Promise<NacBffWorkspace>(() => undefined)}
         />,
         root
@@ -162,6 +163,10 @@ describe('NaC BPMN viewer runtime boundary', () => {
     });
 
     expect(root.textContent).toContain('Vorgangsdaten werden geladen.');
+    const loadingStatus = root.querySelector('[role="status"]');
+    expect(loadingStatus?.textContent).toContain('Vorgangsdaten werden geladen.');
+    expect(loadingStatus?.classList.contains('nacBpmnViewer__message')).toBe(true);
+    expect(loadingStatus?.classList.contains('nacBpmnViewer__error')).toBe(false);
     expect(root.textContent).not.toContain(workspace.matter.displayName);
     expect(BpmnViewer).not.toHaveBeenCalled();
   });
@@ -185,6 +190,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
           userDisplayName="Test User"
           hostName="SharePoint"
           isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
           loadWorkspace={loadWorkspace}
         />,
         root
@@ -207,6 +213,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
           userDisplayName="Test User"
           hostName="Microsoft Teams"
           isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
           loadWorkspace={loadWorkspace}
         />,
         root
@@ -230,6 +237,8 @@ describe('NaC BPMN viewer runtime boundary', () => {
     });
 
     expect(root.textContent).toContain('Vorgangsdaten sind derzeit nicht verfügbar.');
+    expect(root.querySelector('[role="alert"]')?.textContent)
+      .toContain('Vorgangsdaten sind derzeit nicht verfügbar.');
     expect(root.textContent).not.toContain(workspace.matter.displayName);
     expect(BpmnViewer).not.toHaveBeenCalled();
   });
@@ -263,9 +272,15 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(root.textContent).toContain('Keine eigene Frist');
     expect(root.textContent).toContain('Entwurf');
     expect(root.textContent).toContain('Notarielle Freigabe erforderlich');
-    expect(root.textContent).toContain('Zugeordnet (assigned)');
+    expect(root.textContent).toContain('Zugeordnetes Team (assigned)');
     expect(root.textContent).toContain('Aufgaben2');
     expect(root.querySelector('main')?.hasAttribute('data-nac-current-step')).toBe(false);
+    const diagram = root.querySelector('[aria-label="BPMN-Prozessdiagramm"]');
+    expect(diagram?.getAttribute('role')).toBe('img');
+    const diagramStatusId = diagram?.getAttribute('aria-describedby');
+    expect(diagramStatusId).toMatch(/^nac-selected-task-details-[0-9]+-diagram-status$/);
+    expect(root.querySelector('[id="' + diagramStatusId + '"]')?.textContent)
+      .toContain('Aktueller Prozessschritt: Entwurf prüfen');
     expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
       .toBe('Task_EntwurfAbstimmen');
     expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-selected-step'))
@@ -297,6 +312,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
               userDisplayName={userDisplayName}
               hostName="SharePoint"
               isDarkTheme={false}
+              evaluationTimestamp="2026-08-25T16:00:00Z"
               loadWorkspace={loadWorkspace}
             />
             <NacBpmnViewer
@@ -305,6 +321,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
               userDisplayName={userDisplayName}
               hostName="SharePoint"
               isDarkTheme={false}
+              evaluationTimestamp="2026-08-25T16:00:00Z"
               loadWorkspace={loadWorkspace}
             />
           </>,
@@ -318,8 +335,12 @@ describe('NaC BPMN viewer runtime boundary', () => {
 
     const viewers = root.querySelectorAll<HTMLElement>('[data-nac-component="test-workspace"]');
     expect(viewers).toHaveLength(2);
-    const firstDetails = viewers[0].querySelector<HTMLElement>('[id^="nac-selected-task-details-"]') as HTMLElement;
-    const secondDetails = viewers[1].querySelector<HTMLElement>('[id^="nac-selected-task-details-"]') as HTMLElement;
+    const firstDetails = viewers[0].querySelector<HTMLElement>(
+      '[id^="nac-selected-task-details-"][aria-labelledby]'
+    ) as HTMLElement;
+    const secondDetails = viewers[1].querySelector<HTMLElement>(
+      '[id^="nac-selected-task-details-"][aria-labelledby]'
+    ) as HTMLElement;
     const firstId = firstDetails.id;
     const secondId = secondDetails.id;
     expect(new Set([firstId, secondId]).size).toBe(2);
@@ -620,6 +641,224 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('filters deadline tasks and keeps current and selected BPMN markers distinct', async () => {
+    await renderAndFlush(async () => workspace);
+
+    const deadlineFilter = Array.from(root.querySelectorAll<HTMLButtonElement>(
+      '[aria-label="Aufgaben filtern"] button'
+    )).find(button => button.textContent === 'Aufgaben mit Frist');
+    expect(deadlineFilter).toBeDefined();
+
+    act(() => {
+      deadlineFilter?.click();
+    });
+
+    expect(root.querySelector('[data-nac-task-id="NAC-SYN-TASK-001"]')).toBeNull();
+    expect(root.querySelector('[data-nac-task-id="NAC-SYN-DEADLINE-001"]')).not.toBeNull();
+    expect(root.textContent).toContain('1/2');
+    expect(root.textContent).toContain('Abschlussfrist überwachen');
+    expect(removeMarker).toHaveBeenCalledWith('Task_EntwurfAbstimmen', 'nac-selected-step');
+    expect(addMarker).toHaveBeenCalledWith('Task_NachweiseNachhalten', 'nac-selected-step');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
+      .toBe('Task_EntwurfAbstimmen');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-selected-step'))
+      .toBe('Task_NachweiseNachhalten');
+    const liveSelection = root.querySelector('[id$="-diagram-status"]');
+    expect(liveSelection?.getAttribute('aria-live')).toBe('polite');
+    expect(liveSelection?.getAttribute('aria-atomic')).toBe('true');
+    expect(liveSelection?.textContent).toContain('Ausgewählte Aufgabe: Abschlussfrist überwachen');
+  });
+
+  it('shows an explicit empty state for a task filter without matches', async () => {
+    const noNotaryWorkspace: NacBffWorkspace = {
+      ...workspace,
+      matter: {
+        ...workspace.matter,
+        tasks: workspace.matter.tasks.map(task => ({
+          ...task,
+          requiresNotaryApproval: false
+        }))
+      }
+    };
+    await renderAndFlush(async () => noNotaryWorkspace);
+
+    const notaryFilter = Array.from(root.querySelectorAll<HTMLButtonElement>(
+      '[aria-label="Aufgaben filtern"] button'
+    )).find(button => button.textContent === 'Aufgaben mit Notarfreigabe');
+
+    act(() => {
+      notaryFilter?.click();
+    });
+
+    expect(root.textContent).toContain('Keine passenden Aufgaben');
+    expect(root.textContent).toContain('Wählen Sie einen anderen Filter.');
+    expect(root.querySelector('[role="status"]')?.textContent)
+      .toContain('Keine passenden Aufgaben');
+    expect(root.querySelectorAll('[data-nac-task-id]')).toHaveLength(0);
+    expect(root.querySelector('[id^="nac-selected-task-details-"][aria-labelledby]')).toBeNull();
+    expect(removeMarker).toHaveBeenCalledWith('Task_EntwurfAbstimmen', 'nac-selected-step');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.getAttribute('data-nac-current-step'))
+      .toBe('Task_EntwurfAbstimmen');
+    expect(root.querySelector('[aria-label="BPMN-Prozessdiagramm"]')?.hasAttribute('data-nac-selected-step'))
+      .toBe(false);
+  });
+
+  it('fails closed permanently when the bound deadline evaluation timestamp is invalid', async () => {
+    jest.useFakeTimers();
+    const loadWorkspace = jest.fn().mockResolvedValue(workspace);
+    try {
+      await act(async () => {
+        ReactDom.render(
+          <NacBpmnViewer
+            workspaceId="notary_team_01"
+            userDisplayName="Test User"
+            hostName="Microsoft Teams"
+            isDarkTheme={false}
+            evaluationTimestamp="not-a-timestamp"
+            loadWorkspace={loadWorkspace}
+          />,
+          root
+        );
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await flushPromises();
+
+      expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+      expect(root.textContent).not.toContain(workspace.matter.displayName);
+      expect(root.querySelector('[data-nac-current-step]')).toBeNull();
+      expect(destroy).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        jest.advanceTimersByTime(60_000);
+      });
+
+      expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+      expect(root.textContent).not.toContain(workspace.matter.displayName);
+      expect(loadWorkspace).toHaveBeenCalledTimes(1);
+      expect(BpmnViewer).toHaveBeenCalledTimes(1);
+      expect(destroy).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('refreshes and visibly dates the deadline evaluation clock every minute', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-01T16:00:00Z'));
+    try {
+      await renderAndFlush(async () => workspace);
+
+      expect(root.textContent).toContain('Frist innerhalb von sieben Tagen');
+      expect(root.textContent).toContain('Stand: 25.08.2026');
+
+      act(() => {
+        jest.advanceTimersByTime(60_000);
+      });
+
+      expect(root.textContent).toContain('Frist überschritten');
+      expect(root.textContent).toContain('Stand: 01.09.2026');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('retries once after BPMN import failure and destroys the failed viewer', async () => {
+    const loadWorkspace = jest.fn().mockResolvedValue(workspace);
+    importXml.mockRejectedValueOnce(new Error('invalid BPMN')).mockResolvedValueOnce(undefined);
+    await renderAndFlush(loadWorkspace);
+
+    expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
+    const retryButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
+      .find(button => button.textContent === 'Erneut laden');
+    expect(retryButton).toBeDefined();
+
+    await act(async () => {
+      retryButton?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushPromises();
+
+    expect(loadWorkspace).toHaveBeenCalledTimes(2);
+    expect(BpmnViewer).toHaveBeenCalledTimes(2);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(root.textContent).toContain(workspace.matter.displayName);
+  });
+
+  it('announces an unavailable state with the dark host theme', async () => {
+    await act(async () => {
+      ReactDom.render(
+        <NacBpmnViewer
+          workspaceId="notary_team_01"
+          userDisplayName="Test User"
+          hostName="Microsoft Teams"
+          isDarkTheme={true}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
+          loadWorkspace={async () => { throw new Error('NAC_BFF_UNAVAILABLE'); }}
+        />,
+        root
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(root.querySelector('.nacBpmnViewer__messageHost')?.classList.contains('nacBpmnViewer__dark'))
+      .toBe(true);
+    expect(root.querySelector('[role="alert"]')?.textContent)
+      .toContain('Vorgangsdaten sind derzeit nicht verfügbar.');
+  });
+
+  it('renders the deputy role and dark host state without changing the read boundary', async () => {
+    const deputyWorkspace: NacBffWorkspace = {
+      ...workspace,
+      matter: { ...workspace.matter, accessMode: 'deputy' }
+    };
+    await act(async () => {
+      ReactDom.render(
+        <NacBpmnViewer
+          workspaceId="notary_team_01"
+          userDisplayName="Vertretung Test"
+          hostName="Microsoft Teams"
+          isDarkTheme={true}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
+          loadWorkspace={async () => deputyWorkspace}
+        />,
+        root
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushPromises();
+
+    expect(root.querySelector('main')?.classList.contains('nacBpmnViewer__dark')).toBe(true);
+    expect(root.textContent).toContain('Aktive Vertretung');
+    expect(root.textContent).toContain('Vertretung Test');
+    expect(root.textContent).toContain('1 notarielle Freigabe');
+  });
+
+  it('retries an unavailable BFF load without changing workspace scope', async () => {
+    const loadWorkspace = jest.fn()
+      .mockRejectedValueOnce(new Error('NAC_BFF_UNAVAILABLE'))
+      .mockResolvedValueOnce(workspace);
+    await renderAndFlush(loadWorkspace);
+
+    const retryButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
+      .find(button => button.textContent === 'Erneut laden');
+    expect(retryButton).toBeDefined();
+
+    await act(async () => {
+      retryButton?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushPromises();
+
+    expect(loadWorkspace).toHaveBeenCalledTimes(2);
+    expect(root.textContent).toContain(workspace.matter.displayName);
+    expect(root.textContent).not.toContain('Vorgangsdaten sind derzeit nicht verfügbar.');
+  });
+
   it('keeps matter hidden and fails closed when BPMN rendering times out', async () => {
     jest.useFakeTimers();
     importXml.mockReturnValue(new Promise<void>(() => undefined));
@@ -661,6 +900,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
             userDisplayName="Test User"
             hostName="SharePoint"
             isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
             loadWorkspace={loadWorkspace}
           />,
           root
@@ -691,6 +931,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
           userDisplayName="Test User"
           hostName="SharePoint"
           isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
           loadWorkspace={loadWorkspace}
         />,
         root
@@ -731,6 +972,7 @@ describe('NaC BPMN viewer runtime boundary', () => {
           userDisplayName="Test User"
           hostName="Microsoft Teams"
           isDarkTheme={false}
+          evaluationTimestamp="2026-08-25T16:00:00Z"
           loadWorkspace={loadWorkspace}
         />,
         root

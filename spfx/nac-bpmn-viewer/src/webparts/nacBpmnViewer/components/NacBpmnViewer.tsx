@@ -7,6 +7,13 @@ import {
   NacBffWorkspace
 } from '../services/NacBffClient';
 import { nacBpmnViewerStyles as styles, nacBpmnViewerStyleSheet } from './NacBpmnViewer.styles';
+import {
+  classifyDeadline,
+  filterTasks,
+  getAccessModeLabel,
+  TASK_FILTERS,
+  TaskFilter
+} from './WorkspaceViewModel';
 
 const LOAD_TIMEOUT_MS = 10_000;
 const RENDER_TIMEOUT_MS = 10_000;
@@ -17,6 +24,7 @@ export interface NacBpmnViewerProps {
   userDisplayName: string;
   hostName: string;
   isDarkTheme: boolean;
+  evaluationTimestamp: string;
   loadWorkspace: (signal: AbortSignal) => Promise<NacBffWorkspace>;
 }
 
@@ -30,7 +38,7 @@ type ViewerState =
   | {
     readonly kind: 'ready';
     readonly workspace: NacBffWorkspace;
-    readonly selectedTaskId: string;
+    readonly selectedTaskId: string | undefined;
   };
 
 interface ViewerCanvas {
@@ -42,7 +50,7 @@ interface ViewerCanvas {
 
 interface ViewerRuntime {
   readonly canvas: ViewerCanvas;
-  selectedStepCode: string;
+  selectedStepCode: string | undefined;
   failClosed: () => void;
 }
 
@@ -56,8 +64,22 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   }
   const taskDetailsId = taskDetailsIdRef.current;
   const taskDetailsHeadingId = taskDetailsId + '-heading';
+  const diagramStatusId = taskDetailsId + '-diagram-status';
   const [state, setState] = React.useState<ViewerState>({ kind: 'loading' });
+  const [taskFilter, setTaskFilter] = React.useState<TaskFilter>('all');
+  const [reloadNonce, setReloadNonce] = React.useState(0);
+  const [deadlineEvaluationTimestamp, setDeadlineEvaluationTimestamp] = React.useState(
+    props.evaluationTimestamp
+  );
   const isApprovedWorkspace = props.workspaceId === NAC_BFF_WORKSPACE_ID;
+
+  React.useEffect(() => {
+    setDeadlineEvaluationTimestamp(props.evaluationTimestamp);
+    const intervalId = window.setInterval(() => {
+      setDeadlineEvaluationTimestamp(new Date().toISOString());
+    }, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [props.evaluationTimestamp]);
 
   React.useEffect(() => {
     if (!isApprovedWorkspace) {
@@ -94,7 +116,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [isApprovedWorkspace, props.loadWorkspace]);
+  }, [isApprovedWorkspace, props.loadWorkspace, reloadNonce]);
 
   const workspace = isApprovedWorkspace && (state.kind === 'rendering' || state.kind === 'ready')
     ? state.workspace
@@ -225,29 +247,95 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       return;
     }
     try {
-      runtime.canvas.removeMarker(runtime.selectedStepCode, 'nac-selected-step');
+      clearSelectedMarker(runtime);
       runtime.canvas.addMarker(task.stepCode, 'nac-selected-step');
       runtime.selectedStepCode = task.stepCode;
       setState({ ...state, selectedTaskId: task.taskId });
     } catch {
-      runtime.failClosed();
+      failViewerRuntime(runtime ?? undefined);
     }
   }, [state]);
 
+  const changeTaskFilter = React.useCallback((nextFilter: TaskFilter): void => {
+    if (state.kind !== 'ready') {
+      return;
+    }
+    const visibleTasks = filterTasks(state.workspace.matter.tasks, nextFilter);
+    if (!visibleTasks.some(task => task.taskId === state.selectedTaskId)) {
+      if (visibleTasks[0] !== undefined) {
+        selectTask(visibleTasks[0].taskId);
+      } else {
+        const runtime = viewerRuntimeRef.current;
+        try {
+          if (runtime !== null) {
+            clearSelectedMarker(runtime);
+          }
+          setState({ ...state, selectedTaskId: undefined });
+        } catch {
+          failViewerRuntime(runtime ?? undefined);
+          return;
+        }
+      }
+    }
+    setTaskFilter(nextFilter);
+  }, [selectTask, state]);
+
+  const retry = React.useCallback((): void => {
+    setTaskFilter('all');
+    setDeadlineEvaluationTimestamp(new Date().toISOString());
+    setReloadNonce(value => value + 1);
+  }, []);
+
+  const deadlinePresentation = React.useMemo(() => {
+    if (state.kind !== 'ready') {
+      return {
+        valid: true,
+        matter: null,
+        tasks: new Map<string, ReturnType<typeof classifyDeadline>>()
+      };
+    }
+    try {
+      const tasks = new Map<string, ReturnType<typeof classifyDeadline>>();
+      for (const task of filterTasks(state.workspace.matter.tasks, taskFilter)) {
+        tasks.set(task.taskId, classifyDeadline(task.dueAt, deadlineEvaluationTimestamp));
+      }
+      return {
+        valid: true,
+        matter: classifyDeadline(
+          state.workspace.matter.deadline,
+          deadlineEvaluationTimestamp
+        ),
+        tasks
+      };
+    } catch {
+      return {
+        valid: false,
+        matter: null,
+        tasks: new Map<string, ReturnType<typeof classifyDeadline>>()
+      };
+    }
+  }, [deadlineEvaluationTimestamp, state, taskFilter]);
+
+  React.useEffect(() => {
+    if (state.kind === 'ready' && !deadlinePresentation.valid) {
+      failViewerRuntime(viewerRuntimeRef.current ?? undefined);
+    }
+  }, [deadlinePresentation.valid, state.kind]);
+
   if (!isApprovedWorkspace) {
-    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." />;
+    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." isDarkTheme={props.isDarkTheme} kind="alert" />;
   }
   if (state.kind === 'loading') {
-    return <ViewerMessage message="Vorgangsdaten werden geladen." />;
+    return <ViewerMessage message="Vorgangsdaten werden geladen." isDarkTheme={props.isDarkTheme} kind="status" />;
   }
   if (state.kind === 'accessDenied') {
-    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." />;
+    return <ViewerMessage message="Kein Zugriff auf diesen Vorgang." isDarkTheme={props.isDarkTheme} kind="alert" />;
   }
   if (state.kind === 'unavailable') {
-    return <ViewerMessage message="Vorgangsdaten sind derzeit nicht verfügbar." />;
+    return <ViewerMessage message="Vorgangsdaten sind derzeit nicht verfügbar." isDarkTheme={props.isDarkTheme} kind="alert" onRetry={retry} />;
   }
   if (state.kind === 'invalidAsset' || state.kind === 'renderFailed') {
-    return <ViewerMessage message="Prozessmodell ist derzeit nicht verfügbar." />;
+    return <ViewerMessage message="Prozessmodell ist derzeit nicht verfügbar." isDarkTheme={props.isDarkTheme} kind="alert" onRetry={retry} />;
   }
 
   const matter = state.kind === 'ready' ? state.workspace.matter : null;
@@ -257,10 +345,15 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     ? state.workspace.matter.tasks.find(task => task.taskId === state.selectedTaskId) ?? null
     : null;
   const stageLabel = currentTask?.title ?? 'Keine offene Aufgabe';
-  const accessMode = matter?.accessMode === 'deputy'
-    ? 'Vertretung (deputy)'
-    : 'Zugeordnet (assigned)';
+  const accessMode = matter === null ? '' : getAccessModeLabel(matter.accessMode);
   const deadlineLabel = matter === null ? '' : formatTimestamp(matter.deadline);
+  const visibleTasks = matter === null ? [] : filterTasks(matter.tasks, taskFilter);
+  const notaryApprovalCount = matter?.tasks.filter(task => task.requiresNotaryApproval).length ?? 0;
+  if (!deadlinePresentation.valid) {
+    return <ViewerMessage message="Prozessmodell ist derzeit nicht verfügbar." isDarkTheme={props.isDarkTheme} kind="alert" onRetry={retry} />;
+  }
+  const deadlineState = deadlinePresentation.matter;
+  const taskDeadlineStates = deadlinePresentation.tasks;
 
   return (
     <main className={styles.workspace + (props.isDarkTheme ? ' ' + styles.dark : '')} data-nac-component="test-workspace">
@@ -282,9 +375,20 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       {matter !== null && (
         <section className={styles.summary} aria-label="Vorgangsstatus">
           <div><span>Aktueller Schritt</span><strong>{stageLabel}</strong></div>
-          <div><span>Nächste Frist</span><strong>{deadlineLabel}</strong></div>
+          <div>
+            <span>Nächste Frist</span>
+            <strong>{deadlineLabel}</strong>
+            {deadlineState !== null && (
+              <span className={deadlineClassName(deadlineState.kind)}>{deadlineState.label}</span>
+            )}
+            <small>Stand: {formatTimestamp(deadlineEvaluationTimestamp)}</small>
+          </div>
           <div><span>Zugriffsmodus</span><strong>{accessMode}</strong></div>
-          <div><span>Angemeldet</span><strong>{props.userDisplayName}</strong></div>
+          <div>
+            <span>Rollenrahmen</span>
+            <strong>{props.userDisplayName}</strong>
+            <small>{notaryApprovalCount} notarielle Freigabe{notaryApprovalCount === 1 ? '' : 'n'}</small>
+          </div>
         </section>
       )}
 
@@ -297,11 +401,22 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
             </div>
             <span className={styles.fixtureBadge}>Synthetische Testdaten</span>
           </div>
+          <p
+            id={diagramStatusId}
+            className={styles.visuallyHidden}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            Aktueller Prozessschritt: {stageLabel}. Ausgewählte Aufgabe:{' '}
+            {selectedTask?.title ?? 'Keine ausgewählte Aufgabe'}.
+          </p>
           <div className={styles.canvasScroller}>
             <div
               className={styles.canvas}
               ref={containerRef}
+              role="img"
               aria-label="BPMN-Prozessdiagramm"
+              aria-describedby={diagramStatusId}
               data-nac-current-step={currentTask?.stepCode}
               data-nac-selected-step={selectedTask?.stepCode}
             />
@@ -315,10 +430,27 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
                 <span>Arbeitsvorrat</span>
                 <h2 id="tasks-heading">Aufgaben</h2>
               </div>
-              <strong>{matter.tasks.length}</strong>
+              <strong aria-live="polite" aria-atomic="true">{visibleTasks.length}/{matter.tasks.length}</strong>
+            </div>
+            <div className={styles.filters} role="group" aria-label="Aufgaben filtern">
+              {TASK_FILTERS.map(filter => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  aria-pressed={taskFilter === filter.id}
+                  onClick={() => changeTaskFilter(filter.id)}
+                >
+                  {filter.label}
+                </button>
+              ))}
             </div>
             <ul>
-              {matter.tasks.map(task => (
+              {visibleTasks.map(task => {
+                const taskDeadline = taskDeadlineStates.get(task.taskId);
+                if (taskDeadline === undefined) {
+                  return null;
+                }
+                return (
                 <li key={task.taskId}>
                   <button
                     type="button"
@@ -331,13 +463,27 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
                     <span className={styles.taskCopy}>
                       <strong>{task.title}</strong>
                       <span>{task.taskId} · {task.stepCode}</span>
+                      <span>{task.dueAt ? formatTimestamp(task.dueAt) : 'Ohne eigene Frist'}</span>
                     </span>
-                    <span className={styles.taskOpen}>{task.status}</span>
+                    <span className={styles.taskBadges}>
+                      <span className={styles.taskOpen}>{task.status}</span>
+                      {task.requiresNotaryApproval && <span className={styles.approvalBadge}>Notar</span>}
+                      {taskDeadline.kind !== 'none' && (
+                        <span className={deadlineClassName(taskDeadline.kind)}>{taskDeadline.label}</span>
+                      )}
+                    </span>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
-            {selectedTask !== null && (
+            {visibleTasks.length === 0 && (
+              <div className={styles.emptyState} role="status" aria-live="polite">
+                <strong>Keine passenden Aufgaben</strong>
+                <span>Wählen Sie einen anderen Filter.</span>
+              </div>
+            )}
+            {selectedTask !== null && visibleTasks.some(task => task.taskId === selectedTask.taskId) && (
               <section
                 id={taskDetailsId}
                 className={styles.taskDetails}
@@ -388,13 +534,49 @@ function isCanonicalBpmnTask(value: unknown, expectedStepCode: string): boolean 
     businessObject.$instanceOf('bpmn:Task') === true;
 }
 
-function ViewerMessage(props: { message: string }): JSX.Element {
+function ViewerMessage(props: {
+  message: string;
+  isDarkTheme: boolean;
+  kind: 'status' | 'alert';
+  onRetry?: () => void;
+}): JSX.Element {
   return (
     <>
       <style>{nacBpmnViewerStyleSheet}</style>
-      <div className={styles.error}>{props.message}</div>
+      <div className={styles.messageHost + (props.isDarkTheme ? ' ' + styles.dark : '')}>
+        <div
+          className={props.kind === 'alert' ? styles.error : styles.message}
+          role={props.kind}
+          aria-live={props.kind === 'alert' ? 'assertive' : 'polite'}
+        >
+          <span>{props.message}</span>
+          {props.onRetry !== undefined && (
+            <button type="button" onClick={props.onRetry}>Erneut laden</button>
+          )}
+        </div>
+      </div>
     </>
   );
+}
+
+function failViewerRuntime(runtime: ViewerRuntime | undefined): void {
+  if (runtime !== undefined) {
+    runtime.failClosed();
+  }
+}
+
+function clearSelectedMarker(runtime: ViewerRuntime): void {
+  if (runtime.selectedStepCode !== undefined) {
+    runtime.canvas.removeMarker(runtime.selectedStepCode, 'nac-selected-step');
+    runtime.selectedStepCode = undefined;
+  }
+}
+
+function deadlineClassName(kind: 'none' | 'overdue' | 'urgent' | 'scheduled'): string {
+  if (kind === 'overdue') return styles.deadlineState + ' ' + styles.deadlineoverdue;
+  if (kind === 'urgent') return styles.deadlineState + ' ' + styles.deadlineurgent;
+  if (kind === 'scheduled') return styles.deadlineState + ' ' + styles.deadlinescheduled;
+  return styles.deadlineState + ' ' + styles.deadlinenone;
 }
 
 function formatTimestamp(value: string): string {
