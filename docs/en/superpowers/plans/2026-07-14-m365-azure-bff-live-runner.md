@@ -127,14 +127,27 @@ only the exact bytes reverified with `O_NOFOLLOW`, `fstat`, and SHA-256 for
 every module load. Manifest-bound WASM and other non-module assets are
 reverified the same way on every read. The SPFx build invokes direct
 manifest-listed Heft entrypoints and uses neither `node_modules/.bin` nor npm
-lifecycle shims. The complete input tree created by `npm ci --ignore-scripts
---force`, including project configuration, is verified before, between, and
-after the build steps. The exactly pinned `unrs` resolver is forced through
-`NAPI_RS_FORCE_WASI=error` to use its WASI backend rather than a native addon;
+lifecycle shims. The repository input is sealed before `npm ci --ignore-scripts --force`. The
+CPU-incompatible optional `@unrs/resolver-binding-wasm32-wasi@1.12.2` package
+is then reified with a separate `npm install --no-save --ignore-scripts
+--force --cpu=wasm32` command only after its version, URL, integrity, CPU marker, and
+`unrs-resolver` optional-dependency edge have been verified in `package-lock.json`.
+The supplemental reification command requires `--force` because npm 10
+otherwise returns `EBADPLATFORM` for the lock-attested WASI package on an x64
+host; this does not alter the existing `--force` argument used by `npm ci`.
+The source seal is reverified after installation; the complete resulting input
+tree is verified before, between, and after the build steps. The exactly pinned
+`unrs` resolver is forced through `NAPI_RS_FORCE_WASI=error` to use its WASI
+backend rather than a native addon;
 Workers receive explicit sealed loader arguments pinned to the live parent.
 Only declared output directories absent from the isolated source copy may be
 read with stable `O_NOFOLLOW`/`fstat` reads, and the final `.sppkg` is
-SHA-256-bound. Synchronous, callback, promise, stream, and `openAsBlob` reads inside the
+SHA-256-bound. The sealed read-only AST gate runs before the direct Heft
+steps; the real npm 10 double-build is source- and toolchain-bound in
+`assets/docs/spfx-hermetic-build/HERMETIC-715-manifest.json`; its normalized
+78 KB SPPKG evidence artifact is byte-verified against the double-build hash.
+Synchronous,
+callback, promise, stream, and `openAsBlob` reads inside the
 manifested tree use the same `O_NOFOLLOW`/`fstat`/SHA-256 verification.
 Hash, Buffer, Object, Reflect, JSON, Map, and Set operations used by the guard
 are captured as preload primitives; external symlink or hard-link aliases are

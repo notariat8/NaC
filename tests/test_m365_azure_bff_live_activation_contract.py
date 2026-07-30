@@ -56,6 +56,35 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
+    def test_hermetic_build_evidence_source_omission_fails(self) -> None:
+        payload = self._hermetic_build_evidence()
+        payload["sourceInputs"].pop(next(iter(payload["sourceInputs"])))
+        self._write_hermetic_build_evidence(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertTrue(any("sourceInputs differ" in error for error in errors))
+
+    def test_hermetic_build_evidence_package_hash_mismatch_fails(self) -> None:
+        payload = self._hermetic_build_evidence()
+        payload["packageSha256Second"] = "0" * 64
+        self._write_hermetic_build_evidence(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn("SPFx hermetic double-build package hashes differ", errors)
+
+    def test_hermetic_build_evidence_equal_forged_hashes_fail(self) -> None:
+        payload = self._hermetic_build_evidence()
+        payload["packageSha256First"] = "0" * 64
+        payload["packageSha256Second"] = "0" * 64
+        self._write_hermetic_build_evidence(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertTrue(any("packageSha256First differs" in error for error in errors))
+        self.assertIn("SPFx hermetic build package artifact digest differs", errors)
+
     def test_portable_ast_dump_ignores_python_type_params_field(self) -> None:
         first = ast.parse("def target():\n    return 1\n").body[0]
         second = ast.parse("def target():\n    return 1\n").body[0]
@@ -988,10 +1017,32 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         )
 
     def _copy_contracts(self) -> None:
-        for relative in (validator.DOMAIN_PATH, validator.VERIFICATION_PATH):
+        for relative in (
+            validator.DOMAIN_PATH,
+            validator.VERIFICATION_PATH,
+            validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
+        ):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO_ROOT / relative, destination)
+        evidence = json.loads(
+            (REPO_ROOT / validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH).read_text(
+                encoding="utf-8"
+            )
+        )
+        package_artifact = Path(evidence["packageArtifact"])
+        package_destination = self.root / package_artifact
+        package_destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / package_artifact, package_destination)
+        for relative in evidence["sourceInputs"]:
+            source = (
+                REPO_ROOT / validator.SPFX_HERMETIC_BUILD_SOURCE_ROOT / relative
+            )
+            destination = (
+                self.root / validator.SPFX_HERMETIC_BUILD_SOURCE_ROOT / relative
+            )
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
 
     def _write_valid_sources(self) -> None:
         runner = self.root / validator.RUNNER_PATH
@@ -1057,6 +1108,18 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                 )
             else:
                 path.write_text(marker_text, encoding="utf-8")
+
+    def _hermetic_build_evidence(self) -> dict:
+        return json.loads(
+            (
+                self.root / validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH
+            ).read_text(encoding="utf-8")
+        )
+
+    def _write_hermetic_build_evidence(self, payload: dict) -> None:
+        (self.root / validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH).write_text(
+            json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+        )
 
     def _domain(self) -> dict:
         return json.loads(

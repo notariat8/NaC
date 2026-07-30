@@ -25,7 +25,7 @@ import {
 const canonicalBpmnSha256 =
   '02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0';
 const bpmnXml = readFileSync(
-  resolve(process.cwd(), '../../bpmn/immobilienkaufvertrag.bpmn'),
+  resolve(process.cwd(), 'test-fixtures/immobilienkaufvertrag.bpmn'),
   'utf8'
 );
 const noncanonicalBpmnXml = bpmnXml.replace(

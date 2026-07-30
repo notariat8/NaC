@@ -15,6 +15,15 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+_SRC_ROOT = str((REPO_ROOT / "src").resolve())
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
+
+from nac_m365_graph.node_runtime_integrity import (  # noqa: E402
+    NodeRuntimeIntegrityError,
+    build_node_runtime_manifest,
+)
+
 DOMAIN_PATH = Path("workflows/contracts/m365-azure-bff-live-activation.contract.json")
 VERIFICATION_PATH = Path(
     "workflows/verification-contracts/"
@@ -50,6 +59,17 @@ AZURE_LIVE_COMMANDS_PATH = Path("src/nac_bff/azure_live_commands.py")
 BFF_TEST_ENVIRONMENT_PATH = Path("src/nac_bff/test_environment.py")
 README_PATH = Path("workflows/contracts/README.md")
 QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
+SPFX_HERMETIC_BUILD_EVIDENCE_PATH = Path(
+    "assets/docs/spfx-hermetic-build/HERMETIC-715-manifest.json"
+)
+SPFX_HERMETIC_BUILD_SOURCE_ROOT = Path("spfx/nac-bpmn-viewer")
+SPFX_HERMETIC_BUILD_EXCLUDED_DIRECTORIES = frozenset(
+    {
+        "node_modules", ".heft", "bin", "coverage", "dist", "jest-output",
+        "lib", "lib-commonjs", "lib-dts", "lib-esm", "logs", "obj",
+        "release", "sharepoint", "solution", "temp",
+    }
+)
 
 LEADING_ISSUE = "https://github.com/notariat8/NaC/issues/632"
 PARENT_ISSUE = "https://github.com/notariat8/NaC/issues/620"
@@ -712,6 +732,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "canonical_owner_comment_body",
         "environ: Mapping[str, str] | None = None",
         "os.environ if environ is None else environ",
+        "_SPFX_READ_ONLY_BOUNDARY",
+        "SPFX_WASI_LOCK_ATTESTATION_FAILED",
+        "SPFX_WASI_PACKAGE_ATTESTATION_FAILED",
     ),
     PROVISIONER_BOOTSTRAP_PATH: (
         "nac.m365-azure-bff-provisioner-bootstrap/v1",
@@ -931,6 +954,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_prewrite_maps_second_inventory_adapter_exception",
         "test_prewrite_maps_second_inventory_failure_result",
         "test_prewrite_maps_malformed_second_inventory_result",
+        "test_local_build_uses_isolated_snapshot_and_never_mutates_repo",
+        "test_spfx_wasi_lock_rejects_non_object_entry",
+        "test_spfx_wasi_package_rejects_non_object_manifest",
     ),
     Path("tests/test_nac_bff_azure_activation_runner.py"): (
         "test_legacy_binding_lock_blocks_new_hash_namespace",
@@ -1054,7 +1080,96 @@ def validate(repo_root: Path) -> list[str]:
         _validate_cross_contract(domain, verification, errors)
     _validate_runner(repo_root / RUNNER_PATH, errors)
     _validate_source_and_test_markers(repo_root, errors)
+    _validate_spfx_hermetic_build_evidence(repo_root, errors)
     return errors
+
+
+def _validate_spfx_hermetic_build_evidence(
+    repo_root: Path, errors: list[str]
+) -> None:
+    evidence = _read_json(
+        repo_root / SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
+        "SPFx hermetic build evidence",
+        errors,
+    )
+    if not evidence:
+        return
+    expected = {
+        "schemaVersion": "nac.spfx-hermetic-build-evidence/v0.1",
+        "issue": 715,
+        "containsOnlySyntheticData": True,
+        "tenantAccess": False,
+        "nodeVersion": "v22.23.1",
+        "nodeSha256": "93956de2e59480474a7b46571da1651180b1a050cdf32641ebec4ce6e478e068",
+        "npmVersion": "10.9.8",
+        "npmRuntimeManifestSha256": "4e690448d4a6ed6ebe7990f8abae874c6f32142895f60f5711302b23e76b4c6c",
+        "wasiResolverPackage": "@unrs/resolver-binding-wasm32-wasi@1.12.2",
+        "forceFreeReificationFailure": "EBADPLATFORM",
+        "readOnlyAstGateExecuted": True,
+        "forcedWasiBuild": True,
+        "reproducible": True,
+        "packageSha256First": "ba85672073f855bf886b7052e95e2a096f26a57c1802b57be27c18086fdd619b",
+        "packageSha256Second": "ba85672073f855bf886b7052e95e2a096f26a57c1802b57be27c18086fdd619b",
+        "packageArtifact": (
+            "assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg"
+        ),
+        "visualEvidenceManifest": (
+            "assets/docs/spfx-role-deadline-cockpit/VIS-710-manifest.json"
+        ),
+    }
+    for key, value in expected.items():
+        if evidence.get(key) != value:
+            errors.append(f"SPFx hermetic build evidence {key} differs")
+    for key in (
+        "sourceManifestSha256",
+        "nodeSha256",
+        "npmRuntimeManifestSha256",
+        "packageSha256First",
+        "packageSha256Second",
+    ):
+        value = evidence.get(key)
+        if (
+            not isinstance(value, str)
+            or len(value) != 64
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            errors.append(f"SPFx hermetic build evidence {key} is not SHA-256")
+    if evidence.get("packageSha256First") != evidence.get("packageSha256Second"):
+        errors.append("SPFx hermetic double-build package hashes differ")
+    package_artifact = evidence.get("packageArtifact")
+    if not isinstance(package_artifact, str):
+        errors.append("SPFx hermetic build packageArtifact is invalid")
+    else:
+        artifact_path = repo_root / package_artifact
+        if artifact_path.is_symlink() or not artifact_path.is_file():
+            errors.append("SPFx hermetic build package artifact is unavailable")
+        else:
+            artifact_digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+            if artifact_digest != evidence.get("packageSha256First"):
+                errors.append("SPFx hermetic build package artifact digest differs")
+    source_inputs = evidence.get("sourceInputs")
+    if not isinstance(source_inputs, dict) or not source_inputs:
+        errors.append("SPFx hermetic build evidence sourceInputs must be a map")
+        return
+    try:
+        source_manifest = build_node_runtime_manifest(
+            (repo_root / SPFX_HERMETIC_BUILD_SOURCE_ROOT).resolve(),
+            excluded_top_level_directories=(
+                SPFX_HERMETIC_BUILD_EXCLUDED_DIRECTORIES
+            ),
+        )
+    except (NodeRuntimeIntegrityError, OSError):
+        errors.append("SPFx hermetic build source manifest is unavailable")
+        return
+    expected_source_inputs = {
+        item.relative_path: item.sha256 for item in source_manifest.files
+    }
+    if source_inputs != expected_source_inputs:
+        errors.append(
+            "SPFx hermetic build evidence sourceInputs differ from full tree"
+        )
+    if evidence.get("sourceManifestSha256") != source_manifest.digest:
+        errors.append("SPFx hermetic build evidence source manifest digest differs")
 
 
 def _read_json(path: Path, label: str, errors: list[str]) -> dict[str, Any]:
@@ -1330,8 +1445,9 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                     "variants_rejected"
                 ),
                 "spfx_build_dependency_digest_mode": (
-                    "post_npm_ci_full_input_tree_manifest_excluding_declared_"
-                    "fresh_generated_outputs_verified_before_between_and_after_"
+                    "post_npm_ci_plus_lock_bound_wasi_reification_full_input_tree_"
+                    "manifest_excluding_declared_fresh_generated_outputs_"
+                    "verified_before_between_and_after_"
                     "direct_heft_steps"
                 ),
                 "runtime_manifest_asset_read_mode": (
@@ -1359,6 +1475,22 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "spfx_native_resolver_mode": (
                     "exact_pinned_wasm32_wasi_with_force_wasi_and_manifest_"
                     "verified_wasm_bytes"
+                ),
+                "spfx_wasi_reification_force_reason": (
+                    "npm_10_ebadplatform_for_cpu_wasm32_optional_package_on_"
+                    "x64_after_exact_lock_attestation_only"
+                ),
+                "spfx_prebuild_gate_mode": (
+                    "sealed_sha_bound_read_only_ast_gate_before_direct_heft_steps"
+                ),
+                "spfx_hermetic_build_evidence_path": (
+                    "assets/docs/spfx-hermetic-build/HERMETIC-715-manifest.json"
+                ),
+                "spfx_hermetic_build_package_artifact_path": (
+                    "assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg"
+                ),
+                "spfx_hermetic_build_package_sha256": (
+                    "ba85672073f855bf886b7052e95e2a096f26a57c1802b57be27c18086fdd619b"
                 ),
                 "spfx_generated_output_read_mode": (
                     "fresh_isolated_clean_declared_outputs_stable_nofollow_"

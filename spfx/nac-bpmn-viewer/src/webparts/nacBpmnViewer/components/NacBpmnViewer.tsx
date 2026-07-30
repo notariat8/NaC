@@ -1,6 +1,6 @@
 import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
-import 'bpmn-js/dist/assets/diagram-js.css';
+import { diagramJsStyleSheet } from './DiagramJs.styles';
 import {
   classifyNacBffFailure,
   NAC_BFF_WORKSPACE_ID,
@@ -358,6 +358,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   return (
     <main className={styles.workspace + (props.isDarkTheme ? ' ' + styles.dark : '')} data-nac-component="test-workspace">
       <style>{nacBpmnViewerStyleSheet}</style>
+      <style>{diagramJsStyleSheet}</style>
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>NaC Testnotariat</span>

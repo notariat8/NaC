@@ -11,7 +11,9 @@ from unittest.mock import patch
 
 import scripts.validate_m365_sharepoint_bpmn_viewer_adapter as adapter_validator
 from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import (
+    _validate_bpmn_test_fixture,
     _validate_contract,
+    _validate_diagram_js_styles,
     _validate_spfx_ast_gate,
     _validate_visual_evidence_manifest,
 )
@@ -241,6 +243,37 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_spfx_build_is_bound_to_the_typescript_ast_validator(self) -> None:
         self.assertEqual(_validate_spfx_ast_gate(), [])
+
+    def test_bpmn_test_fixture_is_hermetic_and_canonical(self) -> None:
+        self.assertEqual(_validate_bpmn_test_fixture(), [])
+        self.assertEqual(
+            adapter_validator.SPFX_BPMN_TEST_FIXTURE.read_bytes(),
+            adapter_validator.CANONICAL_BPMN.read_bytes(),
+        )
+        client_test = (
+            REPO_ROOT
+            / "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
+        ).read_text(encoding="utf-8")
+        self.assertIn("test-fixtures/immobilienkaufvertrag.bpmn", client_test)
+        self.assertNotIn("../../bpmn/immobilienkaufvertrag.bpmn", client_test)
+
+    def test_bpmn_test_fixture_rejects_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "canonical.bpmn"
+            target.write_bytes(adapter_validator.CANONICAL_BPMN.read_bytes())
+            fixture = Path(temp_dir) / "fixture.bpmn"
+            fixture.symlink_to(target)
+            with patch.object(
+                adapter_validator, "SPFX_BPMN_TEST_FIXTURE", fixture
+            ):
+                errors = _validate_bpmn_test_fixture()
+
+        self.assertEqual(
+            errors, ["SPFx BPMN test fixture must not be a symlink"]
+        )
+
+    def test_diagram_js_styles_are_static_and_hash_bound(self) -> None:
+        self.assertEqual(_validate_diagram_js_styles(), [])
 
     def test_visual_evidence_manifest_is_bound_to_sources_and_screenshots(self) -> None:
         self.assertEqual(_validate_visual_evidence_manifest(), [])

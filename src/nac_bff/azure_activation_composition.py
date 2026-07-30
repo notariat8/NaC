@@ -136,6 +136,26 @@ _DEPLOYMENT_RECONCILIATION_ATTEMPTS = 5
 _DEPLOYMENT_RECONCILIATION_DELAY_SECONDS = 2.0
 _FUNCTION_BUILD = Path("deploy/runtime/azure/nac-bff/build_package.py")
 _SPFX_ROOT = Path("spfx/nac-bpmn-viewer")
+_SPFX_READ_ONLY_BOUNDARY = Path("scripts/validate-read-only-boundary.cjs")
+_SPFX_WASI_RESOLVER_PACKAGE_NAME = "@unrs/resolver-binding-wasm32-wasi"
+_SPFX_WASI_RESOLVER_VERSION = "1.12.2"
+_SPFX_WASI_RESOLVER_PACKAGE = (
+    f"{_SPFX_WASI_RESOLVER_PACKAGE_NAME}@{_SPFX_WASI_RESOLVER_VERSION}"
+)
+_SPFX_WASI_RESOLVER_RESOLVED = (
+    "https://registry.npmjs.org/@unrs/resolver-binding-wasm32-wasi/"
+    "-/resolver-binding-wasm32-wasi-1.12.2.tgz"
+)
+_SPFX_WASI_RESOLVER_INTEGRITY = (
+    "sha512-tYFDIkMxSflfEc/h92ZWNsZlHSwgimbNHSO3PL2JWQHfCuC2q316jMy"
+    "YU9TIWZsFK2bQwyK5VAdYgn8ygPj69A=="
+)
+_SPFX_WASI_RESOLVER_FILES = frozenset(
+    {
+        "node_modules/@unrs/resolver-binding-wasm32-wasi/package.json",
+        "node_modules/@unrs/resolver-binding-wasm32-wasi/resolver.wasm32-wasi.wasm",
+    }
+)
 _SPFX_BUILD_OUTPUT_DIRECTORIES = frozenset(
     {
         ".heft",
@@ -516,7 +536,7 @@ class LocalBuildAdapter:
                     *_SPFX_BUILD_OUTPUT_DIRECTORIES,
                 ),
             )
-            build_node_runtime_manifest(
+            source_manifest = build_node_runtime_manifest(
                 build_root,
                 excluded_top_level_directories=frozenset(
                     {"node_modules", *_SPFX_BUILD_OUTPUT_DIRECTORIES}
@@ -524,6 +544,7 @@ class LocalBuildAdapter:
             )
         except OSError:
             raise ActivationStepError("SPFX_ISOLATED_BUILD_COPY_FAILED") from None
+        self._validate_spfx_wasi_lock(build_root)
         self._run(
             [str(node), str(npm_cli), "ci", "--ignore-scripts", "--force"],
             cwd=build_root,
@@ -531,6 +552,33 @@ class LocalBuildAdapter:
             attestations=((node, True, self._node_sha256),),
             node_runtime=(npm_cli.parent.parent, self._npm_cli_sha256),
         )
+        self._run(
+            [
+                str(node),
+                str(npm_cli),
+                "install",
+                "--no-save",
+                "--ignore-scripts",
+                "--force",
+                "--cpu=wasm32",
+                _SPFX_WASI_RESOLVER_PACKAGE,
+            ],
+            cwd=build_root,
+            timeout=300,
+            attestations=((node, True, self._node_sha256),),
+            node_runtime=(npm_cli.parent.parent, self._npm_cli_sha256),
+        )
+        try:
+            verify_node_runtime_manifest(
+                build_root,
+                expected_digest=source_manifest.digest,
+                excluded_top_level_directories=frozenset(
+                    {"node_modules", *_SPFX_BUILD_OUTPUT_DIRECTORIES}
+                ),
+            )
+        except NodeRuntimeIntegrityError:
+            raise ActivationStepError("SPFX_SOURCE_ATTESTATION_FAILED") from None
+        self._validate_spfx_wasi_package(build_root)
         dependencies_root = build_root / "node_modules"
         heft_entry = dependencies_root / "@rushstack/heft/bin/heft"
         try:
@@ -544,6 +592,19 @@ class LocalBuildAdapter:
             item.relative_path for item in dependencies.files
         }:
             raise ActivationStepError("SPFX_DEPENDENCY_ATTESTATION_FAILED")
+        dependency_files = {item.relative_path for item in dependencies.files}
+        if not _SPFX_WASI_RESOLVER_FILES.issubset(dependency_files):
+            raise ActivationStepError("SPFX_DEPENDENCY_ATTESTATION_FAILED")
+        self._verify_spfx_dependencies(build_root, dependencies.digest)
+        self._run(
+            [str(node), str(build_root / _SPFX_READ_ONLY_BOUNDARY)],
+            cwd=build_root,
+            timeout=300,
+            attestations=((node, True, self._node_sha256),),
+            node_runtime=(build_root, dependencies.digest),
+            node_runtime_excluded_directories=_SPFX_BUILD_OUTPUT_DIRECTORIES,
+        )
+        self._verify_spfx_dependencies(build_root, dependencies.digest)
         build_commands = (
             ("test", "--clean", "--production"),
             ("package-solution", "--production"),
@@ -565,6 +626,60 @@ class LocalBuildAdapter:
         package = build_root / PACKAGE_RELATIVE_PATH.relative_to(_SPFX_ROOT)
         _normalize_zip_archive(package)
         return _sha256_file(package), package
+
+    @staticmethod
+    def _validate_spfx_wasi_lock(root: Path) -> None:
+        try:
+            lock = json.loads((root / "package-lock.json").read_text(encoding="utf-8"))
+            packages = lock["packages"]
+            entry = packages[
+                "node_modules/@unrs/resolver-binding-wasm32-wasi"
+            ]
+            resolver = packages["node_modules/unrs-resolver"]
+        except (OSError, KeyError, TypeError, json.JSONDecodeError):
+            raise ActivationStepError("SPFX_WASI_LOCK_ATTESTATION_FAILED") from None
+        if not isinstance(entry, dict) or not isinstance(resolver, dict):
+            raise ActivationStepError("SPFX_WASI_LOCK_ATTESTATION_FAILED")
+        expected = {
+            "version": _SPFX_WASI_RESOLVER_VERSION,
+            "resolved": _SPFX_WASI_RESOLVER_RESOLVED,
+            "integrity": _SPFX_WASI_RESOLVER_INTEGRITY,
+            "cpu": ["wasm32"],
+            "optional": True,
+        }
+        if any(entry.get(key) != value for key, value in expected.items()):
+            raise ActivationStepError("SPFX_WASI_LOCK_ATTESTATION_FAILED")
+        optional_dependencies = resolver.get("optionalDependencies")
+        if (
+            not isinstance(optional_dependencies, dict)
+            or optional_dependencies.get(_SPFX_WASI_RESOLVER_PACKAGE_NAME)
+            != _SPFX_WASI_RESOLVER_VERSION
+        ):
+            raise ActivationStepError("SPFX_WASI_LOCK_ATTESTATION_FAILED")
+
+    @staticmethod
+    def _validate_spfx_wasi_package(root: Path) -> None:
+        package_root = (
+            root / "node_modules" / "@unrs" / "resolver-binding-wasm32-wasi"
+        )
+        if package_root.is_symlink() or not package_root.is_dir():
+            raise ActivationStepError("SPFX_WASI_PACKAGE_ATTESTATION_FAILED")
+        try:
+            package = json.loads(
+                (package_root / "package.json").read_text(encoding="utf-8")
+            )
+        except (OSError, TypeError, json.JSONDecodeError):
+            raise ActivationStepError("SPFX_WASI_PACKAGE_ATTESTATION_FAILED") from None
+        if not isinstance(package, dict):
+            raise ActivationStepError("SPFX_WASI_PACKAGE_ATTESTATION_FAILED")
+        wasm = package_root / "resolver.wasm32-wasi.wasm"
+        if (
+            package.get("name") != _SPFX_WASI_RESOLVER_PACKAGE_NAME
+            or package.get("version") != _SPFX_WASI_RESOLVER_VERSION
+            or wasm.is_symlink()
+            or not wasm.is_file()
+        ):
+            raise ActivationStepError("SPFX_WASI_PACKAGE_ATTESTATION_FAILED")
 
     @staticmethod
     def _verify_spfx_dependencies(root: Path, expected_digest: str) -> None:
@@ -817,6 +932,7 @@ def _normalize_zip_archive(path: Path) -> None:
                     or name != expected_name
                     or canonical in seen
                     or unix_mode == stat.S_IFLNK
+                    or (not info.is_dir() and pure.suffix.lower() == ".bpmn")
                     or info.flag_bits & 0x1
                 ):
                     raise ActivationStepError("SPFX_PACKAGE_ARCHIVE_INVALID")
