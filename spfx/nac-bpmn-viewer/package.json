@@ -6,11 +6,14 @@
     "node": ">=22.14.0 < 23.0.0"
   },
   "scripts": {
-    "build": "npm run validate:current-step && heft test --clean --production && heft package-solution --production",
+    "build": "npm run validate:current-step && npm run validate:read-only && npm run visual:fixture -- /tmp/nac-spfx-role-deadline-cockpit.html && heft test --clean --production && heft package-solution --production",
     "clean": "heft clean",
     "eject-webpack": "heft eject-webpack",
     "start": "heft start --clean",
-    "validate:current-step": "node scripts/validate-current-step-contract.cjs"
+    "validate:current-step": "node scripts/validate-current-step-contract.cjs",
+    "visual:fixture": "node scripts/generate-role-deadline-visual-fixture.cjs",
+    "visual:capture": "node scripts/capture-role-deadline-visual-evidence.cjs",
+    "validate:read-only": "node scripts/validate-read-only-boundary.cjs"
   },
   "dependencies": {
     "@fluentui/react": "^8.106.4",
@@ -41,6 +44,7 @@
     "css-loader": "~7.1.2",
     "eslint": "9.37.0",
     "eslint-plugin-react-hooks": "5.2.0",
+    "playwright": "1.55.0",
     "typescript": "~5.8.0"
   },
   "overrides": {

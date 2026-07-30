@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -36,8 +37,108 @@ DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "m365-sharepoint-bpmn-view
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "m365-sharepoint-bpmn-viewer-adapter.md"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
 SPFX_PACKAGE_JSON = REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "package.json"
+SPFX_SOURCE_ROOT = REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "src"
 CURRENT_STEP_AST_VALIDATOR = (
     REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "validate-current-step-contract.cjs"
+)
+READ_ONLY_AST_VALIDATOR = (
+    REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "validate-read-only-boundary.cjs"
+)
+VISUAL_FIXTURE_GENERATOR = (
+    REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "generate-role-deadline-visual-fixture.cjs"
+)
+VISUAL_EVIDENCE_CAPTURE = (
+    REPO_ROOT / "spfx" / "nac-bpmn-viewer" / "scripts" / "capture-role-deadline-visual-evidence.cjs"
+)
+VISUAL_EVIDENCE_ROOT = REPO_ROOT / "assets" / "docs" / "spfx-role-deadline-cockpit"
+VISUAL_EVIDENCE_MANIFEST = VISUAL_EVIDENCE_ROOT / "VIS-710-manifest.json"
+VISUAL_SOURCE_PATHS = (
+    "bpmn/immobilienkaufvertrag.bpmn",
+    "spfx/nac-bpmn-viewer/package.json",
+    "spfx/nac-bpmn-viewer/package-lock.json",
+    "spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs",
+    "spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts",
+)
+VISUAL_EVIDENCE_CASES = {
+    "VIS-710-01": {
+        "file": "VIS-710-01-desktop-light.png",
+        "viewport": {"width": 1440, "height": 1000},
+        "containerWidth": None,
+        "query": "?selected=deadline",
+        "dark": False,
+        "filter": "all",
+        "current": ["Task_EntwurfAbstimmen"],
+        "selected": ["Task_NachweiseNachhalten"],
+        "selectedTasks": ["NAC-SYN-DEADLINE-001"],
+        "detailTitle": "Abschlussfrist überwachen",
+    },
+    "VIS-710-02": {
+        "file": "VIS-710-02-narrow-light.png",
+        "viewport": {"width": 390, "height": 844},
+        "containerWidth": None,
+        "query": "?filter=deadline",
+        "dark": False,
+        "filter": "deadline",
+        "current": ["Task_EntwurfAbstimmen"],
+        "selected": ["Task_NachweiseNachhalten"],
+        "selectedTasks": ["NAC-SYN-DEADLINE-001"],
+        "detailTitle": "Abschlussfrist überwachen",
+    },
+    "VIS-710-03": {
+        "file": "VIS-710-03-desktop-dark.png",
+        "viewport": {"width": 1440, "height": 1000},
+        "containerWidth": None,
+        "query": "?theme=dark&filter=notary",
+        "dark": True,
+        "filter": "notary",
+        "current": ["Task_EntwurfAbstimmen"],
+        "selected": ["Task_EntwurfAbstimmen"],
+        "selectedTasks": ["NAC-SYN-TASK-001"],
+        "detailTitle": "Entwurf prüfen",
+    },
+    "VIS-710-04": {
+        "file": "VIS-710-04-narrow-dark-empty.png",
+        "viewport": {"width": 390, "height": 844},
+        "containerWidth": None,
+        "query": "?theme=dark&state=empty",
+        "dark": True,
+        "filter": "notary",
+        "current": ["Task_EntwurfAbstimmen"],
+        "selected": [],
+        "selectedTasks": [],
+        "detailTitle": None,
+    },
+    "VIS-710-05": {
+        "file": "VIS-710-05-error-retry.png",
+        "viewport": {"width": 390, "height": 320},
+        "containerWidth": None,
+        "query": "?state=error",
+        "dark": False,
+        "filter": None,
+        "current": [],
+        "selected": [],
+        "selectedTasks": [],
+        "detailTitle": None,
+    },
+    "VIS-710-06": {
+        "file": "VIS-710-06-narrow-container-light.png",
+        "viewport": {"width": 1440, "height": 1000},
+        "containerWidth": 390,
+        "query": "?selected=deadline",
+        "dark": False,
+        "filter": "all",
+        "current": ["Task_EntwurfAbstimmen"],
+        "selected": ["Task_NachweiseNachhalten"],
+        "selectedTasks": ["NAC-SYN-DEADLINE-001"],
+        "detailTitle": "Abschlussfrist überwachen",
+    },
+}
+VISUAL_EMBEDDED_ASSETS = (
+    "spfx/nac-bpmn-viewer/node_modules/bpmn-js/dist/assets/diagram-js.css",
+    "spfx/nac-bpmn-viewer/node_modules/bpmn-js/dist/bpmn-viewer.production.min.js",
 )
 GENERATED_PATHS = {
     "node_modules",
@@ -102,6 +203,8 @@ def validate() -> list[str]:
     errors.extend(_validate_docs())
     errors.extend(_validate_quality_gate())
     errors.extend(_validate_spfx_ast_gate())
+    errors.extend(_validate_spfx_source_boundary())
+    errors.extend(_validate_visual_evidence_manifest())
     return errors
 
 
@@ -553,13 +656,243 @@ def _validate_spfx_ast_gate() -> list[str]:
             validator_command = "node scripts/validate-current-step-contract.cjs"
             if scripts.get("validate:current-step") != validator_command:
                 errors.append("SPFx validate:current-step script must invoke the canonical AST validator")
+            read_only_command = "node scripts/validate-read-only-boundary.cjs"
+            if scripts.get("validate:read-only") != read_only_command:
+                errors.append("SPFx validate:read-only script must invoke the read-only AST validator")
+            visual_command = "node scripts/generate-role-deadline-visual-fixture.cjs"
+            if scripts.get("visual:fixture") != visual_command:
+                errors.append("SPFx visual:fixture script must invoke the canonical synthetic generator")
+            capture_command = "node scripts/capture-role-deadline-visual-evidence.cjs"
+            if scripts.get("visual:capture") != capture_command:
+                errors.append("SPFx visual:capture script must invoke the canonical evidence harness")
             build = scripts.get("build")
             if not isinstance(build, str) or not build.startswith("npm run validate:current-step && "):
                 errors.append("SPFx build must run validate:current-step first")
+            elif "npm run validate:read-only && " not in build:
+                errors.append("SPFx build must run validate:read-only")
+            elif "npm run visual:fixture -- /tmp/nac-spfx-role-deadline-cockpit.html" not in build:
+                errors.append("SPFx build must generate the synthetic visual fixture")
     if not CURRENT_STEP_AST_VALIDATOR.is_file():
         errors.append(
             f"missing AST validator: {CURRENT_STEP_AST_VALIDATOR.relative_to(REPO_ROOT)}"
         )
+    if not READ_ONLY_AST_VALIDATOR.is_file():
+        errors.append(
+            f"missing read-only AST validator: {READ_ONLY_AST_VALIDATOR.relative_to(REPO_ROOT)}"
+        )
+    if not VISUAL_FIXTURE_GENERATOR.is_file():
+        errors.append(
+            f"missing visual fixture generator: {VISUAL_FIXTURE_GENERATOR.relative_to(REPO_ROOT)}"
+        )
+    if not VISUAL_EVIDENCE_CAPTURE.is_file():
+        errors.append(
+            f"missing visual evidence capture: {VISUAL_EVIDENCE_CAPTURE.relative_to(REPO_ROOT)}"
+        )
+    return errors
+
+
+def _validate_spfx_source_boundary() -> list[str]:
+    errors: list[str] = []
+    forbidden = {
+        "fetch(": "direct fetch",
+        "XMLHttpRequest": "XMLHttpRequest",
+        "/_api/": "legacy SharePoint REST",
+        "graph.microsoft.com": "direct Microsoft Graph",
+        "MSGraphClient": "Graph SDK client",
+        "@pnp/": "PnP client",
+        "bpmn-js/lib/Modeler": "BPMN modeler",
+        "saveXML": "BPMN write",
+        ".post(": "HTTP POST",
+        ".put(": "HTTP PUT",
+        ".patch(": "HTTP PATCH",
+        ".delete(": "HTTP DELETE",
+    }
+    for path in sorted(SPFX_SOURCE_ROOT.rglob("*")):
+        if not path.is_file() or path.suffix not in {".ts", ".tsx"}:
+            continue
+        source = path.read_text(encoding="utf-8")
+        compact = "".join(source.split())
+        for marker, label in forbidden.items():
+            candidate = "".join(marker.split())
+            if candidate in compact:
+                errors.append(
+                    f"{path.relative_to(REPO_ROOT)} contains forbidden {label} boundary"
+                )
+    return errors
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_visual_evidence_manifest() -> list[str]:
+    errors: list[str] = []
+    manifest = _read_json(VISUAL_EVIDENCE_MANIFEST, errors)
+    if not manifest:
+        return errors
+
+    expected_header = {
+        "schemaVersion": "nac.spfx-role-deadline-visual-evidence/v0.2",
+        "evaluationTimestamp": "2026-08-25T16:00:00Z",
+        "containsOnlySyntheticData": True,
+        "tenantAccess": False,
+        "componentE2e": False,
+        "evidenceKind": "offline_visual_contract",
+    }
+    for key, value in expected_header.items():
+        if manifest.get(key) != value:
+            errors.append(f"visual evidence {key} must be {value!r}")
+    browser = manifest.get("browser")
+    if not isinstance(browser, str) or not browser.startswith("Chromium "):
+        errors.append("visual evidence browser must identify Chromium")
+    if manifest.get("playwrightVersion") != "1.55.0":
+        errors.append("visual evidence playwrightVersion must be 1.55.0")
+    node_version = manifest.get("nodeVersion")
+    if not isinstance(node_version, str) or not node_version.startswith("v22."):
+        errors.append("visual evidence nodeVersion must identify pinned Node 22")
+
+    embedded_assets = manifest.get("embeddedAssets")
+    embedded_by_path: dict[str, Any] = {}
+    if not isinstance(embedded_assets, list):
+        errors.append("visual evidence embeddedAssets must be a list")
+    else:
+        for item in embedded_assets:
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                errors.append("visual evidence embeddedAssets entries must have paths")
+                continue
+            embedded_by_path[item["path"]] = item
+    if set(embedded_by_path) != set(VISUAL_EMBEDDED_ASSETS):
+        errors.append("visual evidence embeddedAssets must match canonical bpmn-js inputs")
+    for relative_path in VISUAL_EMBEDDED_ASSETS:
+        item = embedded_by_path.get(relative_path)
+        digest = item.get("sha256") if isinstance(item, dict) else None
+        if not isinstance(digest, str) or len(digest) != 64:
+            errors.append(f"visual evidence embedded asset hash is invalid: {relative_path}")
+        installed = REPO_ROOT / relative_path
+        if installed.is_file() and digest != _sha256(installed):
+            errors.append(f"visual evidence embedded asset hash mismatch: {relative_path}")
+
+    source_inputs = manifest.get("sourceInputs")
+    source_by_path: dict[str, Any] = {}
+    if not isinstance(source_inputs, list):
+        errors.append("visual evidence sourceInputs must be a list")
+    else:
+        for item in source_inputs:
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                errors.append("visual evidence sourceInputs entries must be objects with paths")
+                continue
+            source_path = item["path"]
+            if source_path in source_by_path:
+                errors.append(f"visual evidence sourceInputs duplicates {source_path}")
+            source_by_path[source_path] = item
+
+    if set(source_by_path) != set(VISUAL_SOURCE_PATHS):
+        errors.append("visual evidence sourceInputs must match the canonical source set")
+    source_lines: list[str] = []
+    for relative_path in VISUAL_SOURCE_PATHS:
+        source_path = REPO_ROOT / relative_path
+        item = source_by_path.get(relative_path)
+        if not source_path.is_file():
+            errors.append(f"visual evidence source is missing: {relative_path}")
+            continue
+        actual = _sha256(source_path)
+        if not isinstance(item, dict) or item.get("sha256") != actual:
+            errors.append(f"visual evidence source hash mismatch: {relative_path}")
+        source_lines.append(f"{relative_path}:{actual}")
+    aggregate = hashlib.sha256("\n".join(source_lines).encode("utf-8")).hexdigest()
+    if manifest.get("aggregateSourceSha256") != aggregate:
+        errors.append("visual evidence aggregateSourceSha256 does not match current sources")
+
+    evidence = manifest.get("evidence")
+    evidence_by_id: dict[str, Any] = {}
+    if not isinstance(evidence, list):
+        errors.append("visual evidence evidence must be a list")
+    else:
+        for item in evidence:
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                errors.append("visual evidence entries must be objects with ids")
+                continue
+            evidence_id = item["id"]
+            if evidence_id in evidence_by_id:
+                errors.append(f"visual evidence duplicates {evidence_id}")
+            evidence_by_id[evidence_id] = item
+    if set(evidence_by_id) != set(VISUAL_EVIDENCE_CASES):
+        errors.append("visual evidence IDs must match VIS-710-01 through VIS-710-06")
+
+    for evidence_id, expected_case in VISUAL_EVIDENCE_CASES.items():
+        item = evidence_by_id.get(evidence_id)
+        if not isinstance(item, dict):
+            continue
+        filename = expected_case["file"]
+        if item.get("file") != filename:
+            errors.append(f"{evidence_id} must use canonical filename {filename}")
+        for field in ("viewport", "containerWidth", "query"):
+            if item.get(field) != expected_case[field]:
+                errors.append(f"{evidence_id}.{field} does not match the evidence matrix")
+        screenshot = VISUAL_EVIDENCE_ROOT / filename
+        if not screenshot.is_file():
+            errors.append(f"missing visual evidence screenshot: {filename}")
+        elif item.get("sha256") != _sha256(screenshot):
+            errors.append(f"visual evidence screenshot hash mismatch: {filename}")
+        if item.get("elementCrop") is not True:
+            errors.append(f"{evidence_id} must declare elementCrop=true")
+        checks = item.get("checks")
+        if not isinstance(checks, dict):
+            errors.append(f"{evidence_id}.checks must be an object")
+            continue
+        if (
+            checks.get("documentOverflow") is not False
+            or checks.get("containerOverflow") is not False
+            or checks.get("containerOverflowElements") != []
+            or checks.get("clippedText") != []
+        ):
+            errors.append(f"{evidence_id} must prove no document, container, or text overflow")
+        exact_checks = {
+            "dark": expected_case["dark"],
+            "activeFilter": expected_case["filter"],
+            "currentStepCodes": expected_case["current"],
+            "selectedStepCodes": expected_case["selected"],
+            "selectedTaskIds": expected_case["selectedTasks"],
+            "detailTitle": expected_case["detailTitle"],
+        }
+        for field, expected in exact_checks.items():
+            if checks.get(field) != expected:
+                errors.append(f"{evidence_id}.checks.{field} does not match the evidence matrix")
+        if checks.get("forbiddenTextMatches") != []:
+            errors.append(f"{evidence_id} contains forbidden non-synthetic text markers")
+        if evidence_id == "VIS-710-05":
+            if checks.get("retryButtons") != 1 or item.get("recoveryVerified") is not True:
+                errors.append("VIS-710-05 must prove exactly one functional retry")
+            if checks.get("syntheticMarkers") != {"fixture": False, "noMatterData": False}:
+                errors.append("VIS-710-05 must not infer visible markers from embedded scripts")
+        else:
+            synthetic = checks.get("syntheticMarkers")
+            if synthetic != {"fixture": True, "noMatterData": True}:
+                errors.append(f"{evidence_id} must prove the synthetic-data markers")
+            if checks.get("svgElements", 0) < 1 or checks.get("currentStepCodes") != ["Task_EntwurfAbstimmen"]:
+                errors.append(f"{evidence_id} must prove the canonical BPMN current step")
+            selection = expected_case["detailTitle"] or "Keine ausgewählte Aufgabe"
+            expected_status = (
+                "Aktueller Prozessschritt: Entwurf prüfen. Ausgewählte Aufgabe: "
+                f"{selection}."
+            )
+            if checks.get("diagramStatus") != expected_status:
+                errors.append(f"{evidence_id} diagramStatus is not selection-consistent")
+        if evidence_id == "VIS-710-01" and expected_case["current"] == expected_case["selected"]:
+            errors.append("VIS-710-01 must prove distinct Current and Selected steps")
+        if evidence_id == "VIS-710-04" and item.get("recoveryVerified") is not True:
+            errors.append("VIS-710-04 must prove empty-state recovery")
+        if evidence_id == "VIS-710-06":
+            if expected_case["viewport"]["width"] <= 760:
+                errors.append("VIS-710-06 must prove a narrow container in a wide viewport")
+            if checks.get("maximumTextLayoutVerified") is not True:
+                errors.append("VIS-710-06 must prove bounded maximum-length text layout")
+        elif checks.get("maximumTextLayoutVerified") is not False:
+            errors.append(f"{evidence_id} must not claim the maximum-text layout check")
     return errors
 
 

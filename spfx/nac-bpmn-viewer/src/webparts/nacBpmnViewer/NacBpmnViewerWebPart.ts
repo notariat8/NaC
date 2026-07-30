@@ -12,6 +12,7 @@ export interface NacBpmnViewerWebPartProps {
 
 export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnViewerWebPartProps> {
   private isDarkTheme = false;
+  private readonly evaluationTimestamp = new Date().toISOString();
 
   public render(): void {
     const element = React.createElement<NacBpmnViewerProps>(NacBpmnViewer, {
@@ -19,6 +20,7 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
       userDisplayName: this.context.pageContext.user.displayName,
       hostName: this.context.sdks.microsoftTeams ? 'Microsoft Teams' : 'SharePoint',
       isDarkTheme: this.isDarkTheme,
+      evaluationTimestamp: this.evaluationTimestamp,
       loadWorkspace: (signal: AbortSignal) => loadNacBffWorkspace(this.context.aadHttpClientFactory, signal)
     });
 

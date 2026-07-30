@@ -9,7 +9,12 @@ const root = path.resolve(__dirname, '..');
 const paths = {
   viewer: path.join(root, 'src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx'),
   tests: path.join(root, 'src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx'),
-  styles: path.join(root, 'src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts')
+  styles: path.join(root, 'src/webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts'),
+  viewModel: path.join(root, 'src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts'),
+  viewModelTests: path.join(
+    root,
+    'src/webparts/nacBpmnViewer/components/WorkspaceViewModel.test.ts'
+  )
 };
 const TITLES = {
   current: 'marks the canonical current BPMN task before showing ready metadata',
@@ -70,12 +75,17 @@ const EXPECTED_SELF_TEST_NAMES = new Set([
   'conditional-throw-before-test',
   'skipped-instance-id-test',
   'details-id-binding',
-  'keyboard-test-click'
+  'keyboard-test-click',
+  'filter-button-type',
+  'implicit-deadline-clock',
+  'role-label-drift'
 ]);
-const MINIMUM_SELF_TEST_COUNT = 40;
+const MINIMUM_SELF_TEST_COUNT = 43;
 const executedSelfTestNames = new Set();
 const EXPECTED_TEST_SOURCE_SHA256 =
-  '8fd6fedf219e3f245073120f034b285f9b3c8d09b49ac8f5bd7fd8f40b11999f';
+  '87a57a86636903f3c73cdec26b9e5ddf4e1ce873cdb77728f5b95faaf7ebf3f6';
+const EXPECTED_VIEW_MODEL_TEST_SOURCE_SHA256 =
+  'fa1950dbe8e62cc2fd0f68b258fe2f99a300ea5d865fa5ae102311e77abca3a0';
 
 const CURRENT_STEP_SELECTOR =
   '.nacBpmnViewer__workspace .djs-element.nac-current-step .djs-visual > :first-child';
@@ -394,7 +404,7 @@ const EXPECTED_TASK_HELPER =
   "bpmnType==='bpmn:UserTask')}};}";
 
 const EXPECTED_SUITE_HELPERS = new Set([
-  `asyncfunctionrenderAndFlush(loadWorkspace:(signal:AbortSignal)=>Promise<NacBffWorkspace>):Promise<void>{awaitact(async()=>{ReactDom.render(<NacBpmnViewerworkspaceId="notary_team_01"userDisplayName="TestUser"hostName="MicrosoftTeams"isDarkTheme={false}loadWorkspace={loadWorkspace}/>,root);awaitPromise.resolve();awaitPromise.resolve();});awaitflushPromises();}`,
+  `asyncfunctionrenderAndFlush(loadWorkspace:(signal:AbortSignal)=>Promise<NacBffWorkspace>):Promise<void>{awaitact(async()=>{ReactDom.render(<NacBpmnViewerworkspaceId="notary_team_01"userDisplayName="TestUser"hostName="MicrosoftTeams"isDarkTheme={false}evaluationTimestamp="2026-08-25T16:00:00Z"loadWorkspace={loadWorkspace}/>,root);awaitPromise.resolve();awaitPromise.resolve();});awaitflushPromises();}`,
   `asyncfunctionflushPromises():Promise<void>{awaitact(async()=>{awaitPromise.resolve();awaitPromise.resolve();});}`
 ]);
 
@@ -698,25 +708,29 @@ function validateViewer(source) {
       }
     }
     if (ts.isJsxOpeningElement(node) && nodeText(node.tagName, sf) === 'button') {
-      taskButtonCount += 1;
       const attributes = new Map(node.attributes.properties
         .filter(property => ts.isJsxAttribute(property))
         .map(attribute => [attribute.name.text, attribute.initializer
           ? nodeText(attribute.initializer, sf) : '']));
-      const expectedAttributes = new Map([
-        ['type', '"button"'],
-        ['data-nac-task-id', '{task.taskId}'],
-        ['aria-pressed', '{task.taskId===selectedTaskId}'],
-        ['aria-controls', '{taskDetailsId}'],
-        ['onClick', '{()=>selectTask(task.taskId)}']
-      ]);
-      for (const [name, expected] of expectedAttributes) {
-        if (attributes.get(name) !== expected) {
-          errors.push(`native task button must bind ${name} exactly to ${expected}`);
+      if (attributes.has('data-nac-task-id')) {
+        taskButtonCount += 1;
+        const expectedAttributes = new Map([
+          ['type', '"button"'],
+          ['data-nac-task-id', '{task.taskId}'],
+          ['aria-pressed', '{task.taskId===selectedTaskId}'],
+          ['aria-controls', '{taskDetailsId}'],
+          ['onClick', '{()=>selectTask(task.taskId)}']
+        ]);
+        for (const [name, expected] of expectedAttributes) {
+          if (attributes.get(name) !== expected) {
+            errors.push('native task button must bind ' + name + ' exactly to ' + expected);
+          }
         }
+      } else if (attributes.get('type') !== '"button"') {
+        errors.push('non-task buttons must declare type="button"');
       }
       if (attributes.has('onKeyDown') || attributes.has('onKeyUp')) {
-        errors.push('native task button must not duplicate keyboard activation handlers');
+        errors.push('native buttons must not duplicate keyboard activation handlers');
       }
     }
     if (ts.isJsxOpeningElement(node) && nodeText(node.tagName, sf) === 'section') {
@@ -785,9 +799,7 @@ function validateViewer(source) {
     'Ausgewählte Aufgabe',
     'Status',
     'Eigene Frist',
-    'Freigabe',
-    'Zugeordnet (assigned)',
-    'Vertretung (deputy)'
+    'Freigabe'
   ]) {
     if (!stringLiterals.includes(requiredLiteral)) {
       errors.push(`viewer missing required task-navigation literal: ${requiredLiteral}`);
@@ -802,6 +814,40 @@ function validateViewer(source) {
     'Duplicate stepCode is not allowed.'
   ]) {
     if (!thrown.includes(message)) errors.push(`viewer must fail closed with ${message}`);
+  }
+  return errors;
+}
+
+function validateWorkspaceViewModel(source) {
+  const errors = [];
+  const sf = parse(source, 'WorkspaceViewModel.ts', ts.ScriptKind.TS);
+  const functions = sf.statements.filter(statement =>
+    ts.isFunctionDeclaration(statement) && statement.name
+  );
+  const functionNames = functions.map(statement => statement.name.text);
+  for (const required of [
+    'filterTasks',
+    'getDeadlineStatus',
+    'classifyDeadline',
+    'getAccessModeLabel'
+  ]) {
+    if (functionNames.filter(name => name === required).length !== 1) {
+      errors.push('workspace view model must declare exactly one ' + required);
+    }
+  }
+  const compact = source.replace(/\s+/g, '');
+  for (const literal of [
+    "'ZugeordnetesTeam(assigned)'",
+    "'AktiveVertretung(deputy)'",
+    "'NAC_DEADLINE_REFERENCE_INVALID'",
+    "'NAC_TASK_DEADLINE_INVALID'"
+  ]) {
+    if (!compact.includes(literal)) {
+      errors.push('workspace view model missing required literal: ' + literal);
+    }
+  }
+  if (compact.includes('Date.now(') || compact.includes('newDate()')) {
+    errors.push('workspace view model must use only the explicit reference timestamp');
   }
   return errors;
 }
@@ -1001,6 +1047,15 @@ function run() {
     throw new Error('test source digest does not match the canonical verification contract');
   }
   const styles = fs.readFileSync(paths.styles, 'utf8');
+  const viewModel = fs.readFileSync(paths.viewModel, 'utf8');
+  const viewModelTests = fs.readFileSync(paths.viewModelTests, 'utf8');
+  const viewModelTestSourceDigest = crypto
+    .createHash('sha256')
+    .update(viewModelTests, 'utf8')
+    .digest('hex');
+  if (viewModelTestSourceDigest !== EXPECTED_VIEW_MODEL_TEST_SOURCE_SHA256) {
+    throw new Error('view model test source digest does not match the canonical verification contract');
+  }
 
   assertRejected('regex-decoy', validateViewer, viewer, source =>
     source.replace(
@@ -1177,6 +1232,22 @@ function run() {
       "    deadlineButton.click();\n    expect(deadlineButton.tagName).toBe('BUTTON');"
     ));
 
+  assertRejected('filter-button-type', validateViewer, viewer, source =>
+    source.replace(
+      'type="button"\n                  aria-pressed={taskFilter === filter.id}',
+      'aria-pressed={taskFilter === filter.id}'
+    ));
+  assertRejected('implicit-deadline-clock', validateWorkspaceViewModel, viewModel, source =>
+    source.replace(
+      'const referenceTime = parseIsoTimestamp(referenceIso);',
+      'const referenceTime = Date.now();'
+    ));
+  assertRejected('role-label-drift', validateWorkspaceViewModel, viewModel, source =>
+    source.replace(
+      "'Aktive Vertretung (deputy)'",
+      "'Vertretung'"
+    ));
+
   if (EXPECTED_SELF_TEST_NAMES.size < MINIMUM_SELF_TEST_COUNT) {
     throw new Error('self-test registry is below the required minimum');
   }
@@ -1191,7 +1262,8 @@ function run() {
   return [
     ...validateViewer(viewer),
     ...validateTests(tests),
-    ...validateStyles(styles)
+    ...validateStyles(styles),
+    ...validateWorkspaceViewModel(viewModel)
   ];
 }
 
