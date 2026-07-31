@@ -48,6 +48,14 @@ interruption_reconciliation_acceptance_ids:
   - AC-717-06
   - AC-717-07
   - AC-717-08
+async_baseline_reconciliation_issue: https://github.com/notariat8/NaC/issues/719
+async_baseline_reconciliation_acceptance_ids:
+  - AC-719-01
+  - AC-719-02
+  - AC-719-03
+  - AC-719-04
+  - AC-719-05
+  - AC-719-06
 acceptance_ids:
   - AC-632-01
   - AC-632-02
@@ -68,6 +76,8 @@ applies_when:
     - src/nac_bff/azure_activation_composition.py
     - src/nac_bff/azure_activation_runner.py
     - src/nac_bff/azure_interruption_reconciliation.py
+    - src/nac_bff/azure_interruption_contract.py
+    - src/nac_bff/azure_interruption_baseline.py
     - src/nac_bff/azure_live_commands.py
     - src/nac_bff/azure_cli_sealed_runtime.py
     - src/nac_bff/graph_activation.py
@@ -79,6 +89,7 @@ applies_when:
     - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
     - tests/test_nac_bff_azure_activation*.py
     - tests/test_nac_bff_azure_interruption_reconciliation.py
+    - tests/test_nac_bff_azure_interruption_baseline.py
     - tests/test_nac_bff_azure_activation_attestations.py
     - tests/test_nac_bff_azure_live_commands.py
     - tests/test_nac_bff_graph_activation.py
@@ -102,6 +113,7 @@ required_context:
     - Issue #632 acceptance criteria and stop conditions; Issue #620 as parent MVP context
     - Issue #671 owner-gated Sites.FullControl.All boundary and offline-only stop condition
     - "Issue #717 interrupted-run reconciliation acceptance criteria and separate owner boundary"
+    - "Issue #719 exact pre-existing Bicep baseline reconciliation and hash-bound owner boundary"
   scoped:
     - workflows/contracts/AGENTS.md
     - workflows/contracts/README.md
@@ -124,7 +136,7 @@ required_context:
     - final allowlisted redacted evidence
 
 checks:
-  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_baseline tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --confirm-terminalize-and-release --terminalization-action TERMINALIZE_AND_RELEASE_LOCK_ONLY --interrupted-step ensure_resource_group --terminalization-approval-reference <immutable-issue-717-comment-url> --terminalization-approval-body-sha256 <64-lowercase-hex> --state-sha256 <64-lowercase-hex> --ledger-head-sha256 <64-lowercase-hex> --target-lock-sha256 <64-lowercase-hex> --legacy-lock-sha256 <64-lowercase-hex> --legacy-host-lock-sha256 <64-lowercase-hex> --provider-observation-sha256 <64-lowercase-hex> --format json
@@ -244,6 +256,20 @@ interruption_reconciliation_verification:
       - group exists
       - group show
       - resource list
+    bicep_baseline_read_operations_exact:
+      - account show
+      - provider show
+      - group exists
+      - group show
+      - resource list
+      - deployment group show
+      - deployment operation group list
+      - identity show
+      - functionapp identity show
+      - resource show
+      - rest app settings list
+      - rest resource graph query
+      - resource list
     stable_observation_hashes_must_match: true
     output_status_exact: MIDRUN_RECONCILIATION_REQUIRED
   eligible_state:
@@ -267,7 +293,57 @@ interruption_reconciliation_verification:
     resource_group_location_exact: germanywestcentral
     resource_group_provisioning_state_exact: Succeeded
     exact_tags_required: true
-    resource_inventory_exact: []
+    provider_classifications_exact:
+      RESOURCE_GROUP_ONLY:
+        approval_issue_exact: 717
+        resource_inventory_exact: []
+        prepared_inputs_allowed: false
+      BICEP_BASELINE_EXACT:
+        approval_issue_exact: 719
+        prepared_inputs_required: true
+        prepared_inputs_bound_to_activation_commit_and_tree: true
+        approved_git_tree_manifest_verified_required: true
+        approved_git_tree_bicep_blob_parity_required: true
+        approved_git_tree_replace_refs_disabled_required: true
+        approved_git_tree_blob_ids_reverified_required: true
+        parameter_key_count_exact: 9
+        binding_hashes_exact:
+          - baseline_expectation_sha256
+          - prepared_inputs_manifest_sha256
+          - bicep_snapshot_sha256
+          - bicep_parameters_snapshot_sha256
+        top_level_resource_count_exact: 7
+        top_level_resource_types_exact:
+          - microsoft.insights/actiongroups
+          - microsoft.insights/components
+          - microsoft.managedidentity/userassignedidentities
+          - microsoft.operationalinsights/workspaces
+          - microsoft.storage/storageaccounts
+          - microsoft.web/serverfarms
+          - microsoft.web/sites
+        deployment_name_exact: nac-bff-65b6e28e7d43
+        deployment_provisioning_state_exact: Succeeded
+        deployment_mode_exact: Incremental
+        deployment_operation_count_exact: 12
+        all_deployment_operations_succeeded_required: true
+        deployment_operation_target_ids_bound_to_resource_graph_required: true
+        resource_graph_full_inventory_required: true
+        resource_graph_authorization_inventory_required: true
+        resource_graph_target_set_exact_required: true
+        resource_kind_sku_and_smart_detection_properties_exact_required: true
+        security_property_projection_exact_required: true
+        provider_managed_read_only_properties_allowed_outside_projection: true
+        bff_api_audience_bound_to_prepared_parameter_required: true
+        bff_api_audience_must_differ_from_managed_identity_client_id: true
+        live_resource_detail_read_count_exact: 12
+        live_resource_security_properties_exact_required: true
+        live_resource_targets_sha256_required: true
+        managed_identity_readback_required: true
+        function_app_identity_assignment_exact: UserAssigned
+        double_resource_inventory_read_required: true
+        resource_inventory_drift_allowed: false
+        pre_mutation_provider_revalidation_required: true
+        owner_bound_lock_hash_revalidation_required: true
     duplicate_or_unexpected_resources_allowed: false
     raw_provider_payload_emission_allowed: false
   lock_journals_exact:
@@ -281,6 +357,7 @@ interruption_reconciliation_verification:
     old_live_approval_sufficient: false
     original_live_approval_issue_exact: 632
     terminalization_approval_issue_exact: 717
+    baseline_terminalization_approval_issue_exact: 719
     complete_invocation_requires_inspection_arguments: true
     terminalization_arguments_exact:
       - --confirm-terminalize-and-release
@@ -294,6 +371,23 @@ interruption_reconciliation_verification:
       - --legacy-lock-sha256
       - --legacy-host-lock-sha256
       - --provider-observation-sha256
+    baseline_terminalization_arguments_exact:
+      - --confirm-terminalize-and-release
+      - --terminalization-action
+      - --interrupted-step
+      - --terminalization-approval-reference
+      - --terminalization-approval-body-sha256
+      - --state-sha256
+      - --ledger-head-sha256
+      - --target-lock-sha256
+      - --legacy-lock-sha256
+      - --legacy-host-lock-sha256
+      - --provider-observation-sha256
+      - --provider-classification
+      - --baseline-expectation-sha256
+      - --prepared-inputs-manifest-sha256
+      - --bicep-snapshot-sha256
+      - --bicep-parameters-snapshot-sha256
     owner_binding_fields_exact:
       - action
       - activation_hash
@@ -308,10 +402,33 @@ interruption_reconciliation_verification:
       - reconciler_tree
       - reconciler_toolchain_sha256
       - required_owner_login
+    baseline_owner_binding_fields_exact:
+      - action
+      - activation_hash
+      - state_sha256
+      - ledger_head_sha256
+      - target_lock_sha256
+      - legacy_lock_sha256
+      - legacy_host_lock_sha256
+      - provider_observation_sha256
+      - interrupted_step
+      - reconciler_commit
+      - reconciler_tree
+      - reconciler_toolchain_sha256
+      - required_owner_login
+      - provider_classification
+      - baseline_expectation_sha256
+      - prepared_inputs_manifest_sha256
+      - bicep_snapshot_sha256
+      - bicep_parameters_snapshot_sha256
     terminal_state_exact: FAILED_PARTIAL
     interrupted_step_error_exact: EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE
     release_marker_status_exact: MIDRUN_RELEASE_IN_PROGRESS
     all_three_journals_must_append_RELEASED: true
+    partial_lock_append_recovery_required: true
+    partial_lock_append_recovery_exact_prefix_only: true
+    interruption_runtime_git_replace_refs_disabled_required: true
+    interruption_runtime_git_blob_identity_required: true
     provider_write_calls_exact: 0
     resume_attempts_exact: 0
     automatic_rollbacks_exact: 0
@@ -328,6 +445,28 @@ interruption_reconciliation_verification:
     - PROVIDER_OBSERVATION_INVALID
     - PROVIDER_OBSERVATION_DRIFT
     - INTERRUPTION_TERMINALIZATION_FAILED
+    - INTERRUPTION_BASELINE_BINDING_INVALID
+    - INTERRUPTION_BASELINE_BINDING_MISMATCH
+    - INTERRUPTION_BASELINE_BINDING_MISSING
+    - INTERRUPTION_BASELINE_GIT_PROVENANCE_INVALID
+    - INTERRUPTION_BASELINE_GIT_PROVENANCE_MISMATCH
+    - INTERRUPTION_LOCK_SET_CHANGED
+    - AZURE_INTERRUPTION_BASELINE_BINDING_MISSING
+    - AZURE_INTERRUPTION_BASELINE_BINDING_INVALID
+    - AZURE_INTERRUPTION_RESOURCE_INVENTORY_CHANGED
+    - AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID
+    - AZURE_INTERRUPTION_IDENTITY_INVALID
+    - AZURE_INTERRUPTION_ACCOUNT_MISMATCH
+    - AZURE_INTERRUPTION_DEPLOYMENT_INVALID
+    - AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID
+    - AZURE_INTERRUPTION_PROVIDER_INVALID
+    - AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN
+    - AZURE_INTERRUPTION_READ_FAILED
+    - AZURE_INTERRUPTION_RESOURCE_GROUP_INVALID
+    - AZURE_INTERRUPTION_RESOURCE_GROUP_MISSING
+    - AZURE_INTERRUPTION_RESOURCE_INVALID
+    - AZURE_INTERRUPTION_RESOURCE_STATE_INVALID
+    - AZURE_INTERRUPTION_TARGET_MISMATCH
   blocked_behavior: retain_all_three_HELD_journals_and_return_the_actual_stable_error_code
   raw_ids_paths_commands_provider_payloads_or_credentials_allowed: false
 
@@ -403,10 +542,10 @@ invariants:
   - MVP resume is disabled and no --resume CLI option is exposed; every resume request fails before lock acquisition or provider access until provider-specific read-only reconciliation exists and is independently verified for every write step and crash window.
   - A finalization-integrity failure retains the target-global lock and writes a redacted recovery marker; bff-azure-activation-recovery performs owner-bound local inspection by default and unlocks only with --confirm-unlock, without provider requests, resume, rollback or automatic deletion.
   - bff-azure-activation-interruption-reconcile is separate from finalization recovery and supports only the exact step-2 ensure_resource_group interruption shape: step 1 PASSED, step 2 RUNNING, no later steps, a valid six-event ledger prefix and target, legacy and legacy-host journals all HELD for the same activation hash.
-  - Default interruption inspection is byte-for-byte read-only locally and uses only two stable Azure read snapshots composed of account show, provider show, group exists and group show; it performs zero provider writes and leaves all three lock journals HELD.
+  - Default interruption inspection is byte-for-byte read-only locally and uses only two stable Azure read snapshots composed of account show, provider show, group exists, group show, resource/deployment/identity reads and the exactly bound Azure Resource Graph POST; it performs zero provider writes and leaves all three lock journals HELD.
   - A Succeeded resource group observation never retroactively marks step 2 PASSED and never resumes the old run. Any unsupported step, state drift, ledger drift, journal drift, provider drift or unequal observation hash retains all three HELD journals.
   - The original live approval is insufficient for terminalization. --confirm-terminalize-and-release requires a new owner approval binding the activation, state, ledger head, all three journal hashes, provider observation, interrupted step, reconciler commit/tree/toolchain and exact action TERMINALIZE_AND_RELEASE_LOCK_ONLY.
-  - Confirmed interruption reconciliation may only terminalize the old run to FAILED_PARTIAL with step 2 FAILED and EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE, append the authorization ledger events and MIDRUN_RELEASE_IN_PROGRESS marker, then append RELEASED to target, legacy and legacy-host journals. It never resumes, rolls back, deletes, emits PASSED or creates a success receipt.
+  - Confirmed interruption reconciliation may only terminalize the old run to FAILED_PARTIAL with step 2 FAILED and EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE, append the authorization ledger events and MIDRUN_RELEASE_IN_PROGRESS marker, then append RELEASED to target, legacy and legacy-host journals. A partial journal append is repairable only as a strict prefix of the deterministic RELEASED record after runtime, state, path and descriptor revalidation; unknown tails block. It never resumes, rolls back, deletes, emits PASSED or creates a success receipt.
   - Execution stops on the first error; an error after a write yields FAILED_PARTIAL and no later step runs.
   - Automatic rollback, deletion, uninstall, retract, remove and purge operations are forbidden, including after failure.
   - Microsoft Graph access uses raw REST at https://graph.microsoft.com/v1.0 only; Graph beta, SDKs, PnP and legacy SharePoint APIs are forbidden.
@@ -712,7 +851,7 @@ negative_tests:
       provider_write_calls_exact: 0
       all_three_markers_remain_held: true
   - id: interruption_provider_observation_drift
-    arrange: Make the two Azure read snapshots differ or return a wrong account, provider state, resource-group identity, location, tags, provisioning state, or any non-empty resource inventory.
+    arrange: Make the Azure read snapshots differ or return a wrong account, provider state, resource-group identity, location, tags, provisioning state, or any non-empty inventory that does not exactly match BICEP_BASELINE_EXACT.
     assert:
       terminalization_performed: false
       stable_error_codes:
@@ -731,6 +870,8 @@ negative_tests:
       automatic_rollbacks_exact: 0
       automatic_deletions_exact: 0
       identical_binding_retry_is_idempotent: true
+      partial_append_recovery_exact_prefix_only: true
+      unknown_partial_append_tail_blocks: true
 
 required_evidence:
   - Redacted provisioner-bootstrap readiness proving trusted explicit state/certificate/key metadata, exact tenant/application binding, certificate-only Graph v1.0 mode, zero private-key content reads, zero provider requests and zero tenant writes; IDs, paths and credential values remain omitted.
@@ -745,7 +886,8 @@ required_evidence:
   - Redacted read-only convergence summary proving causal deployment-input binding, zero duplicate readback and no automatic rollback or deletion; replaying provider writes is not claimed.
   - Redacted ordered probe and restoration summary proving healthz before auth, authenticated read before readyz and verified restoration to assigned synthetic state; incomplete/crashed runs remain non-success and require read-only reconciliation plus manual recovery.
   - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, azure_smart_detection_companion_drift, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure, torn lock-journal release at all three marker positions, retryable recovery release, invalid or incomplete lock-marker sets, provisioner-bootstrap source drift, canonical legacy-newline lock recovery, terminal FAILED_PARTIAL torn-release recovery and disabled resume.
-  - "Redacted Issue #717 interruption inspection evidence proving the exact supported step-2 shape, a valid local ledger prefix, all three HELD journal hashes and two equal Azure observation hashes, with zero local mutation and zero provider writes."
+  - "Redacted Issue #717 interruption inspection evidence proving the exact supported step-2 RESOURCE_GROUP_ONLY shape, a valid local ledger prefix, all three HELD journal hashes and two equal Azure observation hashes, with zero local mutation and zero provider writes."
+  - "Redacted Issue #719 BICEP_BASELINE_EXACT evidence binding the prepared manifest, Bicep template, Bicep parameters and canonical expectation hashes to exactly seven top-level resources and twelve successful deployment operations across two equal read-only observations."
   - For terminalization, a separate immutable owner snapshot binding TERMINALIZE_AND_RELEASE_LOCK_ONLY plus the resulting FAILED_PARTIAL evidence, EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE, MIDRUN_RELEASE_IN_PROGRESS and readback of RELEASED on target, legacy and legacy-host journals; no PASSED state or success receipt is permitted.
 
 host_success_receipt:

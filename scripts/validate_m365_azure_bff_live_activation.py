@@ -36,8 +36,18 @@ COMPOSITION_PATH = Path("src/nac_bff/azure_activation_composition.py")
 INTERRUPTION_RECONCILIATION_PATH = Path(
     "src/nac_bff/azure_interruption_reconciliation.py"
 )
+APPROVED_GIT_TREE_PATH = Path("src/nac_bff/approved_git_tree.py")
+INTERRUPTION_BASELINE_PATH = Path(
+    "src/nac_bff/azure_interruption_baseline.py"
+)
+INTERRUPTION_CONTRACT_PATH = Path(
+    "src/nac_bff/azure_interruption_contract.py"
+)
 INTERRUPTION_RECONCILIATION_TEST_PATH = Path(
     "tests/test_nac_bff_azure_interruption_reconciliation.py"
+)
+INTERRUPTION_BASELINE_TEST_PATH = Path(
+    "tests/test_nac_bff_azure_interruption_baseline.py"
 )
 GRAPH_ACTIVATION_PATH = Path("src/nac_bff/graph_activation.py")
 GRAPH_ACTIVATION_TEST_PATH = Path("tests/test_nac_bff_graph_activation.py")
@@ -96,12 +106,25 @@ INTERRUPTION_RECONCILIATION_ISSUE = (
 INTERRUPTION_RECONCILIATION_ACCEPTANCE_IDS = [
     f"AC-717-{index:02d}" for index in range(1, 9)
 ]
+ASYNC_BASELINE_RECONCILIATION_ISSUE = (
+    "https://github.com/notariat8/NaC/issues/719"
+)
+ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS = [
+    f"AC-719-{index:02d}" for index in range(1, 7)
+]
 INTERRUPTION_COMMAND = (
     "nac m365 teams-sharepoint "
     "bff-azure-activation-interruption-reconcile"
 )
 INTERRUPTION_READ_OPERATIONS = [
     "account show", "provider show", "group exists", "group show",
+    "resource list",
+]
+INTERRUPTION_BICEP_BASELINE_READ_OPERATIONS = [
+    *INTERRUPTION_READ_OPERATIONS,
+    "deployment group show", "deployment operation group list",
+    "identity show", "functionapp identity show", "resource show",
+    "rest app settings list", "rest resource graph query",
     "resource list",
 ]
 INTERRUPTION_LOCK_JOURNALS = ["target", "legacy", "legacy_host"]
@@ -154,6 +177,22 @@ INTERRUPTION_TERMINALIZATION_ARGUMENTS = [
     "--legacy-host-lock-sha256",
     "--provider-observation-sha256",
 ]
+INTERRUPTION_BASELINE_TERMINIZATION_ARGUMENTS = [
+    *INTERRUPTION_TERMINALIZATION_ARGUMENTS,
+    "--provider-classification",
+    "--baseline-expectation-sha256",
+    "--prepared-inputs-manifest-sha256",
+    "--bicep-snapshot-sha256",
+    "--bicep-parameters-snapshot-sha256",
+]
+INTERRUPTION_BASELINE_OWNER_BINDING_FIELDS = [
+    *INTERRUPTION_OWNER_BINDING_FIELDS,
+    "provider_classification",
+    "baseline_expectation_sha256",
+    "prepared_inputs_manifest_sha256",
+    "bicep_snapshot_sha256",
+    "bicep_parameters_snapshot_sha256",
+]
 INTERRUPTION_LEDGER_EVENTS = [
     "STEP_FAILED", "RUNNER_TERMINAL", "LOCK_RELEASE_AUTHORIZED"
 ]
@@ -167,7 +206,85 @@ INTERRUPTION_STABLE_ERROR_CODES = [
     "PROVIDER_OBSERVATION_INVALID",
     "PROVIDER_OBSERVATION_DRIFT",
     "INTERRUPTION_TERMINALIZATION_FAILED",
+    "INTERRUPTION_BASELINE_BINDING_INVALID",
+    "INTERRUPTION_BASELINE_BINDING_MISMATCH",
+    "INTERRUPTION_BASELINE_BINDING_MISSING",
+    "INTERRUPTION_BASELINE_GIT_PROVENANCE_INVALID",
+    "INTERRUPTION_BASELINE_GIT_PROVENANCE_MISMATCH",
+    "INTERRUPTION_LOCK_SET_CHANGED",
+    "AZURE_INTERRUPTION_BASELINE_BINDING_MISSING",
+    "AZURE_INTERRUPTION_BASELINE_BINDING_INVALID",
+    "AZURE_INTERRUPTION_RESOURCE_INVENTORY_CHANGED",
+    "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+    "AZURE_INTERRUPTION_IDENTITY_INVALID",
+    'AZURE_INTERRUPTION_ACCOUNT_MISMATCH',
+    'AZURE_INTERRUPTION_DEPLOYMENT_INVALID',
+    'AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID',
+    'AZURE_INTERRUPTION_PROVIDER_INVALID',
+    'AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN',
+    'AZURE_INTERRUPTION_READ_FAILED',
+    'AZURE_INTERRUPTION_RESOURCE_GROUP_INVALID',
+    'AZURE_INTERRUPTION_RESOURCE_GROUP_MISSING',
+    'AZURE_INTERRUPTION_RESOURCE_INVALID',
+    'AZURE_INTERRUPTION_RESOURCE_STATE_INVALID',
+    'AZURE_INTERRUPTION_TARGET_MISMATCH',
 ]
+INTERRUPTION_PROVIDER_CLASSIFICATIONS = {
+    "RESOURCE_GROUP_ONLY": {
+        "approval_issue_exact": 717,
+        "resource_inventory_exact": [],
+        "prepared_inputs_allowed": False,
+    },
+    "BICEP_BASELINE_EXACT": {
+        "approval_issue_exact": 719,
+        "prepared_inputs_required": True,
+        "prepared_inputs_bound_to_activation_commit_and_tree": True,
+        "approved_git_tree_manifest_verified_required": True,
+        "approved_git_tree_bicep_blob_parity_required": True,
+        "approved_git_tree_replace_refs_disabled_required": True,
+        "approved_git_tree_blob_ids_reverified_required": True,
+        "parameter_key_count_exact": 9,
+        "binding_hashes_exact": [
+            "baseline_expectation_sha256",
+            "prepared_inputs_manifest_sha256",
+            "bicep_snapshot_sha256",
+            "bicep_parameters_snapshot_sha256",
+        ],
+        "top_level_resource_count_exact": 7,
+        "top_level_resource_types_exact": [
+            "microsoft.insights/actiongroups",
+            "microsoft.insights/components",
+            "microsoft.managedidentity/userassignedidentities",
+            "microsoft.operationalinsights/workspaces",
+            "microsoft.storage/storageaccounts",
+            "microsoft.web/serverfarms",
+            "microsoft.web/sites",
+        ],
+        "deployment_name_exact": "nac-bff-65b6e28e7d43",
+        "deployment_provisioning_state_exact": "Succeeded",
+        "deployment_mode_exact": "Incremental",
+        "deployment_operation_count_exact": 12,
+        "all_deployment_operations_succeeded_required": True,
+        "deployment_operation_target_ids_bound_to_resource_graph_required": True,
+        "resource_graph_full_inventory_required": True,
+        "resource_graph_authorization_inventory_required": True,
+        "resource_graph_target_set_exact_required": True,
+        "resource_kind_sku_and_smart_detection_properties_exact_required": True,
+        "security_property_projection_exact_required": True,
+        "provider_managed_read_only_properties_allowed_outside_projection": True,
+        "bff_api_audience_bound_to_prepared_parameter_required": True,
+        "bff_api_audience_must_differ_from_managed_identity_client_id": True,
+        "live_resource_detail_read_count_exact": 12,
+        "live_resource_security_properties_exact_required": True,
+        "live_resource_targets_sha256_required": True,
+        "managed_identity_readback_required": True,
+        "function_app_identity_assignment_exact": "UserAssigned",
+        "double_resource_inventory_read_required": True,
+        "resource_inventory_drift_allowed": False,
+        "pre_mutation_provider_revalidation_required": True,
+        "owner_bound_lock_hash_revalidation_required": True,
+    },
+}
 INTERRUPTION_INSPECTION_DOC_MARKER = (
     "# bff-azure-interruption-inspection-command"
 )
@@ -343,7 +460,7 @@ SMART_DETECTION_PREWRITE_AST_SHA256 = (
     "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
-    "6744d3273b552c19a04c6f2999f3b7f990d8b44e4df303747692f598b8af1b30"
+    "1acd0b8cb23a52633e449b29f586072f8f86d9185431dacb145a3a0f00849150"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
@@ -816,6 +933,8 @@ NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
         "automatic_rollbacks_exact": 0,
         "automatic_deletions_exact": 0,
         "identical_binding_retry_is_idempotent": True,
+        "partial_append_recovery_exact_prefix_only": True,
+        "unknown_partial_append_tail_blocks": True,
     },
 }
 SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
@@ -883,6 +1002,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_SPFX_READ_ONLY_BOUNDARY",
         "SPFX_WASI_LOCK_ATTESTATION_FAILED",
         "SPFX_WASI_PACKAGE_ATTESTATION_FAILED",
+        "_run_interruption_git_read",
+        "--no-replace-objects",
+        "_stable_worktree_file_sha256",
+        "GitApprovedTreeSource().inspect",
     ),
     PROVISIONER_BOOTSTRAP_PATH: (
         "nac.m365-azure-bff-provisioner-bootstrap/v1",
@@ -964,8 +1087,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "PROVISIONER_BOOTSTRAP_BINDING_MISMATCH",
         "bff-azure-activation-interruption-reconcile",
         "include_owner_gate=False",
-        "issues/717",
+        "issues/(?:717|719)",
         "--provider-observation-sha256",
+        "--provider-classification",
+        "--baseline-expectation-sha256",
     ),
     M365_RUNNER_PATH: (
         "_safe_bff_http_denial", "Request failed with status code 403",
@@ -1003,25 +1128,75 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "clouds.config", "AZURE_CONFIG_DIR",
         "AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE",
     ),
+    APPROVED_GIT_TREE_PATH: (
+        "--no-replace-objects",
+        "APPROVED_GIT_BLOB_MISMATCH",
+        "approved_tree",
+    ),
     INTERRUPTION_RECONCILIATION_PATH: (
         "_TERMINALIZATION_APPROVAL_REFERENCE_RE",
+        "_BASELINE_APPROVAL_REFERENCE_RE",
         "issues/717",
-        'value.get("resource_inventory") != []',
+        "issues/719",
+        "BICEP_BASELINE_EXACT",
+        "exact_baseline_matches",
+        "pre_mutation_revalidate",
         "PROVIDER_OBSERVATION_INVALID",
         "PROVIDER_OBSERVATION_DRIFT",
         "INTERRUPTION_RECONCILIATION_UNSUPPORTED",
         "INTERRUPTION_APPROVAL_INVALID",
         "INTERRUPTION_APPROVAL_MISMATCH",
+        "_repair_partial_release_append",
+        "_initial_lock_bytes",
+    ),
+    INTERRUPTION_CONTRACT_PATH: (
+        "RESOURCE_GROUP_ONLY",
+        "BICEP_BASELINE_EXACT",
+        "compact_sha256_json",
+        "newline_sha256_json",
+        "canonical_parameters_from_wrappers",
+    ),
+    INTERRUPTION_BASELINE_PATH: (
+        "load_expectation",
+        "exact_baseline_matches",
+        "BICEP_BASELINE_EXACT",
+        "EXPECTED_DEPLOYMENT_TYPE_COUNTS",
+        "APPROVED_TREE_BICEP_PATH",
+        "GitApprovedTreeSource",
+        "INTERRUPTION_BASELINE_GIT_PROVENANCE_INVALID",
+        "INTERRUPTION_BASELINE_GIT_PROVENANCE_MISMATCH",
+        "INTERRUPTION_BASELINE_BINDING_INVALID",
+        "INTERRUPTION_BASELINE_BINDING_MISMATCH",
+    ),
+    INTERRUPTION_BASELINE_TEST_PATH: (
+        "test_expectation_is_bound_to_manifest_template_parameters_and_graph",
+        "test_inventory_deployment_and_operation_drift_are_rejected",
+        "test_self_consistent_manifest_with_false_git_provenance_is_rejected",
+        "test_self_consistent_manifest_with_incomplete_parameters_is_rejected",
+        "test_parent_directory_symlink_is_rejected",
+        "test_world_readable_prepared_input_is_rejected",
     ),
     INTERRUPTION_RECONCILIATION_TEST_PATH: (
         "test_inspection_is_byte_for_byte_local_read_only_and_double_reads",
         "test_any_step2_resource_keeps_all_locks_held",
+        "test_pre_mutation_prepared_artifact_tamper_fails_closed",
+        "test_provider_drift_after_owner_verification_blocks_first_mutation",
+        "test_same_inode_lock_append_blocks_before_first_mutation",
         "test_unconfirmed_or_tampered_approval_is_read_only_and_locked",
         "test_exact_approval_terminalizes_without_resume_rollback_or_delete",
         "test_old_issue_632_reference_cannot_authorize_terminalization",
         "test_torn_journal_release_is_idempotently_completed",
+        "test_third_partial_release_append_is_revalidated_and_recovered",
+        "test_partial_release_append_with_unknown_tail_stays_blocked",
     ),
     AZURE_LIVE_COMMANDS_PATH: (
+        "INTERRUPTION_READ_COMMAND_PREFIXES",
+        "AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN",
+        "_interruption_live_resource_state",
+        "AZURE_INTERRUPTION_RESOURCE_STATE_INVALID",
+        "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+        "_RESOURCE_GRAPH_QUERY",
+        "_RESOURCE_GRAPH_BODY",
         "_exact_default_cloud_selection_digest", "_MAX_CLOUD_SELECTION_BYTES",
         "_SMART_DETECTION_ACTION_GROUP_NAME",
         '("resource", "show")',
@@ -1029,6 +1204,8 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "ConfigParser", "O_NONBLOCK", "run_with_timeout",
         "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
         "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
+        '("identity", "show")',
+        '("functionapp", "identity", "show")',
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
         '"status": status_code', '"error": {"code": code}',
@@ -1151,6 +1328,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_spfx_wasi_lock_rejects_non_object_entry",
         "test_spfx_wasi_package_rejects_non_object_manifest",
     ),
+    Path("tests/test_nac_bff_azure_live_commands.py"): (
+        "test_resource_graph_rest_command_is_exactly_bounded",
+        "test_security_projection_allows_provider_metadata_but_rejects_security_drift",
+    ),
     Path("tests/test_nac_bff_azure_activation_runner.py"): (
         "test_legacy_binding_lock_blocks_new_hash_namespace",
         "test_old_host_lock_namespace_blocks_new_runner",
@@ -1181,6 +1362,7 @@ TEST_PATHS = (
     Path("tests/test_nac_bff_azure_activation_owner_gate.py"),
     Path("tests/test_nac_bff_azure_activation_runner.py"),
     Path("tests/test_nac_bff_azure_activation_cli.py"),
+    INTERRUPTION_BASELINE_TEST_PATH,
     INTERRUPTION_RECONCILIATION_TEST_PATH,
     Path("tests/test_nac_bff_azure_activation_composition.py"),
     Path("tests/test_nac_bff_azure_live_commands.py"),
@@ -1204,6 +1386,7 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_nac_bff_azure_activation_composition",
     "tests.test_nac_bff_graph_activation",
     "tests.test_nac_bff_azure_live_commands",
+    "tests.test_nac_bff_azure_interruption_baseline",
     "tests.test_nac_bff_azure_interruption_reconciliation",
     "tests.test_nac_bff_live_synthetic_workspace",
     "tests.test_nac_bff_azure_activation_cli",
@@ -1422,6 +1605,12 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             ),
             "interruption_reconciliation_acceptance_ids": (
                 INTERRUPTION_RECONCILIATION_ACCEPTANCE_IDS
+            ),
+            "async_baseline_reconciliation_issue": (
+                ASYNC_BASELINE_RECONCILIATION_ISSUE
+            ),
+            "async_baseline_reconciliation_acceptance_ids": (
+                ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
             ),
             "owner_gate_safety_rework_issue": OWNER_GATE_SAFETY_REWORK_ISSUE,
             "owner_gate_safety_rework_acceptance_ids": (
@@ -2148,6 +2337,9 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "automatic_deletion_count_exact": 0,
                 "azure_read_snapshot_count_exact": 2,
                 "azure_read_operations_exact": INTERRUPTION_READ_OPERATIONS,
+                "bicep_baseline_read_operations_exact": (
+                    INTERRUPTION_BICEP_BASELINE_READ_OPERATIONS
+                ),
                 "stable_observation_hashes_must_match": True,
                 "output_status_exact": "MIDRUN_RECONCILIATION_REQUIRED",
             },
@@ -2182,7 +2374,9 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                     "Microsoft.Web", "Microsoft.Storage",
                     "Microsoft.OperationalInsights",
                 ],
-                "resource_inventory_exact": [],
+                "provider_classifications_exact": (
+                    INTERRUPTION_PROVIDER_CLASSIFICATIONS
+                ),
                 "duplicate_or_unexpected_resources_allowed": False,
             },
             "domain interruption provider observation",
@@ -2200,12 +2394,19 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "old_live_approval_sufficient": False,
                 "original_live_approval_issue_exact": 632,
                 "terminalization_approval_issue_exact": 717,
+                "baseline_terminalization_approval_issue_exact": 719,
                 "complete_invocation_requires_inspection_arguments": True,
                 "terminalization_arguments_exact": (
                     INTERRUPTION_TERMINALIZATION_ARGUMENTS
                 ),
+                "baseline_terminalization_arguments_exact": (
+                    INTERRUPTION_BASELINE_TERMINIZATION_ARGUMENTS
+                ),
                 "owner_binding_fields_exact": (
                     INTERRUPTION_OWNER_BINDING_FIELDS
+                ),
+                "baseline_owner_binding_fields_exact": (
+                    INTERRUPTION_BASELINE_OWNER_BINDING_FIELDS
                 ),
                 "terminal_state_exact": "FAILED_PARTIAL",
                 "interrupted_step_error_exact": (
@@ -2218,6 +2419,10 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "ledger_events_appended_exact": INTERRUPTION_LEDGER_EVENTS,
                 "release_marker_status_exact": "MIDRUN_RELEASE_IN_PROGRESS",
                 "release_all_three_journals_required": True,
+                "partial_lock_append_recovery_required": True,
+                "partial_lock_append_recovery_exact_prefix_only": True,
+                "interruption_runtime_git_replace_refs_disabled_required": True,
+                "interruption_runtime_git_blob_identity_required": True,
                 "success_receipt_allowed": False,
                 "passed_state_allowed": False,
             },
@@ -2329,6 +2534,12 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "interruption_reconciliation_acceptance_ids": (
                 INTERRUPTION_RECONCILIATION_ACCEPTANCE_IDS
             ),
+            "async_baseline_reconciliation_issue": (
+                ASYNC_BASELINE_RECONCILIATION_ISSUE
+            ),
+            "async_baseline_reconciliation_acceptance_ids": (
+                ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
+            ),
             "acceptance_ids": ACCEPTANCE_IDS,
         },
         "verification",
@@ -2394,6 +2605,8 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         if inspection.get("azure_read_snapshot_count_exact") != 2 or inspection.get(
             "azure_read_operations_exact"
         ) != INTERRUPTION_READ_OPERATIONS or inspection.get(
+            "bicep_baseline_read_operations_exact"
+        ) != INTERRUPTION_BICEP_BASELINE_READ_OPERATIONS or inspection.get(
             "provider_write_calls_exact"
         ) != 0 or inspection.get("owner_approved_required") is not False or (
             inspection.get("original_live_approval_issue_exact") != 632
@@ -2402,7 +2615,8 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         ):
             errors.append("verification interruption inspection differs")
         observation = interruption.get("provider_observation", {})
-        if observation.get("resource_inventory_exact") != [] or observation.get(
+        if observation.get("provider_classifications_exact"
+        ) != INTERRUPTION_PROVIDER_CLASSIFICATIONS or observation.get(
             "providers_exact"
         ) != [
             "Microsoft.Web", "Microsoft.Storage", "Microsoft.OperationalInsights"
@@ -2416,12 +2630,26 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         ) or terminalize.get("old_live_approval_sufficient") is not False or (
             terminalize.get("original_live_approval_issue_exact") != 632
             or terminalize.get("terminalization_approval_issue_exact") != 717
+            or terminalize.get("baseline_terminalization_approval_issue_exact")
+            != 719
             or terminalize.get("complete_invocation_requires_inspection_arguments")
             is not True
             or terminalize.get("terminalization_arguments_exact")
             != INTERRUPTION_TERMINALIZATION_ARGUMENTS
+            or terminalize.get("baseline_terminalization_arguments_exact")
+            != INTERRUPTION_BASELINE_TERMINIZATION_ARGUMENTS
             or terminalize.get("owner_binding_fields_exact")
             != INTERRUPTION_OWNER_BINDING_FIELDS
+            or terminalize.get("baseline_owner_binding_fields_exact")
+            != INTERRUPTION_BASELINE_OWNER_BINDING_FIELDS
+            or terminalize.get("partial_lock_append_recovery_required")
+            is not True
+            or terminalize.get("partial_lock_append_recovery_exact_prefix_only")
+            is not True
+            or terminalize.get("interruption_runtime_git_replace_refs_disabled_required")
+            is not True
+            or terminalize.get("interruption_runtime_git_blob_identity_required")
+            is not True
         ):
             errors.append("verification interruption owner boundary differs")
         if terminalize.get("terminal_state_exact") != "FAILED_PARTIAL" or (
@@ -2431,7 +2659,7 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             errors.append("verification interruption terminal state differs")
 
     if verification.get("thresholds") != THRESHOLDS:
-        errors.append("verification thresholds must equal the exact Issue #632 and #717 thresholds")
+        errors.append("verification thresholds must equal the exact Issue #632, #717 and #719 thresholds")
     negative = verification.get("negative_tests")
     negative_ids = [
         item.get("id") for item in negative if isinstance(item, dict)
@@ -2752,6 +2980,9 @@ def _validate_interruption_runtime_protocol(
         reconciliation_tree = ast.parse(
             (repo_root / INTERRUPTION_RECONCILIATION_PATH).read_text(encoding="utf-8")
         )
+        baseline_tree = ast.parse(
+            (repo_root / INTERRUPTION_BASELINE_PATH).read_text(encoding="utf-8")
+        )
     except (OSError, SyntaxError):
         errors.append("interruption runtime protocol sources are unavailable")
         return
@@ -2764,10 +2995,18 @@ def _validate_interruption_runtime_protocol(
         r"^https://github\.com/notariat8/NaC/issues/717"
         r"#issuecomment-[1-9][0-9]*$"
     )
+    baseline_pattern = (
+        r"^https://github\.com/notariat8/NaC/issues/719"
+        r"#issuecomment-[1-9][0-9]*$"
+    )
     if _compiled_regex_pattern(runner_tree, "_APPROVAL_REFERENCE_RE") != live_pattern:
         errors.append("live approval regex must remain bound exactly to issue #632")
     if _compiled_regex_pattern(reconciliation_tree, "_TERMINALIZATION_APPROVAL_REFERENCE_RE") != terminal_pattern:
         errors.append("terminalization approval regex must bind exactly to issue #717")
+    if _compiled_regex_pattern(
+        reconciliation_tree, "_BASELINE_APPROVAL_REFERENCE_RE"
+    ) != baseline_pattern:
+        errors.append("baseline approval regex must bind exactly to issue #719")
 
     add_owner = _nested_function_definition(
         cli_tree, "_add_bff_azure_owner_binding_arguments"
@@ -2784,17 +3023,31 @@ def _validate_interruption_runtime_protocol(
         if _direct_add_argument_flags(add_owner) != expected_owner_flags:
             errors.append("interruption base CLI argument set differs")
         expected_direct_flags = set(INTERRUPTION_INSPECTION_REQUIRED_ARGUMENTS[-3:]) | set(
-            INTERRUPTION_TERMINALIZATION_ARGUMENTS
+            INTERRUPTION_BASELINE_TERMINIZATION_ARGUMENTS
         )
         if _direct_add_argument_flags(run_interruption) != expected_direct_flags:
             errors.append("interruption direct CLI argument set differs")
-        terminal_fields = _literal_assignment(run_interruption, "terminal_fields")
-        expected_fields = tuple(
+        core_terminal_fields = _literal_assignment(
+            run_interruption, "core_terminal_fields"
+        )
+        baseline_terminal_fields = _literal_assignment(
+            run_interruption, "baseline_terminal_fields"
+        )
+        expected_core_fields = tuple(
             flag.removeprefix("--").replace("-", "_")
             for flag in INTERRUPTION_TERMINALIZATION_ARGUMENTS[1:]
         )
-        if terminal_fields != expected_fields:
-            errors.append("interruption terminal field tuple differs")
+        expected_baseline_fields = tuple(
+            flag.removeprefix("--").replace("-", "_")
+            for flag in INTERRUPTION_BASELINE_TERMINIZATION_ARGUMENTS[
+                len(INTERRUPTION_TERMINALIZATION_ARGUMENTS):
+            ]
+        )
+        if (
+            core_terminal_fields != expected_core_fields
+            or baseline_terminal_fields != expected_baseline_fields
+        ):
+            errors.append("interruption terminal field tuples differ")
         owner_gate_disabled = any(
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
@@ -2817,21 +3070,46 @@ def _validate_interruption_runtime_protocol(
         '("group", "exists", "--name", resource_group)',
         '("group", "show", "--name", resource_group)',
         '("resource", "list", "--resource-group", resource_group)',
+        '("deployment", "group", "show", "--name", deployment_name, "--resource-group", resource_group)',
+        '("deployment", "operation", "group", "list", "--name", deployment_name, "--resource-group", resource_group)',
+        '("identity", "show", "--name", str(identities[0]["name"]), "--resource-group", resource_group)',
+        '("functionapp", "identity", "show", "--name", FUNCTION_APP, "--resource-group", resource_group)',
+        '("rest", "--method", "post", "--url", _RESOURCE_GRAPH_URL, "--body", _RESOURCE_GRAPH_BODY)',
     )
     if observe is None or any(
         not _function_contains_tuple(observe, expression)
         for expression in expected_reads
     ):
         errors.append("interruption Azure read argv set differs")
+    resource_detail_read = _nested_function_definition(
+        azure_tree, "_resource_detail_read_command"
+    )
+    if resource_detail_read is None or not _function_contains_tuple(
+        resource_detail_read,
+        "(\"rest\", \"--method\", \"post\", \"--url\", _APP_SETTINGS_URL)",
+    ):
+        errors.append("interruption app settings read argv differs")
 
     validate_observation = _nested_function_definition(
         reconciliation_tree, "_validate_provider_observation"
     )
-    if validate_observation is None or not _function_contains_expression(
-        validate_observation, 'value.get("resource_inventory") != []'
-    ):
-        errors.append("interruption runtime must reject every non-empty resource inventory")
-    source_codes = _string_literals(reconciliation_tree) | _string_literals(cli_tree)
+    baseline_match_call = bool(
+        validate_observation is not None
+        and any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "exact_baseline_matches"
+            for node in ast.walk(validate_observation)
+        )
+    )
+    if not baseline_match_call:
+        errors.append("interruption runtime must validate the exact Bicep baseline")
+    source_codes = (
+        _string_literals(reconciliation_tree)
+        | _string_literals(cli_tree)
+        | _string_literals(azure_tree)
+        | _string_literals(baseline_tree)
+    )
     if set(INTERRUPTION_STABLE_ERROR_CODES) - source_codes:
         errors.append("interruption stable error-code set differs from runtime source")
 
@@ -3321,18 +3599,23 @@ def _validate_smart_detection_command_schema(
         )
     expected_schema = """_CommandSchema(
         ("resource", "show"),
-        required=frozenset(
-            {"--resource-group", "--resource-type", "--name", "--api-version"}
-        ),
-        optional=_COMMON_OPTIONAL,
+        optional=frozenset({
+            "--resource-group", "--resource-type", "--name",
+            "--api-version", "--ids", *tuple(_COMMON_OPTIONAL),
+        }),
         validators={
             "--resource-group": _single_exact(RESOURCE_GROUP),
             "--resource-type": _single_exact(
                 _SMART_DETECTION_ACTION_GROUP_TYPE
             ),
             "--name": _single_exact(_SMART_DETECTION_ACTION_GROUP_NAME),
-            "--api-version": _single_exact(
-                _SMART_DETECTION_ACTION_GROUP_API_VERSION
+            "--api-version": _single_in(frozenset({
+                _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+                *_RESOURCE_DETAIL_API_VERSIONS.values(),
+            })),
+            "--ids": lambda values: (
+                len(values) == 1
+                and _resource_detail_type_from_id(values[0]) is not None
             ),
             **_COMMON_VALIDATORS,
         },

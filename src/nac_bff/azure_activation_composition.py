@@ -268,7 +268,7 @@ _COMMENT_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
 )
 _TERMINALIZATION_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/717"
+    r"^https://github\.com/notariat8/NaC/issues/(?:717|719)"
     r"#issuecomment-([1-9][0-9]*)$"
 )
 _APPROVED_OWNER_LOGIN = "ofunk"
@@ -2922,7 +2922,10 @@ def _bound_provisioner_token_provider(
 
 
 _RECONCILER_TOOLCHAIN_PATHS = (
+    Path("src/nac_bff/azure_interruption_contract.py"),
+    Path("src/nac_bff/approved_git_tree.py"),
     Path("src/nac_bff/azure_interruption_reconciliation.py"),
+    Path("src/nac_bff/azure_interruption_baseline.py"),
     Path("src/nac_bff/azure_activation_runner.py"),
     Path("src/nac_bff/azure_activation_composition.py"),
     Path("src/nac_bff/azure_live_commands.py"),
@@ -2937,6 +2940,7 @@ def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
             [
                 str(_GIT_READ_BINARY),
                 "--no-optional-locks",
+                "--no-replace-objects",
                 "-C",
                 str(repo_root),
                 *args,
@@ -2959,12 +2963,13 @@ def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
 
 
 def _read_interruption_git_snapshot(repo_root: Path) -> dict[str, object]:
+    commit = _run_interruption_git_read(
+        repo_root, "rev-parse", "--verify", "HEAD^{commit}"
+    )
     return {
-        "commit": _run_interruption_git_read(
-            repo_root, "rev-parse", "--verify", "HEAD"
-        ),
+        "commit": commit,
         "tree": _run_interruption_git_read(
-            repo_root, "rev-parse", "--verify", "HEAD^{tree}"
+            repo_root, "rev-parse", "--verify", f"{commit}^{{tree}}"
         ),
         "dirty": bool(
             _run_interruption_git_read(
@@ -2979,19 +2984,40 @@ def _read_interruption_git_snapshot(repo_root: Path) -> dict[str, object]:
 
 def calculate_interruption_reconciler_toolchain_sha256(
     repo_root: Path,
+    *,
+    approved_commit: str | None = None,
+    approved_tree: str | None = None,
 ) -> str:
-    files: list[dict[str, str]] = []
-    for relative_path in _RECONCILER_TOOLCHAIN_PATHS:
-        path = repo_root / relative_path
+    if (approved_commit is None) != (approved_tree is None):
+        raise ActivationStepError(
+            "INTERRUPTION_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+        )
+    approved_files: Mapping[str, str] | None = None
+    if approved_commit is not None and approved_tree is not None:
         try:
-            metadata = path.lstat()
-            if not stat.S_ISREG(metadata.st_mode):
-                raise OSError
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError:
+            approved_files = GitApprovedTreeSource().inspect(
+                repo_root,
+                approved_commit=approved_commit,
+                approved_tree=approved_tree,
+            ).file_sha256
+        except ApprovedGitTreeError:
             raise ActivationStepError(
                 "INTERRUPTION_RECONCILER_TOOLCHAIN_UNAVAILABLE"
             ) from None
+    files: list[dict[str, str]] = []
+    for relative_path in _RECONCILER_TOOLCHAIN_PATHS:
+        digest = _stable_worktree_file_sha256(repo_root / relative_path)
+        if digest is None:
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+            )
+        if (
+            approved_files is not None
+            and approved_files.get(relative_path.as_posix()) != digest
+        ):
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH"
+            )
         files.append({"path": relative_path.as_posix(), "sha256": digest})
     return _sha256_json(
         {
@@ -2999,6 +3025,38 @@ def calculate_interruption_reconciler_toolchain_sha256(
             "files": files,
         }
     )
+
+
+def _stable_worktree_file_sha256(path: Path) -> str | None:
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_uid != os.geteuid()
+            or before.st_nlink != 1
+            or before.st_size < 1
+            or before.st_size > 16 * 1024 * 1024
+        ):
+            return None
+        payload = os.pread(descriptor, before.st_size, 0)
+        after = os.fstat(descriptor)
+        if (
+            len(payload) != before.st_size
+            or before.st_dev != after.st_dev
+            or before.st_ino != after.st_ino
+            or before.st_size != after.st_size
+            or before.st_mtime_ns != after.st_mtime_ns
+            or before.st_ctime_ns != after.st_ctime_ns
+        ):
+            return None
+        return hashlib.sha256(payload).hexdigest()
+    except OSError:
+        return None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 class InterruptionRuntimeBindingVerifier:
@@ -3021,7 +3079,11 @@ class InterruptionRuntimeBindingVerifier:
         before = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(before)
         actual_toolchain_sha256 = (
-            calculate_interruption_reconciler_toolchain_sha256(self._repo_root)
+            calculate_interruption_reconciler_toolchain_sha256(
+                self._repo_root,
+                approved_commit=self._expected_commit,
+                approved_tree=self._expected_tree,
+            )
         )
         after = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(after)

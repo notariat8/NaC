@@ -6,17 +6,23 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from nac_bff.azure_activation_runner import (
+    ActivationStepError,
     DEFAULT_OUTPUT_ROOT,
     LiveActivationRequest,
     _binding_sha256_json,
     _read_lock_marker_descriptor,
     _sha256_json,
     run_azure_bff_live_activation,
+)
+from nac_bff.azure_interruption_baseline import (
+    BICEP_BASELINE_EXACT,
+    load_expectation,
 )
 from nac_bff.azure_interruption_reconciliation import (
     InterruptionReconcilerBinding,
@@ -38,6 +44,9 @@ APPROVAL_REFERENCE = (
 )
 RECONCILIATION_APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/717#issuecomment-987654321"
+)
+BASELINE_APPROVAL_REFERENCE = (
+    "https://github.com/notariat8/NaC/issues/719#issuecomment-987654322"
 )
 STEPS = [
     "register_azure_providers",
@@ -150,7 +159,9 @@ class _ObservationPort:
 
     def observe_ensure_resource_group(self, **bindings):
         self.calls.append(dict(bindings))
-        return self.observations.pop(0)
+        if len(self.observations) > 1:
+            return self.observations.pop(0)
+        return self.observations[0]
 
 
 class _OwnerCommentVerifier:
@@ -252,6 +263,28 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
                 "nac_bff.azure_activation_runner._LEGACY_HOST_LOCK_ROOT",
                 self.legacy_host_lock_root,
             ),
+            patch(
+                "nac_bff.azure_interruption_baseline.GitApprovedTreeSource.inspect",
+                side_effect=self._approved_tree_inspection,
+            ),
+        )
+
+    def _approved_tree_inspection(self, _repo_root, *, approved_commit, approved_tree):
+        del approved_commit, approved_tree
+        run_dir = self.root / DEFAULT_OUTPUT_ROOT / ACTIVATION_HASH
+        path = (
+            run_dir
+            / "prepared/approved-tree"
+            / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+        )
+        return SimpleNamespace(
+            manifest_sha256="d" * 64,
+            file_count=1,
+            file_sha256={
+                "deploy/runtime/azure/nac-bff/infra/compiled/main.json": (
+                    hashlib.sha256(path.read_bytes()).hexdigest()
+                )
+            },
         )
 
     def _lock_paths(self) -> tuple[Path, Path, Path]:
@@ -288,7 +321,11 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
         values = {
             "owner_approved": True,
             "action": "TERMINALIZE_AND_RELEASE_LOCK_ONLY",
-            "owner_approval_reference": RECONCILIATION_APPROVAL_REFERENCE,
+            "owner_approval_reference": (
+                BASELINE_APPROVAL_REFERENCE
+                if bindings.get("provider_classification") == "BICEP_BASELINE_EXACT"
+                else RECONCILIATION_APPROVAL_REFERENCE
+            ),
             "approval_body_sha256": inspection["owner_comment"]["body_sha256"],
             "activation_hash": bindings["activation_hash"],
             "state_sha256": bindings["state_sha256"],
@@ -309,6 +346,13 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
             ],
             "required_owner_login": bindings["required_owner_login"],
         }
+        for key in (
+            "provider_classification", "baseline_expectation_sha256",
+            "prepared_inputs_manifest_sha256", "bicep_snapshot_sha256",
+            "bicep_parameters_snapshot_sha256",
+        ):
+            if key in bindings:
+                values[key] = bindings[key]
         values.update(overrides)
         return InterruptionTerminalizationApproval(**values)
 
@@ -364,6 +408,238 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
 
         self.assertEqual(
             result["error"]["code"], "PROVIDER_OBSERVATION_INVALID"
+        )
+        for path in self._lock_paths():
+            self.assertEqual(self._marker(path)["status"], "HELD")
+
+    def test_allowlisted_observation_error_is_propagated(self):
+        class RaisingPort:
+            def observe_ensure_resource_group(self, **bindings):
+                del bindings
+                raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+
+        result = self._inspect(RaisingPort())
+
+        self.assertEqual(
+            result["error"]["code"],
+            "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+        )
+
+    def test_unknown_observation_error_is_redacted(self):
+        sentinel = "secret-provider-payload"
+
+        class RaisingPort:
+            def observe_ensure_resource_group(self, **bindings):
+                del bindings
+                raise ValueError(sentinel)
+
+        result = self._inspect(RaisingPort())
+
+        self.assertEqual(
+            result["error"]["code"], "PROVIDER_OBSERVATION_INVALID"
+        )
+        self.assertNotIn(sentinel, json.dumps(result))
+
+    def test_exact_hashbound_bicep_baseline_can_be_terminalized(self):
+        from tests.test_nac_bff_azure_interruption_baseline import (
+            _deployment,
+            _identity_binding,
+            _inventory,
+            _live_resource_state,
+            _operations,
+            _prepared,
+            _load_expectation,
+        )
+
+        run_dir = self.root / DEFAULT_OUTPUT_ROOT / ACTIVATION_HASH
+        manifest = _prepared(
+            run_dir,
+            activation_hash=ACTIVATION_HASH,
+            commit=COMMIT,
+            tree=TREE,
+        )
+        expectation, error = _load_expectation(
+            run_dir,
+            {"activation_hash": ACTIVATION_HASH},
+            _request(),
+        )
+        self.assertIsNone(error)
+        assert expectation is not None
+        observation = {
+            **_observation(),
+            "resource_inventory": _inventory(),
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "deployment": _deployment(expectation),
+            "deployment_operations": _operations(),
+            "identity_binding": _identity_binding(),
+            "live_resource_state": _live_resource_state(),
+            "baseline_expectation_sha256": _sha256_json(expectation),
+        }
+
+        inspection = self._inspect(
+            _ObservationPort([observation, observation])
+        )
+
+        self.assertEqual(
+            inspection["status"], "MIDRUN_RECONCILIATION_REQUIRED"
+        )
+        bindings = inspection["approval_bindings"]
+        self.assertEqual(
+            bindings["provider_classification"], BICEP_BASELINE_EXACT
+        )
+        self.assertEqual(
+            bindings["prepared_inputs_manifest_sha256"],
+            expectation["prepared_inputs_manifest_sha256"],
+        )
+        approval = self._approval(inspection)
+        self.assertEqual(
+            approval.owner_approval_reference, BASELINE_APPROVAL_REFERENCE
+        )
+        with self._reconciliation_patches():
+            result = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(
+                    [observation, observation]
+                ),
+                owner_comment_verifier=_OwnerCommentVerifier(),
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        self.assertEqual(result["status"], "FAILED_PARTIAL", result)
+        self.assertFalse(
+            (run_dir / "activation.success-receipt.redacted.json").exists()
+        )
+        ledger_dir = run_dir / "ledger"
+        before = {
+            path.name: path.read_bytes()
+            for path in ledger_dir.glob("*.redacted.json")
+        }
+        with self._reconciliation_patches():
+            repeated = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(
+                    [observation, observation]
+                ),
+                owner_comment_verifier=_OwnerCommentVerifier(),
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        after = {
+            path.name: path.read_bytes()
+            for path in ledger_dir.glob("*.redacted.json")
+        }
+        self.assertEqual(repeated["status"], "FAILED_PARTIAL")
+        self.assertIs(repeated["reconciliation"]["idempotent"], True)
+        self.assertEqual(before, after)
+
+    def test_provider_drift_after_owner_verification_blocks_first_mutation(self):
+        observation = _observation()
+        inspection = self._inspect(
+            _ObservationPort([observation, observation])
+        )
+        approval = self._approval(inspection)
+        drifted = json.loads(json.dumps(observation))
+        drifted["providers"]["Microsoft.Web"] = "Registering"
+        run_dir = self.root / DEFAULT_OUTPUT_ROOT / ACTIVATION_HASH
+
+        with self._reconciliation_patches():
+            result = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(
+                    [observation, observation, drifted]
+                ),
+                owner_comment_verifier=_OwnerCommentVerifier(),
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+
+        self.assertEqual(
+            result["error"]["code"], "PROVIDER_OBSERVATION_DRIFT"
+        )
+        self.assertFalse(
+            (run_dir / "interruption-terminalization.redacted.json").exists()
+        )
+        for path in self._lock_paths():
+            self.assertEqual(self._marker(path)["status"], "HELD")
+
+    def test_pre_mutation_prepared_artifact_tamper_fails_closed(self):
+        from tests.test_nac_bff_azure_interruption_baseline import (
+            _deployment,
+            _identity_binding,
+            _inventory,
+            _live_resource_state,
+            _operations,
+            _prepared,
+            _load_expectation,
+        )
+
+        run_dir = self.root / DEFAULT_OUTPUT_ROOT / ACTIVATION_HASH
+        _prepared(
+            run_dir,
+            activation_hash=ACTIVATION_HASH,
+            commit=COMMIT,
+            tree=TREE,
+        )
+        expectation, error = _load_expectation(
+            run_dir,
+            {"activation_hash": ACTIVATION_HASH},
+            _request(),
+        )
+        self.assertIsNone(error)
+        assert expectation is not None
+        observation = {
+            **_observation(),
+            "resource_inventory": _inventory(),
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "deployment": _deployment(expectation),
+            "deployment_operations": _operations(),
+            "identity_binding": _identity_binding(),
+            "live_resource_state": _live_resource_state(),
+            "baseline_expectation_sha256": _sha256_json(expectation),
+        }
+        inspection = self._inspect(
+            _ObservationPort([observation, observation])
+        )
+        approval = self._approval(inspection)
+
+        def tamper_prepared_template() -> None:
+            template_path = run_dir / "prepared" / "main.json"
+            original = template_path.read_bytes()
+            template_path.chmod(0o600)
+            template_path.write_bytes(original + b" ")
+
+        with self._reconciliation_patches():
+            result = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(
+                    [observation, observation]
+                ),
+                owner_comment_verifier=_OwnerCommentVerifier(),
+                approval=approval,
+                pre_mutation_revalidate=tamper_prepared_template,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+
+        self.assertEqual(
+            result["error"]["code"],
+            "INTERRUPTION_BASELINE_GIT_PROVENANCE_MISMATCH",
+        )
+        self.assertFalse(
+            (
+                run_dir
+                / "activation.interruption-reconciliation.redacted.json"
+            ).exists()
         )
         for path in self._lock_paths():
             self.assertEqual(self._marker(path)["status"], "HELD")
@@ -699,6 +975,180 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
             ["RELEASED", "RELEASED", "RELEASED"],
         )
 
+    def _assert_partial_release_append_recovery(self, fail_call: int) -> None:
+        inspection = self._inspect()
+        approval = self._approval(inspection)
+        verifier = _OwnerCommentVerifier()
+        original_append = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_append_lock_marker_bytes"],
+        )._append_lock_marker_bytes
+        append_calls = 0
+
+        def partial_append(descriptor, raw):
+            nonlocal append_calls
+            append_calls += 1
+            if append_calls == fail_call:
+                os.write(descriptor, raw[: max(1, len(raw) // 2)])
+                raise OSError("simulated partial append")
+            return original_append(descriptor, raw)
+
+        with self._reconciliation_patches(), patch(
+            "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+            side_effect=partial_append,
+        ):
+            interrupted = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        self.assertEqual(
+            interrupted["error"]["code"],
+            "INTERRUPTION_TERMINALIZATION_FAILED",
+        )
+        revalidations = 0
+
+        def revalidate():
+            nonlocal revalidations
+            revalidations += 1
+
+        with self._reconciliation_patches():
+            recovered = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=revalidate,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        self.assertEqual(recovered["status"], "FAILED_PARTIAL", recovered)
+        self.assertTrue(recovered["reconciliation"]["idempotent"])
+        self.assertGreaterEqual(revalidations, 1)
+        self.assertEqual(
+            [self._marker(path)["status"] for path in self._lock_paths()],
+            ["RELEASED", "RELEASED", "RELEASED"],
+        )
+
+    def test_first_partial_release_append_is_revalidated_and_recovered(self):
+        self._assert_partial_release_append_recovery(1)
+
+    def test_second_partial_release_append_is_revalidated_and_recovered(self):
+        self._assert_partial_release_append_recovery(2)
+
+    def test_third_partial_release_append_is_revalidated_and_recovered(self):
+        self._assert_partial_release_append_recovery(3)
+
+    def test_partial_release_recovery_keeps_bytes_when_revalidation_fails(self):
+        inspection = self._inspect()
+        approval = self._approval(inspection)
+        verifier = _OwnerCommentVerifier()
+        original_append = __import__(
+            "nac_bff.azure_activation_runner",
+            fromlist=["_append_lock_marker_bytes"],
+        )._append_lock_marker_bytes
+        append_calls = 0
+
+        def partial_append(descriptor, raw):
+            nonlocal append_calls
+            append_calls += 1
+            if append_calls == 1:
+                os.write(descriptor, raw[: max(1, len(raw) // 2)])
+                raise OSError("simulated partial append")
+            return original_append(descriptor, raw)
+
+        with self._reconciliation_patches(), patch(
+            "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+            side_effect=partial_append,
+        ):
+            terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        before = {path: path.read_bytes() for path in self._lock_paths()}
+
+        def reject_revalidation():
+            raise ActivationStepError("RUNTIME_REVALIDATION_FAILED")
+
+        with self._reconciliation_patches():
+            blocked = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=reject_revalidation,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+
+        self.assertEqual(
+            blocked["error"]["code"], "RUNTIME_REVALIDATION_FAILED"
+        )
+        self.assertEqual(
+            before, {path: path.read_bytes() for path in self._lock_paths()}
+        )
+
+    def test_partial_release_append_with_unknown_tail_stays_blocked(self):
+        inspection = self._inspect()
+        approval = self._approval(inspection)
+        verifier = _OwnerCommentVerifier()
+        append_calls = 0
+
+        def partial_append(descriptor, raw):
+            nonlocal append_calls
+            append_calls += 1
+            if append_calls == 1:
+                os.write(descriptor, raw[: max(1, len(raw) // 2)])
+                raise OSError("simulated partial append")
+            raise AssertionError("unexpected second append")
+
+        with self._reconciliation_patches(), patch(
+            "nac_bff.azure_activation_runner._append_lock_marker_bytes",
+            side_effect=partial_append,
+        ):
+            terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        with self._lock_paths()[0].open("ab") as stream:
+            stream.write(b"unknown-tail")
+            stream.flush()
+            os.fsync(stream.fileno())
+        with self._reconciliation_patches():
+            blocked = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=verifier,
+                approval=approval,
+                pre_mutation_revalidate=lambda: None,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+        self.assertEqual(
+            blocked["error"]["code"],
+            "INTERRUPTION_TERMINAL_PROGRESS_INVALID",
+        )
+
     def test_old_issue_632_reference_cannot_authorize_terminalization(self):
         inspection = self._inspect()
         approval = self._approval(
@@ -750,6 +1200,50 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
 
         self.assertEqual(
             result["error"]["code"], "INTERRUPTION_LOCK_REPLACED"
+        )
+        marker_path = (
+            self.root
+            / DEFAULT_OUTPUT_ROOT
+            / ACTIVATION_HASH
+            / "activation.interruption-reconciliation.redacted.json"
+        )
+        self.assertFalse(marker_path.exists())
+
+    def test_same_inode_lock_append_blocks_before_first_mutation(self):
+        inspection = self._inspect()
+        approval = self._approval(inspection)
+        target = self._lock_paths()[0]
+
+        def append_same_held_marker():
+            with target.open("ab") as stream:
+                stream.write((
+                    json.dumps(
+                        {
+                            "activation_hash": ACTIVATION_HASH,
+                            "status": "HELD",
+                        },
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    + "\n"
+                ).encode("utf-8"))
+                stream.flush()
+                os.fsync(stream.fileno())
+
+        with self._reconciliation_patches():
+            result = terminalize_azure_bff_step2_interruption(
+                repo_root=self.root,
+                request=_request(),
+                reconciler_binding=self.binding,
+                observation_port=_ObservationPort(),
+                owner_comment_verifier=_OwnerCommentVerifier(),
+                approval=approval,
+                pre_mutation_revalidate=append_same_held_marker,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+
+        self.assertEqual(
+            result["error"]["code"], "INTERRUPTION_LOCK_SET_CHANGED"
         )
         marker_path = (
             self.root

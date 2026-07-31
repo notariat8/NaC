@@ -8060,7 +8060,10 @@ def _run_bff_azure_activation_interruption_command(
     parser.add_argument("--interrupted-step")
     parser.add_argument(
         "--terminalization-approval-reference",
-        help="Exact immutable terminalization approval reference from issue #717.",
+        help=(
+            "Exact immutable terminalization approval reference from issue "
+            "#717 (resource-group only) or #719 (exact Bicep baseline)."
+        ),
     )
     parser.add_argument("--terminalization-approval-body-sha256")
     parser.add_argument("--state-sha256")
@@ -8069,6 +8072,11 @@ def _run_bff_azure_activation_interruption_command(
     parser.add_argument("--legacy-lock-sha256")
     parser.add_argument("--legacy-host-lock-sha256")
     parser.add_argument("--provider-observation-sha256")
+    parser.add_argument("--provider-classification")
+    parser.add_argument("--baseline-expectation-sha256")
+    parser.add_argument("--prepared-inputs-manifest-sha256")
+    parser.add_argument("--bicep-snapshot-sha256")
+    parser.add_argument("--bicep-parameters-snapshot-sha256")
     command_argv = argv[:command_index] + argv[command_index + 3 :]
     output_format = (
         "json"
@@ -8080,7 +8088,7 @@ def _run_bff_azure_activation_interruption_command(
     )
     args = parser.parse_args(command_argv)
 
-    terminal_fields = (
+    core_terminal_fields = (
         "terminalization_action",
         "interrupted_step",
         "terminalization_approval_reference",
@@ -8092,6 +8100,14 @@ def _run_bff_azure_activation_interruption_command(
         "legacy_host_lock_sha256",
         "provider_observation_sha256",
     )
+    baseline_terminal_fields = (
+        "provider_classification",
+        "baseline_expectation_sha256",
+        "prepared_inputs_manifest_sha256",
+        "bicep_snapshot_sha256",
+        "bicep_parameters_snapshot_sha256",
+    )
+    terminal_fields = core_terminal_fields + baseline_terminal_fields
     supplied_terminal_fields = any(
         getattr(args, field) is not None for field in terminal_fields
     )
@@ -8100,7 +8116,7 @@ def _run_bff_azure_activation_interruption_command(
             "INTERRUPTION_CONFIRMATION_REQUIRED", args.format
         )
     if args.confirm_terminalize_and_release and any(
-        getattr(args, field) is None for field in terminal_fields
+        getattr(args, field) is None for field in core_terminal_fields
     ):
         return _emit_bff_azure_interruption_error(
             "INTERRUPTION_APPROVAL_ARGUMENTS_REQUIRED", args.format
@@ -8109,7 +8125,7 @@ def _run_bff_azure_activation_interruption_command(
         args.terminalization_action != "TERMINALIZE_AND_RELEASE_LOCK_ONLY"
         or args.interrupted_step != "ensure_resource_group"
         or re.fullmatch(
-            r"https://github\.com/notariat8/NaC/issues/717"
+            r"https://github\.com/notariat8/NaC/issues/(?:717|719)"
             r"#issuecomment-[1-9][0-9]*",
             args.terminalization_approval_reference,
         )
@@ -8118,6 +8134,30 @@ def _run_bff_azure_activation_interruption_command(
         return _emit_bff_azure_interruption_error(
             "INTERRUPTION_APPROVAL_ARGUMENTS_INVALID", args.format
         )
+    provider_classification = (
+        args.provider_classification or "RESOURCE_GROUP_ONLY"
+    )
+    baseline_values = tuple(
+        getattr(args, field) for field in baseline_terminal_fields[1:]
+    )
+    if args.confirm_terminalize_and_release:
+        expected_issue = (
+            "719"
+            if provider_classification == "BICEP_BASELINE_EXACT"
+            and all(value is not None for value in baseline_values)
+            else "717"
+            if provider_classification == "RESOURCE_GROUP_ONLY"
+            and all(value is None for value in baseline_values)
+            else None
+        )
+        if expected_issue is None or re.fullmatch(
+            rf"https://github\.com/notariat8/NaC/issues/{expected_issue}"
+            r"#issuecomment-[1-9][0-9]*",
+            args.terminalization_approval_reference,
+        ) is None:
+            return _emit_bff_azure_interruption_error(
+                "INTERRUPTION_APPROVAL_ARGUMENTS_INVALID", args.format
+            )
 
     try:
         from nac_bff.azure_activation_composition import (
@@ -8190,6 +8230,17 @@ def _run_bff_azure_activation_interruption_command(
                 ),
                 required_owner_login=(
                     CANONICAL_INTERRUPTION_OWNER_LOGIN
+                ),
+                provider_classification=provider_classification,
+                baseline_expectation_sha256=(
+                    args.baseline_expectation_sha256
+                ),
+                prepared_inputs_manifest_sha256=(
+                    args.prepared_inputs_manifest_sha256
+                ),
+                bicep_snapshot_sha256=args.bicep_snapshot_sha256,
+                bicep_parameters_snapshot_sha256=(
+                    args.bicep_parameters_snapshot_sha256
                 ),
             )
             result = terminalize_azure_bff_step2_interruption(

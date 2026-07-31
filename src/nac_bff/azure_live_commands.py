@@ -14,6 +14,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Sequence
 
 from nac_bff.azure_activation import FUNCTION_APP, LOCATION, RESOURCE_GROUP
+from nac_bff.azure_interruption_contract import (
+    BICEP_BASELINE_EXACT,
+    RESOURCE_GROUP_ONLY,
+    canonical_parameters_from_wrappers,
+    compact_sha256_json,
+    newline_sha256_json,
+)
 from nac_bff.azure_cli_sealed_runtime import (
     SealedAzureCliRuntime,
     prepare_sealed_azure_cli_runtime,
@@ -52,18 +59,92 @@ ALLOWED_COMMAND_PREFIXES = (
     ("group", "create"),
     ("deployment", "group", "create"),
     ("deployment", "group", "show"),
+    ("deployment", "operation", "group", "list"),
+    ("identity", "show"),
+    ("functionapp", "identity", "show"),
     ("resource", "list"),
     ("resource", "show"),
+    ("rest",),
     ("functionapp", "deployment", "source", "config-zip"),
+)
+INTERRUPTION_READ_COMMAND_PREFIXES = (
+    ("account", "show"),
+    ("provider", "show"),
+    ("group", "exists"),
+    ("group", "show"),
+    ("resource", "list"),
+    ("resource", "show"),
+    ("rest",),
+    ("deployment", "group", "show"),
+    ("deployment", "operation", "group", "list"),
+    ("identity", "show"),
+    ("functionapp", "identity", "show"),
 )
 
 _PROVIDER_NAMESPACES = frozenset(
     {"Microsoft.Web", "Microsoft.Storage", "Microsoft.OperationalInsights"}
 )
 _DEPLOYMENT_NAME_RE = re.compile(r"nac-bff-[0-9a-f]{12}\Z")
+_IDENTITY_NAME_RE = re.compile(r"id-nac-bff-test-[a-z0-9]+\Z")
 _SMART_DETECTION_ACTION_GROUP_NAME = "Application Insights Smart Detection"
 _SMART_DETECTION_ACTION_GROUP_TYPE = "Microsoft.Insights/ActionGroups"
 _SMART_DETECTION_ACTION_GROUP_API_VERSION = "2021-09-01"
+_RESOURCE_DETAIL_API_VERSIONS = {
+    "microsoft.managedidentity/userassignedidentities": "2023-01-31",
+    "microsoft.storage/storageaccounts": "2023-05-01",
+    "microsoft.storage/storageaccounts/blobservices": "2023-05-01",
+    "microsoft.storage/storageaccounts/blobservices/containers": "2023-05-01",
+    "microsoft.operationalinsights/workspaces": "2023-09-01",
+    "microsoft.insights/components": "2020-02-02",
+    "microsoft.insights/components/currentbillingfeatures": "2015-05-01",
+    "microsoft.web/serverfarms": "2024-04-01",
+    "microsoft.web/sites": "2024-04-01",
+    "microsoft.web/sites/config": "2024-04-01",
+    "microsoft.authorization/roleassignments": "2022-04-01",
+}
+_STORAGE_BLOB_DATA_OWNER_ROLE_ID = "b7e6dc6d-f1e8-4753-8033-0f276bb0955b"
+_MONITORING_METRICS_PUBLISHER_ROLE_ID = (
+    "3913510d-42f4-4e42-8a64-420c390055eb"
+)
+_DEPLOYMENT_CONTAINER_NAME = "function-releases"
+_CORS_ALLOWED_ORIGINS = [
+    "https://funktion8.sharepoint.com",
+    "https://teams.microsoft.com",
+    "https://teams.cloud.microsoft",
+]
+_RESOURCE_GRAPH_URL = (
+    "https://management.azure.com/providers/Microsoft.ResourceGraph/resources"
+    "?api-version=2022-10-01"
+)
+_RESOURCE_GRAPH_SCOPE_PREFIX = (
+    f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}/resourcegroups/{RESOURCE_GROUP}"
+)
+_RESOURCE_GRAPH_QUERY = (
+    "Resources "
+    f"| where subscriptionId =~ {json.dumps(EXPECTED_SUBSCRIPTION_ID)} "
+    f"and resourceGroup =~ {json.dumps(RESOURCE_GROUP)} "
+    "| project id, type "
+    "| union (AuthorizationResources "
+    f"| where subscriptionId =~ {json.dumps(EXPECTED_SUBSCRIPTION_ID)} "
+    "| where tolower(tostring(properties.scope)) startswith "
+    f"{json.dumps(_RESOURCE_GRAPH_SCOPE_PREFIX.lower())} "
+    "| project id, type) "
+    "| order by type asc, id asc"
+)
+_RESOURCE_GRAPH_BODY = json.dumps(
+    {
+        "subscriptions": [EXPECTED_SUBSCRIPTION_ID],
+        "query": _RESOURCE_GRAPH_QUERY,
+        "options": {"resultFormat": "objectArray"},
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+)
+_APP_SETTINGS_URL = (
+    f"https://management.azure.com/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+    f"/resourceGroups/{RESOURCE_GROUP}/providers/Microsoft.Web/sites/"
+    f"{FUNCTION_APP}/config/appsettings/list?api-version=2024-04-01"
+)
 _UUID_RE = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z",
     re.IGNORECASE,
@@ -176,7 +257,12 @@ class AzureCliInterruptionObservationPort:
         self._preflight = preflight
 
     def observe_ensure_resource_group(
-        self, *, tenant_id: str, subscription_id: str, resource_group: str
+        self,
+        *,
+        tenant_id: str,
+        subscription_id: str,
+        resource_group: str,
+        baseline_expectation: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if (
             tenant_id != EXPECTED_TENANT_ID
@@ -235,10 +321,7 @@ class AzureCliInterruptionObservationPort:
         raw_inventory = self._read(
             ("resource", "list", "--resource-group", resource_group), list
         )
-        if raw_inventory:
-            raise ValueError("AZURE_INTERRUPTION_RESOURCE_INVENTORY_NOT_EMPTY")
-
-        return {
+        legacy_result = {
             "tenant_id": tenant_id,
             "subscription_id": subscription_id,
             "providers": providers,
@@ -253,8 +336,140 @@ class AzureCliInterruptionObservationPort:
             ],
             "resource_inventory": [],
         }
+        if not raw_inventory:
+            return legacy_result
+        result = {
+            **legacy_result,
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "deployment": None,
+            "deployment_operations": [],
+            "identity_binding": None,
+            "live_resource_state": None,
+            "baseline_expectation_sha256": None,
+        }
+        if baseline_expectation is None:
+            raise ValueError("AZURE_INTERRUPTION_BASELINE_BINDING_MISSING")
+        deployment_name = baseline_expectation.get("deployment_name")
+        if not isinstance(deployment_name, str):
+            raise ValueError("AZURE_INTERRUPTION_BASELINE_BINDING_INVALID")
+        deployment = self._read(
+            (
+                "deployment", "group", "show", "--name", deployment_name,
+                "--resource-group", resource_group,
+            ),
+            dict,
+        )
+        operations = self._read(
+            (
+                "deployment", "operation", "group", "list",
+                "--name", deployment_name,
+                "--resource-group", resource_group,
+            ),
+            list,
+        )
+        smart_detail = self._read(
+            (
+                "resource", "show",
+                "--resource-group", resource_group,
+                "--resource-type", _SMART_DETECTION_ACTION_GROUP_TYPE,
+                "--name", _SMART_DETECTION_ACTION_GROUP_NAME,
+                "--api-version", _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+            ),
+            dict,
+        )
+        inventory = _interruption_inventory_projection(
+            raw_inventory, smart_detail=smart_detail
+        )
+        identities = [
+            item
+            for item in inventory
+            if item["type"]
+            == "microsoft.managedidentity/userassignedidentities"
+        ]
+        if len(identities) != 1:
+            raise ValueError("AZURE_INTERRUPTION_IDENTITY_INVALID")
+        managed_identity = self._read(
+            (
+                "identity", "show",
+                "--name", str(identities[0]["name"]),
+                "--resource-group", resource_group,
+            ),
+            dict,
+        )
+        function_identity = self._read(
+            (
+                "functionapp", "identity", "show",
+                "--name", FUNCTION_APP,
+                "--resource-group", resource_group,
+            ),
+            dict,
+        )
+        projected_operations = _interruption_operation_projection(operations)
+        resource_details = []
+        for operation in projected_operations:
+            detail = self._read(_resource_detail_read_command(operation), dict)
+            if operation["type"] == "microsoft.web/sites/config":
+                detail = {
+                    "id": operation["id"],
+                    "type": operation["type"],
+                    "properties": detail.get("properties"),
+                }
+            resource_details.append(detail)
+        projected_deployment = _interruption_deployment_projection(deployment)
+        projected_identity = _interruption_identity_projection(
+            managed_identity, function_identity
+        )
+        resource_graph = self._read(
+            (
+                "rest", "--method", "post",
+                "--url", _RESOURCE_GRAPH_URL,
+                "--body", _RESOURCE_GRAPH_BODY,
+            ),
+            dict,
+        )
+        live_resource_state = _interruption_live_resource_state(
+            resource_details,
+            projected_operations,
+            inventory,
+            projected_deployment,
+            projected_identity,
+            _resource_graph_projection(resource_graph),
+        )
+        repeated_inventory = self._read(
+            ("resource", "list", "--resource-group", resource_group), list
+        )
+        repeated_smart_detail = self._read(
+            (
+                "resource", "show",
+                "--resource-group", resource_group,
+                "--resource-type", _SMART_DETECTION_ACTION_GROUP_TYPE,
+                "--name", _SMART_DETECTION_ACTION_GROUP_NAME,
+                "--api-version", _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+            ),
+            dict,
+        )
+        if inventory != _interruption_inventory_projection(
+            repeated_inventory, smart_detail=repeated_smart_detail
+        ):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_INVENTORY_CHANGED")
+        result.update({
+            "resource_inventory": inventory,
+            "deployment": projected_deployment,
+            "deployment_operations": projected_operations,
+            "identity_binding": projected_identity,
+            "live_resource_state": live_resource_state,
+            "baseline_expectation_sha256": newline_sha256_json(
+                baseline_expectation
+            ),
+        })
+        return result
 
     def _read(self, argv: tuple[str, ...], expected_type: type) -> Any:
+        if not any(
+            argv[: len(prefix)] == prefix
+            for prefix in INTERRUPTION_READ_COMMAND_PREFIXES
+        ):
+            raise ValueError("AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN")
         self._preflight()
         result = self._azure.run(argv)
         if not isinstance(result, dict):
@@ -263,6 +478,461 @@ class AzureCliInterruptionObservationPort:
         if result.get("ok") is not True or type(value) is not expected_type:
             raise ValueError("AZURE_INTERRUPTION_READ_FAILED")
         return value
+
+
+def _interruption_inventory_projection(
+    value: list[Any], *, smart_detail: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    projected: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_INVALID")
+        smart = (
+            str(item.get("type", "")).lower()
+            == _SMART_DETECTION_ACTION_GROUP_TYPE.lower()
+            and item.get("name") == _SMART_DETECTION_ACTION_GROUP_NAME
+        )
+        source = smart_detail if smart and smart_detail is not None else item
+        sku = source.get("sku")
+        tags = source.get("tags")
+        projected.append({
+            "id": source.get("id"),
+            "name": source.get("name"),
+            "type": str(source.get("type", "")).lower(),
+            "resource_group": source.get("resourceGroup"),
+            "location": str(source.get("location", "")).lower(),
+            "kind": source.get("kind"),
+            "sku": (
+                {key: sku.get(key) for key in ("name", "tier")}
+                if isinstance(sku, dict)
+                else None
+            ),
+            "tags": (
+                {key: tags[key] for key in sorted(tags)}
+                if isinstance(tags, dict)
+                else None
+            ),
+            "managed_by": source.get("managedBy"),
+            "properties": source.get("properties") if smart else None,
+        })
+    return sorted(
+        projected,
+        key=lambda item: (str(item["type"]), str(item["name"])),
+    )
+
+
+
+def _resource_detail_read_command(
+    operation: dict[str, Any],
+) -> tuple[str, ...]:
+    if operation["type"] == "microsoft.web/sites/config":
+        return ("rest", "--method", "post", "--url", _APP_SETTINGS_URL)
+    return (
+        "resource", "show",
+        "--ids", operation["id"],
+        "--api-version", _RESOURCE_DETAIL_API_VERSIONS[operation["type"]],
+    )
+
+
+def _resource_graph_projection(value: dict[str, Any]) -> list[dict[str, str]]:
+    allowed = {
+        "count", "data", "facets", "resultTruncated",
+        "skipToken", "totalRecords",
+    }
+    if set(value) - allowed:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+    rows = value.get("data")
+    count = value.get("count")
+    total_records = value.get("totalRecords")
+    result_truncated = value.get("resultTruncated")
+    skip_token = value.get("skipToken")
+    if (
+        not isinstance(rows, list)
+        or type(count) is not int
+        or type(total_records) is not int
+        or count != len(rows)
+        or total_records != len(rows)
+        or result_truncated not in (False, "false")
+        or ("skipToken" in value and skip_token not in (None, ""))
+        or ("facets" in value and not isinstance(value["facets"], list))
+    ):
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+    projected: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {"id", "type"}:
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+        resource_id = row.get("id")
+        resource_type = row.get("type")
+        if not isinstance(resource_id, str) or not isinstance(resource_type, str):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+        lowered_id = resource_id.lower()
+        lowered_type = resource_type.lower()
+        if (
+            not lowered_id.startswith(_RESOURCE_GRAPH_SCOPE_PREFIX.lower() + "/")
+            or lowered_id in seen
+        ):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+        seen.add(lowered_id)
+        projected.append({"id": lowered_id, "type": lowered_type})
+    return sorted(projected, key=lambda item: (item["type"], item["id"]))
+
+def _interruption_live_resource_state(
+    details: list[dict[str, Any]],
+    operations: list[dict[str, Any]],
+    inventory: list[dict[str, Any]],
+    deployment: dict[str, Any],
+    identity_binding: dict[str, Any],
+    resource_graph: list[dict[str, str]],
+) -> dict[str, Any]:
+    if len(details) != 12 or len(operations) != 12:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+    expected_graph = sorted(
+        {
+            (str(item["id"]).lower(), str(item["type"]).lower())
+            for item in [*inventory, *operations]
+        },
+        key=lambda item: (item[1], item[0]),
+    )
+    actual_graph = sorted(
+        ((item["id"], item["type"]) for item in resource_graph),
+        key=lambda item: (item[1], item[0]),
+    )
+    if actual_graph != expected_graph:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+
+    targets = sorted(
+        ({"id": item["id"].lower(), "type": item["type"]}
+         for item in operations),
+        key=lambda item: (item["type"], item["id"]),
+    )
+    detail_by_id: dict[str, dict[str, Any]] = {}
+    for detail in details:
+        if not isinstance(detail, dict) or not isinstance(detail.get("id"), str):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+        resource_id = detail["id"].lower()
+        if resource_id in detail_by_id:
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+        detail_by_id[resource_id] = detail
+    if set(detail_by_id) != {item["id"] for item in targets}:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+
+    inventory_by_type = {item["type"]: item for item in inventory}
+    operations_by_id = {item["id"].lower(): item for item in operations}
+    managed = identity_binding["managed_identity"]
+    client_id = managed["client_id"]
+    principal_id = managed["principal_id"]
+    tenant_id = managed["tenant_id"]
+    storage = inventory_by_type["microsoft.storage/storageaccounts"]
+    workspace = inventory_by_type["microsoft.operationalinsights/workspaces"]
+    component = inventory_by_type["microsoft.insights/components"]
+    plan = inventory_by_type["microsoft.web/serverfarms"]
+    site = inventory_by_type["microsoft.web/sites"]
+    component_detail = detail_by_id[component["id"].lower()]
+    component_properties = _required_properties(component_detail)
+    connection_string = component_properties.get("ConnectionString")
+    if not isinstance(connection_string, str) or not connection_string:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+
+    for target in targets:
+        detail = detail_by_id[target["id"]]
+        resource_type = target["type"]
+        if (
+            str(detail.get("type", "")).lower() != resource_type
+            or operations_by_id[target["id"]]["type"] != resource_type
+        ):
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+        properties = _required_properties(detail)
+        if resource_type == "microsoft.managedidentity/userassignedidentities":
+            valid = _security_projection_matches(properties, {
+                "clientId": client_id,
+                "principalId": principal_id,
+                "tenantId": tenant_id,
+            })
+        elif resource_type == "microsoft.storage/storageaccounts":
+            valid = _security_projection_matches(properties, {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": False,
+                "allowCrossTenantReplication": False,
+                "allowSharedKeyAccess": False,
+                "defaultToOAuthAuthentication": True,
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "Enabled",
+                "supportsHttpsTrafficOnly": True,
+                "networkAcls": {
+                    "bypass": "None",
+                    "defaultAction": "Allow",
+                    "ipRules": [],
+                    "virtualNetworkRules": [],
+                },
+            })
+        elif resource_type == "microsoft.storage/storageaccounts/blobservices":
+            valid = _security_projection_matches(properties, {
+                "deleteRetentionPolicy": {"enabled": False}
+            })
+        elif resource_type == "microsoft.storage/storageaccounts/blobservices/containers":
+            valid = _security_projection_matches(
+                properties, {"publicAccess": "None"}
+            )
+        elif resource_type == "microsoft.operationalinsights/workspaces":
+            valid = _security_projection_matches(properties, {
+                "features": {
+                    "disableLocalAuth": True,
+                    "enableLogAccessUsingOnlyResourcePermissions": True,
+                    "immediatePurgeDataOn30Days": True,
+                },
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled",
+                "retentionInDays": 30,
+                "sku": {"name": "PerGB2018"},
+                "workspaceCapping": {"dailyQuotaGb": 1},
+            })
+        elif resource_type == "microsoft.insights/components":
+            valid = _security_projection_matches(properties, {
+                "Application_Type": "web",
+                "ConnectionString": connection_string,
+                "DisableLocalAuth": True,
+                "IngestionMode": "LogAnalytics",
+                "RetentionInDays": 30,
+                "WorkspaceResourceId": workspace["id"],
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled",
+            })
+        elif resource_type == "microsoft.insights/components/currentbillingfeatures":
+            valid = _security_projection_matches(properties, {
+                "CurrentBillingFeatures": ["Basic"],
+                "DataVolumeCap": {
+                    "Cap": 0.1,
+                    "StopSendNotificationWhenHitCap": False,
+                },
+            })
+        elif resource_type == "microsoft.web/serverfarms":
+            valid = _security_projection_matches(properties, {
+                "reserved": True, "zoneRedundant": False
+            })
+        elif resource_type == "microsoft.web/sites":
+            valid = _function_site_state_matches(
+                properties, storage, plan, managed
+            )
+        elif resource_type == "microsoft.web/sites/config":
+            valid = properties == {
+                "APPLICATIONINSIGHTS_AUTHENTICATION_STRING": (
+                    f"ClientId={client_id};Authorization=AAD"
+                ),
+                "APPLICATIONINSIGHTS_CONNECTION_STRING": connection_string,
+                "AzureWebJobsStorage__accountName": storage["name"],
+                "AzureWebJobsStorage__clientId": client_id,
+                "AzureWebJobsStorage__credential": "managedidentity",
+                "M365_TENANT_ID": tenant_id,
+                "NAC_BFF_TENANT_ID": tenant_id,
+                "NAC_BFF_AUDIENCE": deployment["bff_api_audience"],
+                "NAC_BFF_REQUIRED_SCOPE": "Matter.Read",
+                "M365_RUNTIME_CLIENT_ID": client_id,
+                "AZURE_CLIENT_ID": client_id,
+            }
+        elif resource_type == "microsoft.authorization/roleassignments":
+            role_id = (
+                _STORAGE_BLOB_DATA_OWNER_ROLE_ID
+                if target["id"].startswith(storage["id"].lower() + "/")
+                else _MONITORING_METRICS_PUBLISHER_ROLE_ID
+                if target["id"].startswith(component["id"].lower() + "/")
+                else None
+            )
+            valid = role_id is not None and _security_projection_matches(
+                properties,
+                {
+                    "principalId": principal_id,
+                    "principalType": "ServicePrincipal",
+                    "roleDefinitionId": (
+                        f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+                        f"/providers/Microsoft.Authorization/roleDefinitions/{role_id}"
+                    ),
+                },
+            )
+        else:
+            valid = False
+        if not valid:
+            raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+
+    return {
+        "schema_version": "nac.azure-interruption-live-resource-state/v1",
+        "resource_count": len(targets),
+        "resource_targets_sha256": compact_sha256_json(targets),
+        "resource_graph_count": len(resource_graph),
+        "resource_graph_targets_sha256": compact_sha256_json([
+            {"id": resource_id, "type": resource_type}
+            for resource_id, resource_type in actual_graph
+        ]),
+        "security_properties_exact": True,
+    }
+
+
+def _required_properties(value: dict[str, Any]) -> dict[str, Any]:
+    properties = value.get("properties")
+    if not isinstance(properties, dict):
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
+    return properties
+
+
+def _security_projection_matches(actual: object, expected: object) -> bool:
+    if isinstance(expected, dict):
+        return bool(
+            isinstance(actual, dict)
+            and all(
+                key in actual
+                and _security_projection_matches(actual[key], value)
+                for key, value in expected.items()
+            )
+        )
+    return actual == expected
+
+
+def _function_site_state_matches(
+    properties: dict[str, Any],
+    storage: dict[str, Any],
+    plan: dict[str, Any],
+    managed: dict[str, Any],
+) -> bool:
+    expected_storage_uri = (
+        f"https://{storage['name']}.blob.core.windows.net/"
+        f"{_DEPLOYMENT_CONTAINER_NAME}"
+    )
+    return _security_projection_matches(properties, {
+        "clientAffinityEnabled": False,
+        "httpsOnly": True,
+        "publicNetworkAccess": "Enabled",
+        "serverFarmId": plan["id"],
+        "siteConfig": {
+            "alwaysOn": False,
+            "cors": {
+                "allowedOrigins": _CORS_ALLOWED_ORIGINS,
+                "supportCredentials": False,
+            },
+            "ftpsState": "Disabled",
+            "healthCheckPath": "/healthz",
+            "http20Enabled": True,
+            "minTlsVersion": "1.2",
+            "remoteDebuggingEnabled": False,
+        },
+        "functionAppConfig": {
+            "deployment": {
+                "storage": {
+                    "authentication": {
+                        "type": "UserAssignedIdentity",
+                        "userAssignedIdentityResourceId": managed["id"],
+                    },
+                    "type": "blobContainer",
+                    "value": expected_storage_uri,
+                }
+            },
+            "runtime": {"name": "python", "version": "3.12"},
+            "scaleAndConcurrency": {
+                "instanceMemoryMB": 2048,
+                "maximumInstanceCount": 4,
+                "triggers": {"http": {"perInstanceConcurrency": 16}},
+            },
+        },
+    })
+
+
+def _interruption_deployment_projection(value: dict[str, Any]) -> dict[str, Any]:
+    properties = value.get("properties")
+    if not isinstance(properties, dict):
+        raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_INVALID")
+    parameters = properties.get("parameters")
+    outputs = properties.get("outputs")
+    if not isinstance(parameters, dict) or not isinstance(outputs, dict):
+        raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_INVALID")
+    try:
+        canonical_parameters = canonical_parameters_from_wrappers(parameters)
+        projected_outputs = {
+            "function_app_resource_id": _interruption_output(
+                outputs, "functionAppResourceId"
+            ),
+            "function_app_host_name": _interruption_output(
+                outputs, "functionAppHostName"
+            ),
+            "managed_identity_resource_id": _interruption_output(
+                outputs, "managedIdentityResourceId"
+            ),
+            "managed_identity_client_id": _interruption_output(
+                outputs, "managedIdentityClientId"
+            ),
+            "managed_identity_principal_id": _interruption_output(
+                outputs, "managedIdentityPrincipalId"
+            ),
+        }
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_INVALID") from None
+    return {
+        "name": value.get("name"),
+        "resource_group": value.get("resourceGroup"),
+        "provisioning_state": properties.get("provisioningState"),
+        "mode": properties.get("mode"),
+        "template_hash": str(properties.get("templateHash", "")),
+        "parameters_sha256": compact_sha256_json(
+            canonical_parameters
+        ),
+        "bff_api_audience": str(
+            canonical_parameters["bffApiAudience"]["value"]
+        ).lower(),
+        "outputs": projected_outputs,
+    }
+
+
+def _interruption_output(outputs: dict[str, Any], key: str) -> Any:
+    wrapper = outputs[key]
+    if not isinstance(wrapper, dict) or set(wrapper) != {"type", "value"}:
+        raise ValueError("deployment output wrapper invalid")
+    return wrapper["value"]
+
+
+def _interruption_identity_projection(
+    managed_identity: dict[str, Any],
+    function_identity: dict[str, Any],
+) -> dict[str, Any]:
+    assignments = function_identity.get("userAssignedIdentities")
+    if not isinstance(assignments, dict):
+        raise ValueError("AZURE_INTERRUPTION_IDENTITY_INVALID")
+    projected_assignments: list[dict[str, Any]] = []
+    for resource_id, binding in assignments.items():
+        if not isinstance(resource_id, str) or not isinstance(binding, dict):
+            raise ValueError("AZURE_INTERRUPTION_IDENTITY_INVALID")
+        projected_assignments.append({
+            "id": resource_id,
+            "client_id": binding.get("clientId"),
+            "principal_id": binding.get("principalId"),
+        })
+    return {
+        "managed_identity": {
+            "id": managed_identity.get("id"),
+            "name": managed_identity.get("name"),
+            "client_id": managed_identity.get("clientId"),
+            "principal_id": managed_identity.get("principalId"),
+            "tenant_id": managed_identity.get("tenantId"),
+        },
+        "function_app": {
+            "type": function_identity.get("type"),
+            "user_assigned_identities": sorted(
+                projected_assignments, key=lambda item: item["id"].lower()
+            ),
+        },
+    }
+
+
+def _interruption_operation_projection(value: list[Any]) -> list[dict[str, str]]:
+    projected: list[dict[str, str]] = []
+    for item in value:
+        properties = item.get("properties") if isinstance(item, dict) else None
+        target = properties.get("targetResource") if isinstance(properties, dict) else None
+        if not isinstance(target, dict):
+            raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID")
+        projected.append({
+            "id": str(target.get("id", "")).lower(),
+            "type": str(target.get("resourceType", "")).lower(),
+            "provisioning_state": str(properties.get("provisioningState", "")),
+        })
+    return sorted(projected, key=lambda item: (item["type"], item["id"]))
 
 
 def resolve_azure_cli_binary(
@@ -720,6 +1390,79 @@ def _resource_group_tags(values: tuple[str, ...]) -> bool:
     } and len(values) == 3
 
 
+def _resource_detail_type_from_id(value: str) -> str | None:
+    lowered = value.lower()
+    prefix = (
+        f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}/resourcegroups/"
+        f"{RESOURCE_GROUP}/providers/"
+    ).lower()
+    if not lowered.startswith(prefix):
+        return None
+    if "/providers/microsoft.authorization/roleassignments/" in lowered:
+        return "microsoft.authorization/roleassignments"
+    if "/microsoft.storage/storageaccounts/" in lowered:
+        if "/blobservices/" in lowered and "/containers/" in lowered:
+            return "microsoft.storage/storageaccounts/blobservices/containers"
+        if "/blobservices/" in lowered:
+            return "microsoft.storage/storageaccounts/blobservices"
+        return "microsoft.storage/storageaccounts"
+    if "/microsoft.insights/components/" in lowered:
+        if "/currentbillingfeatures/" in lowered:
+            return "microsoft.insights/components/currentbillingfeatures"
+        return "microsoft.insights/components"
+    if "/microsoft.web/sites/" in lowered:
+        if "/config/" in lowered:
+            return "microsoft.web/sites/config"
+        return "microsoft.web/sites"
+    candidates = (
+        "microsoft.managedidentity/userassignedidentities",
+        "microsoft.operationalinsights/workspaces",
+        "microsoft.web/serverfarms",
+    )
+    for resource_type in candidates:
+        if f"/{resource_type}/" in lowered:
+            return resource_type
+    return None
+
+
+def _rest_options_valid(options: dict[str, tuple[str, ...]]) -> bool:
+    return options in (
+        {
+            "--method": ("post",),
+            "--url": (_RESOURCE_GRAPH_URL,),
+            "--body": (_RESOURCE_GRAPH_BODY,),
+        },
+        {
+            "--method": ("post",),
+            "--url": (_APP_SETTINGS_URL,),
+        },
+    )
+
+
+def _resource_show_options_valid(
+    options: dict[str, tuple[str, ...]]
+) -> bool:
+    smart = {
+        "--resource-group": (RESOURCE_GROUP,),
+        "--resource-type": (_SMART_DETECTION_ACTION_GROUP_TYPE,),
+        "--name": (_SMART_DETECTION_ACTION_GROUP_NAME,),
+        "--api-version": (_SMART_DETECTION_ACTION_GROUP_API_VERSION,),
+    }
+    if options == smart:
+        return True
+    if set(options) != {"--ids", "--api-version"}:
+        return False
+    resource_ids = options["--ids"]
+    versions = options["--api-version"]
+    if len(resource_ids) != 1 or len(versions) != 1:
+        return False
+    resource_type = _resource_detail_type_from_id(resource_ids[0])
+    return (
+        resource_type is not None
+        and _RESOURCE_DETAIL_API_VERSIONS.get(resource_type) == versions[0]
+    )
+
+
 _COMMON_OPTIONAL = frozenset({"--subscription"})
 _COMMON_VALIDATORS: dict[str, Callable[[tuple[str, ...]], bool]] = {
     "--subscription": _single_exact(EXPECTED_SUBSCRIPTION_ID)
@@ -783,20 +1526,37 @@ _COMMAND_SCHEMAS = {
             **_COMMON_VALIDATORS,
         },
     ),
+    ("rest",): _CommandSchema(
+        ("rest",),
+        required=frozenset({"--method", "--url"}),
+        optional=frozenset({"--body"}),
+        validators={
+            "--method": _single_exact("post"),
+            "--url": _single_in(frozenset({
+                _RESOURCE_GRAPH_URL, _APP_SETTINGS_URL,
+            })),
+            "--body": _single_exact(_RESOURCE_GRAPH_BODY),
+        },
+    ),
     ("resource", "show"): _CommandSchema(
         ("resource", "show"),
-        required=frozenset(
-            {"--resource-group", "--resource-type", "--name", "--api-version"}
-        ),
-        optional=_COMMON_OPTIONAL,
+        optional=frozenset({
+            "--resource-group", "--resource-type", "--name",
+            "--api-version", "--ids", *tuple(_COMMON_OPTIONAL),
+        }),
         validators={
             "--resource-group": _single_exact(RESOURCE_GROUP),
             "--resource-type": _single_exact(
                 _SMART_DETECTION_ACTION_GROUP_TYPE
             ),
             "--name": _single_exact(_SMART_DETECTION_ACTION_GROUP_NAME),
-            "--api-version": _single_exact(
-                _SMART_DETECTION_ACTION_GROUP_API_VERSION
+            "--api-version": _single_in(frozenset({
+                _SMART_DETECTION_ACTION_GROUP_API_VERSION,
+                *_RESOURCE_DETAIL_API_VERSIONS.values(),
+            })),
+            "--ids": lambda values: (
+                len(values) == 1
+                and _resource_detail_type_from_id(values[0]) is not None
             ),
             **_COMMON_VALIDATORS,
         },
@@ -807,6 +1567,36 @@ _COMMAND_SCHEMAS = {
         optional=_COMMON_OPTIONAL,
         validators={
             "--name": _single_matching(_DEPLOYMENT_NAME_RE),
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("deployment", "operation", "group", "list"): _CommandSchema(
+        ("deployment", "operation", "group", "list"),
+        required=frozenset({"--name", "--resource-group"}),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--name": _single_matching(_DEPLOYMENT_NAME_RE),
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("identity", "show"): _CommandSchema(
+        ("identity", "show"),
+        required=frozenset({"--name", "--resource-group"}),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--name": _single_matching(_IDENTITY_NAME_RE),
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("functionapp", "identity", "show"): _CommandSchema(
+        ("functionapp", "identity", "show"),
+        required=frozenset({"--name", "--resource-group"}),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--name": _single_exact(FUNCTION_APP),
             "--resource-group": _single_exact(RESOURCE_GROUP),
             **_COMMON_VALIDATORS,
         },
@@ -911,6 +1701,15 @@ def _validated_command(
     if not schema.required.issubset(options):
         return None, None, "AZURE_CLI_COMMAND_BLOCKED"
     if not schema.required_flags.issubset(seen_flags):
+        return None, None, "AZURE_CLI_COMMAND_BLOCKED"
+    effective_options = {
+        key: value for key, value in options.items() if key != "--subscription"
+    }
+    if family == ("resource", "show") and not (
+        _resource_show_options_valid(effective_options)
+    ):
+        return None, None, "AZURE_CLI_COMMAND_BLOCKED"
+    if family == ("rest",) and not _rest_options_valid(effective_options):
         return None, None, "AZURE_CLI_COMMAND_BLOCKED"
     validators = schema.validators or {}
     if any(not validators[option](values) for option, values in options.items()):

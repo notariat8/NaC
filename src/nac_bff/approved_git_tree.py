@@ -30,8 +30,36 @@ class ApprovedTreeSnapshot:
     file_count: int
 
 
+@dataclass(frozen=True)
+class ApprovedTreeInspection:
+    manifest_sha256: str
+    file_count: int
+    file_sha256: dict[str, str]
+
+
 class GitApprovedTreeSource:
     """Materialize regular blobs from one exact approved Git commit tree."""
+
+    def inspect(
+        self,
+        repo_root: Path,
+        *,
+        approved_commit: str,
+        approved_tree: str,
+    ) -> ApprovedTreeInspection:
+        entries, files, manifest_sha256 = _verified_tree_payload(
+            repo_root,
+            approved_commit=approved_commit,
+            approved_tree=approved_tree,
+        )
+        return ApprovedTreeInspection(
+            manifest_sha256=manifest_sha256,
+            file_count=len(entries),
+            file_sha256={
+                path: hashlib.sha256(files[path]).hexdigest()
+                for path in sorted(entries)
+            },
+        )
 
     def materialize(
         self,
@@ -41,32 +69,12 @@ class GitApprovedTreeSource:
         approved_commit: str,
         approved_tree: str,
     ) -> ApprovedTreeSnapshot:
-        root = repo_root.resolve()
         target = target_root.resolve()
-        if not _OBJECT_RE.fullmatch(approved_commit) or not _OBJECT_RE.fullmatch(
-            approved_tree
-        ):
-            raise ApprovedGitTreeError("APPROVED_GIT_OBJECT_INVALID")
-        git = _trusted_git()
-        resolved_tree = _git_text(
-            git, root, ("rev-parse", "--verify", f"{approved_commit}^{{tree}}")
+        entries, files, manifest_sha256 = _verified_tree_payload(
+            repo_root,
+            approved_commit=approved_commit,
+            approved_tree=approved_tree,
         )
-        if resolved_tree != approved_tree:
-            raise ApprovedGitTreeError("APPROVED_GIT_TREE_MISMATCH")
-
-        listing = _git_bytes(
-            git,
-            root,
-            ("ls-tree", "-r", "-z", "--full-tree", approved_commit),
-        )
-        entries = _parse_tree_listing(listing)
-        archive = _git_bytes(
-            git,
-            root,
-            ("archive", "--format=tar", approved_commit),
-            max_bytes=_MAX_ARCHIVE_BYTES,
-        )
-        files = _read_archive(archive, entries)
 
         if target.exists():
             raise ApprovedGitTreeError("APPROVED_GIT_SNAPSHOT_TARGET_EXISTS")
@@ -94,30 +102,64 @@ class GitApprovedTreeSource:
         except (OSError, KeyError):
             raise ApprovedGitTreeError("APPROVED_GIT_SNAPSHOT_WRITE_FAILED") from None
 
-        manifest = {
-            "schema_version": "nac.approved-git-tree-snapshot/v1",
-            "approved_commit_sha": approved_commit,
-            "approved_tree_sha": approved_tree,
-            "files": [
-                {
-                    "path": path,
-                    "mode": mode,
-                    "blob_sha1": blob_id,
-                    "sha256": hashlib.sha256(files[path]).hexdigest(),
-                }
-                for path, (mode, blob_id) in sorted(entries.items())
-            ],
-        }
-        manifest_sha256 = hashlib.sha256(
-            json.dumps(
-                manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-            ).encode("ascii")
-        ).hexdigest()
         return ApprovedTreeSnapshot(
             root=target,
             manifest_sha256=manifest_sha256,
             file_count=len(entries),
         )
+
+
+def _verified_tree_payload(
+    repo_root: Path,
+    *,
+    approved_commit: str,
+    approved_tree: str,
+) -> tuple[dict[str, tuple[str, str]], dict[str, bytes], str]:
+    root = repo_root.resolve()
+    if not _OBJECT_RE.fullmatch(approved_commit) or not _OBJECT_RE.fullmatch(
+        approved_tree
+    ):
+        raise ApprovedGitTreeError("APPROVED_GIT_OBJECT_INVALID")
+    git = _trusted_git()
+    resolved_tree = _git_text(
+        git, root, ("rev-parse", "--verify", f"{approved_commit}^{{tree}}")
+    )
+    if resolved_tree != approved_tree:
+        raise ApprovedGitTreeError("APPROVED_GIT_TREE_MISMATCH")
+    listing = _git_bytes(
+        git, root, ("ls-tree", "-r", "-z", "--full-tree", approved_tree)
+    )
+    entries = _parse_tree_listing(listing)
+    archive = _git_bytes(
+        git, root, ("archive", "--format=tar", approved_tree),
+        max_bytes=_MAX_ARCHIVE_BYTES,
+    )
+    files = _read_archive(archive, entries)
+    if any(
+        _git_blob_id(files[path]) != blob_id
+        for path, (_mode, blob_id) in entries.items()
+    ):
+        raise ApprovedGitTreeError("APPROVED_GIT_BLOB_MISMATCH")
+    manifest = {
+        "schema_version": "nac.approved-git-tree-snapshot/v1",
+        "approved_commit_sha": approved_commit,
+        "approved_tree_sha": approved_tree,
+        "files": [
+            {
+                "path": path,
+                "mode": mode,
+                "blob_sha1": blob_id,
+                "sha256": hashlib.sha256(files[path]).hexdigest(),
+            }
+            for path, (mode, blob_id) in sorted(entries.items())
+        ],
+    }
+    manifest_sha256 = hashlib.sha256(
+        json.dumps(
+            manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("ascii")
+    ).hexdigest()
+    return entries, files, manifest_sha256
 
 
 def _trusted_git() -> Path:
@@ -151,7 +193,14 @@ def _git_bytes(
 ) -> bytes:
     try:
         result = subprocess.run(
-            [str(git), "--no-optional-locks", "-C", str(root), *argv],
+            [
+                str(git),
+                "--no-optional-locks",
+                "--no-replace-objects",
+                "-C",
+                str(root),
+                *argv,
+            ],
             check=False,
             capture_output=True,
             shell=False,

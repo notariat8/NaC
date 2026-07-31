@@ -9,9 +9,16 @@ import os
 from pathlib import Path
 import re
 import stat
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, cast
 
 from .azure_activation import LOCATION, RESOURCE_GROUP, SUBSCRIPTION_ID, TENANT_ID
+from .azure_interruption_baseline import (
+    BICEP_BASELINE_EXACT,
+    RESOURCE_GROUP_ONLY,
+    exact_baseline_matches,
+    load_expectation,
+    read_bound_prepared_artifact,
+)
 from . import azure_activation_runner as runner
 
 
@@ -30,6 +37,10 @@ _TERMINALIZATION_APPROVAL_REFERENCE_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/717"
     r"#issuecomment-[1-9][0-9]*$"
 )
+_BASELINE_APPROVAL_REFERENCE_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/719"
+    r"#issuecomment-[1-9][0-9]*$"
+)
 _MAX_LOCK_ARTIFACT_BYTES = 1024 * 1024
 _PROVIDERS = {
     "Microsoft.OperationalInsights": "Registered",
@@ -41,6 +52,24 @@ _RESOURCE_GROUP_TAGS = {
     "environment": "test",
     "workload": "nac-bff",
 }
+_OBSERVATION_ERROR_CODES = frozenset({
+    "AZURE_INTERRUPTION_ACCOUNT_MISMATCH",
+    "AZURE_INTERRUPTION_BASELINE_BINDING_INVALID",
+    "AZURE_INTERRUPTION_BASELINE_BINDING_MISSING",
+    "AZURE_INTERRUPTION_DEPLOYMENT_INVALID",
+    "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+    "AZURE_INTERRUPTION_IDENTITY_INVALID",
+    "AZURE_INTERRUPTION_PROVIDER_INVALID",
+    "AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN",
+    "AZURE_INTERRUPTION_READ_FAILED",
+    "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+    "AZURE_INTERRUPTION_RESOURCE_GROUP_INVALID",
+    "AZURE_INTERRUPTION_RESOURCE_GROUP_MISSING",
+    "AZURE_INTERRUPTION_RESOURCE_INVALID",
+    "AZURE_INTERRUPTION_RESOURCE_INVENTORY_CHANGED",
+    "AZURE_INTERRUPTION_RESOURCE_STATE_INVALID",
+    "AZURE_INTERRUPTION_TARGET_MISMATCH",
+})
 _STATE_KEYS = {
     "schema_version", "status", "started_at_utc", "finished_at_utc",
     "activation_hash", "approved_commit_sha", "approved_tree_sha",
@@ -93,6 +122,13 @@ _APPROVAL_BINDING_KEYS = {
     "reconciler_toolchain_sha256",
     "required_owner_login",
 }
+_BASELINE_APPROVAL_BINDING_KEYS = _APPROVAL_BINDING_KEYS | {
+    "provider_classification",
+    "baseline_expectation_sha256",
+    "prepared_inputs_manifest_sha256",
+    "bicep_snapshot_sha256",
+    "bicep_parameters_snapshot_sha256",
+}
 _PHASE_INDEX = {
     "MIDRUN_TERMINALIZATION_AUTHORIZED": 0,
     "MIDRUN_FAILED_EVENT_APPENDED": 1,
@@ -123,7 +159,12 @@ _PHASE_FOR_PROGRESS = {
 
 class InterruptionObservationPort(Protocol):
     def observe_ensure_resource_group(
-        self, *, tenant_id: str, subscription_id: str, resource_group: str
+        self,
+        *,
+        tenant_id: str,
+        subscription_id: str,
+        resource_group: str,
+        baseline_expectation: dict[str, Any] | None,
     ) -> dict[str, Any]: ...
 
 
@@ -163,6 +204,11 @@ class InterruptionTerminalizationApproval:
     reconciler_tree: str
     reconciler_toolchain_sha256: str
     required_owner_login: str
+    provider_classification: str = RESOURCE_GROUP_ONLY
+    baseline_expectation_sha256: str | None = None
+    prepared_inputs_manifest_sha256: str | None = None
+    bicep_snapshot_sha256: str | None = None
+    bicep_parameters_snapshot_sha256: str | None = None
 
 
 def inspect_azure_bff_step2_interruption(
@@ -217,6 +263,7 @@ def inspect_azure_bff_step2_interruption(
             result = _blocked("INTERRUPTION_LOCK_REPLACED")
         else:
             result = _inspect_locked(
+                repo_root=repo_root,
                 run_dir=run_dir,
                 state=current_state,
                 state_path=state_path,
@@ -267,6 +314,7 @@ def terminalize_azure_bff_step2_interruption(
     if state is None:
         return _blocked("INTERRUPTION_STATE_INVALID")
     return _terminalize_locked(
+        repo_root=repo_root,
         run_dir=run_dir,
         state=state,
         state_path=state_path,
@@ -283,6 +331,7 @@ def terminalize_azure_bff_step2_interruption(
 
 def _terminalize_locked(
     *,
+    repo_root: Path,
     run_dir: Path,
     state: dict[str, Any],
     state_path: Path,
@@ -325,6 +374,38 @@ def _terminalize_locked(
                 writes_started=local_mutation_exists,
             )
 
+        provider_revalidation: dict[str, Any] = {
+            "sha256": None,
+            "baseline_expectation": None,
+        }
+
+        def revalidate_runtime_and_baseline() -> None:
+            pre_mutation_revalidate()
+            baseline_error = _baseline_approval_revalidation_error(
+                repo_root, run_dir, current_state, request, approval
+            )
+            if baseline_error:
+                raise runner.ActivationStepError(baseline_error)
+            expected_observation_sha256 = provider_revalidation["sha256"]
+            if isinstance(expected_observation_sha256, str):
+                current_observation, observation_error = _observe(
+                    observation_port,
+                    provider_revalidation["baseline_expectation"],
+                )
+                if observation_error:
+                    raise runner.ActivationStepError(observation_error)
+                if (
+                    _validate_provider_observation(
+                        current_observation,
+                        provider_revalidation["baseline_expectation"],
+                    )
+                    or runner._sha256_json(current_observation)
+                    != expected_observation_sha256
+                ):
+                    raise runner.ActivationStepError(
+                        "PROVIDER_OBSERVATION_DRIFT"
+                    )
+
         marker = runner._read_secure_canonical_json(marker_path)
         if marker_path.exists() and marker is None:
             return _blocked("INTERRUPTION_MARKER_INVALID", writes_started=True)
@@ -350,24 +431,39 @@ def _terminalize_locked(
                 return _blocked(
                     "OWNER_COMMENT_VERIFICATION_FAILED", writes_started=True
                 )
-            if not _marker_provider_observation_is_stable(
-                observation_port, marker
-            ):
+            baseline_expectation, error = load_expectation(
+                run_dir, current_state, request, repo_root=repo_root
+            )
+            if error:
+                return _blocked(error, writes_started=True)
+            observation_error = _marker_provider_observation_error(
+                observation_port,
+                marker,
+                baseline_expectation,
+            )
+            if observation_error:
                 return _blocked(
-                    "PROVIDER_OBSERVATION_DRIFT", writes_started=True
+                    observation_error, writes_started=True
                 )
+            provider_revalidation["sha256"] = marker[
+                "approval_bindings"
+            ]["provider_observation_sha256"]
+            provider_revalidation["baseline_expectation"] = (
+                baseline_expectation
+            )
             return _continue_terminalization(
                 run_dir=run_dir,
                 state_path=state_path,
                 lock_paths=lock_paths,
                 descriptors=descriptors,
                 marker=marker,
-                pre_mutation_revalidate=pre_mutation_revalidate,
+                pre_mutation_revalidate=revalidate_runtime_and_baseline,
                 fault_injector=fault_injector,
                 idempotent=True,
             )
 
         inspection = _inspect_locked(
+            repo_root=repo_root,
             run_dir=run_dir,
             state=current_state,
             state_path=state_path,
@@ -390,16 +486,30 @@ def _terminalize_locked(
             return _blocked("OWNER_COMMENT_VERIFICATION_FAILED")
         if not _approval_matches(approval, inspection):
             return _blocked("INTERRUPTION_APPROVAL_MISMATCH")
+        baseline_expectation, error = load_expectation(
+            run_dir, current_state, request, repo_root=repo_root
+        )
+        if error:
+            return _blocked(error)
+        provider_revalidation["sha256"] = inspection[
+            "approval_bindings"
+        ]["provider_observation_sha256"]
+        provider_revalidation["baseline_expectation"] = baseline_expectation
 
         marker = _authorization_marker(
             inspection, approval, request, current_state, now
         )
         revalidation_error = _pre_mutation_revalidation_error(
-            pre_mutation_revalidate,
+            revalidate_runtime_and_baseline,
             state_path,
             current_state,
             lock_paths,
             descriptors,
+            {
+                "target": approval.target_lock_sha256,
+                "legacy": approval.legacy_lock_sha256,
+                "legacy_host": approval.legacy_host_lock_sha256,
+            },
         )
         if revalidation_error:
             return _blocked(revalidation_error)
@@ -413,7 +523,7 @@ def _terminalize_locked(
             lock_paths=lock_paths,
             descriptors=descriptors,
             marker=marker,
-            pre_mutation_revalidate=pre_mutation_revalidate,
+            pre_mutation_revalidate=revalidate_runtime_and_baseline,
             fault_injector=fault_injector,
             idempotent=False,
             runtime_already_revalidated=True,
@@ -431,6 +541,7 @@ def _terminalize_locked(
 
 def _inspect_locked(
     *,
+    repo_root: Path,
     run_dir: Path,
     state: dict[str, Any],
     state_path: Path,
@@ -447,6 +558,11 @@ def _inspect_locked(
         state_path,
         request,
         allow_authorization_marker=allow_authorization_marker,
+    )
+    if error:
+        return _blocked(error)
+    baseline_expectation, error = load_expectation(
+        run_dir, state, request, repo_root=repo_root
     )
     if error:
         return _blocked(error)
@@ -468,12 +584,20 @@ def _inspect_locked(
             return _blocked("INTERRUPTION_LOCK_SET_INVALID")
         lock_hashes[name] = digest
 
-    first = _observe(observation_port)
-    if _validate_provider_observation(first):
+    first, observation_error = _observe(
+        observation_port, baseline_expectation
+    )
+    if observation_error:
+        return _blocked(observation_error)
+    if _validate_provider_observation(first, baseline_expectation):
         return _blocked("PROVIDER_OBSERVATION_INVALID")
-    second = _observe(observation_port)
+    second, observation_error = _observe(
+        observation_port, baseline_expectation
+    )
+    if observation_error:
+        return _blocked(observation_error)
     if (
-        _validate_provider_observation(second)
+        _validate_provider_observation(second, baseline_expectation)
         or runner._canonical_json_bytes(first) != runner._canonical_json_bytes(second)
     ):
         return _blocked("PROVIDER_OBSERVATION_DRIFT")
@@ -496,6 +620,23 @@ def _inspect_locked(
         "reconciler_toolchain_sha256": reconciler_binding.toolchain_sha256,
         "required_owner_login": reconciler_binding.required_owner_login,
     }
+    if first.get("provider_classification") == BICEP_BASELINE_EXACT:
+        assert baseline_expectation is not None
+        bindings.update({
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "baseline_expectation_sha256": runner._sha256_json(
+                baseline_expectation
+            ),
+            "prepared_inputs_manifest_sha256": baseline_expectation[
+                "prepared_inputs_manifest_sha256"
+            ],
+            "bicep_snapshot_sha256": baseline_expectation[
+                "bicep_snapshot_sha256"
+            ],
+            "bicep_parameters_snapshot_sha256": baseline_expectation[
+                "bicep_parameters_snapshot_sha256"
+            ],
+        })
     body = (
         "NAC_BFF_INTERRUPTION_RECONCILIATION_APPROVAL\n"
         + runner._canonical_json_bytes(bindings).decode("ascii")
@@ -622,19 +763,34 @@ def _validate_interrupted_state(
     return None
 
 
-def _observe(port: InterruptionObservationPort) -> dict[str, Any]:
+def _observe(
+    port: InterruptionObservationPort,
+    baseline_expectation: dict[str, Any] | None,
+) -> tuple[dict[str, Any], str | None]:
     try:
         value = port.observe_ensure_resource_group(
             tenant_id=TENANT_ID,
             subscription_id=SUBSCRIPTION_ID,
             resource_group=RESOURCE_GROUP,
+            baseline_expectation=baseline_expectation,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        return {}, (
+            code
+            if code in _OBSERVATION_ERROR_CODES
+            else "PROVIDER_OBSERVATION_INVALID"
         )
     except Exception:
-        return {}
-    return value if isinstance(value, dict) else {}
+        return {}, "PROVIDER_OBSERVATION_INVALID"
+    if not isinstance(value, dict):
+        return {}, "PROVIDER_OBSERVATION_INVALID"
+    return value, None
 
 
-def _validate_provider_observation(value: dict[str, Any]) -> bool:
+def _validate_provider_observation(
+    value: dict[str, Any], baseline_expectation: dict[str, Any] | None
+) -> bool:
     expected_group = {
         "id": f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}",
         "name": RESOURCE_GROUP,
@@ -642,26 +798,51 @@ def _validate_provider_observation(value: dict[str, Any]) -> bool:
         "provisioning_state": "Succeeded",
         "tags": _RESOURCE_GROUP_TAGS,
     }
-    valid = bool(
-        set(value) == {
-            "tenant_id", "subscription_id", "providers", "resource_groups",
-            "resource_inventory",
-        }
-        and value.get("tenant_id") == TENANT_ID
+    legacy_keys = {
+        "tenant_id", "subscription_id", "providers",
+        "resource_groups", "resource_inventory",
+    }
+    baseline_keys = legacy_keys | {
+        "provider_classification", "deployment",
+        "deployment_operations", "identity_binding",
+        "live_resource_state", "baseline_expectation_sha256",
+    }
+    common_valid = bool(
+        value.get("tenant_id") == TENANT_ID
         and value.get("subscription_id") == SUBSCRIPTION_ID
         and value.get("providers") == _PROVIDERS
         and value.get("resource_groups") == [expected_group]
     )
-    if not valid:
-        return True
-    if value.get("resource_inventory") != []:
+    if baseline_expectation is None:
+        invalid = bool(
+            set(value) != legacy_keys
+            or not common_valid
+            or value.get("resource_inventory") != []
+        )
+    else:
+        invalid = bool(
+            set(value) != baseline_keys
+            or not common_valid
+            or value.get("provider_classification")
+            != BICEP_BASELINE_EXACT
+            or value.get("baseline_expectation_sha256")
+            != runner._sha256_json(baseline_expectation)
+            or not exact_baseline_matches(
+                value.get("resource_inventory"),
+                value.get("deployment"),
+                value.get("deployment_operations"),
+                value.get("identity_binding"),
+                value.get("live_resource_state"),
+                baseline_expectation,
+            )
+        )
+    if invalid:
         return True
     try:
         runner._reject_secret_sentinel(value)
     except runner.ActivationStepError:
         return True
     return False
-
 
 def _verify_owner_comment(
     verifier: ImmutableOwnerCommentVerifier,
@@ -697,13 +878,74 @@ def _verify_owner_comment(
     )
 
 
+def _baseline_approval_revalidation_error(
+    repo_root: Path,
+    run_dir: Path,
+    state: dict[str, Any],
+    request: runner.LiveActivationRequest,
+    approval: InterruptionTerminalizationApproval,
+) -> str | None:
+    expectation, error = load_expectation(
+        run_dir, state, request, repo_root=repo_root
+    )
+    if error:
+        return error
+    if approval.provider_classification == RESOURCE_GROUP_ONLY:
+        return (
+            None
+            if expectation is None
+            else "INTERRUPTION_BASELINE_BINDING_MISMATCH"
+        )
+    if expectation is None:
+        return "INTERRUPTION_BASELINE_BINDING_MISSING"
+    expected = {
+        "baseline_expectation_sha256": runner._sha256_json(expectation),
+        "prepared_inputs_manifest_sha256": expectation[
+            "prepared_inputs_manifest_sha256"
+        ],
+        "bicep_snapshot_sha256": expectation["bicep_snapshot_sha256"],
+        "bicep_parameters_snapshot_sha256": expectation[
+            "bicep_parameters_snapshot_sha256"
+        ],
+    }
+    actual = {
+        key: getattr(approval, key)
+        for key in expected
+    }
+    return (
+        None
+        if actual == expected
+        else "INTERRUPTION_BASELINE_BINDING_MISMATCH"
+    )
+
+
 def _approval_shape_is_valid(approval: InterruptionTerminalizationApproval) -> bool:
+    baseline = approval.provider_classification == BICEP_BASELINE_EXACT
+    reference_valid = bool(
+        (_BASELINE_APPROVAL_REFERENCE_RE if baseline else _TERMINALIZATION_APPROVAL_REFERENCE_RE)
+        .fullmatch(approval.owner_approval_reference)
+    )
+    baseline_hashes = (
+        approval.baseline_expectation_sha256,
+        approval.prepared_inputs_manifest_sha256,
+        approval.bicep_snapshot_sha256,
+        approval.bicep_parameters_snapshot_sha256,
+    )
+    baseline_fields_valid = (
+        all(
+            isinstance(value, str) and runner._SHA256_RE.fullmatch(value)
+            for value in baseline_hashes
+        )
+        if baseline
+        else all(value is None for value in baseline_hashes)
+    )
     return bool(
         approval.owner_approved is True
         and approval.action == ACTION
-        and _TERMINALIZATION_APPROVAL_REFERENCE_RE.fullmatch(
-            approval.owner_approval_reference
-        )
+        and reference_valid
+        and approval.provider_classification
+        in {RESOURCE_GROUP_ONLY, BICEP_BASELINE_EXACT}
+        and baseline_fields_valid
         and approval.interrupted_step == INTERRUPTED_STEP_ID
         and _OWNER_RE.fullmatch(approval.required_owner_login)
         and all(runner._SHA256_RE.fullmatch(value) for value in (
@@ -725,15 +967,19 @@ def _approval_matches(
 ) -> bool:
     bindings = inspection.get("approval_bindings")
     comment = inspection.get("owner_comment")
+    expected_keys = (
+        _BASELINE_APPROVAL_BINDING_KEYS
+        if approval.provider_classification == BICEP_BASELINE_EXACT
+        else _APPROVAL_BINDING_KEYS
+    )
     if (
         not isinstance(bindings, dict)
-        or set(bindings) != _APPROVAL_BINDING_KEYS
+        or set(bindings) != expected_keys
         or not isinstance(comment, dict)
     ):
         return False
-    expected = _approval_bindings_from_approval(approval)
     return bool(
-        bindings == expected
+        bindings == _approval_bindings_from_approval(approval)
         and approval.approval_body_sha256 == comment.get("body_sha256")
     )
 
@@ -741,7 +987,7 @@ def _approval_matches(
 def _approval_bindings_from_approval(
     approval: InterruptionTerminalizationApproval,
 ) -> dict[str, str]:
-    return {
+    bindings = {
         "action": approval.action,
         "activation_hash": approval.activation_hash,
         "state_sha256": approval.state_sha256,
@@ -753,11 +999,26 @@ def _approval_bindings_from_approval(
         "interrupted_step": approval.interrupted_step,
         "reconciler_commit": approval.reconciler_commit,
         "reconciler_tree": approval.reconciler_tree,
-        "reconciler_toolchain_sha256": (
-            approval.reconciler_toolchain_sha256
-        ),
+        "reconciler_toolchain_sha256": approval.reconciler_toolchain_sha256,
         "required_owner_login": approval.required_owner_login,
     }
+    if approval.provider_classification == BICEP_BASELINE_EXACT:
+        bindings.update({
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "baseline_expectation_sha256": cast(
+                str, approval.baseline_expectation_sha256
+            ),
+            "prepared_inputs_manifest_sha256": cast(
+                str, approval.prepared_inputs_manifest_sha256
+            ),
+            "bicep_snapshot_sha256": cast(
+                str, approval.bicep_snapshot_sha256
+            ),
+            "bicep_parameters_snapshot_sha256": cast(
+                str, approval.bicep_parameters_snapshot_sha256
+            ),
+        })
+    return bindings
 
 
 def _marker_runtime_bindings_match(
@@ -964,10 +1225,18 @@ def _existing_marker_is_valid(value: object) -> bool:
         or value.get("automatic_rollback_count") != 0
         or value.get("automatic_deletion_count") != 0
         or not isinstance(bindings, dict)
-        or set(bindings) != _APPROVAL_BINDING_KEYS
+        or frozenset(bindings) not in {
+            frozenset(_APPROVAL_BINDING_KEYS),
+            frozenset(_BASELINE_APPROVAL_BINDING_KEYS),
+        }
         or not all(isinstance(item, str) for item in bindings.values())
         or not isinstance(released, dict)
         or not isinstance(value.get("owner_comment_body"), str)
+    ):
+        return False
+    baseline_marker = set(bindings) == _BASELINE_APPROVAL_BINDING_KEYS
+    if baseline_marker != (
+        bindings.get("provider_classification") == BICEP_BASELINE_EXACT
     ):
         return False
     if not all(
@@ -1043,21 +1312,29 @@ def _terminalization_intent_is_valid(marker: dict[str, Any]) -> bool:
     )
 
 
-def _marker_provider_observation_is_stable(
+def _marker_provider_observation_error(
     observation_port: InterruptionObservationPort,
     marker: dict[str, Any],
-) -> bool:
-    first, second = _observe(observation_port), _observe(observation_port)
-    return bool(
-        not _validate_provider_observation(first)
-        and not _validate_provider_observation(second)
-        and runner._canonical_json_bytes(first)
-        == runner._canonical_json_bytes(second)
-        and runner._sha256_json(first)
-        == marker["approval_bindings"].get(
+    baseline_expectation: dict[str, Any] | None,
+) -> str | None:
+    first, error = _observe(observation_port, baseline_expectation)
+    if error:
+        return error
+    second, error = _observe(observation_port, baseline_expectation)
+    if error:
+        return error
+    if (
+        _validate_provider_observation(first, baseline_expectation)
+        or _validate_provider_observation(second, baseline_expectation)
+        or runner._canonical_json_bytes(first)
+        != runner._canonical_json_bytes(second)
+        or runner._sha256_json(first)
+        != marker["approval_bindings"].get(
             "provider_observation_sha256"
         )
-    )
+    ):
+        return "PROVIDER_OBSERVATION_DRIFT"
+    return None
 
 
 def _continue_terminalization(
@@ -1074,6 +1351,17 @@ def _continue_terminalization(
 ) -> dict[str, Any]:
     marker_path = _marker_path(run_dir)
     runtime_revalidated = runtime_already_revalidated
+    repaired, repair_error = _repair_partial_release_append(
+        state_path=state_path,
+        lock_paths=lock_paths,
+        descriptors=descriptors,
+        marker=marker,
+        pre_mutation_revalidate=pre_mutation_revalidate,
+    )
+    if repair_error:
+        return _blocked(repair_error, writes_started=True)
+    if repaired:
+        runtime_revalidated = True
     while True:
         progress = _terminalization_progress(
             run_dir, state_path, descriptors, marker
@@ -1116,6 +1404,7 @@ def _continue_terminalization(
                 progress["state"],
                 lock_paths,
                 descriptors,
+                progress["lock_sha256"],
             )
             if error:
                 return error
@@ -1232,6 +1521,90 @@ def _continue_terminalization(
             )
 
 
+
+def _repair_partial_release_append(
+    *,
+    state_path: Path,
+    lock_paths: tuple[Path, Path, Path],
+    descriptors: tuple[int, int, int],
+    marker: dict[str, Any],
+    pre_mutation_revalidate: Callable[[], None],
+) -> tuple[bool, str | None]:
+    phase_index = _PHASE_INDEX[marker["status"]]
+    if not 6 <= phase_index < 9:
+        return False, None
+    current_index = phase_index - 6
+    activation_hash = marker["activation_hash"]
+    bindings = marker["approval_bindings"]
+    original_hashes = (
+        bindings["target_lock_sha256"],
+        bindings["legacy_lock_sha256"],
+        bindings["legacy_host_lock_sha256"],
+    )
+    initial_payloads = tuple(
+        _initial_lock_bytes(activation_hash, digest)
+        for digest in original_hashes
+    )
+    if any(payload is None for payload in initial_payloads):
+        return False, "INTERRUPTION_TERMINAL_PROGRESS_INVALID"
+    initial = tuple(payload for payload in initial_payloads if payload is not None)
+    released_marker = runner._canonical_json_bytes({
+        "activation_hash": activation_hash,
+        "status": "RELEASED",
+    })
+    released = tuple(
+        payload
+        + (b"" if payload.endswith(b"\n") else b"\n")
+        + released_marker
+        for payload in initial
+    )
+    before = tuple(_descriptor_bytes(item) for item in descriptors)
+    if any(payload is None for payload in before):
+        return False, "INTERRUPTION_TERMINAL_PROGRESS_INVALID"
+    current = tuple(payload for payload in before if payload is not None)
+    for index, payload in enumerate(current):
+        if index < current_index and payload != released[index]:
+            return False, None
+        if index > current_index and payload != initial[index]:
+            return False, None
+    candidate = current[current_index]
+    if candidate in {initial[current_index], released[current_index]}:
+        return False, None
+    if not (
+        len(initial[current_index]) < len(candidate) < len(released[current_index])
+        and released[current_index].startswith(candidate)
+    ):
+        return False, None
+    state = runner._read_secure_canonical_json(state_path)
+    if state != marker["intent"]["terminal_state"]:
+        return False, "INTERRUPTION_STATE_CHANGED"
+    expected_hashes = {
+        name: hashlib.sha256(payload).hexdigest()
+        for name, payload in zip(
+            ("target", "legacy", "legacy_host"), current, strict=True
+        )
+    }
+    error = _pre_mutation_revalidation_error(
+        pre_mutation_revalidate,
+        state_path,
+        state,
+        lock_paths,
+        descriptors,
+        expected_hashes,
+    )
+    if error:
+        return False, error
+    if tuple(_descriptor_bytes(item) for item in descriptors) != current:
+        return False, "INTERRUPTION_LOCK_SET_CHANGED"
+    try:
+        os.ftruncate(descriptors[current_index], len(initial[current_index]))
+        os.fsync(descriptors[current_index])
+    except OSError:
+        return False, "INTERRUPTION_TERMINALIZATION_FAILED"
+    if _descriptor_bytes(descriptors[current_index]) != initial[current_index]:
+        return False, "INTERRUPTION_TERMINALIZATION_FAILED"
+    return True, None
+
 def _terminalization_progress(
     run_dir: Path,
     state_path: Path,
@@ -1285,16 +1658,35 @@ def _terminalization_progress(
     activation_hash = marker["activation_hash"]
     statuses: list[str] = []
     released_hashes: dict[str, str] = {}
+    lock_hashes: dict[str, str] = {}
     names = ("target", "legacy", "legacy_host")
+    bindings = marker["approval_bindings"]
+    original_hashes = {
+        "target": bindings["target_lock_sha256"],
+        "legacy": bindings["legacy_lock_sha256"],
+        "legacy_host": bindings["legacy_host_lock_sha256"],
+    }
+    recorded_released = marker["released_lock_sha256"]
     for name, descriptor in zip(names, descriptors, strict=True):
         lock_marker = runner._read_lock_marker_descriptor(descriptor)
+        digest = _descriptor_sha256(descriptor)
+        if digest is None:
+            return None
+        lock_hashes[name] = digest
         if runner._held_lock_marker_matches(lock_marker, activation_hash):
+            if digest != original_hashes[name]:
+                return None
             statuses.append("HELD")
         elif runner._released_lock_marker_matches(lock_marker, activation_hash):
-            statuses.append("RELEASED")
-            digest = _descriptor_sha256(descriptor)
-            if digest is None:
+            expected_released = _released_lock_sha256(
+                activation_hash, original_hashes[name]
+            )
+            if digest != expected_released or (
+                name in recorded_released
+                and recorded_released[name] != digest
+            ):
                 return None
+            statuses.append("RELEASED")
             released_hashes[name] = digest
         else:
             return None
@@ -1318,6 +1710,7 @@ def _terminalization_progress(
         "index": index,
         "state": state,
         "released_hashes": released_hashes,
+        "lock_sha256": lock_hashes,
     }
 
 
@@ -1388,6 +1781,7 @@ def _pre_mutation_revalidation_error(
     expected_state: dict[str, Any],
     lock_paths: tuple[Path, Path, Path],
     descriptors: tuple[int, int, int],
+    expected_lock_hashes: dict[str, str],
 ) -> str | None:
     try:
         callback()
@@ -1405,6 +1799,16 @@ def _pre_mutation_revalidation_error(
         return "INTERRUPTION_STATE_CHANGED"
     if not _descriptors_match_paths(lock_paths, descriptors):
         return "INTERRUPTION_LOCK_REPLACED"
+    current_lock_hashes = {
+        name: _descriptor_sha256(descriptor)
+        for name, descriptor in zip(
+            ("target", "legacy", "legacy_host"),
+            descriptors,
+            strict=True,
+        )
+    }
+    if current_lock_hashes != expected_lock_hashes:
+        return "INTERRUPTION_LOCK_SET_CHANGED"
     return None
 
 
@@ -1524,7 +1928,7 @@ def _descriptors_match_paths(
     return True
 
 
-def _descriptor_sha256(descriptor: int) -> str | None:
+def _descriptor_bytes(descriptor: int) -> bytes | None:
     try:
         before = os.fstat(descriptor)
         if (
@@ -1540,9 +1944,42 @@ def _descriptor_sha256(descriptor: int) -> str | None:
             or not runner._same_secure_snapshot(before, after)
         ):
             return None
-        return hashlib.sha256(raw).hexdigest()
+        return raw
     except OSError:
         return None
+
+
+def _descriptor_sha256(descriptor: int) -> str | None:
+    raw = _descriptor_bytes(descriptor)
+    return hashlib.sha256(raw).hexdigest() if raw is not None else None
+
+
+def _initial_lock_bytes(
+    activation_hash: str, initial_sha256: str
+) -> bytes | None:
+    legacy = runner._canonical_json_bytes({
+        "activation_hash": activation_hash
+    })
+    held = runner._canonical_json_bytes({
+        "activation_hash": activation_hash, "status": "HELD"
+    })
+    for initial in (legacy[:-1], legacy, held):
+        if hashlib.sha256(initial).hexdigest() == initial_sha256:
+            return initial
+    return None
+
+
+def _released_lock_sha256(
+    activation_hash: str, initial_sha256: str
+) -> str | None:
+    initial = _initial_lock_bytes(activation_hash, initial_sha256)
+    if initial is None:
+        return None
+    released = runner._canonical_json_bytes({
+        "activation_hash": activation_hash, "status": "RELEASED"
+    })
+    separator = b"" if initial.endswith(b"\n") else b"\n"
+    return hashlib.sha256(initial + separator + released).hexdigest()
 
 
 def _open_lock_set_read_only(
@@ -1604,6 +2041,8 @@ def _snapshot_bytes(paths: tuple[Path, ...]) -> dict[Path, bytes] | None:
     snapshots: dict[Path, bytes] = {}
     for path in paths:
         raw = runner._read_secure_artifact_bytes(path)
+        if raw is None and path.parent.name == "prepared":
+            raw = read_bound_prepared_artifact(path.parent, path.name)
         if raw is None:
             return None
         snapshots[path] = raw
@@ -1621,7 +2060,16 @@ def _inspection_snapshot_paths(
         )
     except OSError:
         return None
-    return (state_path, *ledger_paths, *lock_paths)
+    prepared_paths = tuple(
+        path
+        for path in (
+            run_dir / "prepared" / "prepared-inputs.redacted.json",
+            run_dir / "prepared" / "main.json",
+            run_dir / "prepared" / "main.parameters.json",
+        )
+        if path.exists()
+    )
+    return (state_path, *ledger_paths, *prepared_paths, *lock_paths)
 
 
 def _marker_path(run_dir: Path) -> Path:

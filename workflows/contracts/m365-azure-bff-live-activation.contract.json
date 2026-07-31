@@ -143,7 +143,22 @@
           "resource list"
         ],
         "stable_observation_hashes_must_match": true,
-        "output_status_exact": "MIDRUN_RECONCILIATION_REQUIRED"
+        "output_status_exact": "MIDRUN_RECONCILIATION_REQUIRED",
+        "bicep_baseline_read_operations_exact": [
+          "account show",
+          "provider show",
+          "group exists",
+          "group show",
+          "resource list",
+          "deployment group show",
+          "deployment operation group list",
+          "identity show",
+          "functionapp identity show",
+          "resource show",
+          "rest app settings list",
+          "rest resource graph query",
+          "resource list"
+        ]
       },
       "eligible_local_state_exact": {
         "state": "LIVE_APPROVED",
@@ -185,9 +200,64 @@
         "resource_group_arm_id_must_match_bound_subscription": true,
         "resource_group_provisioning_state_exact": "Succeeded",
         "resource_group_tags_must_match_contract_exactly": true,
-        "resource_inventory_exact": [],
         "duplicate_or_unexpected_resources_allowed": false,
-        "raw_provider_payload_emission_allowed": false
+        "raw_provider_payload_emission_allowed": false,
+        "provider_classifications_exact": {
+          "RESOURCE_GROUP_ONLY": {
+            "approval_issue_exact": 717,
+            "resource_inventory_exact": [],
+            "prepared_inputs_allowed": false
+          },
+          "BICEP_BASELINE_EXACT": {
+            "approval_issue_exact": 719,
+            "prepared_inputs_required": true,
+            "prepared_inputs_bound_to_activation_commit_and_tree": true,
+            "approved_git_tree_manifest_verified_required": true,
+            "approved_git_tree_bicep_blob_parity_required": true,
+            "approved_git_tree_replace_refs_disabled_required": true,
+            "approved_git_tree_blob_ids_reverified_required": true,
+            "parameter_key_count_exact": 9,
+            "binding_hashes_exact": [
+              "baseline_expectation_sha256",
+              "prepared_inputs_manifest_sha256",
+              "bicep_snapshot_sha256",
+              "bicep_parameters_snapshot_sha256"
+            ],
+            "top_level_resource_count_exact": 7,
+            "top_level_resource_types_exact": [
+              "microsoft.insights/actiongroups",
+              "microsoft.insights/components",
+              "microsoft.managedidentity/userassignedidentities",
+              "microsoft.operationalinsights/workspaces",
+              "microsoft.storage/storageaccounts",
+              "microsoft.web/serverfarms",
+              "microsoft.web/sites"
+            ],
+            "deployment_name_exact": "nac-bff-65b6e28e7d43",
+            "deployment_provisioning_state_exact": "Succeeded",
+            "deployment_mode_exact": "Incremental",
+            "deployment_operation_count_exact": 12,
+            "all_deployment_operations_succeeded_required": true,
+            "deployment_operation_target_ids_bound_to_resource_graph_required": true,
+            "resource_graph_full_inventory_required": true,
+            "resource_graph_authorization_inventory_required": true,
+            "resource_graph_target_set_exact_required": true,
+            "resource_kind_sku_and_smart_detection_properties_exact_required": true,
+            "live_resource_detail_read_count_exact": 12,
+            "live_resource_security_properties_exact_required": true,
+            "live_resource_targets_sha256_required": true,
+            "double_resource_inventory_read_required": true,
+            "resource_inventory_drift_allowed": false,
+            "pre_mutation_provider_revalidation_required": true,
+            "owner_bound_lock_hash_revalidation_required": true,
+            "managed_identity_readback_required": true,
+            "function_app_identity_assignment_exact": "UserAssigned",
+            "security_property_projection_exact_required": true,
+            "provider_managed_read_only_properties_allowed_outside_projection": true,
+            "bff_api_audience_bound_to_prepared_parameter_required": true,
+            "bff_api_audience_must_differ_from_managed_identity_client_id": true
+          }
+        }
       },
       "lock_journals_exact": [
         "target",
@@ -255,8 +325,51 @@
         "release_journal_transition_exact": "RELEASED",
         "release_all_three_journals_required": true,
         "torn_release_retry_requires_identical_owner_binding": true,
+        "partial_lock_append_recovery_required": true,
+        "partial_lock_append_recovery_exact_prefix_only": true,
+        "interruption_runtime_git_replace_refs_disabled_required": true,
+        "interruption_runtime_git_blob_identity_required": true,
         "success_receipt_allowed": false,
-        "passed_state_allowed": false
+        "passed_state_allowed": false,
+        "baseline_terminalization_approval_issue_exact": 719,
+        "baseline_terminalization_arguments_exact": [
+          "--confirm-terminalize-and-release",
+          "--terminalization-action",
+          "--interrupted-step",
+          "--terminalization-approval-reference",
+          "--terminalization-approval-body-sha256",
+          "--state-sha256",
+          "--ledger-head-sha256",
+          "--target-lock-sha256",
+          "--legacy-lock-sha256",
+          "--legacy-host-lock-sha256",
+          "--provider-observation-sha256",
+          "--provider-classification",
+          "--baseline-expectation-sha256",
+          "--prepared-inputs-manifest-sha256",
+          "--bicep-snapshot-sha256",
+          "--bicep-parameters-snapshot-sha256"
+        ],
+        "baseline_owner_binding_fields_exact": [
+          "action",
+          "activation_hash",
+          "state_sha256",
+          "ledger_head_sha256",
+          "target_lock_sha256",
+          "legacy_lock_sha256",
+          "legacy_host_lock_sha256",
+          "provider_observation_sha256",
+          "interrupted_step",
+          "reconciler_commit",
+          "reconciler_tree",
+          "reconciler_toolchain_sha256",
+          "required_owner_login",
+          "provider_classification",
+          "baseline_expectation_sha256",
+          "prepared_inputs_manifest_sha256",
+          "bicep_snapshot_sha256",
+          "bicep_parameters_snapshot_sha256"
+        ]
       },
       "stable_error_codes_exact": [
         "INTERRUPTION_CONFIRMATION_REQUIRED",
@@ -267,7 +380,29 @@
         "INTERRUPTION_RECONCILIATION_UNSUPPORTED",
         "PROVIDER_OBSERVATION_INVALID",
         "PROVIDER_OBSERVATION_DRIFT",
-        "INTERRUPTION_TERMINALIZATION_FAILED"
+        "INTERRUPTION_TERMINALIZATION_FAILED",
+        "INTERRUPTION_BASELINE_BINDING_INVALID",
+        "INTERRUPTION_BASELINE_BINDING_MISMATCH",
+        "INTERRUPTION_BASELINE_BINDING_MISSING",
+        "INTERRUPTION_BASELINE_GIT_PROVENANCE_INVALID",
+        "INTERRUPTION_BASELINE_GIT_PROVENANCE_MISMATCH",
+        "INTERRUPTION_LOCK_SET_CHANGED",
+        "AZURE_INTERRUPTION_BASELINE_BINDING_MISSING",
+        "AZURE_INTERRUPTION_BASELINE_BINDING_INVALID",
+        "AZURE_INTERRUPTION_RESOURCE_INVENTORY_CHANGED",
+        "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+        "AZURE_INTERRUPTION_IDENTITY_INVALID",
+        "AZURE_INTERRUPTION_ACCOUNT_MISMATCH",
+        "AZURE_INTERRUPTION_DEPLOYMENT_INVALID",
+        "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+        "AZURE_INTERRUPTION_PROVIDER_INVALID",
+        "AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN",
+        "AZURE_INTERRUPTION_READ_FAILED",
+        "AZURE_INTERRUPTION_RESOURCE_GROUP_INVALID",
+        "AZURE_INTERRUPTION_RESOURCE_GROUP_MISSING",
+        "AZURE_INTERRUPTION_RESOURCE_INVALID",
+        "AZURE_INTERRUPTION_RESOURCE_STATE_INVALID",
+        "AZURE_INTERRUPTION_TARGET_MISMATCH"
       ],
       "blocked_behavior": "retain_all_three_HELD_journals_and_return_the_actual_stable_error_code",
       "output_fields_allowlisted": true,
@@ -1301,5 +1436,14 @@
     "AC-664-04",
     "AC-664-05",
     "AC-664-06"
+  ],
+  "async_baseline_reconciliation_issue": "https://github.com/notariat8/NaC/issues/719",
+  "async_baseline_reconciliation_acceptance_ids": [
+    "AC-719-01",
+    "AC-719-02",
+    "AC-719-03",
+    "AC-719-04",
+    "AC-719-05",
+    "AC-719-06"
   ]
 }
