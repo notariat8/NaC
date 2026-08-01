@@ -52,6 +52,10 @@ function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function normalizedNpmUserAgent() {
+  return (process.env.npm_config_user_agent || '').replace(/\s+ci\/[^\s]+$/u, '');
+}
+
 function binding(relativePath) {
   return { relativePath, sha256: sha256(path.join(repoRoot, relativePath)) };
 }
@@ -175,7 +179,7 @@ async function run() {
     buildArtifacts: buildArtifactPaths.map(binding),
     runtime: {
       nodeVersion: process.version,
-      npmUserAgent: process.env.npm_config_user_agent || '',
+      npmUserAgent: normalizedNpmUserAgent(),
       playwrightVersion: require('playwright/package.json').version,
       webpackVersion: require('webpack/package.json').version,
       typescriptVersion: require('typescript/package.json').version,

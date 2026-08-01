@@ -73,7 +73,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
-      "sha256": "69a3e7c2f67712792837e81577e964b85ee62aeaae212bbd6b563a8add82a6e2"
+      "sha256": "eea7cb3b87392c679d9e4c83adac179f61aecd62f5d7e4ab68f32ce02073d421"
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
