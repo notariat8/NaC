@@ -13,6 +13,8 @@
     "validate:current-step": "node scripts/validate-current-step-contract.cjs",
     "visual:fixture": "node scripts/generate-role-deadline-visual-fixture.cjs",
     "visual:capture": "node scripts/capture-role-deadline-visual-evidence.cjs",
+    "workbench:fixture": "node scripts/generate-workbench-visual-fixture.cjs",
+    "workbench:capture": "heft test --clean --production && node scripts/capture-workbench-visual-evidence.cjs",
     "validate:read-only": "node scripts/validate-read-only-boundary.cjs"
   },
   "dependencies": {

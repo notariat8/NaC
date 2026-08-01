@@ -111,14 +111,16 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.validate(self.root),
         )
 
-    def test_hermetic_build_evidence_source_omission_fails(self) -> None:
+    def test_hermetic_build_historical_manifest_mutation_fails(self) -> None:
         payload = self._hermetic_build_evidence()
         payload["sourceInputs"].pop(next(iter(payload["sourceInputs"])))
         self._write_hermetic_build_evidence(payload)
 
         errors = validator.validate(self.root)
 
-        self.assertTrue(any("sourceInputs differ" in error for error in errors))
+        self.assertIn(
+            "SPFx hermetic build historical manifest digest differs", errors
+        )
 
     def test_hermetic_build_evidence_package_hash_mismatch_fails(self) -> None:
         payload = self._hermetic_build_evidence()

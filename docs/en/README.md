@@ -120,6 +120,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/microsoft-first-onprem-target-architecture.md](architecture/microsoft-first-onprem-target-architecture.md):
   binding Microsoft-first/on-prem AI target with layer separation, PDF
   assessment, durable-workflow spike and 90/180/365-day roadmap.
+- [docs/en/architecture/generic-workbench.md](architecture/generic-workbench.md):
+  Generic Today, Matter and Decision Center contract bound to the NaC BFF.
 - [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
   defines the closed M365 / SharePoint MVP infrastructure baseline through
   Teams, Microsoft 365 group, SharePoint team site and Microsoft Graph REST

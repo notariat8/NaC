@@ -73,13 +73,36 @@ jobs:
         working-directory: spfx/nac-bpmn-viewer
         run: npm run build
 
+      - name: Upload generic workbench compiled evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: generic-workbench-compiled
+          if-no-files-found: error
+          path: |
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/WorkbenchContracts.js
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/WorkbenchSelectors.js
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js
+            spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.styles.js
+
   quality-gate:
     needs: spfx-bpmn-viewer
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     steps:
+      - name: Require successful SPFx evidence build
+        env:
+          SPFX_EVIDENCE_RESULT: ${{ needs.spfx-bpmn-viewer.result }}
+        run: |
+          if [ "$SPFX_EVIDENCE_RESULT" != "success" ]; then
+            echo "SPFx evidence build did not complete successfully: $SPFX_EVIDENCE_RESULT" >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -92,6 +115,12 @@ jobs:
 
       - name: Install package
         run: pip install -e .
+
+      - name: Download generic workbench compiled evidence
+        uses: actions/download-artifact@v7
+        with:
+          name: generic-workbench-compiled
+          path: spfx/nac-bpmn-viewer/lib-commonjs/workbench
 
       - name: Install pinned Bicep compiler
         run: az bicep install --version v0.45.6
@@ -107,6 +136,8 @@ jobs:
         run: az bicep build --file deploy/runtime/azure/immutable-evidence/main.bicep --stdout > /tmp/nac-worm-main.json
 
       - name: Run strict quality gate
+        env:
+          NAC_REQUIRE_WORKBENCH_BUILD_EVIDENCE: "1"
         run: python scripts/quality_gate.py --profile strict
 
       - name: Render PR developer CI comment

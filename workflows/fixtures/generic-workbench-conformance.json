@@ -1,0 +1,29 @@
+{
+  "schema_version": "nac.generic-workbench-conformance/v1",
+  "limits": {
+    "maximum_snapshot_bytes": 131072,
+    "maximum_text_utf16_code_units": 256
+  },
+  "accepted": {
+    "generated_at": "2026-08-01T09:00:00Z",
+    "observed_at": "2026-08-01T09:01:00Z",
+    "expires_at": "2026-08-01T09:04:00Z",
+    "redaction_verified_at": "2026-08-01T09:00:30Z",
+    "access_binding": {
+      "subject_id": "actor:synthetic:001",
+      "role": "notary",
+      "workspace_id": "notary_team_01",
+      "matter_id": "NAC-SYN-MATTER-001",
+      "purpose": "view_synthetic_matter_workspace"
+    }
+  },
+  "rejected": {
+    "timestamp_with_milliseconds": "2026-08-01T09:00:00.000Z",
+    "duplicate_agent_id": "personal-assistance",
+    "duplicate_step_id": "Task_EntwurfAbstimmen",
+    "token_shaped_identifier_parts": [
+      "gh",
+      "p_12345678901234567890"
+    ]
+  }
+}

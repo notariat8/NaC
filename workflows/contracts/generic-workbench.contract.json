@@ -1,0 +1,63 @@
+{
+  "schema_version": "nac.generic-workbench-contract/v1",
+  "contract_id": "nac.generic_workbench",
+  "status": "foundation_read_only",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/721",
+  "ownership": {
+    "repository": "notariat8/NaC",
+    "extraction_condition": "A second independently released consumer and a stable versioned contract are both required."
+  },
+  "boundaries": {
+    "core_forbidden_imports": ["@microsoft", "spfx", "graph", "nac_bff", "bpmn-js", "react"],
+    "browser_data_source": "versioned_redacted_nac_bff_snapshot_only",
+    "today_scope": "currently_active_already_authorized_matter",
+    "deny_behavior": "no_snapshot_no_counts_no_identifiers",
+    "maximum_projection_lease_seconds": 300,
+    "maximum_snapshot_bytes": 131072,
+    "maximum_text_utf16_code_units": 256,
+    "wire_serialization": "compact_json_insertion_order_utf8",
+    "mutating_capabilities": "deny_only",
+    "browser_action_executor": false,
+    "browser_graph_access": false,
+    "browser_mcp_access": false,
+    "browser_persistence": false
+  },
+  "authority": {
+    "tasks": "server_projection",
+    "attention": "server_projection",
+    "decisions": "server_projection",
+    "evidence": "server_projection",
+    "capabilities": "server_projection",
+    "bpmn": "non_authoritative_model_reference"
+  },
+  "access": {
+    "allowed_modes": ["assigned", "deputy"],
+    "lease_binding_requires": ["subject_id", "role", "workspace_id", "matter_id", "purpose"],
+    "deputy_requires": ["decision_id", "decision_version", "subject_id", "role", "workspace_id", "matter_id", "purpose", "issued_at", "expires_at", "reason"],
+    "refresh": "before_lease_expiry",
+    "failure": "fail_closed"
+  },
+  "redaction": {
+    "required_status": "verified",
+    "attestation_fields": ["policy_id", "policy_version", "classifier_id", "classifier_version", "verified_at", "content_sha256"],
+    "content_binding": "canonical_projection_sha256",
+    "source_reference_format": "opaque_identifier_only",
+    "failure": "no_snapshot"
+  },
+  "hosts": {
+    "current": [],
+    "compiled_candidates": ["spfx_teams"],
+    "future": ["spfx_teams_live_webpart", "office_addin", "local_onprem_shell"],
+    "live_webpart_binding": false,
+    "business_rules_in_host": false
+  },
+  "validation_commands": [
+    "python3 scripts/validate_generic_workbench_foundation.py",
+    "PYTHONPATH=. python3 -m unittest tests.test_validate_generic_workbench_foundation",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_workbench_projection",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_frontend_cli",
+    "cd spfx/nac-bpmn-viewer && npm run build",
+    "python3 scripts/nac.py frontend workbench-verify",
+    "python3 scripts/nac.py doctor --profile strict"
+  ]
+}
