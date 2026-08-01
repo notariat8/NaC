@@ -24,6 +24,7 @@ from .synthetic_workspace_graph import (
     SyntheticWorkspaceGraphRestAdapter,
 )
 from .test_environment import TestEnvironmentBff, ValidatedClaims
+from .workbench_endpoint import WorkbenchEndpoint
 
 
 _ENTRA_JWKS_URI = "https://login.microsoftonline.com/common/discovery/v2.0/keys"
@@ -213,18 +214,29 @@ def build_configured_app(
     request_budget_factory = getattr(graph_client, "request_budget", None)
     if not callable(request_budget_factory):
         request_budget_factory = None
+    access_port = access_port_factory(
+        graph_client,
+        expected_tenant_id=settings.tenant_id,
+    )
+    workspace_port = workspace_port_factory(graph_client)
+    bpmn_asset_port = bpmn_asset_port_factory()
     bff = TestEnvironmentBff(
         expected_tenant_id=settings.tenant_id,
-        access_decision_port=access_port_factory(
-            graph_client,
-            expected_tenant_id=settings.tenant_id,
-        ),
-        graph_rest_port=workspace_port_factory(graph_client),
-        bpmn_asset_port=bpmn_asset_port_factory(),
+        access_decision_port=access_port,
+        graph_rest_port=workspace_port,
+        bpmn_asset_port=bpmn_asset_port,
+        request_budget_factory=request_budget_factory,
+    )
+    workbench_endpoint = WorkbenchEndpoint(
+        expected_tenant_id=settings.tenant_id,
+        access_decision_port=access_port,
+        graph_rest_port=workspace_port,
+        bpmn_asset_port=bpmn_asset_port,
         request_budget_factory=request_budget_factory,
     )
     return create_fastapi_app(
         bff=bff,
+        workbench_endpoint=workbench_endpoint,
         validated_claims_dependency=_claims_dependency(
             validator,
             expected_tenant_id=settings.tenant_id,

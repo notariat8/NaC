@@ -1,0 +1,103 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.workbench_live_read_binding",
+  "domain_contract_id": "nac.workbench_live_read_binding",
+  "title": "NaC Workbench Live Read Binding Verification",
+  "status": "planned_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/725",
+  "applies_when": {
+    "paths": [
+      "src/nac_bff/**",
+      "assets/docs/workbench-live-read-binding/**",
+      "scripts/validate_workbench_live_read_binding.py",
+      "spfx/nac-bpmn-viewer/scripts/*workbench-live-read*",
+      "spfx/nac-bpmn-viewer/src/workbench/**",
+      "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/**",
+      "workflows/contracts/workbench-live-read-binding.contract.json",
+      "workflows/verification-contracts/workbench-live-read-binding.verification.json"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/technology-policy.yaml",
+      "policies/data-protection-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "workflows/contracts/generic-workbench.contract.json",
+      "workflows/contracts/workbench-live-read-binding.contract.json",
+      "docs/de/superpowers/specs/2026-08-01-workbench-live-read-binding-design.md"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh test output",
+      "synthetic visual evidence"
+    ]
+  },
+  "checks": [
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_workbench_endpoint",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_live_graph_ports tests.test_nac_bff_azure_function_host",
+    "cd spfx/nac-bpmn-viewer && npm run build",
+    "cd spfx/nac-bpmn-viewer && npm run workbench:capture",
+    "cd spfx/nac-bpmn-viewer && npm run workbench:live:capture",
+    "python3 scripts/validate_workbench_live_read_binding.py",
+    "python3 scripts/nac.py frontend workbench-verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/nac.py doctor --profile strict"
+  ],
+  "required_evidence": [
+    "python_test_results",
+    "spfx_test_results",
+    "generic_workbench_visual_evidence_unchanged",
+    "live_host_desktop_visual_evidence",
+    "live_host_narrow_spfx_visual_evidence",
+    "live_host_mobile_visual_evidence",
+    "live_host_loading_visual_evidence",
+    "live_host_deny_visual_evidence",
+    "live_host_unavailable_visual_evidence",
+    "live_host_visual_sha256_bindings",
+    "changed_files",
+    "full_base_head_diff",
+    "remote_ci_checks"
+  ],
+  "thresholds": {
+    "maximum_projection_lease_seconds": 300,
+    "maximum_snapshot_bytes": 131072,
+    "maximum_text_utf16_code_units": 256,
+    "maximum_items_per_collection": 64,
+    "maximum_live_writes": 0,
+    "minimum_visual_viewports": 3,
+    "minimum_live_host_visual_cases": 6,
+    "minimum_live_host_runtime_states": 4
+  },
+  "invariants": [
+    "synthetic_allowlist_precedes_every_access_or_data_port",
+    "tenant_and_subject_come_only_from_validated_entra_claims",
+    "wrong_tenant_target_and_query_shapes_share_the_exact_access_denied_envelope",
+    "authentication_failures_share_the_exact_authentication_required_envelope",
+    "deny_has_no_snapshot_counts_identifiers_roles_or_decisions",
+    "all_responses_are_no_store",
+    "browser_has_no_graph_mcp_or_persistence",
+    "stale_requests_cannot_commit_state",
+    "live_host_visual_evidence_is_separate_from_generic_workbench_evidence",
+    "live_host_visual_manifest_binds_host_styles_client_webpart_parser_projection_and_contract",
+    "existing_v0_2_route_remains_compatible"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_required_evidence_present": true,
+    "all_invariants_hold": true
+  },
+  "failure_behavior": {
+    "authentication_failure": "exact_401_envelope_no_snapshot",
+    "authorization_or_scope_denial": "exact_403_envelope_no_snapshot",
+    "invalid_or_expired_snapshot": "discard_and_fail_closed",
+    "stale_response": "ignore_generation_and_keep_newer_state",
+    "quality_gate_failure": "block_deploy"
+  }
+}

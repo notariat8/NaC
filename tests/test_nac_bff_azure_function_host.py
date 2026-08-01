@@ -334,7 +334,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             )
             elapsed = time.monotonic() - started
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json(), {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
+        self.assertEqual(response.json(), {"detail": "service unavailable"})
         self.assertLess(elapsed, 0.1)
 
     def test_invalid_correlation_id_is_not_reflected(self) -> None:

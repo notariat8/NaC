@@ -2074,6 +2074,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Business Case Type Azure Blob WORM S6b", "validate_business_case_type_azure_blob_worm.py"),
             ("M365 Azure BFF Live Activation Contract", "validate_m365_azure_bff_live_activation.py"),
             ("Generic Workbench Foundation", "validate_generic_workbench_foundation.py"),
+            ("Workbench Live Read Binding", "validate_workbench_live_read_binding.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -2117,6 +2118,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_business_case_type_azure_blob_worm.py",
             "scripts/validate_m365_azure_bff_live_activation.py",
             "scripts/validate_generic_workbench_foundation.py",
+            "scripts/validate_workbench_live_read_binding.py",
         ]
         overall_rc = 0
         for script_name in validators:
@@ -2132,6 +2134,9 @@ def command_frontend(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.frontend_command == "workbench-verify":
         rc = run_script(repo_root, "scripts/validate_generic_workbench_foundation.py", [])
+        if rc != 0:
+            return rc
+        rc = run_script(repo_root, "scripts/validate_workbench_live_read_binding.py", [])
         if rc != 0:
             return rc
         node = shutil.which("node")

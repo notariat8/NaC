@@ -217,6 +217,15 @@ delegierte Scope und Site-Grant sind unter Issue #632 bereitgestellt. Offen
 bleiben der aktuelle zwölfstufige Abschlusslauf, Idempotenz, die vollständige
 Manipulationsmatrix sowie SharePoint-/Teams-Render-Evidence.
 
+M365-Statushinweis 2026-08-01: Issue #725 bindet die generische Workbench-
+Oberfläche an einen neuen, strikt read-only ausgelegten NaC-BFF-Snapshotpfad.
+Der Scope bleibt auf Tenant `f8`, Workspace `notary_team_01` und den
+synthetischen Immobilienkaufvorgang begrenzt. Entra-Identität,
+Assigned-/Deputy-Zugriff, kurze Lease, `no-store`, 128-KiB-Wire-Limit,
+Refresh und Stale-Response-Schutz werden als Verification Contract geprüft.
+Eine Tenant-Bereitstellung erfolgt erst aus geprüftem `main` und bleibt bis
+dahin offen.
+
 ## Regel
 
 Die strikte Qualitätsprüfung umfasst `scripts/validate_gantt_progress.py` und setzt

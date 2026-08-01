@@ -3,10 +3,14 @@ import * as path from 'path';
 import { createHash, webcrypto } from 'crypto';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
-import { parseWorkbenchSnapshotJson } from './parseWorkbenchSnapshot';
+import { canonicalWorkbenchJson, parseWorkbenchSnapshotJson } from './parseWorkbenchSnapshot';
 
 const CONFORMANCE = JSON.parse(fs.readFileSync(
   path.resolve(process.cwd(), '..', '..', 'workflows', 'fixtures', 'generic-workbench-conformance.json'),
+  'utf8'
+));
+const LIVE_CANONICALIZATION = JSON.parse(fs.readFileSync(
+  path.resolve(process.cwd(), '..', '..', 'workflows', 'fixtures', 'workbench-live-read-canonicalization.json'),
   'utf8'
 ));
 
@@ -143,6 +147,13 @@ function canonicalJson(value: unknown): string {
 }
 
 describe('generic workbench runtime contract', () => {
+  it('matches the live-read Unicode canonicalization fixture', () => {
+    const canonical = canonicalWorkbenchJson(LIVE_CANONICALIZATION.content);
+    expect(canonical).toBe(LIVE_CANONICALIZATION.canonical_utf8_json);
+    expect(createHash('sha256').update(canonical, 'utf8').digest('hex'))
+      .toBe(LIVE_CANONICALIZATION.sha256);
+  });
+
   it('accepts an exact, fresh and referentially valid snapshot', async () => {
     expect(CONFORMANCE.limits.maximum_snapshot_bytes).toBe(128 * 1024);
     expect(VALID_WORKBENCH_SNAPSHOT.generatedAt).toBe(CONFORMANCE.accepted.generated_at);
@@ -338,5 +349,16 @@ describe('generic workbench runtime contract', () => {
       .rejects.toThrow('WORKBENCH_SNAPSHOT_INVALID');
     await expect(parseWorkbenchSnapshotJson(' '.repeat(129 * 1024), '2026-08-01T09:01:00Z'))
       .rejects.toThrow('WORKBENCH_SNAPSHOT_INVALID');
+  });
+
+  it('rejects unpaired UTF-16 surrogates before content verification', async () => {
+    const changed = {
+      ...VALID_WORKBENCH_SNAPSHOT,
+      matter: { ...VALID_WORKBENCH_SNAPSHOT.matter, title: '\ud800' }
+    };
+    await expect(parseWorkbenchSnapshotJson(
+      signedWorkbenchSnapshotJson(changed),
+      '2026-08-01T09:01:00Z'
+    )).rejects.toThrow('WORKBENCH_SNAPSHOT_INVALID');
   });
 });

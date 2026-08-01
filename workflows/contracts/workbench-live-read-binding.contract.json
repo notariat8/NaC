@@ -1,0 +1,210 @@
+{
+  "schema_version": "nac.workbench-live-read-binding-contract/v1",
+  "contract_id": "nac.workbench_live_read_binding",
+  "status": "planned_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/725",
+  "extends": "workflows/contracts/generic-workbench.contract.json",
+  "wire_schema": "nac.workbench.snapshot/v1",
+  "endpoint": {
+    "method": "GET",
+    "path": "/v1/workspaces/{workspace_id}/matters/{matter_id}/workbench-snapshot",
+    "query": {
+      "required_exactly_once": "purpose",
+      "allowed_value": "view_synthetic_matter_workspace",
+      "additional_parameters": "deny"
+    },
+    "entra_resource": "api://funktion8.de/nac-bff",
+    "required_scope": "Matter.Read"
+  },
+  "synthetic_allowlist": {
+    "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "workspace_id": "notary_team_01",
+    "matter_id": "NAC-SYN-MATTER-001",
+    "purpose": "view_synthetic_matter_workspace",
+    "enforcement": "before_access_and_data_ports"
+  },
+  "identity_authority": {
+    "tenant_id": "validated_entra_token_tid",
+    "subject_id": "validated_entra_token_oid",
+    "browser_page_context": "consistency_check_only",
+    "browser_role": "fixed_ui_allowlist_only",
+    "authorization_from_browser_values": false
+  },
+  "access": {
+    "allowed_modes": [
+      "assigned",
+      "deputy"
+    ],
+    "ui_supported_roles": [
+      "notary",
+      "notary_clerk",
+      "deputy_notary",
+      "deputy_clerk"
+    ],
+    "every_allowed_snapshot_requires": [
+      "decision_id",
+      "decision_version",
+      "subject_id",
+      "role",
+      "workspace_id",
+      "matter_id",
+      "purpose",
+      "issued_at",
+      "expires_at"
+    ],
+    "deputy_additionally_requires": [
+      "reason",
+      "active_approved_grant",
+      "matching_audit_event"
+    ],
+    "synthetic_deputy_reason_exact": "Synthetische Urlaubsvertretung",
+    "maximum_lease_seconds": 300,
+    "deny_behavior": {
+      "status": 403,
+      "body": {
+        "status": 403,
+        "error": {
+          "code": "ACCESS_DENIED"
+        }
+      },
+      "identifiers_counts_roles_decisions": "forbidden",
+      "actor_role_decision_headers": "forbidden"
+    },
+    "authentication_failure": {
+      "status": 401,
+      "body": {
+        "status": 401,
+        "error": {
+          "code": "AUTHENTICATION_REQUIRED"
+        }
+      }
+    },
+    "rejection_mapping": {
+      "missing_invalid_or_wrong_scope_token": "authentication_failure",
+      "wrong_tenant": "deny_behavior",
+      "wrong_workspace_matter_or_purpose": "deny_behavior",
+      "missing_duplicate_or_additional_query": "deny_behavior",
+      "role_or_deputy_policy_denial": "deny_behavior",
+      "authorized_projection_or_redaction_failure": "generic_service_unavailable"
+    }
+  },
+  "response": {
+    "content_type": "application/json; charset=utf-8",
+    "cache_control": "no-store",
+    "pragma": "no-cache",
+    "maximum_wire_bytes": 131072,
+    "wire_serialization": "compact_json_insertion_order_utf8",
+    "content_hash": {
+      "algorithm": "sha256",
+      "covered_value": "complete_top_level_object_without_redaction",
+      "object_key_order": "recursive_unicode_code_point_ascending",
+      "array_order": "preserved",
+      "string_normalization": "none",
+      "json_whitespace": "none",
+      "json_encoding": "utf-8",
+      "json_string_escaping": "json_stringify_compatible_quote_backslash_and_control_escapes_lowercase_hex_no_solidus_escape",
+      "unicode_scalar_values": "literal_utf8_without_normalization",
+      "unpaired_utf16_surrogates": "forbidden",
+      "numbers": "forbidden_in_snapshot",
+      "booleans_and_null": "lowercase_json_literals",
+      "normative_fixture": "workflows/fixtures/workbench-live-read-canonicalization.json"
+    }
+  },
+  "projection": {
+    "matter_tasks": "fixed_graph_rest_v1_projection",
+    "bpmn": "package_bound_non_authoritative_model_reference",
+    "attention": "empty_until_authoritative_port_exists",
+    "decisions": "empty_until_authoritative_port_exists",
+    "agents": "empty_until_authoritative_port_exists",
+    "capabilities": "empty_or_deny_only",
+    "current_step_id": "null_until_authoritative_port_exists",
+    "maximum_text_utf16_code_units": 256
+  },
+  "browser": {
+    "transport": "spfx_aad_http_client_only",
+    "graph_access": false,
+    "mcp_access": false,
+    "persistence": false,
+    "refresh": "before_effective_expiry",
+    "stale_response_guard": "monotonic_request_generation",
+    "failure": "discard_snapshot_and_fail_closed"
+  },
+  "visual_evidence": {
+    "schema_version": "nac.workbench-live-read-host-visual-evidence/v1",
+    "isolation": "separate_from_generic_workbench_visual_evidence",
+    "data": "synthetic_only",
+    "browser_network_requests": 0,
+    "capture_command": "cd spfx/nac-bpmn-viewer && npm run workbench:live:capture",
+    "manifest": "assets/docs/workbench-live-read-binding/VIS-725-manifest.json",
+    "required_source_sha256_bindings": [
+      "host",
+      "styles",
+      "client",
+      "webPart",
+      "parser",
+      "projection",
+      "contract"
+    ],
+    "required_cases": [
+      {
+        "id": "VIS-725-01",
+        "state": "ready",
+        "layout": "desktop",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        }
+      },
+      {
+        "id": "VIS-725-02",
+        "state": "ready",
+        "layout": "narrow-spfx-column",
+        "viewport": {
+          "width": 720,
+          "height": 980
+        }
+      },
+      {
+        "id": "VIS-725-03",
+        "state": "ready",
+        "layout": "mobile",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        }
+      },
+      {
+        "id": "VIS-725-04",
+        "state": "loading",
+        "layout": "state",
+        "viewport": {
+          "width": 720,
+          "height": 420
+        }
+      },
+      {
+        "id": "VIS-725-05",
+        "state": "deny",
+        "layout": "state",
+        "viewport": {
+          "width": 720,
+          "height": 420
+        }
+      },
+      {
+        "id": "VIS-725-06",
+        "state": "unavailable",
+        "layout": "state",
+        "viewport": {
+          "width": 720,
+          "height": 420
+        }
+      }
+    ]
+  },
+  "compatibility": {
+    "existing_workspace_v0_2_route": "unchanged",
+    "existing_bpmn_detail_view": "retained"
+  },
+  "verification_contract": "workflows/verification-contracts/workbench-live-read-binding.verification.json"
+}

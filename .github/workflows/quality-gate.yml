@@ -6,6 +6,8 @@ on:
       - "processes/**/*.json"
       - "schemas/**/*.json"
       - "src/business_os/**/*.py"
+      - "src/nac_bff/**/*.py"
+      - "src/nac_m365_graph/**/*.py"
       - "tests/**/*.py"
       - "scripts/**/*.py"
       - "policies/**/*.yaml"
@@ -30,6 +32,8 @@ on:
       - "processes/**/*.json"
       - "schemas/**/*.json"
       - "src/business_os/**/*.py"
+      - "src/nac_bff/**/*.py"
+      - "src/nac_m365_graph/**/*.py"
       - "tests/**/*.py"
       - "scripts/**/*.py"
       - "policies/**/*.yaml"
@@ -69,9 +73,24 @@ jobs:
         working-directory: spfx/nac-bpmn-viewer
         run: npm ci --ignore-scripts
 
+      - name: Install pinned Playwright Chromium
+        working-directory: spfx/nac-bpmn-viewer
+        run: npx --no-install playwright install --with-deps chromium
+
       - name: Test, build and package BPMN viewer
         working-directory: spfx/nac-bpmn-viewer
         run: npm run build
+
+      - name: Reproduce committed Workbench visual evidence
+        working-directory: spfx/nac-bpmn-viewer
+        run: |
+          npm run workbench:capture
+          npm run workbench:live:capture
+
+      - name: Require deterministic Workbench visual evidence
+        run: |
+          git diff --exit-code -- assets/docs/generic-workbench
+          git diff --exit-code -- assets/docs/workbench-live-read-binding
 
       - name: Upload generic workbench compiled evidence
         uses: actions/upload-artifact@v7
@@ -85,6 +104,15 @@ jobs:
             spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js
             spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js
             spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.styles.js
+
+      - name: Upload live workbench host compiled evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-live-host-compiled
+          if-no-files-found: error
+          path: |
+            spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js
+            spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js
 
   quality-gate:
     needs: spfx-bpmn-viewer
@@ -114,13 +142,19 @@ jobs:
           python-version: "3.11"
 
       - name: Install package
-        run: pip install -e .
+        run: pip install -e . fastapi==0.116.1 httpx==0.28.1
 
       - name: Download generic workbench compiled evidence
         uses: actions/download-artifact@v7
         with:
           name: generic-workbench-compiled
           path: spfx/nac-bpmn-viewer/lib-commonjs/workbench
+
+      - name: Download live workbench host compiled evidence
+        uses: actions/download-artifact@v7
+        with:
+          name: workbench-live-host-compiled
+          path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components
 
       - name: Install pinned Bicep compiler
         run: az bicep install --version v0.45.6

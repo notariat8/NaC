@@ -24,6 +24,8 @@ from nac_mvp_test_environment import (
 ALLOWED_WORKSPACE_ID = WORKSPACE_ID
 ALLOWED_MATTER_ID = MATTER_ID
 ALLOWED_PURPOSE = PURPOSE
+ALLOWED_TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
+ALLOWED_DEPUTY_REASON = "Synthetische Urlaubsvertretung"
 _MATTER_DISPLAY_NAME = "Synthetische IKV-Testakte"
 _SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.2"
 
@@ -39,14 +41,26 @@ class AccessDecision:
     """Result returned by the server-side role/case/deputy decision port."""
 
     mode: AccessMode
+    decision_id: str | None = None
+    decision_version: str | None = None
+    subject_id: str | None = None
+    role: str | None = None
+    workspace_id: str | None = None
+    matter_id: str | None = None
+    purpose: str | None = None
+    issued_at: str | None = None
+    expires_at: str | None = None
+    reason: str | None = None
+    active_approved_grant: bool = False
+    matching_audit_event: bool = False
 
     @classmethod
-    def assigned(cls) -> AccessDecision:
-        return cls(AccessMode.ASSIGNED)
+    def assigned(cls, **metadata: Any) -> AccessDecision:
+        return cls(AccessMode.ASSIGNED, **metadata)
 
     @classmethod
-    def deputy(cls) -> AccessDecision:
-        return cls(AccessMode.DEPUTY)
+    def deputy(cls, **metadata: Any) -> AccessDecision:
+        return cls(AccessMode.DEPUTY, **metadata)
 
     @classmethod
     def deny(cls) -> AccessDecision:
