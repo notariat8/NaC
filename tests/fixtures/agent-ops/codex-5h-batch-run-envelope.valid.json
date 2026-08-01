@@ -68,17 +68,26 @@
       {
         "id": "matter-access-scout",
         "role": "Matter Access scout",
-        "read_only": true
+        "read_only": true,
+        "fork_context": false,
+        "prompt_context": ["applicable_rules", "issue_or_pr", "paths", "task"],
+        "close_completed_immediately": true
       },
       {
         "id": "bpmn-scout",
         "role": "BPMN/SPFx scout",
-        "read_only": true
+        "read_only": true,
+        "fork_context": false,
+        "prompt_context": ["applicable_rules", "issue_or_pr", "paths", "task"],
+        "close_completed_immediately": true
       },
       {
         "id": "xjustiz-scout",
         "role": "XJustiz package-boundary scout",
-        "read_only": true
+        "read_only": true,
+        "fork_context": false,
+        "prompt_context": ["applicable_rules", "issue_or_pr", "paths", "task"],
+        "close_completed_immediately": true
       }
     ],
     "no_split_reason": null

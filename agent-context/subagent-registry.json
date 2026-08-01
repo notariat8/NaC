@@ -16,6 +16,13 @@
     "use_worktrees_when_parallel_write_scopes": 2,
     "do_not_split_if_coordination_cost_exceeds_review_value": true
   },
+  "context_isolation": {
+    "fork_context_default": false,
+    "full_history_fork_allowed": false,
+    "scoped_prompt_required": true,
+    "required_prompt_context": ["task", "paths", "issue_or_pr", "applicable_rules"],
+    "close_completed_subagents_immediately": true
+  },
   "rogue_agent_policy": {
     "unknown_profile_behavior": "fail_closed",
     "local_extra_toml_allowed": false,

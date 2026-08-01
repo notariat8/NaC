@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import ast
 import json
 import tomllib
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 
 if __package__:
@@ -27,6 +30,9 @@ AGENT_DIR = REPO_ROOT / ".codex" / "agents"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
 NAC_CLI = REPO_ROOT / "src" / "nac_cli" / "cli.py"
 TEST_FILE = REPO_ROOT / "tests" / "test_codex_subagent_operating_gate.py"
+PROCESS_POLICY = REPO_ROOT / "policies" / "process-policy.yaml"
+ROOT_AGENTS = REPO_ROOT / "AGENTS.md"
+BATCH_ENVELOPE_MODULE = REPO_ROOT / "src" / "nac_agent_ops" / "batch_run_envelope.py"
 
 EXPECTED_AGENT_NAMES = {
     "nac_scope_mapper",
@@ -46,6 +52,18 @@ EXPECTED_THRESHOLDS = {
     "use_worktrees_when_parallel_write_scopes": 2,
     "do_not_split_if_coordination_cost_exceeds_review_value": True,
 }
+EXPECTED_CONTEXT_ISOLATION = {
+    "fork_context_default": False,
+    "full_history_fork_allowed": False,
+    "scoped_prompt_required": True,
+    "required_prompt_context": [
+        "task",
+        "paths",
+        "issue_or_pr",
+        "applicable_rules",
+    ],
+    "close_completed_subagents_immediately": True,
+}
 EXPECTED_PROHIBITED_DELEGATIONS = {
     "secrets",
     "certificate_private_material",
@@ -63,6 +81,28 @@ PROHIBITED_MARKERS = {
     "gh" + "o_",
     "real_mandate_data_sample",
     "password=",
+}
+DOC_CONTEXT_ISOLATION_MARKERS = {
+    "docs/de/operations/codex-subagent-operating-gate.md": (
+        "fork_context: false",
+        "Full-History-Forks sind verboten",
+        "abgegrenzten Auftrag",
+        "relevante Pfade",
+        "Issue oder PR",
+        "benötigten Regeln",
+        "Abgeschlossene Subagents werden unverzüglich geschlossen",
+        "vollständige Haupttask wird nicht kopiert",
+    ),
+    "docs/en/operations/codex-subagent-operating-gate.md": (
+        "fork_context: false",
+        "Full-history forks are prohibited",
+        "bounded task",
+        "relevant paths",
+        "issue or pull request",
+        "applicable rules",
+        "Completed subagents are closed immediately",
+        "complete parent task is not copied",
+    ),
 }
 
 
@@ -85,6 +125,7 @@ def validate() -> list[str]:
     verification = _read_json(VERIFICATION_PATH, errors)
     index = _read_json(AGENT_CONTEXT_INDEX, errors)
     config = _read_toml(CODEX_CONFIG, errors)
+    process_policy = _read_yaml(PROCESS_POLICY, errors)
 
     if registry is not None:
         errors.extend(_validate_registry(registry))
@@ -96,6 +137,9 @@ def validate() -> list[str]:
         errors.extend(_validate_agent_context_index(index))
     if config is not None:
         errors.extend(_validate_config(config))
+    if process_policy is not None:
+        errors.extend(_validate_process_policy(process_policy))
+    errors.extend(_validate_root_agents())
     errors.extend(_validate_docs())
     errors.extend(_validate_quality_gate_and_cli())
     return errors
@@ -116,6 +160,11 @@ def _validate_registry(registry: dict[str, Any]) -> list[str]:
 
     errors.extend(_validate_limits("subagent-registry.json:limits", registry.get("limits")))
     errors.extend(_validate_thresholds("subagent-registry.json:batch_thresholds", registry.get("batch_thresholds")))
+    if registry.get("context_isolation") != EXPECTED_CONTEXT_ISOLATION:
+        errors.append(
+            "subagent-registry.json: context_isolation muss den isolierten "
+            "fork_context:false-Default exakt erzwingen"
+        )
 
     rogue = registry.get("rogue_agent_policy")
     if not isinstance(rogue, dict):
@@ -190,6 +239,27 @@ def _validate_contract(contract: dict[str, Any], registry: dict[str, Any]) -> li
         errors.append("codex-parallel-review.contract.json: rogue_agent_profiles_allowed muss false sein")
     if gate.get("lead_agent_integrates_results") is not True:
         errors.append("codex-parallel-review.contract.json: lead_agent_integrates_results muss true sein")
+    for key, expected in {
+        "fork_context_default": False,
+        "full_history_fork_allowed": False,
+        "scoped_prompt_required": True,
+        "close_completed_subagents_immediately": True,
+    }.items():
+        if gate.get(key) is not expected:
+            errors.append(
+                f"codex-parallel-review.contract.json: {key} muss {expected!r} sein"
+            )
+    if gate.get("required_prompt_context") != EXPECTED_CONTEXT_ISOLATION["required_prompt_context"]:
+        errors.append(
+            "codex-parallel-review.contract.json: required_prompt_context muss exakt "
+            "task, paths, issue_or_pr und applicable_rules enthalten"
+        )
+    if gate.get("required_prompt_context") != registry.get("context_isolation", {}).get(
+        "required_prompt_context"
+    ):
+        errors.append(
+            "codex-parallel-review.contract.json: required_prompt_context muss zur Registry passen"
+        )
 
     contract_names = {
         item.get("name")
@@ -222,8 +292,13 @@ def _validate_verification_contract(payload: dict[str, Any]) -> list[str]:
     applies_when = payload.get("applies_when")
     paths = _string_list(applies_when.get("paths")) if isinstance(applies_when, dict) else []
     for required in (
+        "AGENTS.md",
         "agent-context/subagent-registry.json",
         ".codex/agents/**",
+        "policies/process-policy.yaml",
+        "src/nac_agent_ops/batch_run_envelope.py",
+        "tests/fixtures/agent-ops/codex-5h-batch-run-envelope.valid.json",
+        "tests/test_codex_5h_batch_run_envelope.py",
         "scripts/validate_codex_subagent_operating_gate.py",
         "tests/test_codex_subagent_operating_gate.py",
     ):
@@ -248,15 +323,33 @@ def _validate_verification_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("codex-subagent-operating-gate.verification.json: thresholds.required_profile_count muss 6 sein")
         if thresholds.get("minimum_independent_questions_for_subagents") != 2:
             errors.append("codex-subagent-operating-gate.verification.json: thresholds.minimum_independent_questions_for_subagents muss 2 sein")
+        if thresholds.get("fork_context_default") is not False:
+            errors.append("codex-subagent-operating-gate.verification.json: thresholds.fork_context_default muss false sein")
+        if thresholds.get("full_history_fork_allowed") is not False:
+            errors.append("codex-subagent-operating-gate.verification.json: thresholds.full_history_fork_allowed muss false sein")
     for field in ("checks", "invariants", "required_evidence"):
         if not _string_list(payload.get(field)):
             errors.append(f"codex-subagent-operating-gate.verification.json: {field} muss nicht leer sein")
+    invariants = set(_string_list(payload.get("invariants")))
+    if "Every subagent uses isolated scoped context and full-history forks are prohibited." not in invariants:
+        errors.append("codex-subagent-operating-gate.verification.json: Isolation-Invariante fehlt")
+    evidence = set(_string_list(payload.get("required_evidence")))
+    if "context_isolation_policy" not in evidence:
+        errors.append("codex-subagent-operating-gate.verification.json: context_isolation_policy fehlt")
     pass_condition = payload.get("pass_condition")
-    if not isinstance(pass_condition, dict) or pass_condition.get("all_checks_pass") is not True:
-        errors.append("codex-subagent-operating-gate.verification.json: pass_condition.all_checks_pass muss true sein")
+    if not isinstance(pass_condition, dict):
+        errors.append("codex-subagent-operating-gate.verification.json: pass_condition muss Objekt sein")
+    else:
+        for key in ("all_checks_pass", "context_isolation_enforced"):
+            if pass_condition.get(key) is not True:
+                errors.append(f"codex-subagent-operating-gate.verification.json: pass_condition.{key} muss true sein")
     failure = payload.get("failure_behavior")
-    if not isinstance(failure, dict) or failure.get("unknown_agent_profile") != "fail_closed":
-        errors.append("codex-subagent-operating-gate.verification.json: unknown_agent_profile muss fail_closed sein")
+    if not isinstance(failure, dict):
+        errors.append("codex-subagent-operating-gate.verification.json: failure_behavior muss Objekt sein")
+    else:
+        for key in ("unknown_agent_profile", "full_history_fork"):
+            if failure.get(key) != "fail_closed":
+                errors.append(f"codex-subagent-operating-gate.verification.json: {key} muss fail_closed sein")
     return errors
 
 
@@ -271,6 +364,7 @@ def _validate_agent_context_index(payload: dict[str, Any]) -> list[str]:
     paths = _string_list(categories.get("subagent_operating_gate"))
     required = {
         "agent-context/subagent-registry.json",
+        "policies/process-policy.yaml",
         "docs/de/operations/codex-subagent-operating-gate.md",
         "docs/en/operations/codex-subagent-operating-gate.md",
         "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
@@ -279,11 +373,50 @@ def _validate_agent_context_index(payload: dict[str, Any]) -> list[str]:
     return [f"agent-context/index.json: subagent_operating_gate fehlt Pfad {path}" for path in sorted(missing)]
 
 
+def _validate_root_agents() -> list[str]:
+    if not ROOT_AGENTS.is_file():
+        return ["AGENTS.md fehlt"]
+    text = ROOT_AGENTS.read_text(encoding="utf-8")
+    required = (
+        "fork_context: false",
+        "Full-History-Forks sind verboten",
+        "schließt abgeschlossene Subagents unverzüglich",
+        "vollständige Haupttask-Verlauf darf nicht als Subagent-Session vervielfältigt werden",
+    )
+    return [f"AGENTS.md fehlt Kontextisolations-Marker: {marker}" for marker in required if marker not in text]
+
+
 def _validate_config(config: dict[str, Any]) -> list[str]:
     agents = config.get("agents")
     if not isinstance(agents, dict):
         return [".codex/config.toml: [agents] fehlt"]
     return _validate_limits(".codex/config.toml:[agents]", agents)
+
+
+def _validate_process_policy(payload: dict[str, Any]) -> list[str]:
+    workflows = payload.get("agent_workflows")
+    if not isinstance(workflows, dict):
+        return ["process-policy.yaml: agent_workflows fehlt"]
+    isolation = workflows.get("codex_subagent_context_isolation")
+    expected = {
+        **EXPECTED_CONTEXT_ISOLATION,
+        "prohibit_parent_task_session_duplication": True,
+    }
+    errors: list[str] = []
+    if isolation != expected:
+        errors.append(
+            "process-policy.yaml: codex_subagent_context_isolation muss "
+            "Full-History-Forks fail-closed verbieten"
+        )
+    implementation_context = _python_set_constant(
+        BATCH_ENVELOPE_MODULE, "REQUIRED_SUBAGENT_PROMPT_CONTEXT", errors
+    )
+    policy_context = set(_string_list(isolation.get("required_prompt_context"))) if isinstance(isolation, dict) else set()
+    if implementation_context != policy_context:
+        errors.append(
+            "batch_run_envelope.py: REQUIRED_SUBAGENT_PROMPT_CONTEXT muss exakt zur Prozess-Policy passen"
+        )
+    return errors
 
 
 def _validate_docs() -> list[str]:
@@ -304,10 +437,27 @@ def _validate_docs() -> list[str]:
         for marker in PROHIBITED_MARKERS:
             if marker.lower() in text.lower():
                 errors.append(f"{rel_path} enthaelt unzulaessigen Marker: {marker}")
-        for required in ("subagent-registry.json", "codex-subagent-operating-gate", "read-only"):
-            if required not in text:
+        required_markers = [
+            "subagent-registry.json",
+            "codex-subagent-operating-gate",
+            "read-only",
+        ]
+        normalized = " ".join(text.split())
+        for required in required_markers:
+            if required not in normalized:
                 errors.append(f"{rel_path} fehlt Marker: {required}")
+        for required in _missing_doc_context_markers(rel_path, text):
+            errors.append(f"{rel_path} fehlt Marker: {required}")
     return errors
+
+
+def _missing_doc_context_markers(rel_path: str, text: str) -> list[str]:
+    normalized = " ".join(text.split())
+    return [
+        marker
+        for marker in DOC_CONTEXT_ISOLATION_MARKERS.get(rel_path, ())
+        if marker not in normalized
+    ]
 
 
 def _validate_quality_gate_and_cli() -> list[str]:
@@ -348,6 +498,7 @@ def _validate_agent_profile_toml(rel_path: str, expected_name: str) -> list[str]
         "Do not edit files.",
         "persistent owner working agreement",
         "Codex command rules",
+        "Do not depend on or request the full parent task history.",
     ):
         if required not in instructions:
             errors.append(f"{rel_path}: developer_instructions fehlt Marker: {required}")
@@ -394,6 +545,38 @@ def _read_toml(path: Path, errors: list[str]) -> dict[str, Any] | None:
         errors.append(f"TOML-Datei fehlt: {path.relative_to(REPO_ROOT)}")
         return None
     return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_yaml(path: Path, errors: list[str]) -> dict[str, Any] | None:
+    if not path.is_file():
+        errors.append(f"YAML-Datei fehlt: {path.relative_to(REPO_ROOT)}")
+        return None
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        errors.append(f"{path.relative_to(REPO_ROOT)} muss YAML-Objekt sein")
+        return None
+    return payload
+
+
+def _python_set_constant(path: Path, name: str, errors: list[str]) -> set[str]:
+    if not path.is_file():
+        errors.append(f"Python-Datei fehlt: {path.relative_to(REPO_ROOT)}")
+        return set()
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        targets = node.targets if isinstance(node, ast.Assign) else []
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            try:
+                value = ast.literal_eval(node.value)
+            except (ValueError, TypeError):
+                errors.append(f"{path.relative_to(REPO_ROOT)}: {name} ist kein literales Set")
+                return set()
+            if isinstance(value, set) and all(isinstance(item, str) for item in value):
+                return value
+            errors.append(f"{path.relative_to(REPO_ROOT)}: {name} muss String-Set sein")
+            return set()
+    errors.append(f"{path.relative_to(REPO_ROOT)}: Konstante {name} fehlt")
+    return set()
 
 
 def _string_list(value: object) -> list[str]:

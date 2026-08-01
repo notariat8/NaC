@@ -29,6 +29,18 @@ when parallel implementation needs separate branches or isolated file edits.
 The lead Codex run remains accountable for the final diff, validation evidence,
 owner-gate wording and PR state.
 
+## Context Isolation
+
+Every NaC subagent is started with `fork_context: false`. Full-history forks
+are prohibited. The lead run passes only the bounded task, relevant paths,
+issue or pull request, and applicable rules. If that context is insufficient,
+the scoped prompt is extended; the complete parent task is not copied.
+Completed subagents are closed immediately.
+
+This rule prevents long parent tasks from being duplicated into a new session
+file for every reviewer. It is part of the fail-closed validator, not merely an
+operator recommendation.
+
 ## Registry Boundary
 
 - Only profiles listed in the registry may be used.

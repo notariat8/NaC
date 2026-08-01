@@ -31,6 +31,18 @@ isolierte Dateiänderungen braucht.
 Der führende Codex-Lauf bleibt verantwortlich für finalen Diff,
 Validierungsnachweise, Owner-Gate-Text und PR-Zustand.
 
+## Kontextisolation
+
+Jeder NaC-Subagent wird mit `fork_context: false` gestartet. Full-History-Forks
+sind verboten. Der führende Lauf übergibt nur den abgegrenzten Auftrag,
+relevante Pfade, Issue oder PR und die benötigten Regeln. Reicht dieser Kontext
+nicht aus, wird der gezielte Prompt erweitert; der vollständige Haupttask wird
+nicht kopiert. Abgeschlossene Subagents werden unverzüglich geschlossen.
+
+Diese Vorgabe verhindert, dass lange Haupttasks pro Review-Agent als neue
+Sessiondatei vervielfältigt werden. Sie ist Teil des fail-closed Validators und
+nicht nur eine Bedienempfehlung.
+
 ## Registry-Grenze
 
 - Nur Profile aus der Registry dürfen genutzt werden.
