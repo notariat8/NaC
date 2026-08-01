@@ -98,6 +98,7 @@
           "description": "Exact read-only subagent registry, runtime limits and batch thresholds.",
           "paths": [
             "agent-context/subagent-registry.json",
+            "policies/process-policy.yaml",
             "docs/de/operations/codex-subagent-operating-gate.md",
             "docs/en/operations/codex-subagent-operating-gate.md",
             "workflows/contracts/codex-parallel-review.contract.json",

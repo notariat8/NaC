@@ -73,6 +73,35 @@ class Codex5hBatchRunEnvelopeTests(unittest.TestCase):
 
         self.assertIn("two or more independent review questions require subagent_plan or no_split_reason", errors)
 
+    def test_rejects_subagent_without_context_isolation(self) -> None:
+        payload = _fixture()
+        plan = payload["subagent_review"]["subagent_plan"][0]
+        plan["fork_context"] = True
+        plan["prompt_context"] = ["task", "paths"]
+        plan["close_completed_immediately"] = False
+
+        errors = validate_batch_run_envelope(payload)
+
+        self.assertTrue(any("fork_context must be false" in error for error in errors))
+        self.assertTrue(any("prompt_context must contain" in error for error in errors))
+        self.assertTrue(any("close_completed_immediately must be true" in error for error in errors))
+
+    def test_rejects_single_subagent_below_threshold_and_without_isolation(self) -> None:
+        payload = _fixture()
+        payload["subagent_review"]["independent_review_questions_count"] = 1
+        payload["subagent_review"]["subagent_plan"] = [
+            {"id": "single", "role": "single reviewer", "read_only": True}
+        ]
+
+        errors = validate_batch_run_envelope(payload)
+
+        self.assertIn(
+            "subagent_plan requires at least two independent review questions", errors
+        )
+        self.assertTrue(any("fork_context must be false" in error for error in errors))
+        self.assertTrue(any("prompt_context must contain" in error for error in errors))
+        self.assertTrue(any("close_completed_immediately must be true" in error for error in errors))
+
     def test_rejects_red_command_and_yellow_without_owner_gate(self) -> None:
         payload = _fixture()
         payload["command_risk_matrix"].append(

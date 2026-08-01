@@ -22,6 +22,16 @@
     "worker_agents_allowed_for_disjoint_write_scopes": true,
     "explorer_agents_read_only_by_default": true,
     "lead_agent_integrates_results": true,
+    "fork_context_default": false,
+    "full_history_fork_allowed": false,
+    "scoped_prompt_required": true,
+    "required_prompt_context": [
+      "task",
+      "paths",
+      "issue_or_pr",
+      "applicable_rules"
+    ],
+    "close_completed_subagents_immediately": true,
     "max_threads": 6,
     "max_depth": 1,
     "job_max_runtime_seconds": 1800,

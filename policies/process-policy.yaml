@@ -272,6 +272,17 @@ agent_workflows:
   codex_parallel_review_doc_en: docs/en/codex-parallel-review-workflow.md
   codex_parallel_review_profiles: .codex/agents
   codex_parallel_review_write_policy: read_only_specialists_lead_agent_or_user_approved_implementation
+  codex_subagent_context_isolation:
+    fork_context_default: false
+    full_history_fork_allowed: false
+    scoped_prompt_required: true
+    required_prompt_context:
+      - task
+      - paths
+      - issue_or_pr
+      - applicable_rules
+    close_completed_subagents_immediately: true
+    prohibit_parent_task_session_duplication: true
 
 portfolio_structure:
   plugin_root: plugins

@@ -24,6 +24,12 @@ PROHIBITED_SHARED_CONTEXT_MARKERS = {
     "mandate_data_shared",
     "customer_data_shared",
 }
+REQUIRED_SUBAGENT_PROMPT_CONTEXT = {
+    "task",
+    "paths",
+    "issue_or_pr",
+    "applicable_rules",
+}
 
 
 def build_batch_run_envelope_template(
@@ -72,8 +78,22 @@ def build_batch_run_envelope_template(
         "subagent_review": {
             "independent_review_questions_count": 2,
             "subagent_plan": [
-                {"id": "scope", "role": "scope mapper", "read_only": True},
-                {"id": "validation", "role": "validation reviewer", "read_only": True},
+                {
+                    "id": "scope",
+                    "role": "scope mapper",
+                    "read_only": True,
+                    "fork_context": False,
+                    "prompt_context": sorted(REQUIRED_SUBAGENT_PROMPT_CONTEXT),
+                    "close_completed_immediately": True,
+                },
+                {
+                    "id": "validation",
+                    "role": "validation reviewer",
+                    "read_only": True,
+                    "fork_context": False,
+                    "prompt_context": sorted(REQUIRED_SUBAGENT_PROMPT_CONTEXT),
+                    "close_completed_immediately": True,
+                },
             ],
             "no_split_reason": None,
         },
@@ -251,17 +271,36 @@ def _validate_subagent_review(review: dict[str, Any]) -> list[str]:
         return errors
     subagent_plan = review.get("subagent_plan")
     no_split_reason = str(review.get("no_split_reason") or "").strip()
-    if count >= 2:
-        if isinstance(subagent_plan, list) and subagent_plan:
-            for index, item in enumerate(subagent_plan):
-                if not isinstance(item, dict):
-                    errors.append(f"subagent_review.subagent_plan[{index}] must be an object")
-                elif item.get("read_only") is not True and not item.get("worktree_path"):
-                    errors.append(
-                        f"subagent_review.subagent_plan[{index}] must be read_only or own a worktree_path"
-                    )
-        elif not no_split_reason:
-            errors.append("two or more independent review questions require subagent_plan or no_split_reason")
+    if isinstance(subagent_plan, list) and subagent_plan:
+        if count < 2:
+            errors.append(
+                "subagent_plan requires at least two independent review questions"
+            )
+        for index, item in enumerate(subagent_plan):
+            if not isinstance(item, dict):
+                errors.append(f"subagent_review.subagent_plan[{index}] must be an object")
+                continue
+            if item.get("read_only") is not True and not item.get("worktree_path"):
+                errors.append(
+                    f"subagent_review.subagent_plan[{index}] must be read_only or own a worktree_path"
+                )
+            if item.get("fork_context") is not False:
+                errors.append(
+                    f"subagent_review.subagent_plan[{index}].fork_context must be false"
+                )
+            prompt_context = set(_strings(item.get("prompt_context")))
+            if prompt_context != REQUIRED_SUBAGENT_PROMPT_CONTEXT:
+                errors.append(
+                    f"subagent_review.subagent_plan[{index}].prompt_context must contain "
+                    "task, paths, issue_or_pr and applicable_rules exactly"
+                )
+            if item.get("close_completed_immediately") is not True:
+                errors.append(
+                    f"subagent_review.subagent_plan[{index}].close_completed_immediately "
+                    "must be true"
+                )
+    elif count >= 2 and not no_split_reason:
+        errors.append("two or more independent review questions require subagent_plan or no_split_reason")
     return errors
 
 
