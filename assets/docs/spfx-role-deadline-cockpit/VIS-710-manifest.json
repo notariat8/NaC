@@ -18,7 +18,7 @@
   "tenantAccess": false,
   "componentE2e": false,
   "evidenceKind": "offline_visual_contract",
-  "aggregateSourceSha256": "6c00a74d7dcaa7534708b3f5ac27bb9fc9466e956c077d33ce5fbecf9f9178c0",
+  "aggregateSourceSha256": "077f1cb50041f08a83061f208bd25915aee6ad69725ebb47f4551105ec0dc499",
   "sourceInputs": [
     {
       "path": "bpmn/immobilienkaufvertrag.bpmn",
@@ -26,7 +26,7 @@
     },
     {
       "path": "spfx/nac-bpmn-viewer/package.json",
-      "sha256": "8646499abc49481c759ebeeec018901915f98bb8088ab4539245d8a93397154f"
+      "sha256": "0e5f5da6d1aa35fee37d1385cb528531ce8f411674c64ea4313b9dc5cdbe04cb"
     },
     {
       "path": "spfx/nac-bpmn-viewer/package-lock.json",

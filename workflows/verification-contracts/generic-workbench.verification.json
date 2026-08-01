@@ -1,0 +1,87 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.generic_workbench",
+  "domain_contract_id": "nac.generic_workbench",
+  "title": "Generic NaC Workbench Foundation Verification",
+  "status": "active_foundation",
+  "applies_when": {
+    "paths": [
+      "spfx/nac-bpmn-viewer/src/workbench/**",
+      ".github/workflows/quality-gate.yml",
+      "assets/docs/generic-workbench/**",
+      "scripts/quality_gate.py",
+      "scripts/validate_generic_workbench_foundation.py",
+      "src/nac_bff/workbench_projection.py",
+      "src/nac_cli/cli.py",
+      "workflows/contracts/generic-workbench.contract.json",
+      "workflows/fixtures/generic-workbench-conformance.json",
+      "workflows/verification-contracts/generic-workbench.verification.json",
+      "docs/de/architecture/generic-workbench.md",
+      "docs/en/architecture/generic-workbench.md"
+    ]
+  },
+  "required_context": {
+    "always_on": ["AGENTS.md", "policies/technology-policy.yaml", "policies/data-protection-policy.yaml"],
+    "scoped": ["docs/AGENTS.md", "workflows/contracts/AGENTS.md"],
+    "on_demand": [
+      "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+      "docs/de/architecture/generic-workbench.md",
+      "workflows/contracts/generic-workbench.contract.json"
+    ],
+    "runtime": ["fresh git diff", "fresh test output", "synthetic visual evidence"]
+  },
+  "checks": [
+    "python3 scripts/validate_generic_workbench_foundation.py",
+    "PYTHONPATH=. python3 -m unittest tests.test_validate_generic_workbench_foundation",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_workbench_projection",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_frontend_cli",
+    "cd spfx/nac-bpmn-viewer && npm run build",
+    "cd spfx/nac-bpmn-viewer && npm run workbench:capture",
+    "python3 scripts/nac.py frontend workbench-verify",
+    "python3 scripts/nac.py doctor --profile strict"
+  ],
+  "invariants": [
+    "The generic core imports no React, SPFx, Graph, MCP, BPMN or NaC runtime dependency.",
+    "The browser never derives attention, decisions, evidence authority or capabilities from tasks.",
+    "Deny returns no snapshot, identifiers or aggregate counts.",
+    "Every access lease is bound to subject, role, workspace, matter and purpose; deputy access is additionally decision-versioned and reason-bound.",
+    "Every snapshot carries a verified redaction attestation bound to the canonical projected content; evidence source references are opaque identifiers.",
+    "The Python producer emits compact insertion-order JSON and both runtimes enforce the same 128 KiB UTF-8 wire-size ceiling on those exact bytes.",
+    "Every mutating capability is deny-only in the foundation slice.",
+    "BPMN is a non-authoritative model reference, never immutable audit evidence.",
+    "Today is limited to the active already-authorized matter.",
+    "All preview and evidence data are synthetic and contain no browser persistence or network action.",
+    "The foundation source is compiled and tested in the SPFx package but is not imported by the live web part."
+  ],
+  "thresholds": {
+    "maximum_projection_lease_seconds": 300,
+    "maximum_snapshot_bytes": 131072,
+    "maximum_text_utf16_code_units": 256,
+    "maximum_items_per_collection": 64,
+    "maximum_live_writes": 0,
+    "minimum_visual_viewports": 2
+  },
+  "required_evidence": [
+    "runtime_parser_tests",
+    "bff_projection_tests",
+    "import_dag_validator",
+    "read_only_boundary_validator",
+    "desktop_synthetic_screenshot",
+    "mobile_synthetic_screenshot",
+    "visual_source_build_and_toolchain_provenance"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_capabilities_deny": true,
+    "no_graph_or_mcp_browser_path": true,
+    "no_real_matter_data": true,
+    "no_live_tenant_action": true
+  },
+  "failure_behavior": {
+    "invalid_snapshot": "fail_closed",
+    "expired_lease": "discard_and_refresh",
+    "deny": "render_access_denied_without_snapshot",
+    "missing_evidence": "block_decision_render",
+    "quality_gate_failure": "block_completion"
+  }
+}

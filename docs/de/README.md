@@ -185,6 +185,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/microsoft-first-onprem-target-architecture.md](architecture/microsoft-first-onprem-target-architecture.md):
   verbindliches Microsoft-first-/On-Prem-AI-Zielbild mit Schichtentrennung,
   PDF-Bewertung, Durable-Workflow-Spike sowie 90-/180-/365-Tage-Roadmap.
+- [docs/de/architecture/generic-workbench.md](architecture/generic-workbench.md):
+  Generischer Today-/Akten-/Decision-Center-Vertrag mit NaC-BFF-Bindung.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   geschlossene M365-/SharePoint-MVP-Infrastruktur-Baseline über Teams,
   Microsoft-365-Gruppe, SharePoint-Team-Site und Microsoft Graph REST ohne alte

@@ -638,6 +638,14 @@ def build_parser() -> argparse.ArgumentParser:
     contracts_sub.add_parser("verify", help="Validiert agentische Verification Contracts und Kontext-Harness.")
     contracts.set_defaults(func=command_contracts)
 
+    frontend = subparsers.add_parser("frontend", help="Prüft NaC-Frontend-Verträge.")
+    frontend_sub = frontend.add_subparsers(dest="frontend_command", required=True)
+    frontend_sub.add_parser(
+        "workbench-verify",
+        help="Validiert die generische read-only Workbench- und NaC-BFF-Grenze.",
+    )
+    frontend.set_defaults(func=command_frontend)
+
     agent_batch = subparsers.add_parser("agent-batch", help="Prueft lange agentische Offline-Batches.")
     agent_batch_sub = agent_batch.add_subparsers(dest="agent_batch_command", required=True)
     agent_batch_validate = agent_batch_sub.add_parser(
@@ -1638,6 +1646,7 @@ def command_status(args: argparse.Namespace) -> int:
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
             "contracts_verify": "nac contracts verify",
+            "frontend_workbench_verify": "nac frontend workbench-verify",
             "agent_batch_validate": "nac agent-batch validate",
             "m365_teams_sharepoint_plan": "nac m365 teams-sharepoint plan",
             "config_validate": "nac config validate",
@@ -2064,6 +2073,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Business Case Type Immutable Evidence S6", "validate_business_case_type_immutable_evidence.py"),
             ("Business Case Type Azure Blob WORM S6b", "validate_business_case_type_azure_blob_worm.py"),
             ("M365 Azure BFF Live Activation Contract", "validate_m365_azure_bff_live_activation.py"),
+            ("Generic Workbench Foundation", "validate_generic_workbench_foundation.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -2106,6 +2116,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_business_case_type_immutable_evidence.py",
             "scripts/validate_business_case_type_azure_blob_worm.py",
             "scripts/validate_m365_azure_bff_live_activation.py",
+            "scripts/validate_generic_workbench_foundation.py",
         ]
         overall_rc = 0
         for script_name in validators:
@@ -2115,6 +2126,26 @@ def command_contracts(args: argparse.Namespace) -> int:
         return overall_rc
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
+
+
+def command_frontend(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    if args.frontend_command == "workbench-verify":
+        rc = run_script(repo_root, "scripts/validate_generic_workbench_foundation.py", [])
+        if rc != 0:
+            return rc
+        node = shutil.which("node")
+        if node is None:
+            print("ERROR: Node.js is required for the frontend AST boundary gate.", file=sys.stderr)
+            return 1
+        package_root = repo_root / "spfx" / "nac-bpmn-viewer"
+        result = subprocess.run(
+            [node, "scripts/validate-read-only-boundary.cjs"],
+            cwd=package_root,
+            check=False,
+        )
+        return result.returncode
+    raise AssertionError(f"Unknown frontend command: {args.frontend_command}")
 
 
 def command_agent_batch(args: argparse.Namespace) -> int:

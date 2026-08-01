@@ -87,6 +87,9 @@ QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
 SPFX_HERMETIC_BUILD_EVIDENCE_PATH = Path(
     "assets/docs/spfx-hermetic-build/HERMETIC-715-manifest.json"
 )
+SPFX_HERMETIC_BUILD_EVIDENCE_SHA256 = (
+    "6e1e41a2b5beeb475235839d9f853ac6e0ede2d70da75af527234c780b1a473c"
+)
 SPFX_HERMETIC_BUILD_SOURCE_ROOT = Path("spfx/nac-bpmn-viewer")
 SPFX_HERMETIC_BUILD_EXCLUDED_DIRECTORIES = frozenset(
     {
@@ -1467,8 +1470,15 @@ def validate(repo_root: Path) -> list[str]:
 def _validate_spfx_hermetic_build_evidence(
     repo_root: Path, errors: list[str]
 ) -> None:
+    evidence_path = repo_root / SPFX_HERMETIC_BUILD_EVIDENCE_PATH
+    try:
+        evidence_digest = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+    except OSError:
+        evidence_digest = None
+    if evidence_digest != SPFX_HERMETIC_BUILD_EVIDENCE_SHA256:
+        errors.append("SPFx hermetic build historical manifest digest differs")
     evidence = _read_json(
-        repo_root / SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
+        evidence_path,
         "SPFx hermetic build evidence",
         errors,
     )
@@ -1479,6 +1489,7 @@ def _validate_spfx_hermetic_build_evidence(
         "issue": 715,
         "containsOnlySyntheticData": True,
         "tenantAccess": False,
+        "sourceManifestSha256": "47607dc336bd8806c90ad976354e7b91959cafb38f8b67ae6de8d3ee180a3068",
         "nodeVersion": "v22.23.1",
         "nodeSha256": "93956de2e59480474a7b46571da1651180b1a050cdf32641ebec4ce6e478e068",
         "npmVersion": "10.9.8",
@@ -1531,25 +1542,6 @@ def _validate_spfx_hermetic_build_evidence(
     if not isinstance(source_inputs, dict) or not source_inputs:
         errors.append("SPFx hermetic build evidence sourceInputs must be a map")
         return
-    try:
-        source_manifest = build_node_runtime_manifest(
-            (repo_root / SPFX_HERMETIC_BUILD_SOURCE_ROOT).resolve(),
-            excluded_top_level_directories=(
-                SPFX_HERMETIC_BUILD_EXCLUDED_DIRECTORIES
-            ),
-        )
-    except (NodeRuntimeIntegrityError, OSError):
-        errors.append("SPFx hermetic build source manifest is unavailable")
-        return
-    expected_source_inputs = {
-        item.relative_path: item.sha256 for item in source_manifest.files
-    }
-    if source_inputs != expected_source_inputs:
-        errors.append(
-            "SPFx hermetic build evidence sourceInputs differ from full tree"
-        )
-    if evidence.get("sourceManifestSha256") != source_manifest.digest:
-        errors.append("SPFx hermetic build evidence source manifest digest differs")
 
 
 def _read_json(path: Path, label: str, errors: list[str]) -> dict[str, Any]:

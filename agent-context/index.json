@@ -404,6 +404,22 @@
             "tests/test_business_case_type_write_identity_inspection.py",
             "tests/test_azure_blob_worm_rest_transport.py"
           ]
+        },
+        {
+          "id": "generic_workbench_foundation",
+          "description": "Issue #721 read-only generic Today, Matter and Decision Center with a framework-light core, exact NaC BFF snapshot projection, short access lease and deny-only capability boundary.",
+          "paths": [
+            "docs/de/architecture/generic-workbench.md",
+            "docs/en/architecture/generic-workbench.md",
+            "docs/de/superpowers/specs/2026-08-01-generic-workbench-foundation-design.md",
+            "docs/en/superpowers/specs/2026-08-01-generic-workbench-foundation-design.md",
+            "spfx/nac-bpmn-viewer/src/workbench/**",
+            "src/nac_bff/workbench_projection.py",
+            "workflows/contracts/generic-workbench.contract.json",
+            "workflows/verification-contracts/generic-workbench.verification.json",
+            "scripts/validate_generic_workbench_foundation.py",
+            "tests/test_nac_bff_workbench_projection.py"
+          ]
         }
       ]
     },
@@ -439,6 +455,7 @@
     "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json",
     "workflows/verification-contracts/business-case-type-live-write-readiness-s4e.verification.json",
     "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json",
-    "workflows/verification-contracts/business-case-type-production-composition-s4g.verification.json"
+    "workflows/verification-contracts/business-case-type-production-composition-s4g.verification.json",
+    "workflows/verification-contracts/generic-workbench.verification.json"
   ]
 }
