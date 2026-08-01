@@ -35,6 +35,7 @@ from nac_bff.azure_activation_composition import (
     _copy_snapshot,
     _deployment_name,
     _normalize_zip_archive,
+    _run_interruption_git_read,
     _validate_azure_resource_inventory,
     build_interruption_reconciliation_ports,
     build_live_activation_execution_port,
@@ -1050,6 +1051,19 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
                 "body_sha256": expected_sha256,
             },
         )
+        baseline_reference = (
+            "https://github.com/notariat8/NaC/issues/719"
+            "#issuecomment-987654322"
+        )
+        comment["html_url"] = baseline_reference
+        with patch.object(verifier, "_gh_json", return_value=comment):
+            baseline_result = verifier.verify_owner_comment(
+                reference=baseline_reference,
+                expected_body=expected_body,
+                expected_body_sha256=expected_sha256,
+            )
+        self.assertEqual(baseline_result["status"], "VERIFIED")
+        self.assertEqual(baseline_result["reference"], baseline_reference)
 
     def test_terminalization_owner_comment_rejects_issue_632(self) -> None:
         temporary, _request, context, _plan, comment = self._fixture()
@@ -4679,8 +4693,11 @@ class AzureBffCompositionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             repo_root = Path(temporary)
             paths = (
+                "src/nac_bff/azure_interruption_contract.py",
+                "src/nac_bff/approved_git_tree.py",
                 "src/nac_bff/azure_interruption_reconciliation.py",
                 "src/nac_bff/azure_activation_runner.py",
+                "src/nac_bff/azure_interruption_baseline.py",
                 "src/nac_bff/azure_activation_composition.py",
                 "src/nac_bff/azure_live_commands.py",
                 "src/nac_cli/cli.py",
@@ -4705,6 +4722,60 @@ class AzureBffCompositionTests(unittest.TestCase):
 
         self.assertEqual(first, second)
         self.assertNotEqual(first, changed)
+
+    def test_interruption_git_reads_disable_replace_refs(self) -> None:
+        process_result = SimpleNamespace(returncode=0, stdout="bound\n")
+        with patch(
+            "nac_bff.azure_activation_composition.subprocess.run",
+            return_value=process_result,
+        ) as process:
+            self.assertEqual(
+                _run_interruption_git_read(Path("/repo"), "rev-parse", "HEAD"),
+                "bound",
+            )
+        command = process.call_args.args[0]
+        self.assertEqual(command[0], "/usr/bin/git")
+        self.assertIn("--no-replace-objects", command)
+        self.assertLess(
+            command.index("--no-replace-objects"), command.index("-C")
+        )
+
+    def test_interruption_toolchain_rejects_approved_blob_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo_root = Path(temporary)
+            paths = (
+                "src/nac_bff/azure_interruption_contract.py",
+                "src/nac_bff/approved_git_tree.py",
+                "src/nac_bff/azure_interruption_reconciliation.py",
+                "src/nac_bff/azure_activation_runner.py",
+                "src/nac_bff/azure_interruption_baseline.py",
+                "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/azure_live_commands.py",
+                "src/nac_cli/cli.py",
+            )
+            file_sha256 = {}
+            for index, relative_path in enumerate(paths):
+                path = repo_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                payload = f"runtime-{index}\n".encode()
+                path.write_bytes(payload)
+                file_sha256[relative_path] = hashlib.sha256(payload).hexdigest()
+            file_sha256[paths[0]] = "0" * 64
+            snapshot = SimpleNamespace(file_sha256=file_sha256)
+            with patch(
+                "nac_bff.azure_activation_composition."
+                "GitApprovedTreeSource.inspect",
+                return_value=snapshot,
+            ), self.assertRaises(ActivationStepError) as raised:
+                calculate_interruption_reconciler_toolchain_sha256(
+                    repo_root,
+                    approved_commit=COMMIT,
+                    approved_tree=TREE,
+                )
+        self.assertEqual(
+            raised.exception.code,
+            "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH",
+        )
 
     def _interruption_binding_verifier(self) -> InterruptionRuntimeBindingVerifier:
         return InterruptionRuntimeBindingVerifier(
@@ -4768,10 +4839,15 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "nac_bff.azure_activation_composition."
                 "calculate_interruption_reconciler_toolchain_sha256",
                 return_value="f" * 64,
-            ),
+            ) as toolchain,
             self.assertRaises(ActivationStepError) as raised,
         ):
             self._interruption_binding_verifier().verify()
+        toolchain.assert_called_once_with(
+            Path("/repo"),
+            approved_commit=COMMIT,
+            approved_tree=TREE,
+        )
         self.assertEqual(
             raised.exception.code,
             "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH",

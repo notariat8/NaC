@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import inspect
 import json
@@ -65,10 +66,113 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 ("group", "create"),
                 ("deployment", "group", "create"),
                 ("deployment", "group", "show"),
+                ("deployment", "operation", "group", "list"),
+                ("identity", "show"),
+                ("functionapp", "identity", "show"),
                 ("resource", "list"),
                 ("resource", "show"),
+                ("rest",),
                 ("functionapp", "deployment", "source", "config-zip"),
             ),
+        )
+
+    def test_resource_graph_rest_command_is_exactly_bounded(self) -> None:
+        valid = [
+            "rest",
+            "--method",
+            "post",
+            "--url",
+            azure_live_commands._RESOURCE_GRAPH_URL,
+            "--body",
+            azure_live_commands._RESOURCE_GRAPH_BODY,
+        ]
+        command, family, code = azure_live_commands._validated_command(valid)
+        self.assertEqual(command, valid)
+        self.assertEqual(family, ("rest",))
+        self.assertEqual(code, "AZURE_CLI_OK")
+        for option, replacement in (
+            ("--method", "get"),
+            ("--url", "https://management.azure.com/foreign"),
+            ("--body", "{}"),
+        ):
+            drifted = list(valid)
+            drifted[drifted.index(option) + 1] = replacement
+            self.assertEqual(
+                azure_live_commands._validated_command(drifted)[2],
+                "AZURE_CLI_COMMAND_BLOCKED",
+            )
+
+        app_settings = [
+            "rest", "--method", "post",
+            "--url", azure_live_commands._APP_SETTINGS_URL,
+        ]
+        command, family, code = azure_live_commands._validated_command(
+            app_settings
+        )
+        self.assertEqual(command, app_settings)
+        self.assertEqual(family, ("rest",))
+        self.assertEqual(code, "AZURE_CLI_OK")
+        self.assertEqual(
+            azure_live_commands._validated_command(valid[:-2])[2],
+            "AZURE_CLI_COMMAND_BLOCKED",
+        )
+        self.assertEqual(
+            azure_live_commands._validated_command(
+                [*app_settings, "--body", azure_live_commands._RESOURCE_GRAPH_BODY]
+            )[2],
+            "AZURE_CLI_COMMAND_BLOCKED",
+        )
+
+    def test_resource_graph_projection_rejects_paging_and_count_drift(self) -> None:
+        complete = {
+            "count": 0,
+            "data": [],
+            "resultTruncated": "false",
+            "totalRecords": 0,
+        }
+        self.assertEqual(
+            azure_live_commands._resource_graph_projection(complete), []
+        )
+        drifted_responses = (
+            {**complete, "resultTruncated": "true"},
+            {**complete, "resultTruncated": True},
+            {**complete, "count": 1},
+            {**complete, "totalRecords": 1},
+            {**complete, "skipToken": "next-page"},
+            {key: value for key, value in complete.items() if key != "count"},
+            {
+                key: value
+                for key, value in complete.items()
+                if key != "totalRecords"
+            },
+        )
+        for response in drifted_responses:
+            with self.subTest(response=response), self.assertRaisesRegex(
+                ValueError, "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID"
+            ):
+                azure_live_commands._resource_graph_projection(response)
+
+    def test_security_projection_allows_provider_metadata_but_rejects_security_drift(self) -> None:
+        expected = {
+            "allowSharedKeyAccess": False,
+            "networkAcls": {"bypass": "None"},
+        }
+        actual = {
+            **expected,
+            "primaryEndpoints": {"blob": "https://provider-managed"},
+            "networkAcls": {
+                "bypass": "None",
+                "resourceAccessRules": [],
+            },
+        }
+
+        self.assertTrue(
+            azure_live_commands._security_projection_matches(actual, expected)
+        )
+        drifted = copy.deepcopy(actual)
+        drifted["allowSharedKeyAccess"] = True
+        self.assertFalse(
+            azure_live_commands._security_projection_matches(drifted, expected)
         )
 
     def test_sealed_bootstrap_disables_all_azure_cli_extension_sources(self) -> None:
@@ -747,6 +851,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             ["provider", "show", "--namespace", "Microsoft.Authorization"],
             ["provider", "register", "--namespace", "Microsoft.Web"],
             ["resource", "list", "--resource-group", "foreign-rg"],
+            [
+                "identity", "show",
+                "--name", "id-nac-bff-prod-foreign",
+                "--resource-group", "rg-nac-bff-test",
+            ],
+            [
+                "functionapp", "identity", "show",
+                "--name", "foreign-function",
+                "--resource-group", "rg-nac-bff-test",
+            ],
             [
                 "resource", "show",
                 "--resource-group", "rg-nac-bff-test",
@@ -2285,6 +2399,370 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(run.call_args.kwargs["bound_artifacts"], bindings)
 
 
+    def test_nonempty_interruption_observation_uses_dynamic_audience_and_app_settings_rest(self) -> None:
+        from tests.test_nac_bff_azure_interruption_baseline import (
+            ACTIVATION_HASH,
+            CLIENT_ID,
+            COMMIT,
+            PRINCIPAL_ID,
+            TREE,
+            _deployment,
+            _identity_binding,
+            _inventory,
+            _load_expectation,
+            _operations,
+            _prepared,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = Path(temporary)
+            _prepared(run_dir)
+            request = SimpleNamespace(
+                expected_activation_hash=ACTIVATION_HASH,
+                approved_commit=COMMIT,
+                approved_tree=TREE,
+            )
+            expectation, error = _load_expectation(
+                run_dir, {"activation_hash": ACTIVATION_HASH}, request
+            )
+            self.assertIsNone(error)
+            assert expectation is not None
+            inventory = _inventory()
+            by_type = {item["type"]: item for item in inventory}
+            operations = _operations()
+            deployment = _deployment(expectation)
+            identity = _identity_binding()
+            raw_inventory = [
+                {
+                    "id": item["id"],
+                    "name": item["name"],
+                    "type": item["type"],
+                    "resourceGroup": item["resource_group"],
+                    "location": item["location"],
+                    "kind": item["kind"],
+                    "sku": item["sku"],
+                    "tags": item["tags"],
+                    "managedBy": item["managed_by"],
+                }
+                for item in inventory
+            ]
+            smart = by_type["microsoft.insights/actiongroups"]
+            smart_detail = {
+                **next(
+                    item for item in raw_inventory
+                    if item["type"] == "microsoft.insights/actiongroups"
+                ),
+                "properties": smart["properties"],
+            }
+            parameters = json.loads(
+                (run_dir / "prepared/main.parameters.json").read_text()
+            )["parameters"]
+            raw_deployment = {
+                "name": deployment["name"],
+                "resourceGroup": deployment["resource_group"],
+                "properties": {
+                    "provisioningState": "Succeeded",
+                    "mode": "Incremental",
+                    "templateHash": expectation["azure_template_hash"],
+                    "parameters": parameters,
+                    "outputs": {
+                        "functionAppResourceId": {
+                            "type": "String",
+                            "value": deployment["outputs"]["function_app_resource_id"],
+                        },
+                        "functionAppHostName": {
+                            "type": "String",
+                            "value": deployment["outputs"]["function_app_host_name"],
+                        },
+                        "managedIdentityResourceId": {
+                            "type": "String",
+                            "value": deployment["outputs"]["managed_identity_resource_id"],
+                        },
+                        "managedIdentityClientId": {
+                            "type": "String",
+                            "value": CLIENT_ID,
+                        },
+                        "managedIdentityPrincipalId": {
+                            "type": "String",
+                            "value": PRINCIPAL_ID,
+                        },
+                    },
+                },
+            }
+            raw_operations = [
+                {
+                    "properties": {
+                        "provisioningState": "Succeeded",
+                        "targetResource": {
+                            "id": item["id"],
+                            "resourceType": item["type"],
+                        },
+                    }
+                }
+                for item in operations
+            ]
+            managed = identity["managed_identity"]
+            raw_managed = {
+                "id": managed["id"],
+                "name": managed["name"],
+                "clientId": CLIENT_ID,
+                "principalId": PRINCIPAL_ID,
+                "tenantId": managed["tenant_id"],
+            }
+            raw_function_identity = {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    managed["id"]: {
+                        "clientId": CLIENT_ID,
+                        "principalId": PRINCIPAL_ID,
+                    }
+                },
+            }
+            storage = by_type["microsoft.storage/storageaccounts"]
+            workspace = by_type["microsoft.operationalinsights/workspaces"]
+            component = by_type["microsoft.insights/components"]
+            plan = by_type["microsoft.web/serverfarms"]
+            connection = "InstrumentationKey=synthetic"
+            properties = {
+                "microsoft.managedidentity/userassignedidentities": {
+                    "clientId": CLIENT_ID,
+                    "principalId": PRINCIPAL_ID,
+                    "tenantId": managed["tenant_id"],
+                    "providerMetadata": "allowed",
+                },
+                "microsoft.storage/storageaccounts": {
+                    "accessTier": "Hot",
+                    "allowBlobPublicAccess": False,
+                    "allowCrossTenantReplication": False,
+                    "allowSharedKeyAccess": False,
+                    "defaultToOAuthAuthentication": True,
+                    "minimumTlsVersion": "TLS1_2",
+                    "publicNetworkAccess": "Enabled",
+                    "supportsHttpsTrafficOnly": True,
+                    "networkAcls": {
+                        "bypass": "None", "defaultAction": "Allow",
+                        "ipRules": [], "virtualNetworkRules": [],
+                    },
+                },
+                "microsoft.storage/storageaccounts/blobservices": {
+                    "deleteRetentionPolicy": {"enabled": False}
+                },
+                "microsoft.storage/storageaccounts/blobservices/containers": {
+                    "publicAccess": "None"
+                },
+                "microsoft.operationalinsights/workspaces": {
+                    "features": {
+                        "disableLocalAuth": True,
+                        "enableLogAccessUsingOnlyResourcePermissions": True,
+                        "immediatePurgeDataOn30Days": True,
+                    },
+                    "publicNetworkAccessForIngestion": "Enabled",
+                    "publicNetworkAccessForQuery": "Enabled",
+                    "retentionInDays": 30,
+                    "sku": {"name": "PerGB2018"},
+                    "workspaceCapping": {"dailyQuotaGb": 1},
+                },
+                "microsoft.insights/components": {
+                    "Application_Type": "web",
+                    "ConnectionString": connection,
+                    "DisableLocalAuth": True,
+                    "IngestionMode": "LogAnalytics",
+                    "RetentionInDays": 30,
+                    "WorkspaceResourceId": workspace["id"],
+                    "publicNetworkAccessForIngestion": "Enabled",
+                    "publicNetworkAccessForQuery": "Enabled",
+                },
+                "microsoft.insights/components/currentbillingfeatures": {
+                    "CurrentBillingFeatures": ["Basic"],
+                    "DataVolumeCap": {
+                        "Cap": 0.1,
+                        "StopSendNotificationWhenHitCap": False,
+                    },
+                },
+                "microsoft.web/serverfarms": {
+                    "reserved": True, "zoneRedundant": False
+                },
+                "microsoft.web/sites": {
+                    "clientAffinityEnabled": False,
+                    "httpsOnly": True,
+                    "publicNetworkAccess": "Enabled",
+                    "serverFarmId": plan["id"],
+                    "siteConfig": {
+                        "alwaysOn": False,
+                        "cors": {
+                            "allowedOrigins": azure_live_commands._CORS_ALLOWED_ORIGINS,
+                            "supportCredentials": False,
+                        },
+                        "ftpsState": "Disabled",
+                        "healthCheckPath": "/healthz",
+                        "http20Enabled": True,
+                        "minTlsVersion": "1.2",
+                        "remoteDebuggingEnabled": False,
+                    },
+                    "functionAppConfig": {
+                        "deployment": {"storage": {
+                            "authentication": {
+                                "type": "UserAssignedIdentity",
+                                "userAssignedIdentityResourceId": managed["id"],
+                            },
+                            "type": "blobContainer",
+                            "value": (
+                                f"https://{storage['name']}.blob.core.windows.net/"
+                                "function-releases"
+                            ),
+                        }},
+                        "runtime": {"name": "python", "version": "3.12"},
+                        "scaleAndConcurrency": {
+                            "instanceMemoryMB": 2048,
+                            "maximumInstanceCount": 4,
+                            "triggers": {"http": {"perInstanceConcurrency": 16}},
+                        },
+                    },
+                },
+                "microsoft.web/sites/config": {
+                    "APPLICATIONINSIGHTS_AUTHENTICATION_STRING": (
+                        f"ClientId={CLIENT_ID};Authorization=AAD"
+                    ),
+                    "APPLICATIONINSIGHTS_CONNECTION_STRING": connection,
+                    "AzureWebJobsStorage__accountName": storage["name"],
+                    "AzureWebJobsStorage__clientId": CLIENT_ID,
+                    "AzureWebJobsStorage__credential": "managedidentity",
+                    "M365_TENANT_ID": managed["tenant_id"],
+                    "NAC_BFF_TENANT_ID": managed["tenant_id"],
+                    "NAC_BFF_AUDIENCE": expectation["bff_api_audience"],
+                    "NAC_BFF_REQUIRED_SCOPE": "Matter.Read",
+                    "M365_RUNTIME_CLIENT_ID": CLIENT_ID,
+                    "AZURE_CLIENT_ID": CLIENT_ID,
+                },
+            }
+            details = []
+            for operation in operations:
+                resource_type = operation["type"]
+                if resource_type == "microsoft.authorization/roleassignments":
+                    role_id = (
+                        azure_live_commands._STORAGE_BLOB_DATA_OWNER_ROLE_ID
+                        if operation["id"].startswith(storage["id"].lower())
+                        else azure_live_commands._MONITORING_METRICS_PUBLISHER_ROLE_ID
+                    )
+                    detail_properties = {
+                        "principalId": PRINCIPAL_ID,
+                        "principalType": "ServicePrincipal",
+                        "roleDefinitionId": (
+                            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}/providers/"
+                            f"Microsoft.Authorization/roleDefinitions/{role_id}"
+                        ),
+                    }
+                else:
+                    detail_properties = properties[resource_type]
+                details.append({
+                    "id": operation["id"],
+                    "type": resource_type,
+                    "properties": detail_properties,
+                })
+            graph_rows = sorted(
+                [
+                    {"id": resource_id, "type": resource_type}
+                    for resource_id, resource_type in {
+                        (item["id"].lower(), item["type"].lower())
+                        for item in [*inventory, *operations]
+                    }
+                ],
+                key=lambda item: (item["type"], item["id"]),
+            )
+            graph = {
+                "count": len(graph_rows),
+                "data": graph_rows,
+                "resultTruncated": "false",
+                "totalRecords": len(graph_rows),
+            }
+            group_id = (
+                f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+                "/resourceGroups/rg-nac-bff-test"
+            )
+            expected = [
+                (("account", "show"), {
+                    "environmentName": EXPECTED_CLOUD_NAME,
+                    "tenantId": EXPECTED_TENANT_ID,
+                    "id": EXPECTED_SUBSCRIPTION_ID,
+                    "state": "Enabled",
+                }),
+                *[
+                    (("provider", "show", "--namespace", namespace), {
+                        "namespace": namespace,
+                        "registrationState": "Registered",
+                    })
+                    for namespace in sorted(azure_live_commands._PROVIDER_NAMESPACES)
+                ],
+                (("group", "exists", "--name", "rg-nac-bff-test"), True),
+                (("group", "show", "--name", "rg-nac-bff-test"), {
+                    "id": group_id,
+                    "name": "rg-nac-bff-test",
+                    "location": "germanywestcentral",
+                    "tags": {
+                        "dataClassification": "no-production-data",
+                        "environment": "test", "workload": "nac-bff",
+                    },
+                    "properties": {"provisioningState": "Succeeded"},
+                }),
+                (("resource", "list", "--resource-group", "rg-nac-bff-test"), raw_inventory),
+                (("deployment", "group", "show", "--name", expectation["deployment_name"], "--resource-group", "rg-nac-bff-test"), raw_deployment),
+                (("deployment", "operation", "group", "list", "--name", expectation["deployment_name"], "--resource-group", "rg-nac-bff-test"), raw_operations),
+                (("resource", "show", "--resource-group", "rg-nac-bff-test", "--resource-type", azure_live_commands._SMART_DETECTION_ACTION_GROUP_TYPE, "--name", azure_live_commands._SMART_DETECTION_ACTION_GROUP_NAME, "--api-version", azure_live_commands._SMART_DETECTION_ACTION_GROUP_API_VERSION), smart_detail),
+                (("identity", "show", "--name", managed["name"], "--resource-group", "rg-nac-bff-test"), raw_managed),
+                (("functionapp", "identity", "show", "--name", azure_live_commands.FUNCTION_APP, "--resource-group", "rg-nac-bff-test"), raw_function_identity),
+            ]
+            for operation, detail in zip(operations, details, strict=True):
+                command = azure_live_commands._resource_detail_read_command(operation)
+                if operation["type"] == "microsoft.web/sites/config":
+                    self.assertEqual(command, (
+                        "rest", "--method", "post", "--url",
+                        azure_live_commands._APP_SETTINGS_URL,
+                    ))
+                response = (
+                    {"properties": detail["properties"]}
+                    if operation["type"] == "microsoft.web/sites/config"
+                    else detail
+                )
+                expected.append((command, response))
+            expected.extend([
+                (("rest", "--method", "post", "--url", azure_live_commands._RESOURCE_GRAPH_URL, "--body", azure_live_commands._RESOURCE_GRAPH_BODY), graph),
+                (("resource", "list", "--resource-group", "rg-nac-bff-test"), raw_inventory),
+                (("resource", "show", "--resource-group", "rg-nac-bff-test", "--resource-type", azure_live_commands._SMART_DETECTION_ACTION_GROUP_TYPE, "--name", azure_live_commands._SMART_DETECTION_ACTION_GROUP_NAME, "--api-version", azure_live_commands._SMART_DETECTION_ACTION_GROUP_API_VERSION), smart_detail),
+            ])
+
+            class FakeAzure:
+                def __init__(self, calls):
+                    self.calls = list(calls)
+
+                def run(self, argv):
+                    expected_command, response = self.calls.pop(0)
+                    if tuple(argv) != expected_command:
+                        raise AssertionError((tuple(argv), expected_command))
+                    command, _family, code = azure_live_commands._validated_command(argv)
+                    if command is None or code != "AZURE_CLI_OK":
+                        raise AssertionError((argv, code))
+                    return {"ok": True, "code": "AZURE_CLI_OK", "data": response}
+
+            azure = FakeAzure(expected)
+            result = AzureCliInterruptionObservationPort(
+                azure, preflight=lambda: None
+            ).observe_ensure_resource_group(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="rg-nac-bff-test",
+                baseline_expectation=expectation,
+            )
+
+            self.assertEqual(azure.calls, [])
+            self.assertEqual(
+                result["deployment"]["bff_api_audience"],
+                "33333333-3333-4333-8333-333333333333",
+            )
+            self.assertNotEqual(
+                result["deployment"]["bff_api_audience"], CLIENT_ID
+            )
+            self.assertTrue(result["live_resource_state"]["security_properties_exact"])
+
     def test_interruption_observation_uses_only_exact_read_commands(self) -> None:
         calls: list[tuple[str, ...]] = []
         preflight = Mock()
@@ -2360,122 +2838,65 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         )
         self.assertEqual(result["resource_groups"][0]["provisioning_state"], "Succeeded")
         self.assertEqual(result["resource_inventory"], [])
+        self.assertEqual(
+            set(result),
+            {
+                "tenant_id", "subscription_id", "providers",
+                "resource_groups", "resource_inventory",
+            },
+        )
         self.assertNotIn("secret", json.dumps(result))
+        from nac_bff.azure_activation_runner import _sha256_json
+        self.assertEqual(
+            _sha256_json(result),
+            "6f34f2ec265462edf25a295c9dbab5363a0252b1d7a50e5c1e81459c8d9db850",
+        )
 
-    def test_interruption_observation_rejects_any_existing_resource(self) -> None:
-        group_id = (
-            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
-            "/resourceGroups/rg-nac-bff-test"
-        )
-        port = AzureCliInterruptionObservationPort(
-            Mock(), preflight=lambda: None
-        )
-        port._read = Mock(side_effect=[
-            {
-                "environmentName": EXPECTED_CLOUD_NAME,
-                "tenantId": EXPECTED_TENANT_ID,
-                "id": EXPECTED_SUBSCRIPTION_ID,
-                "state": "Enabled",
-            },
-            {
-                "namespace": "Microsoft.OperationalInsights",
-                "registrationState": "Registered",
-            },
-            {
-                "namespace": "Microsoft.Storage",
-                "registrationState": "Registered",
-            },
-            {
-                "namespace": "Microsoft.Web",
-                "registrationState": "Registered",
-            },
-            True,
-            {
-                "id": group_id,
-                "name": "rg-nac-bff-test",
-                "location": "germanywestcentral",
-                "tags": {
-                    "workload": "nac-bff",
-                    "environment": "test",
-                    "dataClassification": "no-production-data",
-                },
-                "properties": {"provisioningState": "Succeeded"},
-            },
-            [{
-                "id": group_id + "/providers/Microsoft.Web/sites/foreign",
-                "name": "foreign",
-                "resourceGroup": "rg-nac-bff-test",
-                "type": "Microsoft.Web/sites",
-            }],
-        ])
+    def test_interruption_observation_rejects_write_command_before_adapter(self) -> None:
+        azure = Mock()
+        preflight = Mock()
+        port = AzureCliInterruptionObservationPort(azure, preflight=preflight)
 
         with self.assertRaisesRegex(
-            ValueError, "AZURE_INTERRUPTION_RESOURCE_INVENTORY_NOT_EMPTY"
+            ValueError, "AZURE_INTERRUPTION_READ_COMMAND_FORBIDDEN"
         ):
-            port.observe_ensure_resource_group(
-                tenant_id=EXPECTED_TENANT_ID,
-                subscription_id=EXPECTED_SUBSCRIPTION_ID,
-                resource_group="rg-nac-bff-test",
+            port._read(
+                ("deployment", "group", "create"), dict
             )
 
-    def test_interruption_observation_rejects_wrong_target_without_calls(self) -> None:
-        class NoCallsAzure:
-            def run(self, argv):
-                raise AssertionError(f"unexpected Azure command: {argv}")
-
-        with self.assertRaises(ValueError):
-            AzureCliInterruptionObservationPort(
-                NoCallsAzure(), preflight=lambda: None
-            ).observe_ensure_resource_group(
-                tenant_id=EXPECTED_TENANT_ID,
-                subscription_id=EXPECTED_SUBSCRIPTION_ID,
-                resource_group="wrong",
-            )
-
-    def test_interruption_observation_rejects_invalid_adapter_result(self) -> None:
-        class InvalidAzure:
-            def run(self, argv):
-                return None
-
-        with self.assertRaises(ValueError):
-            AzureCliInterruptionObservationPort(
-                InvalidAzure(), preflight=lambda: None
-            ).observe_ensure_resource_group(
-                tenant_id=EXPECTED_TENANT_ID,
-                subscription_id=EXPECTED_SUBSCRIPTION_ID,
-                resource_group="rg-nac-bff-test",
-            )
-
-    def test_interruption_preflight_failure_stops_before_azure_read(self) -> None:
-        azure = Mock()
-        preflight = Mock(side_effect=RuntimeError("binding mismatch"))
-        port = AzureCliInterruptionObservationPort(
-            azure, preflight=preflight
-        )
-
-        with self.assertRaisesRegex(RuntimeError, "binding mismatch"):
-            port.observe_ensure_resource_group(
-                tenant_id=EXPECTED_TENANT_ID,
-                subscription_id=EXPECTED_SUBSCRIPTION_ID,
-                resource_group="rg-nac-bff-test",
-            )
-
-        preflight.assert_called_once_with()
         azure.run.assert_not_called()
+        preflight.assert_not_called()
 
-    def test_interruption_observation_source_has_no_write_command_family(self) -> None:
-        source = inspect.getsource(
-            AzureCliInterruptionObservationPort.observe_ensure_resource_group
+    def test_interruption_resource_detail_reads_are_target_and_api_bound(self) -> None:
+        resource_id = (
+            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+            "/resourceGroups/rg-nac-bff-test/providers/"
+            "Microsoft.Storage/storageAccounts/stnacbff43o765p7uslni"
+            "/blobServices/default/containers/function-releases"
         )
-        for phrase in (
-            "provider register",
-            "group create",
-            "deployment group create",
-            "functionapp deployment",
-            "resource delete",
+        command, family, code = azure_live_commands._validated_command((
+            "resource", "show", "--ids", resource_id,
+            "--api-version", "2023-05-01",
+        ))
+        self.assertEqual(code, "AZURE_CLI_OK")
+        self.assertEqual(family, ("resource", "show"))
+        self.assertIsNotNone(command)
+        for candidate in (
+            (
+                "resource", "show", "--ids",
+                resource_id.replace("rg-nac-bff-test", "foreign"),
+                "--api-version", "2023-05-01",
+            ),
+            (
+                "resource", "show", "--ids", resource_id,
+                "--api-version", "2024-04-01",
+            ),
         ):
-            self.assertNotIn(phrase, source)
-
+            blocked, _family, blocked_code = (
+                azure_live_commands._validated_command(candidate)
+            )
+            self.assertIsNone(blocked)
+            self.assertEqual(blocked_code, "AZURE_CLI_COMMAND_BLOCKED")
 
 def _fake_binary(root: Path) -> Path:
     venv = root / "azure-cli-venv"

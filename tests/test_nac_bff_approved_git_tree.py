@@ -5,7 +5,9 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
+import nac_bff.approved_git_tree as approved_git_tree
 from nac_bff.approved_git_tree import ApprovedGitTreeError, GitApprovedTreeSource
 
 
@@ -42,6 +44,24 @@ class ApprovedGitTreeTests(unittest.TestCase):
         commit, tree = self._commit()
         source.write_text("dirty-and-unapproved\n")
 
+        with patch.object(
+            approved_git_tree.subprocess, "run", wraps=subprocess.run
+        ) as git_run:
+            inspection = GitApprovedTreeSource().inspect(
+                self.root,
+                approved_commit=commit,
+                approved_tree=tree,
+            )
+        commands = [call.args[0] for call in git_run.call_args_list]
+        self.assertTrue(all("--no-replace-objects" in cmd for cmd in commands))
+        self.assertIn(
+            ["ls-tree", "-r", "-z", "--full-tree", tree],
+            [cmd[cmd.index("-C") + 2:] for cmd in commands],
+        )
+        self.assertIn(
+            ["archive", "--format=tar", tree],
+            [cmd[cmd.index("-C") + 2:] for cmd in commands],
+        )
         first = GitApprovedTreeSource().materialize(
             self.root,
             Path(self.temporary.name) / "snapshot-1",
@@ -59,11 +79,32 @@ class ApprovedGitTreeTests(unittest.TestCase):
             (first.root / "deploy/runtime/input.txt").read_text(), "approved\n"
         )
         self.assertEqual(first.manifest_sha256, second.manifest_sha256)
+        self.assertEqual(inspection.manifest_sha256, first.manifest_sha256)
+        self.assertEqual(inspection.file_count, 1)
+        self.assertEqual(
+            inspection.file_sha256["deploy/runtime/input.txt"],
+            hashlib.sha256(b"approved\n").hexdigest(),
+        )
         self.assertEqual(first.file_count, 1)
         self.assertEqual(
             hashlib.sha1(b"blob 9\0approved\n", usedforsecurity=False).hexdigest(),
             self._git("rev-parse", "HEAD:deploy/runtime/input.txt"),
         )
+
+    def test_archive_blob_bytes_must_match_listed_blob_ids(self) -> None:
+        source = self.root / "input.txt"
+        source.write_text("approved\n")
+        commit, tree = self._commit()
+        with patch.object(
+            approved_git_tree,
+            "_read_archive",
+            return_value={"input.txt": b"different\n"},
+        ), self.assertRaisesRegex(ApprovedGitTreeError, "BLOB_MISMATCH"):
+            GitApprovedTreeSource().inspect(
+                self.root,
+                approved_commit=commit,
+                approved_tree=tree,
+            )
 
     def test_wrong_tree_is_rejected_before_target_creation(self) -> None:
         (self.root / "input.txt").write_text("approved\n")

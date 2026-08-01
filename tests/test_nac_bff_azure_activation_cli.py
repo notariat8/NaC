@@ -679,7 +679,7 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         self.assertNotIn("provider_secret", stdout.getvalue())
         self.assertNotIn("PROVISIONER_STATE", stdout.getvalue())
 
-    def test_interruption_help_documents_632_binding_and_717_approval(self) -> None:
+    def test_interruption_help_documents_632_binding_and_both_approvals(self) -> None:
         stdout = io.StringIO()
         argv = [
             "m365",
@@ -693,6 +693,7 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         help_text = stdout.getvalue()
         self.assertIn("#632", help_text)
         self.assertIn("#717", help_text)
+        self.assertIn("#719", help_text)
         self.assertNotIn("--owner-approved", help_text)
 
     def test_issue632_terminalization_reference_is_rejected_before_factory(self) -> None:
@@ -776,6 +777,42 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["reconciliation"]["status"], "MIDRUN_RELEASED")
         self.assertNotIn("private_path", stdout.getvalue())
+
+    def test_exact_bicep_baseline_forwards_all_hash_bindings(self) -> None:
+        modules, _factory, inspect, terminalize, _observation, _verifier = (
+            self._fake_modules()
+        )
+        args = self._terminal_args()
+        reference_index = args.index("--terminalization-approval-reference") + 1
+        args[reference_index] = (
+            "https://github.com/notariat8/NaC/issues/719#issuecomment-987655"
+        )
+        args.extend([
+            "--provider-classification",
+            "BICEP_BASELINE_EXACT",
+            "--baseline-expectation-sha256",
+            "7" * 64,
+            "--prepared-inputs-manifest-sha256",
+            "8" * 64,
+            "--bicep-snapshot-sha256",
+            "9" * 64,
+            "--bicep-parameters-snapshot-sha256",
+            "a" * 64,
+        ])
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv(*args, "--format", "json"))
+
+        self.assertEqual(rc, 0)
+        inspect.assert_not_called()
+        approval = terminalize.call_args.kwargs["approval"]
+        self.assertEqual(
+            approval.provider_classification, "BICEP_BASELINE_EXACT"
+        )
+        self.assertEqual(approval.baseline_expectation_sha256, "7" * 64)
+        self.assertEqual(approval.prepared_inputs_manifest_sha256, "8" * 64)
+        self.assertEqual(approval.bicep_snapshot_sha256, "9" * 64)
+        self.assertEqual(approval.bicep_parameters_snapshot_sha256, "a" * 64)
 
     def test_terminalization_fields_without_confirmation_are_rejected(self) -> None:
         modules, factory, inspect, terminalize, _observation, _verifier = (

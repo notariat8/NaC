@@ -95,19 +95,19 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             errors,
         )
 
-    def test_nonempty_provider_inventory_guard_mutation_fails(self) -> None:
+    def test_exact_baseline_guard_mutation_fails(self) -> None:
         path = self.root / validator.INTERRUPTION_RECONCILIATION_PATH
         source = path.read_text(encoding="utf-8")
         mutated = source.replace(
-            'value.get("resource_inventory") != []',
-            'value.get("resource_inventory") == []',
+            "exact_baseline_matches(",
+            "exact_baseline_broken(",
             1,
         )
         self.assertNotEqual(mutated, source)
         path.write_text(mutated, encoding="utf-8")
 
         self.assertIn(
-            "interruption runtime must reject every non-empty resource inventory",
+            "interruption runtime must validate the exact Bicep baseline",
             validator.validate(self.root),
         )
 
@@ -1153,6 +1153,8 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                 validator.AZURE_LIVE_COMMANDS_PATH,
                 validator.CLI_PATH,
                 validator.INTERRUPTION_RECONCILIATION_PATH,
+                validator.INTERRUPTION_BASELINE_PATH,
+                validator.INTERRUPTION_CONTRACT_PATH,
                 validator.DE_CLI_DOC_PATH,
                 validator.EN_CLI_DOC_PATH,
             }:
