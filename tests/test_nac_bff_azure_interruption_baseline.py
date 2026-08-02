@@ -308,17 +308,13 @@ def _live_resource_state() -> dict:
         ),
         key=lambda item: (item["type"], item["id"]),
     )
-    graph_targets = sorted(
-        (
-            {"id": resource_id, "type": resource_type}
-            for resource_id, resource_type in {
-                (item["id"].lower(), item["type"].lower())
-                for item in [*_inventory(), *_operations()]
-            }
-        ),
-        key=lambda item: (item["type"], item["id"]),
+    from nac_bff.azure_interruption_contract import (
+        compact_sha256_json,
+        resource_graph_visible_targets,
     )
-    from nac_bff.azure_interruption_contract import compact_sha256_json
+
+    graph_targets = resource_graph_visible_targets(_inventory(), _operations())
+    assert graph_targets is not None
 
     return {
         "schema_version": "nac.azure-interruption-live-resource-state/v1",
@@ -331,6 +327,45 @@ def _live_resource_state() -> dict:
 
 
 class AzureInterruptionBaselineTests(unittest.TestCase):
+    def test_resource_graph_visible_targets_are_inventory_plus_roles(self):
+        from nac_bff.azure_interruption_contract import (
+            resource_graph_visible_targets,
+        )
+
+        targets = resource_graph_visible_targets(_inventory(), _operations())
+
+        self.assertIsNotNone(targets)
+        assert targets is not None
+        self.assertEqual(len(targets), 9)
+        expected = sorted(
+            [
+                {"id": item["id"].lower(), "type": item["type"].lower()}
+                for item in _inventory()
+            ]
+            + [
+                {"id": item["id"].lower(), "type": item["type"].lower()}
+                for item in _operations()
+                if item["type"] == "microsoft.authorization/roleassignments"
+            ],
+            key=lambda item: (item["type"], item["id"]),
+        )
+        self.assertEqual(targets, expected)
+        self.assertEqual(
+            sum(
+                item["type"] == "microsoft.authorization/roleassignments"
+                for item in targets
+            ),
+            2,
+        )
+        self.assertTrue(
+            {
+                "microsoft.insights/components/currentbillingfeatures",
+                "microsoft.storage/storageaccounts/blobservices",
+                "microsoft.storage/storageaccounts/blobservices/containers",
+                "microsoft.web/sites/config",
+            }.isdisjoint({item["type"] for item in targets})
+        )
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.run_dir = Path(self.temporary.name)

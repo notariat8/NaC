@@ -63,6 +63,13 @@ arm_operation_normalization_acceptance_ids:
   - AC-727-03
   - AC-727-04
   - AC-727-05
+resource_graph_visibility_issue: https://github.com/notariat8/NaC/issues/729
+resource_graph_visibility_acceptance_ids:
+  - AC-729-01
+  - AC-729-02
+  - AC-729-03
+  - AC-729-04
+  - AC-729-05
 acceptance_ids:
   - AC-632-01
   - AC-632-02
@@ -333,7 +340,15 @@ interruption_reconciliation_verification:
         deployment_mode_exact: Incremental
         deployment_operation_count_exact: 12
         all_deployment_operations_succeeded_required: true
-        deployment_operation_target_ids_bound_to_resource_graph_required: true
+        deployment_operation_target_ids_direct_readback_required: true
+        resource_graph_visible_target_count_exact: 9
+        resource_graph_top_level_inventory_count_exact: 7
+        resource_graph_role_assignment_count_exact: 2
+        resource_graph_non_enumerated_child_target_types_exact:
+          - microsoft.insights/components/currentbillingfeatures
+          - microsoft.storage/storageaccounts/blobservices
+          - microsoft.storage/storageaccounts/blobservices/containers
+          - microsoft.web/sites/config
         resource_graph_full_inventory_required: true
         resource_graph_authorization_inventory_required: true
         resource_graph_target_set_exact_required: true
@@ -895,6 +910,7 @@ required_evidence:
   - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, azure_smart_detection_companion_drift, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure, torn lock-journal release at all three marker positions, retryable recovery release, invalid or incomplete lock-marker sets, provisioner-bootstrap source drift, canonical legacy-newline lock recovery, terminal FAILED_PARTIAL torn-release recovery and disabled resume.
   - "Redacted Issue #717 interruption inspection evidence proving the exact supported step-2 RESOURCE_GROUP_ONLY shape, a valid local ledger prefix, all three HELD journal hashes and two equal Azure observation hashes, with zero local mutation and zero provider writes."
   - "Redacted Issue #719 BICEP_BASELINE_EXACT evidence binding the prepared manifest, Bicep template, Bicep parameters and canonical expectation hashes to exactly seven top-level resources and twelve unique successful deployment targets across two equal read-only observations; duplicate ARM sub-operations are accepted only for the same normalized target and at most one targetless EvaluateDeploymentOutput metadata operation with provisioningState Succeeded and statusCode OK is allowed."
+  - "Redacted Issue #729 evidence proving exact Azure Resource Graph visibility for seven inventory resources plus two authorization role assignments while all twelve deployment targets remain mandatory under direct ARM readback and security-property verification."
   - For terminalization, a separate immutable owner snapshot binding TERMINALIZE_AND_RELEASE_LOCK_ONLY plus the resulting FAILED_PARTIAL evidence, EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE, MIDRUN_RELEASE_IN_PROGRESS and readback of RELEASED on target, legacy and legacy-host journals; no PASSED state or success receipt is permitted.
 
 host_success_receipt:

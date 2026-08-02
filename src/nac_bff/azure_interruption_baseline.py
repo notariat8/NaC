@@ -26,6 +26,7 @@ from .azure_interruption_contract import (
     RESOURCE_GROUP_ONLY,
     canonical_parameters_from_wrappers,
     compact_sha256_json,
+    resource_graph_visible_targets,
 )
 
 
@@ -404,7 +405,7 @@ def exact_baseline_matches(
             return False
         operation_ids.add(operation_id)
         operation_counts[operation["type"]] += 1
-    graph_targets = _resource_graph_targets(inventory, operations)
+    graph_targets = resource_graph_visible_targets(inventory, operations)
     if (
         graph_targets is None
         or dict(sorted(operation_counts.items()))
@@ -431,33 +432,6 @@ def exact_baseline_matches(
     ):
         return False
     return _inventory_matches(inventory, deployment, identity_binding)
-
-
-
-
-def _resource_graph_targets(
-    inventory: object, operations: list[dict[str, Any]]
-) -> list[dict[str, str]] | None:
-    if not isinstance(inventory, list):
-        return None
-    targets: dict[str, str] = {}
-    for item in [*inventory, *operations]:
-        if (
-            not isinstance(item, dict)
-            or not isinstance(item.get("id"), str)
-            or not isinstance(item.get("type"), str)
-        ):
-            return None
-        resource_id = item["id"].lower()
-        resource_type = item["type"].lower()
-        if resource_id in targets and targets[resource_id] != resource_type:
-            return None
-        targets[resource_id] = resource_type
-    return sorted(
-        ({"id": key, "type": value} for key, value in targets.items()),
-        key=lambda item: (item["type"], item["id"]),
-    )
-
 def _operation_targets_match(
     operations: list[dict[str, Any]], inventory: object
 ) -> bool:
