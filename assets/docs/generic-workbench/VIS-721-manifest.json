@@ -21,7 +21,7 @@
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "b0c2920aa095aee0b6d11b0915ccda87a9a5a9f7e1c2bd75880c1ff19cab9604"
+      "sha256": "9fc4884b7735b9cf025a851f2c86b8caa86ece7d9bbc89701f16c5f9c7f5839c"
     },
     {
       "relativePath": "scripts/quality_gate.py",
@@ -77,7 +77,7 @@
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
-      "sha256": "03aa3c78915a7d28196e5796a0edad46a30027afebdc6c1a924749f6ff3d358a"
+      "sha256": "eaa230176eda5889dc4d6a7715a7769bea129a061df4e88a2afd20cbcb7d21e9"
     },
     {
       "relativePath": "workflows/verification-contracts/generic-workbench.verification.json",

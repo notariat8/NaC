@@ -5,6 +5,7 @@
   "title": "NaC Workbench Live Read Binding Verification",
   "status": "planned_protected_pr",
   "leading_issue": "https://github.com/notariat8/NaC/issues/725",
+  "acceptance_ids": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"],
   "applies_when": {
     "paths": [
       "src/nac_bff/**",
@@ -50,6 +51,16 @@
     "python3 scripts/validate_language_parity.py",
     "python3 scripts/nac.py doctor --profile strict"
   ],
+  "acceptance_evidence": {
+    "AC-1": ["python_test_results", "synthetic_allowlist_precedes_every_access_or_data_port"],
+    "AC-2": ["python_test_results", "authentication_failures_share_the_exact_authentication_required_envelope", "deny_has_no_snapshot_counts_identifiers_roles_or_decisions"],
+    "AC-3": ["python_test_results", "spfx_test_results", "live_host_visual_sha256_bindings"],
+    "AC-4": ["python_test_results", "changed_files"],
+    "AC-5": ["spfx_test_results", "browser_has_no_graph_mcp_or_persistence"],
+    "AC-6": ["spfx_test_results", "stale_requests_cannot_commit_state"],
+    "AC-7": ["python_test_results", "spfx_test_results", "existing_v0_2_route_remains_compatible"],
+    "AC-8": ["remote_ci_checks", "live_host_desktop_visual_evidence", "live_host_mobile_visual_evidence"]
+  },
   "required_evidence": [
     "python_test_results",
     "spfx_test_results",
@@ -71,6 +82,7 @@
     "maximum_text_utf16_code_units": 256,
     "maximum_items_per_collection": 64,
     "maximum_live_writes": 0,
+    "maximum_tenant_deployments": 0,
     "minimum_visual_viewports": 3,
     "minimum_live_host_visual_cases": 6,
     "minimum_live_host_runtime_states": 4
@@ -78,7 +90,8 @@
   "invariants": [
     "synthetic_allowlist_precedes_every_access_or_data_port",
     "tenant_and_subject_come_only_from_validated_entra_claims",
-    "wrong_tenant_target_and_query_shapes_share_the_exact_access_denied_envelope",
+    "wrong_tenant_tokens_share_the_exact_authentication_required_envelope",
+    "defensive_domain_tenant_mismatch_target_and_query_shapes_share_the_exact_access_denied_envelope",
     "authentication_failures_share_the_exact_authentication_required_envelope",
     "deny_has_no_snapshot_counts_identifiers_roles_or_decisions",
     "all_responses_are_no_store",
@@ -87,6 +100,7 @@
     "live_host_visual_evidence_is_separate_from_generic_workbench_evidence",
     "live_host_visual_manifest_binds_host_styles_client_webpart_parser_projection_and_contract",
     "existing_v0_2_route_remains_compatible"
+    ,"tenant_deployment_is_not_performed_and_remains_owner_gated"
   ],
   "pass_condition": {
     "all_checks_pass": true,
@@ -94,8 +108,8 @@
     "all_invariants_hold": true
   },
   "failure_behavior": {
-    "authentication_failure": "exact_401_envelope_no_snapshot",
-    "authorization_or_scope_denial": "exact_403_envelope_no_snapshot",
+    "token_authentication_tenant_or_scope_failure": "exact_401_envelope_no_snapshot",
+    "authenticated_authorization_denial": "exact_403_envelope_no_snapshot",
     "invalid_or_expired_snapshot": "discard_and_fail_closed",
     "stale_response": "ignore_generation_and_keep_newer_state",
     "quality_gate_failure": "block_deploy"

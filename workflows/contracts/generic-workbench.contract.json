@@ -49,7 +49,8 @@
     "compiled_candidates": [],
     "future": ["office_addin", "local_onprem_shell"],
     "live_webpart_binding": true,
-    "tenant_deployment": "not_performed_from_unreviewed_branch",
+    "tenant_deployment_performed": false,
+    "tenant_deployment": "owner_gated_after_reviewed_main",
     "business_rules_in_host": false
   },
   "validation_commands": [

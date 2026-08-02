@@ -86,6 +86,11 @@ machen die Abnahmeharness agentisch lesbar.
   Vertrag für explizite, parallele Codex-Reviews mit read-only Agentprofilen,
   Scope-Mapping, KG-/BPMN-/Policy-/Doku-/Validierungsprüfung, Guardrails und
   frischem Nachweis vor Abnahme.
+- [workflows/contracts/workbench-live-read-binding.contract.json](workbench-live-read-binding.contract.json):
+  Vertrag für die tenant-, workspace-, akten- und zweckgebundene read-only
+  Workbench-Projektion über den Entra-geschützten NaC-BFF mit kurzlebiger
+  Access-Lease, kanonischer Redaktionsattestation, SPFx-Host und explizit
+  nicht ausgeführtem, Owner-gated Tenant-Deployment.
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](nac-onprem-agent-runtime.contract.json):
   archivierter Legacy-Vertrag für die OCI-gebundene NaC-On-Prem-Agent-Runtime;
   nicht Teil der aktiven M365-MVP-Spur.

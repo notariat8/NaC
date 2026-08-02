@@ -94,7 +94,7 @@
     },
     "client": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-      "sha256": "8e7451f9c9e44cd744a6837ab6c53cfeb185988c5ffa540cce34c35185a57be6"
+      "sha256": "eb73d4e9b6797fb2ae473118fd1f58a1c491488d9630bbf1a54c824f4f0c1d41"
     },
     "webPart": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
@@ -110,13 +110,13 @@
     },
     "contract": {
       "relativePath": "workflows/contracts/workbench-live-read-binding.contract.json",
-      "sha256": "a37c911be37e8b6637dc3731fed63a85f2ba54b53e7a9651663008030b1c81d7"
+      "sha256": "6920cf9ba4717044b6154756aca1ae879cf6b1f92f24f3b10fe75bfb1b7e9929"
     }
   },
   "visualHarness": [
     {
       "relativePath": "scripts/validate_workbench_live_read_binding.py",
-      "sha256": "7b93342a726696a8cb7aa00dffd296f36753938d30e2e4f357499c71b0da1f6c"
+      "sha256": "f943182e4a06d4b921d59d0e2f277a523c7c51b6f5edac7d394ab4dd15794f03"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
@@ -140,7 +140,7 @@
     },
     {
       "relativePath": "workflows/verification-contracts/workbench-live-read-binding.verification.json",
-      "sha256": "41845e920dd5c8bd19cae0c99eda629fd7e813efef5804f6a216a7a5594c4738"
+      "sha256": "8fff7fac3ffa437a4eeedccc7ca09d6f2ea71ee7d2008e17e9f65d33013d2b0d"
     }
   ],
   "buildArtifacts": [

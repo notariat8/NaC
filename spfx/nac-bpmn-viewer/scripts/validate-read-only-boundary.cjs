@@ -18,7 +18,7 @@ const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
   ['webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx', 'ecc076bf35fabee66c807a0e6a7f14b14eb43c452f01c12116b72633274247ff'],
   ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87'],
   ['webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts', 'd5b357e7b60f4de60152908d0356fab7233c73fe9e59584ec3f8ef4c2d324f4f'],
-  ['webparts/nacBpmnViewer/services/NacBffClient.ts', '8e7451f9c9e44cd744a6837ab6c53cfeb185988c5ffa540cce34c35185a57be6'],
+  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'eb73d4e9b6797fb2ae473118fd1f58a1c491488d9630bbf1a54c824f4f0c1d41'],
   ['workbench/core/WorkbenchContracts.ts', '8eebbb61b8d2b173568ba3022fcec20ccaf76d5a21f3be7dbec8707271db3fba'],
   ['workbench/core/WorkbenchSelectors.ts', '3e3dcf923d999254a5d92ecfbbab17642c5635d026a52bb3a0260607143b6a5c'],
   ['workbench/core/parseWorkbenchSnapshot.ts', '2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df'],
@@ -50,6 +50,7 @@ const FORBIDDEN_NETWORK_GLOBALS = new Set(['XMLHttpRequest', 'WebSocket', 'Event
 const FORBIDDEN_NETWORK_IDENTIFIERS = new Set([
   'fetch', 'sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'require'
 ]);
+const FORBIDDEN_RUNTIME_IDENTIFIERS = new Set(['eval', 'Function', 'Reflect']);
 
 function staticPropertyName(node) {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
@@ -117,6 +118,12 @@ function validateSource(relativePath, source) {
         }
       }
     }
+    if (ts.isImportEqualsDeclaration(node)) {
+      errors.push(`${relativePath}: import-equals declarations are forbidden`);
+    }
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+      errors.push(`${relativePath}: module re-exports are forbidden`);
+    }
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       if (FORBIDDEN_LITERAL_PARTS.some(part => node.text.includes(part))) {
         errors.push(`${relativePath}: forbidden network literal ${node.text}`);
@@ -157,6 +164,9 @@ function validateSource(relativePath, source) {
     }
     if (ts.isIdentifier(node) && FORBIDDEN_NETWORK_IDENTIFIERS.has(node.text)) {
       errors.push(`${relativePath}: network identifier ${node.text} is forbidden`);
+    }
+    if (ts.isIdentifier(node) && FORBIDDEN_RUNTIME_IDENTIFIERS.has(node.text)) {
+      errors.push(`${relativePath}: runtime reflection or compilation identifier ${node.text} is forbidden`);
     }
     if (ts.isPropertyAccessExpression(node) &&
         node.name.text === 'get' &&
@@ -280,13 +290,11 @@ function validateAll(files) {
 }
 
 function assertRejected(name, files, relativePath, mutate) {
-  const changed = new Map(files);
-  const source = changed.get(relativePath);
+  const source = files.get(relativePath);
   if (source === undefined) throw new Error(`${name}: missing mutation source`);
   const mutated = mutate(source);
   if (mutated === source) throw new Error(`${name}: mutation changed nothing`);
-  changed.set(relativePath, mutated);
-  if (validateAll(changed).length === 0) {
+  if (validateSource(relativePath, mutated).length === 0) {
     throw new Error(`${name}: mutation was accepted`);
   }
 }

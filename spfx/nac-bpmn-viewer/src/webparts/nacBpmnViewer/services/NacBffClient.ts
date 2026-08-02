@@ -95,7 +95,7 @@ export async function loadNacWorkbenchSnapshot(
   clientFactory: AadHttpClientFactory,
   expectedSubjectId: string,
   signal: AbortSignal,
-  nowIso: string = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+  nowIso?: string
 ): Promise<WorkbenchSnapshot> {
   if (expectedSubjectId.trim().length === 0) {
     throw new Error('NAC_BFF_ACCESS_DENIED');
@@ -112,7 +112,8 @@ export async function loadNacWorkbenchSnapshot(
       'X-Correlation-ID': createCorrelationId()
     }
   });
-  return parseWorkbenchResponse(response, expectedSubjectId, nowIso);
+  const validationNowIso = nowIso ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return parseWorkbenchResponse(response, expectedSubjectId, validationNowIso);
 }
 
 export async function parseWorkbenchResponse(

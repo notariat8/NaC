@@ -12,19 +12,21 @@ review_gates:
   - Workflow
   - External Service
 acceptance_ids:
-  - AC-725-01
-  - AC-725-02
-  - AC-725-03
-  - AC-725-04
-  - AC-725-05
-  - AC-725-06
-  - AC-725-07
-  - AC-725-08
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
 validation_commands:
   - PYTHONPATH=src python3 -m unittest tests.test_nac_bff_workbench_endpoint
   - PYTHONPATH=src python3 -m unittest tests.test_nac_bff_live_graph_ports tests.test_nac_bff_azure_function_host
   - cd spfx/nac-bpmn-viewer && npm run build
   - cd spfx/nac-bpmn-viewer && npm run workbench:capture
+  - cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
+  - python3 scripts/validate_workbench_live_read_binding.py
   - python3 scripts/nac.py frontend workbench-verify
   - python3 scripts/validate_spec_traceability.py
   - python3 scripts/validate_language_parity.py
@@ -41,14 +43,14 @@ vollständig serverseitig. Der Browser erhält weder Graph- noch MCP-Zugriff.
 
 ## Akzeptanzkriterien
 
-- **AC-725-01:** Der BFF erzwingt vor jedem Port-/Graph-Aufruf die exakte Synthetic-Allowlist für Tenant, `notary_team_01`, `NAC-SYN-MATTER-001` und den einzigen Query-Purpose. Tenant und Subject stammen ausschließlich aus validierten Entra-Token-Claims.
-- **AC-725-02:** Assigned-/Deputy-Entscheidungen enthalten serverseitig gebundene Rolle, Decision-ID/-Version, Subject und eine maximal fünfminütige Lease. Alle authentisierten Deny- und ungültigen Scope-Varianten liefern exakt denselben identifikatorfreien `403`-Body und keine Actor-/Rollen-/Decision-Header; alle Antworten tragen `Cache-Control: no-store`.
-- **AC-725-03:** Die Redaktionsattestation prüft den vollständigen projizierten Inhalt und bindet Policy, Classifier, Zeitpunkt und den normativ kanonisierten SHA-256 gemäß `workbench-live-read-binding.contract.json`; Golden-Wire- und Unicode-Fixtures müssen in Python und TypeScript denselben Digest ergeben.
-- **AC-725-04:** Akte, Aufgaben und BPMN-Referenz stammen aus den vorhandenen autoritativen Ports. Nicht belegte Attention-, Decision- und Agent-Zustände bleiben leer und werden nicht aus Fristen oder Aufgaben erfunden.
-- **AC-725-05:** Der SPFx-Client verwendet ausschließlich `AadHttpClient`, begrenzt auch chunked Antworten ohne `Content-Length` auf 131.072 Bytes und prüft Vertrag, Inhaltsbindung, das erwartete Subject aus dem authentisierten Seitenkontext, eine feste UI-Rollen-Allowlist sowie Workspace-, Matter- und Purpose-Bindung. Der Seitenkontext ist niemals Autorisierungsinput für den BFF.
-- **AC-725-06:** Der React-Host lädt und erneuert den Snapshot vor Ablauf, verwirft alte Daten bei jedem Fehler und verwendet eine monotone Request-Generation, damit verspätete oder Abort-ignorierende Antworten keinen neueren Zustand überschreiben. Loading-, Deny- und Unavailable-Zustände sind deterministisch.
-- **AC-725-07:** Die bestehende BPMN-Detailansicht und ihr v0.2-Endpunkt bleiben kompatibel; die Workbench ist die neue primäre read-only Arbeitsansicht.
-- **AC-725-08:** Assigned, Deputy, Deny, falscher Tenant/Subject/Purpose/Workspace/Matter, nicht-synthetische Ziele, Redaktionsfehler, 128-KiB-/256-UTF-16-Grenzen, deny-only Capabilities, Ablauf, überlappende Refreshes, Unmount und Abort-ignorierende Transporte sind automatisiert getestet; Desktop-/Mobile-Evidence und Strict Gate bestehen.
+- **AC-1:** Der BFF erzwingt vor jedem Port-/Graph-Aufruf die exakte Synthetic-Allowlist für Tenant, `notary_team_01`, `NAC-SYN-MATTER-001` und den einzigen Query-Purpose. Tenant und Subject stammen ausschließlich aus validierten Entra-Token-Claims.
+- **AC-2:** Assigned-/Deputy-Entscheidungen enthalten serverseitig gebundene Rolle, Decision-ID/-Version, Subject und eine maximal fünfminütige Lease. Fehlende, ungültige, tenantfremde oder Scope-ungeeignete Token liefern exakt `401 AUTHENTICATION_REQUIRED`; authentisierte Autorisierungs-, Ziel- und Query-Ablehnungen liefern exakt den identifikatorfreien `403 ACCESS_DENIED`-Body. Keine Antwort enthält Actor-/Rollen-/Decision-Header; alle Antworten tragen `Cache-Control: no-store`.
+- **AC-3:** Die Redaktionsattestation prüft den vollständigen projizierten Inhalt und bindet Policy, Classifier, Zeitpunkt und den normativ kanonisierten SHA-256 gemäß `workbench-live-read-binding.contract.json`; Golden-Wire- und Unicode-Fixtures müssen in Python und TypeScript denselben Digest ergeben.
+- **AC-4:** Akte, Aufgaben und BPMN-Referenz stammen aus den vorhandenen autoritativen Ports. Nicht belegte Attention-, Decision- und Agent-Zustände bleiben leer und werden nicht aus Fristen oder Aufgaben erfunden.
+- **AC-5:** Der SPFx-Client verwendet ausschließlich `AadHttpClient`, begrenzt auch chunked Antworten ohne `Content-Length` auf 131.072 Bytes und prüft Vertrag, Inhaltsbindung, das erwartete Subject aus dem authentisierten Seitenkontext, eine feste UI-Rollen-Allowlist sowie Workspace-, Matter- und Purpose-Bindung. Der Seitenkontext ist niemals Autorisierungsinput für den BFF.
+- **AC-6:** Der React-Host lädt und erneuert den Snapshot vor Ablauf, verwirft alte Daten bei jedem Fehler und verwendet eine monotone Request-Generation, damit verspätete oder Abort-ignorierende Antworten keinen neueren Zustand überschreiben. Loading-, Deny- und Unavailable-Zustände sind deterministisch.
+- **AC-7:** Die bestehende BPMN-Detailansicht und ihr v0.2-Endpunkt bleiben kompatibel; die Workbench ist die neue primäre read-only Arbeitsansicht.
+- **AC-8:** Assigned, Deputy, Deny, falscher Tenant/Subject/Purpose/Workspace/Matter, nicht-synthetische Ziele, Redaktionsfehler, 128-KiB-/256-UTF-16-Grenzen, deny-only Capabilities, Ablauf, überlappende Refreshes, Unmount und Abort-ignorierende Transporte sind automatisiert getestet; Desktop-/Mobile-Evidence und Strict Gate bestehen.
 
 ## Servergrenze
 
@@ -59,8 +61,10 @@ Er verwendet dieselbe validierte Entra-Abhängigkeit, den bestehenden
 danach feste Graph-Projektionen und das paketgebundene BPMN-Modell und baut erst
 dann den Snapshot. Die serialisierten UTF-8-Bytes werden unverändert ausgeliefert.
 
-Unauthorized-, falsche Scope- und Deny-Fälle sind nach Body und sichtbaren
-Metadaten ununterscheidbar. Erfolgs-, Deny- und Fehlerantworten sind `no-store`.
+Token-Authentifizierungsfehler einschließlich falschem Tenant oder fehlendem
+Scope teilen den exakten neutralen `401`-Body. Erst nach erfolgreicher
+Authentifizierung teilen fachliche Deny-, Ziel- und Query-Fälle den exakten
+neutralen `403`-Body. Erfolgs-, Deny- und Fehlerantworten sind `no-store`.
 Die Access-Entscheidung wird um die für die Workbench benötigte
 Entscheidungsmetadaten erweitert. Zugeordnete Rollen werden aus der eindeutigen
 Aktenzuordnung bestimmt. Eine Vertretungsentscheidung bindet Grant, Audit,

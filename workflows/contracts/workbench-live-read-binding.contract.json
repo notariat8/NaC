@@ -3,6 +3,16 @@
   "contract_id": "nac.workbench_live_read_binding",
   "status": "planned_protected_pr",
   "leading_issue": "https://github.com/notariat8/NaC/issues/725",
+  "acceptance_ids": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8"
+  ],
   "extends": "workflows/contracts/generic-workbench.contract.json",
   "wire_schema": "nac.workbench.snapshot/v1",
   "endpoint": {
@@ -80,8 +90,8 @@
       }
     },
     "rejection_mapping": {
-      "missing_invalid_or_wrong_scope_token": "authentication_failure",
-      "wrong_tenant": "deny_behavior",
+      "missing_invalid_wrong_scope_or_wrong_tenant_token": "authentication_failure",
+      "defensive_domain_tenant_mismatch_after_authentication": "deny_behavior",
       "wrong_workspace_matter_or_purpose": "deny_behavior",
       "missing_duplicate_or_additional_query": "deny_behavior",
       "role_or_deputy_policy_denial": "deny_behavior",
@@ -205,6 +215,12 @@
   "compatibility": {
     "existing_workspace_v0_2_route": "unchanged",
     "existing_bpmn_detail_view": "retained"
+  },
+  "delivery": {
+    "tenant_deployment_performed": false,
+    "tenant_deployment_target": "notary_team_01",
+    "deployment_requires_reviewed_main": true,
+    "deployment_requires_owner_apply": true
   },
   "verification_contract": "workflows/verification-contracts/workbench-live-read-binding.verification.json"
 }

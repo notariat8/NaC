@@ -106,6 +106,8 @@ def validate() -> list[str]:
     if contract:
         if contract.get("contract_id") != "nac.workbench_live_read_binding":
             errors.append("live binding contract ID is invalid")
+        if contract.get("acceptance_ids") != [f"AC-{index}" for index in range(1, 9)]:
+            errors.append("live binding acceptance IDs do not match Issue #725")
         endpoint = contract.get("endpoint", {})
         if endpoint.get("method") != "GET" or endpoint.get("path") != ROUTE:
             errors.append("live binding endpoint is not the fixed GET route")
@@ -138,6 +140,19 @@ def validate() -> list[str]:
             "error": {"code": "AUTHENTICATION_REQUIRED"},
         }:
             errors.append("authentication failure envelope is not exact")
+        rejection_mapping = access.get("rejection_mapping", {})
+        if rejection_mapping.get(
+            "missing_invalid_wrong_scope_or_wrong_tenant_token"
+        ) != "authentication_failure":
+            errors.append("token tenant/scope failures must map to authentication failure")
+        delivery = contract.get("delivery", {})
+        if delivery != {
+            "tenant_deployment_performed": False,
+            "tenant_deployment_target": WORKSPACE_ID,
+            "deployment_requires_reviewed_main": True,
+            "deployment_requires_owner_apply": True,
+        }:
+            errors.append("tenant deployment boundary is not exact")
         response = contract.get("response", {})
         if response.get("cache_control") != "no-store" or response.get("maximum_wire_bytes") != 131072:
             errors.append("response no-store or wire limit is invalid")
@@ -191,9 +206,13 @@ def validate() -> list[str]:
             errors.append("live binding verification contract ID is invalid")
         if verification.get("domain_contract_id") != "nac.workbench_live_read_binding":
             errors.append("live binding verification domain link is invalid")
+        if verification.get("acceptance_ids") != [f"AC-{index}" for index in range(1, 9)]:
+            errors.append("verification acceptance IDs do not match Issue #725")
         thresholds = verification.get("thresholds", {})
         if thresholds.get("maximum_live_writes") != 0:
             errors.append("live read verification must allow zero live writes")
+        if thresholds.get("maximum_tenant_deployments") != 0:
+            errors.append("live read verification must allow zero tenant deployments")
         if thresholds.get("maximum_snapshot_bytes") != 131072:
             errors.append("verification snapshot limit is invalid")
         if thresholds.get("minimum_visual_viewports") != 3:
@@ -256,7 +275,9 @@ def validate() -> list[str]:
         CI_PATH,
         (
             '"src/nac_bff/**/*.py"',
+            '"src/nac_cli/**/*.py"',
             '"src/nac_m365_graph/**/*.py"',
+            '"assets/docs/**"',
             "pip install -e . fastapi==0.116.1 httpx==0.28.1",
             "npx --no-install playwright install --with-deps chromium",
             "npm run workbench:capture",

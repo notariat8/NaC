@@ -236,6 +236,50 @@ describe('NaC BFF client boundary', () => {
     }
   });
 
+  it('captures default validation time after the BFF response arrives', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-01T09:01:00.900Z'));
+    try {
+      const laterSnapshot = {
+        ...VALID_WORKBENCH_SNAPSHOT,
+        generatedAt: '2026-08-01T09:01:01Z',
+        access: {
+          ...VALID_WORKBENCH_SNAPSHOT.access,
+          issuedAt: '2026-08-01T09:01:01Z'
+        },
+        redaction: {
+          ...VALID_WORKBENCH_SNAPSHOT.redaction,
+          verifiedAt: '2026-08-01T09:01:01Z'
+        }
+      };
+      const get = jest.fn().mockImplementation(async () => {
+        jest.setSystemTime(new Date('2026-08-01T09:01:01.100Z'));
+        return responseFromChunks(
+          [new TextEncoder().encode(signedWorkbenchSnapshotJson(laterSnapshot))],
+          true,
+          undefined,
+          200,
+          {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            pragma: 'no-cache'
+          }
+        );
+      });
+      const factory = {
+        getClient: jest.fn().mockResolvedValue({ get })
+      } as unknown as AadHttpClientFactory;
+
+      await expect(loadNacWorkbenchSnapshot(
+        factory,
+        VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+        new AbortController().signal
+      )).resolves.toEqual(expect.objectContaining({ generatedAt: '2026-08-01T09:01:01Z' }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it.each([
     ['subject', { subjectId: 'actor:synthetic:other' }],
     ['role', { role: 'runtime_service' }],

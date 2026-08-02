@@ -425,6 +425,8 @@
           "id": "workbench_live_read_binding",
           "description": "Issue #725 binds the generic read-only Workbench to the authenticated NaC BFF snapshot endpoint and SPFx/Teams host with exact synthetic allowlists, short leases, canonical redaction evidence and stale-response protection.",
           "paths": [
+            "docs/de/architecture/generic-workbench.md",
+            "docs/en/architecture/generic-workbench.md",
             "docs/de/superpowers/specs/2026-08-01-workbench-live-read-binding-design.md",
             "docs/en/superpowers/specs/2026-08-01-workbench-live-read-binding-design.md",
             "docs/de/superpowers/plans/2026-08-01-workbench-live-read-binding.md",

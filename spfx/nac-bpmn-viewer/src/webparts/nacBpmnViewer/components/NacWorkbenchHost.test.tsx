@@ -192,7 +192,7 @@ describe('NaC workbench live host', () => {
     expect(root.querySelector('[data-nac-workbench-schema]')).toBeNull();
   });
 
-  it('prevents an older abort-ignoring response from committing after a new request', async () => {
+  it('prevents an older abort-ignoring successful response from overwriting a newer request', async () => {
     const oldRequest = deferred<WorkbenchSnapshot>();
     const newRequest = deferred<WorkbenchSnapshot>();
     const firstLoader = jest.fn(() => oldRequest.promise);
@@ -217,11 +217,17 @@ describe('NaC workbench live host', () => {
     });
     expect(root.textContent).toContain('Synthetischer Immobilienkaufvertrag');
     await act(async () => {
-      oldRequest.reject(new Error('NAC_BFF_UNAVAILABLE'));
+      oldRequest.resolve({
+        ...snapshot('2026-08-01T09:00:00Z', '2026-08-01T09:04:00Z'),
+        matter: {
+          ...snapshot().matter,
+          title: 'Veralteter Arbeitsbereich'
+        }
+      });
       await Promise.resolve();
     });
     expect(root.textContent).toContain('Synthetischer Immobilienkaufvertrag');
-    expect(root.textContent).not.toContain('Arbeitsbereich ist derzeit nicht verfügbar.');
+    expect(root.textContent).not.toContain('Veralteter Arbeitsbereich');
   });
 
   it('aborts on timeout and ignores an abort-ignoring late completion', async () => {
@@ -250,14 +256,15 @@ describe('NaC workbench live host', () => {
     expect(root.querySelector('[data-nac-workbench-schema]')).toBeNull();
   });
 
-  it('aborts an active request during unmount', () => {
+  it('aborts an active request during unmount and ignores its late completion', async () => {
+    const pending = deferred<WorkbenchSnapshot>();
     let signal: AbortSignal | undefined;
     act(() => {
       ReactDom.render(<NacWorkbenchHost
         expectedSubjectId="actor:synthetic:001"
         loadSnapshot={(value: AbortSignal) => {
           signal = value;
-          return new Promise<WorkbenchSnapshot>(() => undefined);
+          return pending.promise;
         }}
         detailSurface={<div />}
       />, root);
@@ -267,5 +274,10 @@ describe('NaC workbench live host', () => {
       ReactDom.unmountComponentAtNode(root);
     });
     expect(signal?.aborted).toBe(true);
+    await act(async () => {
+      pending.resolve(snapshot());
+      await Promise.resolve();
+    });
+    expect(root.childElementCount).toBe(0);
   });
 });

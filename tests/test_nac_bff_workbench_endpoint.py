@@ -532,6 +532,28 @@ class WorkbenchEndpointTests(unittest.TestCase):
         )
         self.assertEqual(unauthorized.headers["cache-control"], "no-store")
 
+        class _UnavailableWorkbench:
+            def get_snapshot(self, **_: object):
+                raise RuntimeError("sensitive backend detail")
+
+        unavailable_client = TestClient(
+            create_fastapi_app(
+                bff=legacy_bff,
+                workbench_endpoint=_UnavailableWorkbench(),
+                validated_claims_dependency=validated_claims,
+            )
+        )
+        unavailable = unavailable_client.get(path, params={"purpose": ALLOWED_PURPOSE})
+        self.assertEqual(
+            (unavailable.status_code, unavailable.content),
+            (
+                503,
+                b'{"status":503,"error":{"code":"SERVICE_UNAVAILABLE"}}',
+            ),
+        )
+        self.assertEqual(unavailable.headers["cache-control"], "no-store")
+        self.assertNotIn("sensitive backend detail", unavailable.text)
+
     def test_existing_v0_2_route_body_is_unchanged(self) -> None:
         try:
             from fastapi.testclient import TestClient
@@ -561,7 +583,22 @@ class WorkbenchEndpointTests(unittest.TestCase):
             params={"purpose": ALLOWED_PURPOSE},
         )
 
+        expected = legacy_bff.get_workspace(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        expected_wire = json.dumps(
+            expected.body,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), expected.body)
+        self.assertEqual(response.content, expected_wire)
         self.assertEqual(response.json()["schemaVersion"], "nac.m365-test-environment-workspace/v0.2")
         self.assertEqual(response.json()["matter"]["accessMode"], "assigned")
         self.assertEqual(response.json()["matter"]["businessCaseTypeId"], BUSINESS_CASE_TYPE_ID)
