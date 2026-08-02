@@ -238,7 +238,16 @@
             "deployment_mode_exact": "Incremental",
             "deployment_operation_count_exact": 12,
             "all_deployment_operations_succeeded_required": true,
-            "deployment_operation_target_ids_bound_to_resource_graph_required": true,
+            "deployment_operation_target_ids_direct_readback_required": true,
+            "resource_graph_visible_target_count_exact": 9,
+            "resource_graph_top_level_inventory_count_exact": 7,
+            "resource_graph_role_assignment_count_exact": 2,
+            "resource_graph_non_enumerated_child_target_types_exact": [
+              "microsoft.insights/components/currentbillingfeatures",
+              "microsoft.storage/storageaccounts/blobservices",
+              "microsoft.storage/storageaccounts/blobservices/containers",
+              "microsoft.web/sites/config"
+            ],
             "resource_graph_full_inventory_required": true,
             "resource_graph_authorization_inventory_required": true,
             "resource_graph_target_set_exact_required": true,
@@ -1445,5 +1454,21 @@
     "AC-719-04",
     "AC-719-05",
     "AC-719-06"
+  ],
+  "arm_operation_normalization_issue": "https://github.com/notariat8/NaC/issues/727",
+  "arm_operation_normalization_acceptance_ids": [
+    "AC-727-01",
+    "AC-727-02",
+    "AC-727-03",
+    "AC-727-04",
+    "AC-727-05"
+  ],
+  "resource_graph_visibility_issue": "https://github.com/notariat8/NaC/issues/729",
+  "resource_graph_visibility_acceptance_ids": [
+    "AC-729-01",
+    "AC-729-02",
+    "AC-729-03",
+    "AC-729-04",
+    "AC-729-05"
   ]
 }

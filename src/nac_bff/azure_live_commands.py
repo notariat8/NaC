@@ -20,6 +20,7 @@ from nac_bff.azure_interruption_contract import (
     canonical_parameters_from_wrappers,
     compact_sha256_json,
     newline_sha256_json,
+    resource_graph_visible_targets,
 )
 from nac_bff.azure_cli_sealed_runtime import (
     SealedAzureCliRuntime,
@@ -587,19 +588,11 @@ def _interruption_live_resource_state(
 ) -> dict[str, Any]:
     if len(details) != 12 or len(operations) != 12:
         raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
-    expected_graph = sorted(
-        {
-            (str(item["id"]).lower(), str(item["type"]).lower())
-            for item in [*inventory, *operations]
-        },
-        key=lambda item: (item[1], item[0]),
-    )
-    actual_graph = sorted(
-        ((item["id"], item["type"]) for item in resource_graph),
-        key=lambda item: (item[1], item[0]),
-    )
-    if actual_graph != expected_graph:
-        raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
+    _require_exact_resource_graph(resource_graph, inventory, operations)
+    actual_graph = [
+        (item["id"], item["type"])
+        for item in resource_graph
+    ]
 
     targets = sorted(
         ({"id": item["id"].lower(), "type": item["type"]}
@@ -765,6 +758,16 @@ def _interruption_live_resource_state(
         ]),
         "security_properties_exact": True,
     }
+
+
+def _require_exact_resource_graph(
+    resource_graph: list[dict[str, str]],
+    inventory: list[dict[str, Any]],
+    operations: list[dict[str, Any]],
+) -> None:
+    expected = resource_graph_visible_targets(inventory, operations)
+    if expected is None or resource_graph != expected:
+        raise ValueError("AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID")
 
 
 def _required_properties(value: dict[str, Any]) -> dict[str, Any]:

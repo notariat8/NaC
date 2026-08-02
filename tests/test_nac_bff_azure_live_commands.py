@@ -2670,16 +2670,12 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                     "type": resource_type,
                     "properties": detail_properties,
                 })
-            graph_rows = sorted(
-                [
-                    {"id": resource_id, "type": resource_type}
-                    for resource_id, resource_type in {
-                        (item["id"].lower(), item["type"].lower())
-                        for item in [*inventory, *operations]
-                    }
-                ],
-                key=lambda item: (item["type"], item["id"]),
+            from nac_bff.azure_interruption_contract import (
+                resource_graph_visible_targets,
             )
+
+            graph_rows = resource_graph_visible_targets(inventory, operations)
+            assert graph_rows is not None
             graph = {
                 "count": len(graph_rows),
                 "data": graph_rows,
@@ -2773,6 +2769,49 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 result["deployment"]["bff_api_audience"], CLIENT_ID
             )
             self.assertTrue(result["live_resource_state"]["security_properties_exact"])
+
+    def test_exact_resource_graph_rejects_visible_target_drift(self) -> None:
+        from nac_bff.azure_interruption_contract import (
+            resource_graph_visible_targets,
+        )
+        from tests.test_nac_bff_azure_interruption_baseline import (
+            _inventory,
+            _operations,
+        )
+
+        inventory = _inventory()
+        operations = _operations()
+        expected = resource_graph_visible_targets(inventory, operations)
+        assert expected is not None
+        azure_live_commands._require_exact_resource_graph(
+            expected, inventory, operations
+        )
+
+        for drifted in (
+            expected[:-1],
+            [
+                *expected,
+                {
+                    "id": (
+                        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c"
+                        "/resourcegroups/rg-nac-bff-test/providers/test/extra/one"
+                    ),
+                    "type": "test/extra",
+                },
+            ],
+            [*expected, copy.deepcopy(expected[0])],
+            [
+                {**expected[0], "type": "test/drifted"},
+                *expected[1:],
+            ],
+        ):
+            with self.assertRaisesRegex(
+                ValueError,
+                "AZURE_INTERRUPTION_RESOURCE_GRAPH_INVALID",
+            ):
+                azure_live_commands._require_exact_resource_graph(
+                    drifted, inventory, operations
+                )
 
     def test_interruption_operation_projection_rejects_unsafe_metadata(self) -> None:
         valid = {

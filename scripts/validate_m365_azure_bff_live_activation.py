@@ -115,6 +115,18 @@ ASYNC_BASELINE_RECONCILIATION_ISSUE = (
 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS = [
     f"AC-719-{index:02d}" for index in range(1, 7)
 ]
+ARM_OPERATION_NORMALIZATION_ISSUE = (
+    "https://github.com/notariat8/NaC/issues/727"
+)
+ARM_OPERATION_NORMALIZATION_ACCEPTANCE_IDS = [
+    f"AC-727-{index:02d}" for index in range(1, 6)
+]
+RESOURCE_GRAPH_VISIBILITY_ISSUE = (
+    "https://github.com/notariat8/NaC/issues/729"
+)
+RESOURCE_GRAPH_VISIBILITY_ACCEPTANCE_IDS = [
+    f"AC-729-{index:02d}" for index in range(1, 6)
+]
 INTERRUPTION_COMMAND = (
     "nac m365 teams-sharepoint "
     "bff-azure-activation-interruption-reconcile"
@@ -268,7 +280,16 @@ INTERRUPTION_PROVIDER_CLASSIFICATIONS = {
         "deployment_mode_exact": "Incremental",
         "deployment_operation_count_exact": 12,
         "all_deployment_operations_succeeded_required": True,
-        "deployment_operation_target_ids_bound_to_resource_graph_required": True,
+        "deployment_operation_target_ids_direct_readback_required": True,
+        "resource_graph_visible_target_count_exact": 9,
+        "resource_graph_top_level_inventory_count_exact": 7,
+        "resource_graph_role_assignment_count_exact": 2,
+        "resource_graph_non_enumerated_child_target_types_exact": [
+            "microsoft.insights/components/currentbillingfeatures",
+            "microsoft.storage/storageaccounts/blobservices",
+            "microsoft.storage/storageaccounts/blobservices/containers",
+            "microsoft.web/sites/config",
+        ],
         "resource_graph_full_inventory_required": True,
         "resource_graph_authorization_inventory_required": True,
         "resource_graph_target_set_exact_required": True,
@@ -1604,6 +1625,16 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             "async_baseline_reconciliation_acceptance_ids": (
                 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
             ),
+            "arm_operation_normalization_issue": (
+                ARM_OPERATION_NORMALIZATION_ISSUE
+            ),
+            "arm_operation_normalization_acceptance_ids": (
+                ARM_OPERATION_NORMALIZATION_ACCEPTANCE_IDS
+            ),
+            "resource_graph_visibility_issue": RESOURCE_GRAPH_VISIBILITY_ISSUE,
+            "resource_graph_visibility_acceptance_ids": (
+                RESOURCE_GRAPH_VISIBILITY_ACCEPTANCE_IDS
+            ),
             "owner_gate_safety_rework_issue": OWNER_GATE_SAFETY_REWORK_ISSUE,
             "owner_gate_safety_rework_acceptance_ids": (
                 OWNER_GATE_SAFETY_REWORK_ACCEPTANCE_IDS
@@ -2532,6 +2563,16 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             "async_baseline_reconciliation_acceptance_ids": (
                 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
             ),
+            "arm_operation_normalization_issue": (
+                ARM_OPERATION_NORMALIZATION_ISSUE
+            ),
+            "arm_operation_normalization_acceptance_ids": (
+                ARM_OPERATION_NORMALIZATION_ACCEPTANCE_IDS
+            ),
+            "resource_graph_visibility_issue": RESOURCE_GRAPH_VISIBILITY_ISSUE,
+            "resource_graph_visibility_acceptance_ids": (
+                RESOURCE_GRAPH_VISIBILITY_ACCEPTANCE_IDS
+            ),
             "acceptance_ids": ACCEPTANCE_IDS,
         },
         "verification",
@@ -2689,6 +2730,16 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
     ):
         errors.append(
             "verification required evidence must include Issue #717 interruption inspection"
+        )
+    if not isinstance(required_evidence, list) or not any(
+        isinstance(item, str)
+        and "Issue #729 evidence" in item
+        and "seven inventory resources plus two authorization role assignments" in item
+        and "all twelve deployment targets" in item
+        for item in required_evidence
+    ):
+        errors.append(
+            "verification required evidence must include the Issue #729 split read boundary"
         )
     invariants = verification.get("invariants")
     if (
