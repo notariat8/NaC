@@ -384,7 +384,8 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "crypto.subtle.digest",
             "AbortSignal",
             "streamingResponse.body?.getReader()",
-            "byteLength > MAX_RESPONSE_BYTES",
+            "readBoundedResponseText(response, MAX_RESPONSE_BYTES)",
+            "byteLength > maximumBytes",
             "new TextDecoder('utf-8', { fatal: true })",
         ):
             if required not in service_text:

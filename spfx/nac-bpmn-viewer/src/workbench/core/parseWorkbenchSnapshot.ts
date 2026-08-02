@@ -33,6 +33,7 @@ export async function parseWorkbenchSnapshotJson(text: string, nowIso: string): 
   } catch {
     fail();
   }
+  if (containsUnpairedSurrogate(value)) fail();
   const snapshot = parseWorkbenchSnapshot(value, nowIso);
   await verifyRedactionContentBinding(snapshot);
   return snapshot;
@@ -109,7 +110,7 @@ async function verifyRedactionContentBinding(snapshot: WorkbenchSnapshot): Promi
   if (!globalThis.crypto?.subtle) fail();
   const content: Record<string, unknown> = { ...snapshot };
   delete content.redaction;
-  const bytes = new TextEncoder().encode(canonicalJson(content));
+  const bytes = new TextEncoder().encode(canonicalWorkbenchJson(content));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   const actual = Array.from(new Uint8Array(digest))
     .map(value => value.toString(16).padStart(2, '0'))
@@ -117,16 +118,48 @@ async function verifyRedactionContentBinding(snapshot: WorkbenchSnapshot): Promi
   if (actual !== snapshot.redaction.contentSha256) fail();
 }
 
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+export function canonicalWorkbenchJson(value: unknown): string {
+  if (Array.isArray(value)) return '[' + value.map(canonicalWorkbenchJson).join(',') + ']';
   if (record(value)) {
-    return '{' + Object.keys(value).sort()
-      .map(key => JSON.stringify(key) + ':' + canonicalJson(value[key]))
+    return '{' + Object.keys(value).sort(compareUnicodeCodePoints)
+      .map(key => JSON.stringify(key) + ':' + canonicalWorkbenchJson(value[key]))
       .join(',') + '}';
   }
   const encoded = JSON.stringify(value);
   if (encoded === undefined) fail();
   return encoded;
+}
+
+function compareUnicodeCodePoints(left: string, right: string): number {
+  const leftPoints = Array.from(left, value => value.codePointAt(0) as number);
+  const rightPoints = Array.from(right, value => value.codePointAt(0) as number);
+  const length = Math.min(leftPoints.length, rightPoints.length);
+  for (let index = 0; index < length; index += 1) {
+    if (leftPoints[index] !== rightPoints[index]) return leftPoints[index] - rightPoints[index];
+  }
+  return leftPoints.length - rightPoints.length;
+}
+
+function containsUnpairedSurrogate(value: unknown): boolean {
+  if (typeof value === 'string') {
+    for (let index = 0; index < value.length; index += 1) {
+      const unit = value.charCodeAt(index);
+      if (unit >= 0xd800 && unit <= 0xdbff) {
+        const next = value.charCodeAt(index + 1);
+        if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+        index += 1;
+      } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (Array.isArray(value)) return value.some(containsUnpairedSurrogate);
+  if (record(value)) {
+    return Object.entries(value).some(([key, item]) =>
+      containsUnpairedSurrogate(key) || containsUnpairedSurrogate(item));
+  }
+  return false;
 }
 
 function validateAccess(value: unknown, scope: unknown, now: number, generatedAt: number, projectionExpiresAt: number): void {

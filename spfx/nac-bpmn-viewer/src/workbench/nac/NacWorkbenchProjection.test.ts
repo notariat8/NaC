@@ -6,13 +6,29 @@ import { parseNacWorkbenchProjectionJson } from './NacWorkbenchProjection';
 
 const expected = {
   subjectId: 'actor:synthetic:001',
-  role: 'notary',
   workspaceId: 'notary_team_01',
   matterId: 'NAC-SYN-MATTER-001',
   purpose: 'view_synthetic_matter_workspace'
 };
 
 describe('NaC workbench projection boundary', () => {
+  it.each(['notary', 'notary_clerk', 'deputy_notary', 'deputy_clerk'])(
+    'accepts the canonical UI role %s',
+    async role => {
+      const roleSnapshot = {
+        ...VALID_WORKBENCH_SNAPSHOT,
+        access: { ...VALID_WORKBENCH_SNAPSHOT.access, role }
+      };
+      await expect(parseNacWorkbenchProjectionJson(
+        signedWorkbenchSnapshotJson(roleSnapshot),
+        '2026-08-01T09:01:00Z',
+        expected
+      )).resolves.toEqual(expect.objectContaining({
+        access: expect.objectContaining({ role })
+      }));
+    }
+  );
+
   it('keeps all decisions, evidence and capabilities server-authored', async () => {
     const snapshot = await parseNacWorkbenchProjectionJson(
       signedWorkbenchSnapshotJson(),
@@ -44,10 +60,14 @@ describe('NaC workbench projection boundary', () => {
       '2026-08-01T09:01:00Z',
       { ...expected, subjectId: 'actor:synthetic:other' }
     )).rejects.toThrow('NAC_WORKBENCH_SCOPE_INVALID');
+    const unsupportedRole = {
+      ...VALID_WORKBENCH_SNAPSHOT,
+      access: { ...VALID_WORKBENCH_SNAPSHOT.access, role: 'runtime_service' }
+    };
     await expect(parseNacWorkbenchProjectionJson(
-      signedWorkbenchSnapshotJson(),
+      signedWorkbenchSnapshotJson(unsupportedRole),
       '2026-08-01T09:01:00Z',
-      { ...expected, role: 'clerk' }
+      expected
     )).rejects.toThrow('NAC_WORKBENCH_SCOPE_INVALID');
   });
 });

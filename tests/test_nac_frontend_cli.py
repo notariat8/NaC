@@ -4,7 +4,7 @@ import argparse
 import subprocess
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from nac_cli.cli import command_frontend
 
@@ -20,8 +20,12 @@ class FrontendCliTests(unittest.TestCase):
             patch("nac_cli.cli.subprocess.run", return_value=completed) as ast_gate,
         ):
             self.assertEqual(command_frontend(args), 0)
-        python_gate.assert_called_once_with(
-            Path("/repo"), "scripts/validate_generic_workbench_foundation.py", []
+        self.assertEqual(
+            python_gate.call_args_list,
+            [
+                call(Path("/repo"), "scripts/validate_generic_workbench_foundation.py", []),
+                call(Path("/repo"), "scripts/validate_workbench_live_read_binding.py", []),
+            ],
         )
         ast_gate.assert_called_once_with(
             ["/usr/bin/node", "scripts/validate-read-only-boundary.cjs"],

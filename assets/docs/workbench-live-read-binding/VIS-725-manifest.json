@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "nac.workbench-live-read-host-visual-evidence/v1",
+  "syntheticOnly": true,
+  "browserNetworkRequests": 0,
+  "fixtureClock": "2026-08-01T09:01:00Z",
+  "cases": [
+    {
+      "id": "VIS-725-01",
+      "state": "ready",
+      "layout": "desktop",
+      "file": "VIS-725-01-desktop-ready.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "imageWidth": 1280,
+      "imageHeight": 659,
+      "sha256": "8f637fc29c32ab232bbdb907440a2f44496e63651cff26d8e786fa90f9906906"
+    },
+    {
+      "id": "VIS-725-02",
+      "state": "ready",
+      "layout": "narrow-spfx-column",
+      "file": "VIS-725-02-narrow-spfx-ready.png",
+      "viewport": {
+        "width": 720,
+        "height": 980
+      },
+      "imageWidth": 600,
+      "imageHeight": 917,
+      "sha256": "cb1bfd17f0da3b4ade61200b22bca8d69822a0094bf5fed2b5f3936a48222e03"
+    },
+    {
+      "id": "VIS-725-03",
+      "state": "ready",
+      "layout": "mobile",
+      "file": "VIS-725-03-mobile-ready.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "imageWidth": 390,
+      "imageHeight": 888,
+      "sha256": "1297191351b0900896e4062ab2118606d2d5a569eab32912d59f9d1869ae44bc"
+    },
+    {
+      "id": "VIS-725-04",
+      "state": "loading",
+      "layout": "state",
+      "file": "VIS-725-04-loading.png",
+      "viewport": {
+        "width": 720,
+        "height": 420
+      },
+      "imageWidth": 680,
+      "imageHeight": 222,
+      "sha256": "73fb8a60ee65401f830cf51bb7285208b2459cab4b609d38f25f016f216d8633"
+    },
+    {
+      "id": "VIS-725-05",
+      "state": "deny",
+      "layout": "state",
+      "file": "VIS-725-05-deny.png",
+      "viewport": {
+        "width": 720,
+        "height": 420
+      },
+      "imageWidth": 680,
+      "imageHeight": 222,
+      "sha256": "82eaa58ab3e72ea80819607f6ea92547d0bedb40931dd67ec6aa6bb88dbaa88b"
+    },
+    {
+      "id": "VIS-725-06",
+      "state": "unavailable",
+      "layout": "state",
+      "file": "VIS-725-06-unavailable.png",
+      "viewport": {
+        "width": 720,
+        "height": 420
+      },
+      "imageWidth": 680,
+      "imageHeight": 222,
+      "sha256": "28cfd6b5fbf23cd1a145909a9ea0ac2a405ac07fb1f9653e309efde64b420fcf"
+    }
+  ],
+  "sourceBindings": {
+    "host": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
+      "sha256": "ecc076bf35fabee66c807a0e6a7f14b14eb43c452f01c12116b72633274247ff"
+    },
+    "styles": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
+      "sha256": "89dc903640f55dcab69cfd92836cd9466c80a73787c8198409a6c1d79fd97983"
+    },
+    "client": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
+      "sha256": "eb73d4e9b6797fb2ae473118fd1f58a1c491488d9630bbf1a54c824f4f0c1d41"
+    },
+    "webPart": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
+      "sha256": "148e0633d9c0dd950819a6910fc3114b1519c419fd90aee91c0afcda5353a7fa"
+    },
+    "parser": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
+      "sha256": "2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df"
+    },
+    "projection": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts",
+      "sha256": "fcdb4d90b21b19e5bb97ddd96816e14a4d6067109c4113b9c0e9fe0a1d5f92b9"
+    },
+    "contract": {
+      "relativePath": "workflows/contracts/workbench-live-read-binding.contract.json",
+      "sha256": "6920cf9ba4717044b6154756aca1ae879cf6b1f92f24f3b10fe75bfb1b7e9929"
+    }
+  },
+  "visualHarness": [
+    {
+      "relativePath": "scripts/validate_workbench_live_read_binding.py",
+      "sha256": "f943182e4a06d4b921d59d0e2f277a523c7c51b6f5edac7d394ab4dd15794f03"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/package.json",
+      "sha256": "d7de89e8fa6267cf09c6c5637a2459001db30bf33ab3cc06d6c8ebd68f02cdcc"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/package-lock.json",
+      "sha256": "dd03638743ebf291ddce8626306624d04cab08676590af6a2bb92f4e19537e06"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/scripts/workbench-live-read-synthetic-snapshot.cjs",
+      "sha256": "61e88c7d64482c4625219628ca4eda4d6083b4e0a0ab1de89a388e749570034b"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs",
+      "sha256": "46840fe0bc9ad6f1e161b62e43da19979c13ecd6f5363aeed5cb87a6daac7da9"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs",
+      "sha256": "57e13033560f08f5b78bdf5cb247d964a75c91f8292458c474882a757353f216"
+    },
+    {
+      "relativePath": "workflows/verification-contracts/workbench-live-read-binding.verification.json",
+      "sha256": "8fff7fac3ffa437a4eeedccc7ca09d6f2ea71ee7d2008e17e9f65d33013d2b0d"
+    }
+  ],
+  "buildArtifacts": [
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js",
+      "sha256": "5126657f9b4adb9b25be71042b6024c05d274ebe770fffc1da47a19ab4e08697"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js",
+      "sha256": "623b89587d551e01cf246672997e4ec79ee65873737407d1245f0a3588bf9296"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
+      "sha256": "cf0f2192996fc09c8af564872864fdea98fff05f03c4e0801fed15df38125cc9"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js",
+      "sha256": "9aabd37d0abf046c8e5a623e66e3928ec5d2a53a3ea26047e707831708175cb9"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js",
+      "sha256": "c0b263278fc2b3da12301f54394a4a1c6852961412524b1d529ba006a009c617"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.styles.js",
+      "sha256": "0a25bc17c93303f14ae196c0812dae5e70533a10e15b50a41908bd25c9798960"
+    }
+  ],
+  "runtime": {
+    "nodeVersion": "v22.14.0",
+    "npmUserAgent": "npm/10.9.2 node/v22.14.0 linux x64 workspaces/false",
+    "playwrightVersion": "1.55.0",
+    "webpackVersion": "5.105.4",
+    "typescriptVersion": "5.8.3",
+    "heftVersion": "1.2.17"
+  }
+}

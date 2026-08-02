@@ -4,24 +4,33 @@ import { IReadonlyTheme } from '@microsoft/sp-component-base';
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { NacBpmnViewer, NacBpmnViewerProps } from './components/NacBpmnViewer';
-import { loadNacBffWorkspace } from './services/NacBffClient';
+import { NacWorkbenchHost, NacWorkbenchHostProps } from './components/NacWorkbenchHost';
+import { loadNacBffWorkspace, loadNacWorkbenchSnapshot } from './services/NacBffClient';
 
-export interface NacBpmnViewerWebPartProps {
-  workspaceId: string;
-}
+export type NacBpmnViewerWebPartProps = Record<string, never>;
 
 export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnViewerWebPartProps> {
   private isDarkTheme = false;
   private readonly evaluationTimestamp = new Date().toISOString();
 
   public render(): void {
-    const element = React.createElement<NacBpmnViewerProps>(NacBpmnViewer, {
+    const expectedSubjectId = this.context.pageContext.aadInfo?.userId.toString();
+    const detailSurface = React.createElement<NacBpmnViewerProps>(NacBpmnViewer, {
       workspaceId: 'notary_team_01',
       userDisplayName: this.context.pageContext.user.displayName,
       hostName: this.context.sdks.microsoftTeams ? 'Microsoft Teams' : 'SharePoint',
       isDarkTheme: this.isDarkTheme,
       evaluationTimestamp: this.evaluationTimestamp,
       loadWorkspace: (signal: AbortSignal) => loadNacBffWorkspace(this.context.aadHttpClientFactory, signal)
+    });
+    const element = React.createElement<NacWorkbenchHostProps>(NacWorkbenchHost, {
+      expectedSubjectId,
+      loadSnapshot: (signal: AbortSignal) => loadNacWorkbenchSnapshot(
+        this.context.aadHttpClientFactory,
+        expectedSubjectId ?? '',
+        signal
+      ),
+      detailSurface
     });
 
     ReactDom.render(element, this.domElement);

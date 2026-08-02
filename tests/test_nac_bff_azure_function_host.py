@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import subprocess
 import sys
@@ -39,6 +40,7 @@ from nac_bff.synthetic_workspace_graph import (  # noqa: E402
 from nac_bff.test_environment import (  # noqa: E402
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
+    ALLOWED_TENANT_ID,
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
     ValidatedClaims,
@@ -197,6 +199,59 @@ class AzureBffCompositionTests(unittest.TestCase):
             (401, {"status": 401, "error": {"code": "AUTHENTICATION_REQUIRED"}}),
         )
 
+    def test_configured_workbench_treats_wrong_tenant_claim_as_authentication_failure(self) -> None:
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("FastAPI runtime dependencies are not installed")
+
+        port_calls: list[str] = []
+
+        class _Access:
+            def decide(self, **_: str) -> AccessDecision:
+                port_calls.append("access")
+                return AccessDecision.deny()
+
+        class _Workspace:
+            def read_synthetic_workspace(self, **_: str) -> dict:
+                port_calls.append("workspace")
+                return _projection()
+
+        def validator_factory(**_: object):
+            def validate(_authorization: object) -> ValidatedClaims:
+                return ValidatedClaims(
+                    object_id="wrong-tenant-actor",
+                    tenant_id="00000000-0000-0000-0000-000000000099",
+                    subject="wrong-tenant-actor",
+                )
+
+            return validate
+
+        app = create_app_from_env(
+            _environment(),
+            validator_factory=validator_factory,
+            token_provider_factory=lambda _: object(),
+            graph_client_factory=lambda _: object(),
+            access_port_factory=lambda *_args, **_kwargs: _Access(),
+            workspace_port_factory=lambda _: _Workspace(),
+        )
+        client = TestClient(app)
+        response = client.get(
+            f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/"
+            f"{ALLOWED_MATTER_ID}/workbench-snapshot",
+            params={"purpose": ALLOWED_PURPOSE},
+            headers={"Authorization": "Bearer wrong-tenant-token"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.content,
+            b'{"status":401,"error":{"code":"AUTHENTICATION_REQUIRED"}}',
+        )
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(response.headers["www-authenticate"], "Bearer")
+        self.assertEqual(port_calls, [])
+
     def test_configured_app_stages_readiness_until_dependency_backed_success(self) -> None:
         try:
             from fastapi.testclient import TestClient
@@ -209,9 +264,21 @@ class AzureBffCompositionTests(unittest.TestCase):
         event_loop_thread_ids: set[int] = set()
 
         class _RecordingAccess:
-            def decide(self, **_: str) -> AccessDecision:
+            def decide(self, **request: str) -> AccessDecision:
                 bff_thread_ids.add(threading.get_ident())
-                return AccessDecision.assigned()
+                issued = datetime.now(UTC)
+                expires = issued + timedelta(minutes=5)
+                return AccessDecision.assigned(
+                    decision_id=f"access:{ALLOWED_MATTER_ID}:1",
+                    decision_version="policy-v1",
+                    subject_id=request["actor_id"],
+                    role="notary",
+                    workspace_id=ALLOWED_WORKSPACE_ID,
+                    matter_id=ALLOWED_MATTER_ID,
+                    purpose=ALLOWED_PURPOSE,
+                    issued_at=issued.isoformat(timespec="seconds").replace("+00:00", "Z"),
+                    expires_at=expires.isoformat(timespec="seconds").replace("+00:00", "Z"),
+                )
 
         class _RecordingWorkspace:
             def read_synthetic_workspace(self, **_: str) -> dict:
@@ -227,14 +294,17 @@ class AzureBffCompositionTests(unittest.TestCase):
                     raise ValueError("authentication failed")
                 return ValidatedClaims(
                     object_id="assigned-object-id",
-                    tenant_id=TENANT_ID,
+                    tenant_id=ALLOWED_TENANT_ID,
                     subject="assigned-object-id",
                 )
 
             return validate
 
+        environment = _environment()
+        environment["NAC_BFF_TENANT_ID"] = ALLOWED_TENANT_ID
+        environment["M365_TENANT_ID"] = ALLOWED_TENANT_ID
         app = create_app_from_env(
-            _environment(),
+            environment,
             validator_factory=validator_factory,
             token_provider_factory=lambda _: object(),
             graph_client_factory=lambda _: object(),
@@ -265,6 +335,12 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "X-Correlation-ID": "request.620",
             },
         )
+        workbench = client.get(
+            f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/"
+            f"{ALLOWED_MATTER_ID}/workbench-snapshot",
+            params={"purpose": ALLOWED_PURPOSE},
+            headers={"Authorization": "Bearer test-token"},
+        )
         allowed_event_loop_thread_ids = set(event_loop_thread_ids)
 
         self.assertEqual(
@@ -275,6 +351,10 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(allowed.status_code, 200)
         self.assertEqual(allowed.headers["x-correlation-id"], "request.620")
         self.assertEqual(allowed.json()["matter"]["matterId"], ALLOWED_MATTER_ID)
+        self.assertEqual(workbench.status_code, 200)
+        self.assertEqual(workbench.headers["cache-control"], "no-store")
+        self.assertEqual(workbench.json()["schemaVersion"], "nac.workbench.snapshot/v1")
+        self.assertEqual(workbench.json()["matter"]["id"], ALLOWED_MATTER_ID)
         self.assertTrue(
             allowed_event_loop_thread_ids.isdisjoint(
                 validator_thread_ids | bff_thread_ids
@@ -285,7 +365,9 @@ class AzureBffCompositionTests(unittest.TestCase):
             (activated_readiness.status_code, activated_readiness.json()),
             (200, {"status": "ready"}),
         )
-        self.assertEqual(validator_configuration["expected_tenant_id"], TENANT_ID)
+        self.assertEqual(
+            validator_configuration["expected_tenant_id"], ALLOWED_TENANT_ID
+        )
         self.assertEqual(validator_configuration["required_scopes"], {"Matter.Read"})
         self.assertTrue(validator_thread_ids)
         self.assertTrue(bff_thread_ids)
@@ -334,7 +416,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             )
             elapsed = time.monotonic() - started
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json(), {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
+        self.assertEqual(response.json(), {"detail": "service unavailable"})
         self.assertLess(elapsed, 0.1)
 
     def test_invalid_correlation_id_is_not_reflected(self) -> None:

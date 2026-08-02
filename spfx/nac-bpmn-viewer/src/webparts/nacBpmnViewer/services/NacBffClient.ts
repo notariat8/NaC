@@ -1,5 +1,7 @@
 import { AadHttpClient, AadHttpClientFactory } from '@microsoft/sp-http';
 import type { HttpClientResponse } from '@microsoft/sp-http';
+import { WorkbenchSnapshot } from '../../../workbench/core/WorkbenchContracts';
+import { parseNacWorkbenchProjectionJson } from '../../../workbench/nac/NacWorkbenchProjection';
 
 export const NAC_BFF_RESOURCE_URI = 'api://funktion8.de/nac-bff';
 export const NAC_BFF_SCOPE = 'Matter.Read';
@@ -15,6 +17,7 @@ const EXPECTED_BPMN_SHA256 =
   '02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0';
 const EXPECTED_BUSINESS_CASE_TYPE_ID = 'immobilienkaufvertrag';
 const MAX_RESPONSE_BYTES = 64 * 1024;
+const MAX_WORKBENCH_RESPONSE_BYTES = 131072;
 const MAX_BPMN_BYTES = 48 * 1024;
 
 const ROOT_KEYS = ['matter', 'schemaVersion', 'workspaceId'];
@@ -76,9 +79,9 @@ export async function loadNacBffWorkspace(
   signal: AbortSignal
 ): Promise<NacBffWorkspace> {
   const client = await clientFactory.getClient(NAC_BFF_RESOURCE_URI);
-  const path = '/v1/workspaces/' + NAC_BFF_WORKSPACE_ID + '/matters/' + NAC_BFF_MATTER_ID;
-  const url = NAC_BFF_BASE_URL + path + '?purpose=' + encodeURIComponent(NAC_BFF_PURPOSE);
-  const response = await client.get(url, AadHttpClient.configurations.v1, {
+  const workspacePath = '/v1/workspaces/' + NAC_BFF_WORKSPACE_ID + '/matters/' + NAC_BFF_MATTER_ID;
+  const workspaceUrl = NAC_BFF_BASE_URL + workspacePath + '?purpose=' + encodeURIComponent(NAC_BFF_PURPOSE);
+  const response = await client.get(workspaceUrl, AadHttpClient.configurations.v1, {
     signal,
     headers: {
       Accept: 'application/json',
@@ -86,6 +89,59 @@ export async function loadNacBffWorkspace(
     }
   });
   return parseWorkspaceResponse(response);
+}
+
+export async function loadNacWorkbenchSnapshot(
+  clientFactory: AadHttpClientFactory,
+  expectedSubjectId: string,
+  signal: AbortSignal,
+  nowIso?: string
+): Promise<WorkbenchSnapshot> {
+  if (expectedSubjectId.trim().length === 0) {
+    throw new Error('NAC_BFF_ACCESS_DENIED');
+  }
+  const client = await clientFactory.getClient(NAC_BFF_RESOURCE_URI);
+  const workbenchPath = '/v1/workspaces/' + NAC_BFF_WORKSPACE_ID + '/matters/' +
+    NAC_BFF_MATTER_ID + '/workbench-snapshot';
+  const workbenchUrl = NAC_BFF_BASE_URL + workbenchPath + '?purpose=' +
+    encodeURIComponent(NAC_BFF_PURPOSE);
+  const response = await client.get(workbenchUrl, AadHttpClient.configurations.v1, {
+    signal,
+    headers: {
+      Accept: 'application/json',
+      'X-Correlation-ID': createCorrelationId()
+    }
+  });
+  const validationNowIso = nowIso ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return parseWorkbenchResponse(response, expectedSubjectId, validationNowIso);
+}
+
+export async function parseWorkbenchResponse(
+  response: HttpClientResponse,
+  expectedSubjectId: string,
+  nowIso: string
+): Promise<WorkbenchSnapshot> {
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('NAC_BFF_ACCESS_DENIED');
+    }
+    throw new Error('NAC_BFF_UNAVAILABLE');
+  }
+  if (
+    response.headers.get('content-type') !== 'application/json; charset=utf-8' ||
+    response.headers.get('cache-control') !== 'no-store' ||
+    response.headers.get('pragma') !== 'no-cache'
+  ) {
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
+  }
+  validateContentLength(response, MAX_WORKBENCH_RESPONSE_BYTES);
+  const text = await readBoundedResponseText(response, MAX_WORKBENCH_RESPONSE_BYTES);
+  return parseNacWorkbenchProjectionJson(text, nowIso, {
+    subjectId: expectedSubjectId,
+    workspaceId: NAC_BFF_WORKSPACE_ID,
+    matterId: NAC_BFF_MATTER_ID,
+    purpose: NAC_BFF_PURPOSE
+  });
 }
 
 export async function parseWorkspaceResponse(
@@ -97,14 +153,8 @@ export async function parseWorkspaceResponse(
     }
     throw new Error('NAC_BFF_UNAVAILABLE');
   }
-  const contentLength = response.headers.get('content-length');
-  if (
-    contentLength !== null &&
-    (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_RESPONSE_BYTES)
-  ) {
-    throw new Error('NAC_BFF_RESPONSE_INVALID');
-  }
-  const text = await readBoundedResponseText(response);
+  validateContentLength(response, MAX_RESPONSE_BYTES);
+  const text = await readBoundedResponseText(response, MAX_RESPONSE_BYTES);
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -116,7 +166,20 @@ export async function parseWorkspaceResponse(
   return workspace;
 }
 
-async function readBoundedResponseText(response: HttpClientResponse): Promise<string> {
+function validateContentLength(response: HttpClientResponse, maximumBytes: number): void {
+  const contentLength = response.headers.get('content-length');
+  if (
+    contentLength !== null &&
+    (!/^\d+$/.test(contentLength) || Number(contentLength) > maximumBytes)
+  ) {
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
+  }
+}
+
+async function readBoundedResponseText(
+  response: HttpClientResponse,
+  maximumBytes: number
+): Promise<string> {
   const streamingResponse = response as HttpClientResponse & {
     readonly body: ReadableStream<Uint8Array> | null;
   };
@@ -137,7 +200,7 @@ async function readBoundedResponseText(response: HttpClientResponse): Promise<st
         continue;
       }
       byteLength += result.value.byteLength;
-      if (byteLength > MAX_RESPONSE_BYTES) {
+      if (byteLength > maximumBytes) {
         await reader.cancel();
         throw new Error('NAC_BFF_RESPONSE_INVALID');
       }

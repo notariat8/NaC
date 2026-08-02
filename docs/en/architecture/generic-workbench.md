@@ -58,12 +58,13 @@ units; token-shaped values are forbidden in all external IDs and display text.
 
 ## Repository And Host Boundary
 
-SPFx/Teams is the first compiled host candidate in Microsoft 365. The
-foundation slice is built and tested with the SPFx package but is not imported
-by the production web part yet. It therefore changes neither the deployed web
-part nor its runtime data path. Live binding follows only after the BFF emits
-the `nac.workbench.snapshot/v1` contract and the host refreshes the short lease
-during operation.
+SPFx/Teams is the first bound Microsoft 365 host. Issue
+[#725](https://github.com/notariat8/NaC/issues/725) adds the authenticated BFF
+snapshot endpoint and imports Workbench into the web part. Repository binding
+does not mean tenant deployment: package, BFF and host are activated only from
+reviewed `main` and only in `notary_team_01`. The host refreshes the short lease
+before expiry and discards the previous snapshot on every missing binding or
+stale request generation.
 CI transfers the compiled Workbench artifacts from the SPFx build into the
 strict-gate job, where their bytes are checked against the visual evidence.
 
@@ -74,3 +75,7 @@ consumer exists and the contract is stably versioned.
 Contract: [generic-workbench.contract.json](../../../workflows/contracts/generic-workbench.contract.json)
 
 Verification contract: [generic-workbench.verification.json](../../../workflows/verification-contracts/generic-workbench.verification.json)
+
+Live binding contract: [workbench-live-read-binding.contract.json](../../../workflows/contracts/workbench-live-read-binding.contract.json)
+
+Live binding verification: [workbench-live-read-binding.verification.json](../../../workflows/verification-contracts/workbench-live-read-binding.verification.json)

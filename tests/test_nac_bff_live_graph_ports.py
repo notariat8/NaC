@@ -458,10 +458,21 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
         )
 
     def test_lead_notary_and_assigned_clerk_are_assigned_without_grant_read(self) -> None:
-        for actor in ("actor-notary", "actor-clerk"):
-            with self.subTest(actor=actor):
+        for actor, role in (
+            ("actor-notary", "notary"),
+            ("actor-clerk", "notary_clerk"),
+        ):
+            with self.subTest(actor=actor, role=role):
                 adapter, client = self._adapter(_page(_access_case()))
-                self.assertIs(self._decide(adapter, actor).mode, AccessMode.ASSIGNED)
+                decision = self._decide(adapter, actor)
+                self.assertIs(decision.mode, AccessMode.ASSIGNED)
+                self.assertEqual(decision.subject_id, actor)
+                self.assertEqual(decision.role, role)
+                self.assertEqual(decision.decision_id, "access:NAC-SYN-MATTER-001:1")
+                self.assertEqual(decision.decision_version, "policy-v1")
+                self.assertEqual(decision.issued_at, "2026-07-14T12:00:00Z")
+                self.assertEqual(decision.expires_at, "2026-07-14T12:05:00Z")
+                self.assertIsNone(decision.reason)
                 self.assertEqual(len(client.paths), 1)
                 self.assertIn("FederfuehrenderNotar,Sachbearbeitung", client.paths[0])
 
@@ -472,11 +483,30 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
             _page(_audit()),
         )
 
-        self.assertIs(self._decide(adapter, "actor-deputy").mode, AccessMode.DEPUTY)
+        decision = self._decide(adapter, "actor-deputy")
+        self.assertIs(decision.mode, AccessMode.DEPUTY)
+        self.assertEqual(decision.subject_id, "actor-deputy")
+        self.assertEqual(decision.role, "deputy_clerk")
+        self.assertEqual(decision.reason, "Synthetische Urlaubsvertretung")
+        self.assertEqual(decision.expires_at, "2026-07-14T12:05:00Z")
+        self.assertTrue(decision.active_approved_grant)
+        self.assertTrue(decision.matching_audit_event)
         self.assertEqual(len(client.paths), 3)
         self.assertIn("/lists/ec12d339-d9b7-45e9-be45-38dadd917746/items?", client.paths[1])
         self.assertIn("/lists/327181c2-e402-48e9-bcfa-1f5081b45d9c/items?", client.paths[2])
         self.assertIn("CorrelationId", client.paths[2])
+
+    def test_notary_deputy_grant_maps_to_canonical_role(self) -> None:
+        adapter, _ = self._adapter(
+            _page(_access_case()),
+            _page(_grant(GrantedRole="NotarVertretung")),
+            _page(_audit()),
+        )
+
+        decision = self._decide(adapter, "actor-deputy")
+
+        self.assertIs(decision.mode, AccessMode.DEPUTY)
+        self.assertEqual(decision.role, "deputy_notary")
 
     def test_deputy_fails_closed_for_invalid_role_window_approval_or_audit(self) -> None:
         invalid_grants = (
@@ -484,6 +514,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
             _grant(ValidFrom="2026-07-14T12:00:01Z"),
             _grant(ValidUntil="2026-07-14T12:00:00Z"),
             _grant(Reason=" "),
+            _grant(Reason="Vertretung fuer Max Mustermann"),
             _grant(Status="Widerrufen"),
             _grant(ApprovedBy="other-notary"),
             _grant(AuditCorrelationId=""),

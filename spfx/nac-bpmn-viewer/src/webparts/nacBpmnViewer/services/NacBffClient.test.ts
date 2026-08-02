@@ -17,10 +17,16 @@ import type { AadHttpClientFactory, HttpClientResponse } from '@microsoft/sp-htt
 import {
   classifyNacBffFailure,
   NacBffWorkspace,
+  loadNacWorkbenchSnapshot,
   loadNacBffWorkspace,
+  parseWorkbenchResponse,
   parseWorkspaceResponse,
   verifyBpmnAsset
 } from './NacBffClient';
+import {
+  signedWorkbenchSnapshotJson,
+  VALID_WORKBENCH_SNAPSHOT
+} from '../../../workbench/core/parseWorkbenchSnapshot.test';
 
 const canonicalBpmnSha256 =
   '02cc15850e7e828189214a75ad3edfa3a2e704d5a766b3aa2237f2445040dfa0';
@@ -66,15 +72,19 @@ function responseFromChunks(
   chunks: readonly Uint8Array[],
   ok: boolean = true,
   contentLength?: string,
-  status: number = 200
+  status: number = 200,
+  headers: Readonly<Record<string, string>> = {}
 ): HttpClientResponse {
   let index = 0;
   return {
     ok,
     status,
     headers: {
-      get: (name: string): string | null =>
-        name.toLowerCase() === 'content-length' ? contentLength ?? null : null
+      get: (name: string): string | null => {
+        const normalized = name.toLowerCase();
+        if (normalized === 'content-length') return contentLength ?? null;
+        return headers[normalized] ?? null;
+      }
     },
     body: {
       getReader: () => ({
@@ -158,6 +168,190 @@ describe('NaC BFF client boundary', () => {
         })
       })
     );
+  });
+
+  it('uses the dedicated workbench route and validates the authenticated subject', async () => {
+    const body = signedWorkbenchSnapshotJson();
+    const get = jest.fn().mockResolvedValue(responseFromChunks(
+      [new TextEncoder().encode(body)],
+      true,
+      undefined,
+      200,
+      {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        pragma: 'no-cache'
+      }
+    ));
+    const getClient = jest.fn().mockResolvedValue({ get });
+    const factory = { getClient } as unknown as AadHttpClientFactory;
+    const controller = new AbortController();
+
+    await expect(loadNacWorkbenchSnapshot(
+      factory,
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      controller.signal,
+      '2026-08-01T09:01:00Z'
+    )).resolves.toEqual(expect.objectContaining({ schemaVersion: 'nac.workbench.snapshot/v1' }));
+
+    expect(getClient).toHaveBeenCalledWith('api://funktion8.de/nac-bff');
+    expect(get).toHaveBeenCalledWith(
+      'https://func-nac-bff-test-funktion8.azurewebsites.net' +
+        '/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001/workbench-snapshot' +
+        '?purpose=view_synthetic_matter_workspace',
+      AadHttpClient.configurations.v1,
+      expect.objectContaining({
+        signal: controller.signal,
+        headers: expect.objectContaining({ Accept: 'application/json' })
+      })
+    );
+  });
+
+  it('normalizes the default workbench validation time to whole-second RFC3339', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-01T09:01:00.789Z'));
+    try {
+      const get = jest.fn().mockResolvedValue(responseFromChunks(
+        [new TextEncoder().encode(signedWorkbenchSnapshotJson())],
+        true,
+        undefined,
+        200,
+        {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          pragma: 'no-cache'
+        }
+      ));
+      const factory = {
+        getClient: jest.fn().mockResolvedValue({ get })
+      } as unknown as AadHttpClientFactory;
+
+      await expect(loadNacWorkbenchSnapshot(
+        factory,
+        VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+        new AbortController().signal
+      )).resolves.toEqual(expect.objectContaining({ schemaVersion: 'nac.workbench.snapshot/v1' }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('captures default validation time after the BFF response arrives', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-01T09:01:00.900Z'));
+    try {
+      const laterSnapshot = {
+        ...VALID_WORKBENCH_SNAPSHOT,
+        generatedAt: '2026-08-01T09:01:01Z',
+        access: {
+          ...VALID_WORKBENCH_SNAPSHOT.access,
+          issuedAt: '2026-08-01T09:01:01Z'
+        },
+        redaction: {
+          ...VALID_WORKBENCH_SNAPSHOT.redaction,
+          verifiedAt: '2026-08-01T09:01:01Z'
+        }
+      };
+      const get = jest.fn().mockImplementation(async () => {
+        jest.setSystemTime(new Date('2026-08-01T09:01:01.100Z'));
+        return responseFromChunks(
+          [new TextEncoder().encode(signedWorkbenchSnapshotJson(laterSnapshot))],
+          true,
+          undefined,
+          200,
+          {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            pragma: 'no-cache'
+          }
+        );
+      });
+      const factory = {
+        getClient: jest.fn().mockResolvedValue({ get })
+      } as unknown as AadHttpClientFactory;
+
+      await expect(loadNacWorkbenchSnapshot(
+        factory,
+        VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+        new AbortController().signal
+      )).resolves.toEqual(expect.objectContaining({ generatedAt: '2026-08-01T09:01:01Z' }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['subject', { subjectId: 'actor:synthetic:other' }],
+    ['role', { role: 'runtime_service' }],
+    ['workspace', { workspaceId: 'notary_team_02' }],
+    ['matter', { matterId: 'NAC-SYN-MATTER-OTHER' }],
+    ['purpose', { purpose: 'view_other_matter' }]
+  ])('rejects workbench %s drift after hash verification', async (
+    _label,
+    accessOverride: Partial<typeof VALID_WORKBENCH_SNAPSHOT.access>
+  ) => {
+    const changed = {
+      ...VALID_WORKBENCH_SNAPSHOT,
+      access: { ...VALID_WORKBENCH_SNAPSHOT.access, ...accessOverride },
+      scope: {
+        ...VALID_WORKBENCH_SNAPSHOT.scope,
+        ...(accessOverride.workspaceId ? { workspaceId: accessOverride.workspaceId } : {}),
+        ...(accessOverride.matterId ? { matterId: accessOverride.matterId } : {}),
+        ...(accessOverride.purpose ? { purpose: accessOverride.purpose } : {})
+      },
+      matter: accessOverride.matterId
+        ? { ...VALID_WORKBENCH_SNAPSHOT.matter, id: accessOverride.matterId }
+        : VALID_WORKBENCH_SNAPSHOT.matter
+    };
+    const workbenchResponse = responseFromChunks(
+      [new TextEncoder().encode(signedWorkbenchSnapshotJson(changed))],
+      true,
+      undefined,
+      200,
+      {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        pragma: 'no-cache'
+      }
+    );
+    await expect(parseWorkbenchResponse(
+      workbenchResponse,
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      '2026-08-01T09:01:00Z'
+    )).rejects.toThrow('NAC_WORKBENCH_SCOPE_INVALID');
+  });
+
+  it('bounds chunked workbench responses at exactly 128 KiB', async () => {
+    const headers = {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      pragma: 'no-cache'
+    };
+    await expect(parseWorkbenchResponse(
+      responseFromChunks([new Uint8Array(80 * 1024), new Uint8Array((48 * 1024) + 1)], true, undefined, 200, headers),
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      '2026-08-01T09:01:00Z'
+    )).rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
+  });
+
+  it.each([401, 403])('maps workbench HTTP %i to the neutral access denial', async status => {
+    await expect(parseWorkbenchResponse(
+      response('{}', false, undefined, status),
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      '2026-08-01T09:01:00Z'
+    )).rejects.toThrow('NAC_BFF_ACCESS_DENIED');
+  });
+
+  it.each([
+    ['content type', { 'content-type': 'text/plain', 'cache-control': 'no-store', pragma: 'no-cache' }],
+    ['cache policy', { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public', pragma: 'no-cache' }],
+    ['pragma', { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', pragma: 'cache' }]
+  ])('rejects invalid workbench %s headers', async (_label, headers) => {
+    await expect(parseWorkbenchResponse(
+      responseFromChunks([new TextEncoder().encode(signedWorkbenchSnapshotJson())], true, undefined, 200, headers),
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      '2026-08-01T09:01:00Z'
+    )).rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
   });
 
   it.each([

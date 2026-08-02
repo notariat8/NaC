@@ -19,6 +19,10 @@ function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function normalizedNpmUserAgent() {
+  return (process.env.npm_config_user_agent || '').replace(/\s+ci\/[^\s]+$/u, '');
+}
+
 async function run() {
   childProcess.execFileSync(
     process.execPath,
@@ -108,7 +112,7 @@ async function run() {
     buildArtifacts,
     runtime: {
       nodeVersion: process.version,
-      npmUserAgent: process.env.npm_config_user_agent || '',
+      npmUserAgent: normalizedNpmUserAgent(),
       playwrightVersion: require('playwright/package.json').version,
       typescriptVersion: require('typescript/package.json').version,
       heftVersion: require('@rushstack/heft/package.json').version

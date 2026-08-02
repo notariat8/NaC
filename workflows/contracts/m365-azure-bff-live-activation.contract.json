@@ -758,7 +758,7 @@
     "spfx_solution": {
       "name": "nac-bpmn-viewer-client-side-solution",
       "product_id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
-      "version": "0.2.0.0",
+      "version": "0.3.0.0",
       "package_path": "spfx/nac-bpmn-viewer/sharepoint/solution/nac-bpmn-viewer.sppkg",
       "site_scoped": true,
       "skip_feature_deployment": false,

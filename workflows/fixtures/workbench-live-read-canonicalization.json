@@ -1,0 +1,20 @@
+{
+  "schema_version": "nac.workbench-live-read-canonicalization-fixture/v1",
+  "content": {
+    "z": null,
+    "": "bmp-private-use",
+    "𐀀": "astral",
+    "unicode": "Prüfung",
+    "nested": {
+      "quote": "A\"B",
+      "line": "A\nB",
+      "backslash": "A\\B"
+    },
+    "flags": [
+      true,
+      false
+    ]
+  },
+  "canonical_utf8_json": "{\"flags\":[true,false],\"nested\":{\"backslash\":\"A\\\\B\",\"line\":\"A\\nB\",\"quote\":\"A\\\"B\"},\"unicode\":\"Prüfung\",\"z\":null,\"\":\"bmp-private-use\",\"𐀀\":\"astral\"}",
+  "sha256": "690ab01b52465bafab65f6d211126cae576e551f24ecf4b72a3260d5e4e5f1cb"
+}

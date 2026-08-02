@@ -12,6 +12,7 @@ from typing import Any, Callable
 import uuid
 
 from .test_environment import TestEnvironmentBff, ValidatedClaims
+from .workbench_endpoint import WorkbenchEndpoint, WorkbenchResponse
 
 
 REQUEST_TIMEOUT_SECONDS = 20.0
@@ -24,6 +25,7 @@ def create_fastapi_app(
     *,
     bff: TestEnvironmentBff,
     validated_claims_dependency: Callable[..., ValidatedClaims],
+    workbench_endpoint: WorkbenchEndpoint | None = None,
     ready: bool = True,
 ) -> Any:
     """Create the ASGI adapter around already validated Entra claims.
@@ -36,7 +38,7 @@ def create_fastapi_app(
 
     try:
         from fastapi import Depends, FastAPI, Request
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse, Response
     except ImportError as exc:  # pragma: no cover - exercised by container wiring
         raise RuntimeError("FastAPI is available only in the nac-bff runtime image") from exc
 
@@ -59,17 +61,40 @@ def create_fastapi_app(
         try:
             response = await call_next(request)
         except TimeoutError:
-            response = JSONResponse(
-                status_code=503,
-                content={"detail": "service unavailable"},
+            response = (
+                _workbench_http_response(Response, _workbench_error(503))
+                if _is_workbench_path(request.url.path)
+                else JSONResponse(
+                    status_code=503,
+                    content={"detail": "service unavailable"},
+                )
             )
         except Exception:
-            response = JSONResponse(
-                status_code=500,
-                content={"detail": "internal server error"},
+            response = (
+                _workbench_http_response(Response, _workbench_error(503))
+                if _is_workbench_path(request.url.path)
+                else JSONResponse(
+                    status_code=500,
+                    content={"detail": "internal server error"},
+                )
             )
         finally:
             _REQUEST_DEADLINE.reset(deadline_token)
+        if _is_workbench_path(request.url.path):
+            if response.status_code == 401:
+                authenticate = response.headers.get("WWW-Authenticate")
+                response = _workbench_http_response(
+                    Response,
+                    _workbench_error(401),
+                    authenticate=authenticate,
+                )
+            elif response.status_code == 403:
+                response = _workbench_http_response(
+                    Response,
+                    _workbench_error(403),
+                )
+            elif response.status_code >= 500:
+                response = _workbench_http_response(Response, _workbench_error(503))
         for name, value in _security_headers().items():
             response.headers[name] = value
         response.headers["X-Correlation-ID"] = correlation_id
@@ -128,6 +153,37 @@ def create_fastapi_app(
         methods=["GET"],
     )
 
+    if workbench_endpoint is not None:
+        async def get_workbench_snapshot(
+            request: object,
+            workspace_id: str,
+            matter_id: str,
+            claims: object = Depends(validated_claims_dependency),
+        ):
+            purpose, request_filters = _parse_workspace_query(
+                request.query_params.multi_items()
+            )
+            response = await run_sync_with_request_budget(
+                workbench_endpoint.get_snapshot,
+                claims=claims,
+                workspace_id=workspace_id,
+                matter_id=matter_id,
+                purpose=purpose,
+                request_filters=request_filters,
+            )
+            if response.status_code == 200:
+                readiness.mark_ready()
+            elif response.status_code == 503:
+                readiness.mark_unavailable()
+            return _workbench_http_response(Response, response)
+
+        get_workbench_snapshot.__annotations__["request"] = Request
+        app.add_api_route(
+            "/v1/workspaces/{workspace_id}/matters/{matter_id}/workbench-snapshot",
+            get_workbench_snapshot,
+            methods=["GET"],
+        )
+
     return app
 
 
@@ -184,8 +240,15 @@ def create_unconfigured_app() -> Any:
         graph_rest_port=_UnavailableGraph(),
         bpmn_asset_port=_UnavailableBpmnAsset(),
     )
+    workbench_endpoint = WorkbenchEndpoint(
+        expected_tenant_id="unconfigured",
+        access_decision_port=_DenyAllAccess(),
+        graph_rest_port=_UnavailableGraph(),
+        bpmn_asset_port=_UnavailableBpmnAsset(),
+    )
     return create_fastapi_app(
         bff=bff,
+        workbench_endpoint=workbench_endpoint,
         validated_claims_dependency=_no_validated_claims,
         ready=False,
     )
@@ -216,6 +279,48 @@ def _security_headers() -> dict[str, str]:
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
     }
+
+
+def _workbench_error(status_code: int) -> WorkbenchResponse:
+    if status_code == 401:
+        code = "AUTHENTICATION_REQUIRED"
+    elif status_code == 403:
+        code = "ACCESS_DENIED"
+    else:
+        code = "SERVICE_UNAVAILABLE"
+    body = {"status": status_code, "error": {"code": code}}
+    body_bytes = (
+        f'{{"status":{status_code},"error":{{"code":"{code}"}}}}'
+    ).encode("ascii")
+    return WorkbenchResponse(
+        status_code=status_code,
+        body=body,
+        body_bytes=body_bytes,
+    )
+
+
+def _workbench_http_response(
+    response_type: Any,
+    response: WorkbenchResponse,
+    *,
+    authenticate: str | None = None,
+) -> Any:
+    headers = {
+        **_security_headers(),
+        "Content-Type": "application/json; charset=utf-8",
+    }
+    if authenticate:
+        headers["WWW-Authenticate"] = authenticate
+    return response_type(
+        content=response.body_bytes,
+        status_code=response.status_code,
+        headers=headers,
+        media_type=None,
+    )
+
+
+def _is_workbench_path(path: object) -> bool:
+    return isinstance(path, str) and path.endswith("/workbench-snapshot")
 
 
 class _StagedReadiness:

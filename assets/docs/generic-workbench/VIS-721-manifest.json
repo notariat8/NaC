@@ -21,11 +21,11 @@
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "65c2de9c6e346ca28e0fb3b29ad2f94e5717a0514eb373b58f9aa4243bbb6c6a"
+      "sha256": "9fc4884b7735b9cf025a851f2c86b8caa86ece7d9bbc89701f16c5f9c7f5839c"
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "337c8e4f57edd11cc6ae6f62b4aecc90814ce747d1fded56f1cc48d030c81d29"
+      "sha256": "dc07b80b06ae0ad29c3b368c16eeabe070278c6d0a23a27689fb47c1c8ea26c2"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
@@ -33,11 +33,11 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
-      "sha256": "0e5f5da6d1aa35fee37d1385cb528531ce8f411674c64ea4313b9dc5cdbe04cb"
+      "sha256": "d7de89e8fa6267cf09c6c5637a2459001db30bf33ab3cc06d6c8ebd68f02cdcc"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package-lock.json",
-      "sha256": "0e8c78fa2a6e3d0b064a44c7ca0e876c4a4b9f463c6e824b35b0d576f274d019"
+      "sha256": "dd03638743ebf291ddce8626306624d04cab08676590af6a2bb92f4e19537e06"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/WorkbenchContracts.ts",
@@ -49,11 +49,11 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
-      "sha256": "05147ec307c816eaff90ae1c2121e6592a8997445b8d8b09d02d508d6cefc43f"
+      "sha256": "2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts",
-      "sha256": "b55dde377a0579472551dd17846eacd039434e0c50323e085a5456c436abbea3"
+      "sha256": "fcdb4d90b21b19e5bb97ddd96816e14a4d6067109c4113b9c0e9fe0a1d5f92b9"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/react/WorkbenchPanel.tsx",
@@ -73,11 +73,11 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
-      "sha256": "69a3e7c2f67712792837e81577e964b85ee62aeaae212bbd6b563a8add82a6e2"
+      "sha256": "eea7cb3b87392c679d9e4c83adac179f61aecd62f5d7e4ab68f32ce02073d421"
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
-      "sha256": "5665314473ac9344ad83e4f16707ed55882b3a61189b88ad509f87f9f3f8179e"
+      "sha256": "eaa230176eda5889dc4d6a7715a7769bea129a061df4e88a2afd20cbcb7d21e9"
     },
     {
       "relativePath": "workflows/verification-contracts/generic-workbench.verification.json",
@@ -99,11 +99,11 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
-      "sha256": "413ddc8ff51889cda08632c77d2efc678033bc4980a697db27ba2b0bcc162766"
+      "sha256": "cf0f2192996fc09c8af564872864fdea98fff05f03c4e0801fed15df38125cc9"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js",
-      "sha256": "4384e204c577843552efd29718bbf8a68e1eafcb5651d52c9af1fd10d2cb82d0"
+      "sha256": "9aabd37d0abf046c8e5a623e66e3928ec5d2a53a3ea26047e707831708175cb9"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js",
@@ -115,8 +115,8 @@
     }
   ],
   "runtime": {
-    "nodeVersion": "v22.23.1",
-    "npmUserAgent": "npm/10.9.8 node/v22.23.1 linux x64 workspaces/false",
+    "nodeVersion": "v22.14.0",
+    "npmUserAgent": "npm/10.9.2 node/v22.14.0 linux x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "typescriptVersion": "5.8.3",
     "heftVersion": "1.2.17"

@@ -63,12 +63,13 @@ Anzeigetexten unzulässig.
 
 ## Repository- und Hostgrenze
 
-SPFx/Teams ist der erste kompilierte Hostkandidat in der Microsoft-365-
-Umgebung. Der Foundation-Slice wird im SPFx-Paket gebaut und getestet, ist aber
-noch nicht in das produktive Webpart importiert. Deshalb verändert er weder
-das ausgelieferte Webpart noch dessen Laufzeitdatenpfad. Die Live-Bindung folgt
-erst, wenn der BFF den Snapshot-Vertrag `nac.workbench.snapshot/v1` ausliefert
-und der Host die kurze Lease auch im laufenden Betrieb erneuert.
+SPFx/Teams ist der erste gebundene Host in der Microsoft-365-Umgebung. Issue
+[#725](https://github.com/notariat8/NaC/issues/725) ergänzt den authentisierten
+BFF-Snapshot-Endpunkt und importiert die Workbench in das Webpart. Die
+Repository-Bindung bedeutet noch kein Tenant-Deployment: Paket, BFF und Host
+werden erst aus geprüftem `main` ausschließlich in `notary_team_01` aktiviert.
+Der Host erneuert die kurze Lease vor Ablauf und verwirft bei jeder fehlenden
+Bindung oder verspäteten Request-Generation den vorherigen Snapshot.
 Die CI übergibt die kompilierten Workbench-Artefakte aus dem SPFx-Build an den
 Strict-Gate-Job; dort werden sie byteweise gegen den visuellen Nachweis geprüft.
 
@@ -79,3 +80,7 @@ veröffentlichter Consumer existiert und der Vertrag stabil versioniert ist.
 Vertrag: [generic-workbench.contract.json](../../../workflows/contracts/generic-workbench.contract.json)
 
 Verification Contract: [generic-workbench.verification.json](../../../workflows/verification-contracts/generic-workbench.verification.json)
+
+Live-Binding-Vertrag: [workbench-live-read-binding.contract.json](../../../workflows/contracts/workbench-live-read-binding.contract.json)
+
+Live-Binding-Verification: [workbench-live-read-binding.verification.json](../../../workflows/verification-contracts/workbench-live-read-binding.verification.json)

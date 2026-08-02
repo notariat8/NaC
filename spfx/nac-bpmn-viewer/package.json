@@ -1,6 +1,6 @@
 {
   "name": "@notariat8/nac-bpmn-viewer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "node": ">=22.14.0 < 23.0.0"
@@ -15,6 +15,8 @@
     "visual:capture": "node scripts/capture-role-deadline-visual-evidence.cjs",
     "workbench:fixture": "node scripts/generate-workbench-visual-fixture.cjs",
     "workbench:capture": "heft test --clean --production && node scripts/capture-workbench-visual-evidence.cjs",
+    "workbench:live:fixture": "node scripts/generate-workbench-live-read-visual-fixture.cjs",
+    "workbench:live:capture": "heft test --clean --production && node scripts/capture-workbench-live-read-visual-evidence.cjs",
     "validate:read-only": "node scripts/validate-read-only-boundary.cjs"
   },
   "dependencies": {

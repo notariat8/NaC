@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, Mapping
 
 from nac_bff.synthetic_workspace_graph import (
@@ -11,6 +11,7 @@ from nac_bff.synthetic_workspace_graph import (
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
+    ALLOWED_DEPUTY_REASON,
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
 )
@@ -18,7 +19,14 @@ from nac_bff.test_environment import (
 
 SYNTHETIC_NOTARY_TEAM = "NaC-Notar-01"
 ALLOWED_DEPUTY_ROLES = frozenset({"NotarVertretung", "SachbearbeitungVertretung"})
+WORKBENCH_DEPUTY_ROLES = {
+    "NotarVertretung": "deputy_notary",
+    "SachbearbeitungVertretung": "deputy_clerk",
+}
 APPROVAL_ACTIONS = frozenset({"GrantApproved", "DeputyGrantApproved"})
+ACCESS_DECISION_ID = f"access:{ALLOWED_MATTER_ID}:1"
+ACCESS_DECISION_VERSION = "policy-v1"
+MAX_ACCESS_LEASE_SECONDS = 300
 
 
 class LiveAccessDecisionAdapter:
@@ -110,8 +118,21 @@ class LiveAccessDecisionAdapter:
         if len(notaries) != 1:
             return AccessDecision.deny()
         lead_notary = next(iter(notaries))
-        if actor_id == lead_notary or actor_id in clerks:
-            return AccessDecision.assigned()
+        reference = _reference_time(self)
+        if actor_id == lead_notary:
+            return _allowed_decision(
+                mode="assigned",
+                actor_id=actor_id,
+                role="notary",
+                reference=reference,
+            )
+        if actor_id in clerks:
+            return _allowed_decision(
+                mode="assigned",
+                actor_id=actor_id,
+                role="notary_clerk",
+                reference=reference,
+            )
 
         grants = read_bounded_collection(
             self._client,
@@ -137,7 +158,7 @@ class LiveAccessDecisionAdapter:
         if len(matching) != 1:
             return AccessDecision.deny()
         grant = matching[0]
-        if not _valid_grant(grant, lead_notary=lead_notary, reference=_reference_time(self)):
+        if not _valid_grant(grant, lead_notary=lead_notary, reference=reference):
             return AccessDecision.deny()
 
         correlation_id = _text(grant.get("AuditCorrelationId"))
@@ -154,12 +175,54 @@ class LiveAccessDecisionAdapter:
         )
         if len(audits) != 1 or not _valid_audit(audits[0], grant):
             return AccessDecision.deny()
-        return AccessDecision.deputy()
+        return _allowed_decision(
+            mode="deputy",
+            actor_id=actor_id,
+            role=WORKBENCH_DEPUTY_ROLES[_text(grant.get("GrantedRole"))],
+            reference=reference,
+            maximum_expiry=_timestamp(grant.get("ValidUntil")),
+            reason=_text(grant.get("Reason")),
+            active_approved_grant=True,
+            matching_audit_event=True,
+        )
 
 
 # Stable descriptive aliases for dependency-injection composition roots.
 LiveAccessDecisionPortAdapter = LiveAccessDecisionAdapter
 GraphAccessDecisionPortAdapter = LiveAccessDecisionAdapter
+
+
+def _allowed_decision(
+    *,
+    mode: str,
+    actor_id: str,
+    role: str,
+    reference: datetime,
+    maximum_expiry: datetime | None = None,
+    reason: str | None = None,
+    active_approved_grant: bool = False,
+    matching_audit_event: bool = False,
+) -> AccessDecision:
+    expires = reference + timedelta(seconds=MAX_ACCESS_LEASE_SECONDS)
+    if maximum_expiry is not None:
+        expires = min(expires, maximum_expiry)
+    metadata = {
+        "decision_id": ACCESS_DECISION_ID,
+        "decision_version": ACCESS_DECISION_VERSION,
+        "subject_id": actor_id,
+        "role": role,
+        "workspace_id": ALLOWED_WORKSPACE_ID,
+        "matter_id": ALLOWED_MATTER_ID,
+        "purpose": ALLOWED_PURPOSE,
+        "issued_at": _wire_timestamp(reference),
+        "expires_at": _wire_timestamp(expires),
+        "reason": reason,
+        "active_approved_grant": active_approved_grant,
+        "matching_audit_event": matching_audit_event,
+    }
+    if mode == "assigned":
+        return AccessDecision.assigned(**metadata)
+    return AccessDecision.deputy(**metadata)
 
 
 def _valid_grant(grant: Mapping[str, Any], *, lead_notary: str, reference: datetime) -> bool:
@@ -173,7 +236,7 @@ def _valid_grant(grant: Mapping[str, Any], *, lead_notary: str, reference: datet
         and _text(grant.get("GrantId")) != ""
         and _single_user_id(grant.get("FromUser")) == lead_notary
         and _text(grant.get("GrantedRole")) in ALLOWED_DEPUTY_ROLES
-        and _text(grant.get("Reason")) != ""
+        and _text(grant.get("Reason")) == ALLOWED_DEPUTY_REASON
         and valid_from < valid_until
         and valid_from <= reference < valid_until
         and _single_user_id(grant.get("ApprovedBy")) == lead_notary
@@ -207,6 +270,12 @@ def _timestamp(value: object) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError("timestamp requires timezone")
     return parsed.astimezone(UTC)
+
+
+def _wire_timestamp(value: datetime) -> str:
+    return value.astimezone(UTC).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
 
 
 def _user_ids(value: object, *, allow_multiple: bool) -> frozenset[str]:

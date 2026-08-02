@@ -1,7 +1,7 @@
 {
   "schema_version": "nac.generic-workbench-contract/v1",
   "contract_id": "nac.generic_workbench",
-  "status": "foundation_read_only",
+  "status": "live_read_binding_review",
   "leading_issue": "https://github.com/notariat8/NaC/issues/721",
   "ownership": {
     "repository": "notariat8/NaC",
@@ -45,10 +45,12 @@
     "failure": "no_snapshot"
   },
   "hosts": {
-    "current": [],
-    "compiled_candidates": ["spfx_teams"],
-    "future": ["spfx_teams_live_webpart", "office_addin", "local_onprem_shell"],
-    "live_webpart_binding": false,
+    "current": ["spfx_teams"],
+    "compiled_candidates": [],
+    "future": ["office_addin", "local_onprem_shell"],
+    "live_webpart_binding": true,
+    "tenant_deployment_performed": false,
+    "tenant_deployment": "owner_gated_after_reviewed_main",
     "business_rules_in_host": false
   },
   "validation_commands": [
