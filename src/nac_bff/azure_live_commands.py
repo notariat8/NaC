@@ -921,18 +921,50 @@ def _interruption_identity_projection(
 
 
 def _interruption_operation_projection(value: list[Any]) -> list[dict[str, str]]:
-    projected: list[dict[str, str]] = []
+    projected: dict[tuple[str, str], dict[str, str]] = {}
+    output_evaluation_seen = False
     for item in value:
         properties = item.get("properties") if isinstance(item, dict) else None
-        target = properties.get("targetResource") if isinstance(properties, dict) else None
-        if not isinstance(target, dict):
+        if not isinstance(properties, dict):
             raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID")
-        projected.append({
-            "id": str(target.get("id", "")).lower(),
-            "type": str(target.get("resourceType", "")).lower(),
-            "provisioning_state": str(properties.get("provisioningState", "")),
-        })
-    return sorted(projected, key=lambda item: (item["type"], item["id"]))
+        target = properties.get("targetResource")
+        if not isinstance(target, dict):
+            if (
+                target is not None
+                or output_evaluation_seen
+                or properties.get("provisioningOperation")
+                != "EvaluateDeploymentOutput"
+                or properties.get("provisioningState") != "Succeeded"
+                or properties.get("statusCode") != "OK"
+            ):
+                raise ValueError(
+                    "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID"
+                )
+            output_evaluation_seen = True
+            continue
+        resource_id = target.get("id")
+        resource_type = target.get("resourceType")
+        if (
+            not isinstance(resource_id, str)
+            or not resource_id
+            or not isinstance(resource_type, str)
+            or not resource_type
+        ):
+            raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID")
+        operation = {
+            "id": resource_id.lower(),
+            "type": resource_type.lower(),
+            "provisioning_state": properties.get("provisioningState"),
+        }
+        if (
+            not operation["id"]
+            or not operation["type"]
+            or operation["provisioning_state"] != "Succeeded"
+        ):
+            raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID")
+        key = (operation["id"], operation["type"])
+        projected[key] = operation
+    return sorted(projected.values(), key=lambda item: (item["type"], item["id"]))
 
 
 def resolve_azure_cli_binary(

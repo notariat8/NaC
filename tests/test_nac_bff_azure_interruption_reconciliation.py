@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import replace
 from datetime import datetime, timezone
 import hashlib
@@ -871,6 +872,53 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
         )
         self.assertEqual(marker["status"], "MIDRUN_RELEASED")
+
+    def test_raw_duplicate_operations_are_not_accepted_as_canonical(self):
+        from tests.test_nac_bff_azure_interruption_baseline import (
+            _deployment,
+            _identity_binding,
+            _inventory,
+            _live_resource_state,
+            _operations,
+            _prepared,
+            _load_expectation,
+        )
+
+        run_dir = self.root / DEFAULT_OUTPUT_ROOT / ACTIVATION_HASH
+        _prepared(
+            run_dir,
+            activation_hash=ACTIVATION_HASH,
+            commit=COMMIT,
+            tree=TREE,
+        )
+        expectation, error = _load_expectation(
+            run_dir,
+            {"activation_hash": ACTIVATION_HASH},
+            _request(),
+        )
+        self.assertIsNone(error)
+        assert expectation is not None
+        raw_operations = _operations()
+        raw_operations.append(copy.deepcopy(raw_operations[0]))
+        observation = {
+            **_observation(),
+            "resource_inventory": _inventory(),
+            "provider_classification": BICEP_BASELINE_EXACT,
+            "deployment": _deployment(expectation),
+            "deployment_operations": raw_operations,
+            "identity_binding": _identity_binding(),
+            "live_resource_state": _live_resource_state(),
+            "baseline_expectation_sha256": _sha256_json(expectation),
+        }
+
+        result = self._inspect(_ObservationPort([observation, observation]))
+
+        self.assertEqual(
+            result["error"]["code"], "PROVIDER_OBSERVATION_INVALID"
+        )
+        self.assertNotIn("approval_bindings", result)
+        for path in self._lock_paths():
+            self.assertEqual(self._marker(path)["status"], "HELD")
 
     def test_terminalization_is_idempotent_after_all_journals_released(self):
         inspection = self._inspect()

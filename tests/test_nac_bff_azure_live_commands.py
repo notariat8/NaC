@@ -2501,6 +2501,17 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 }
                 for item in operations
             ]
+            raw_operations.extend([
+                *(copy.deepcopy(raw_operations[index]) for index in range(4)),
+                {
+                    "properties": {
+                        "provisioningOperation": "EvaluateDeploymentOutput",
+                        "provisioningState": "Succeeded",
+                        "statusCode": "OK",
+                        "targetResource": None,
+                    }
+                },
+            ])
             managed = identity["managed_identity"]
             raw_managed = {
                 "id": managed["id"],
@@ -2762,6 +2773,96 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 result["deployment"]["bff_api_audience"], CLIENT_ID
             )
             self.assertTrue(result["live_resource_state"]["security_properties_exact"])
+
+    def test_interruption_operation_projection_rejects_unsafe_metadata(self) -> None:
+        valid = {
+            "properties": {
+                "provisioningOperation": "EvaluateDeploymentOutput",
+                "provisioningState": "Succeeded",
+                "statusCode": "OK",
+                "targetResource": None,
+            }
+        }
+        invalid_rows = (
+            {"properties": {**valid["properties"], "provisioningState": "Failed"}},
+            {"properties": {**valid["properties"], "provisioningOperation": "Create"}},
+            {"properties": {**valid["properties"], "statusCode": "Accepted"}},
+        )
+        for row in invalid_rows:
+            with self.subTest(row=row):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+                ):
+                    azure_live_commands._interruption_operation_projection([row])
+        with self.assertRaisesRegex(
+            ValueError,
+            "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+        ):
+            azure_live_commands._interruption_operation_projection([valid, valid])
+
+        targeted = {
+            "properties": {
+                "provisioningState": "Succeeded",
+                "targetResource": {
+                    "id": "/subscriptions/test/providers/Test/items/one",
+                    "resourceType": "Test/items",
+                },
+            }
+        }
+        for field, value in (("id", None), ("id", 1), ("resourceType", [])):
+            malformed = copy.deepcopy(targeted)
+            malformed["properties"]["targetResource"][field] = value
+            with self.subTest(field=field, value=value):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+                ):
+                    azure_live_commands._interruption_operation_projection([
+                        malformed
+                    ])
+
+    def test_interruption_operation_projection_deduplicates_only_exact_targets(self) -> None:
+        operation = {
+            "properties": {
+                "provisioningState": "Succeeded",
+                "targetResource": {
+                    "id": "/subscriptions/test/resourceGroups/test/providers/Test/items/one",
+                    "resourceType": "Test/items",
+                },
+            }
+        }
+        self.assertEqual(
+            azure_live_commands._interruption_operation_projection([
+                operation,
+                copy.deepcopy(operation),
+            ]),
+            [{
+                "id": operation["properties"]["targetResource"]["id"].lower(),
+                "type": "test/items",
+                "provisioning_state": "Succeeded",
+            }],
+        )
+        conflicting = copy.deepcopy(operation)
+        conflicting["properties"]["targetResource"]["resourceType"] = (
+            "Test/otherItems"
+        )
+        projected = azure_live_commands._interruption_operation_projection([
+            operation,
+            conflicting,
+        ])
+        self.assertEqual(len(projected), 2)
+
+        failed = copy.deepcopy(operation)
+        failed["properties"]["provisioningState"] = "Failed"
+        with self.assertRaisesRegex(
+            ValueError,
+            "AZURE_INTERRUPTION_DEPLOYMENT_OPERATION_INVALID",
+        ):
+            azure_live_commands._interruption_operation_projection([
+                operation,
+                failed,
+            ])
 
     def test_interruption_observation_uses_only_exact_read_commands(self) -> None:
         calls: list[tuple[str, ...]] = []

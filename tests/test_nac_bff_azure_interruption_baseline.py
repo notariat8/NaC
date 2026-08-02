@@ -559,6 +559,22 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
             _inventory(), _deployment(expectation), duplicate_operations,
             _identity_binding(),
         ))
+        cases.append((
+            _inventory(), _deployment(expectation), _operations()[:-1],
+            _identity_binding(),
+        ))
+        cases.append((
+            _inventory(), _deployment(expectation),
+            _operations() + [copy.deepcopy(_operations()[0])],
+            _identity_binding(),
+        ))
+        type_conflict = _operations()
+        conflicting = copy.deepcopy(type_conflict[0])
+        conflicting["type"] = "microsoft.example/conflicting"
+        cases.append((
+            _inventory(), _deployment(expectation),
+            type_conflict + [conflicting], _identity_binding(),
+        ))
         extra = _inventory() + [copy.deepcopy(_inventory()[0])]
         cases.append((
             extra, _deployment(expectation), _operations(),
