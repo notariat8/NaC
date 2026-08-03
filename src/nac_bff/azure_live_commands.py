@@ -27,6 +27,7 @@ from nac_bff.azure_cli_sealed_runtime import (
     prepare_sealed_azure_cli_runtime,
     sealed_runtime_failure_code,
 )
+from nac_bff.azure_performance_monitor import is_metrics_url, monitor_policy_sha256
 from nac_m365_graph.sealed_toolchain import (
     SealedToolchainError,
     sealed_artifacts,
@@ -168,6 +169,7 @@ _PYTHON_NAME_RE = re.compile(r"python(?:\d+(?:\.\d+)*)?\Z")
 _MAX_CLOUD_SELECTION_BYTES = 4096
 _MAX_INTERPRETER_LINKS = 8
 _FILE_CHUNK_SIZE = 1024 * 1024
+_MONITOR_EXECUTION_AUTHORITY = object()
 
 
 class AzureCliAdapter:
@@ -193,6 +195,37 @@ class AzureCliAdapter:
             expected_binary_sha256=self._expected_binary_sha256,
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
+        )
+
+    def run_monitor_metrics(
+        self,
+        argv: object,
+        *,
+        live_action_capability: object,
+        target_binding_sha256: str,
+    ) -> dict[str, object]:
+        command, family, _code = _validated_command(argv)
+        if (
+            command is None
+            or family != ("rest",)
+            or not _is_monitor_metrics_command(command)
+        ):
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        _authorize_monitor_metrics(
+            live_action_capability,
+            target_binding_sha256=target_binding_sha256,
+        )
+        return _run_azure_cli(
+            command,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=self._timeout_seconds,
+            _monitor_execution_authority=_MONITOR_EXECUTION_AUTHORITY,
         )
 
     def run_with_timeout(
@@ -1025,12 +1058,43 @@ def run_azure_cli(
 ) -> dict[str, object]:
     """Run one allowlisted Azure CLI command and return parsed JSON only."""
 
+    return _run_azure_cli(
+        argv,
+        binary=binary,
+        expected_binary_sha256=expected_binary_sha256,
+        environ=environ,
+        timeout_seconds=timeout_seconds,
+        bound_artifacts=bound_artifacts,
+    )
+
+
+def _run_azure_cli(
+    argv: object,
+    *,
+    binary: str | os.PathLike[str] | None = None,
+    expected_binary_sha256: str | None = None,
+    environ: Mapping[str, str] | None = None,
+    timeout_seconds: float = 120,
+    bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
+    _monitor_execution_authority: object | None = None,
+) -> dict[str, object]:
+    """Internal executor; Monitor authority is not exposed by the public API."""
+
     command, family, validation_code = _validated_command(argv)
     if command is None or family is None:
         return _command_result(
             ok=False,
             code=validation_code,
             command=None,
+        )
+    if (
+        _is_monitor_metrics_command(command)
+        and _monitor_execution_authority is not _MONITOR_EXECUTION_AUTHORITY
+    ):
+        return _command_result(
+            ok=False,
+            code="AZURE_CLI_COMMAND_BLOCKED",
+            command=family,
         )
 
     bindings = tuple((bound_artifacts or {}).items())
@@ -1461,7 +1525,7 @@ def _resource_detail_type_from_id(value: str) -> str | None:
 
 
 def _rest_options_valid(options: dict[str, tuple[str, ...]]) -> bool:
-    return options in (
+    if options in (
         {
             "--method": ("post",),
             "--url": (_RESOURCE_GRAPH_URL,),
@@ -1471,6 +1535,60 @@ def _rest_options_valid(options: dict[str, tuple[str, ...]]) -> bool:
             "--method": ("post",),
             "--url": (_APP_SETTINGS_URL,),
         },
+    ):
+        return True
+    return (
+        set(options) == {"--method", "--url"}
+        and options["--method"] == ("get",)
+        and len(options["--url"]) == 1
+        and is_metrics_url(options["--url"][0])
+    )
+
+
+def _rest_url(values: tuple[str, ...]) -> bool:
+    return len(values) == 1 and (
+        values[0] in {_RESOURCE_GRAPH_URL, _APP_SETTINGS_URL}
+        or is_metrics_url(values[0])
+    )
+
+
+def _is_monitor_metrics_command(command: Sequence[str]) -> bool:
+    try:
+        if not command or command[0] != "rest":
+            return False
+        options: dict[str, str] = {}
+        index = 1
+        while index < len(command):
+            option = command[index]
+            if index + 1 >= len(command) or not option.startswith("--"):
+                return False
+            options[option] = command[index + 1]
+            index += 2
+        return (
+            options.get("--method") == "get"
+            and isinstance(options.get("--url"), str)
+            and is_metrics_url(options["--url"])
+        )
+    except (IndexError, TypeError):
+        return False
+
+
+def _authorize_monitor_metrics(
+    capability: object,
+    *,
+    target_binding_sha256: str,
+) -> None:
+    from nac_bff.azure_performance_authorization import (
+        MONITOR_READ,
+        _authorize_live_action,
+    )
+
+    _authorize_live_action(
+        capability,
+        action=MONITOR_READ,
+        target_binding_sha256=target_binding_sha256,
+        binding_sha256=monitor_policy_sha256(),
+        consume=True,
     )
 
 
@@ -1566,10 +1684,8 @@ _COMMAND_SCHEMAS = {
         required=frozenset({"--method", "--url"}),
         optional=frozenset({"--body"}),
         validators={
-            "--method": _single_exact("post"),
-            "--url": _single_in(frozenset({
-                _RESOURCE_GRAPH_URL, _APP_SETTINGS_URL,
-            })),
+            "--method": _single_in(frozenset({"get", "post"})),
+            "--url": _rest_url,
             "--body": _single_exact(_RESOURCE_GRAPH_BODY),
         },
     ),

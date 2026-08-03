@@ -1,18 +1,28 @@
 # M365-BFF-Performance-Abnahme
 
-Status: Offline-Plan, Safety-Runtime und Verification Contract implementiert;
-die Microsoft-365-/Azure-Preflight-Adapter und der Live-CLI-Befehl bleiben
-fail-closed und Owner-gated.
+Status: Issue #733 definiert einen Offline-Vertrag sowie Offline-Adapter für
+Azure Monitor und eine dedizierte Azure-Blob-Lease. Ein Live-CLI-Befehl und
+eine Live-Aktion sind nicht implementiert.
 
-Dieser Standard definiert eine kapazitätsgebundene Abnahme-Lane für den
-aktivierten M365-BFF-Read-Endpunkt. Die maschinenlesbare Quelle ist
-[m365-bff-performance-acceptance.contract.json](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json),
-der Verification-Harness steht in
-[m365-bff-performance-acceptance.verification.json](../../../workflows/verification-contracts/m365-bff-performance-acceptance.verification.json).
+Die maschinenlesbaren Quellen sind der
+[Abnahmevertrag](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
+und der
+[Verification Contract](../../../workflows/verification-contracts/m365-bff-performance-acceptance.verification.json).
+Der Modus lautet exakt `endpoint_scoped_conservative_measurement`.
 
-## Feste Route
+## Aussagegrenze
 
-Das fachliche Ziel ist unveränderlich:
+Diese Lane misst ausschließlich einen synthetischen GET-Endpunkt. Sie erhebt
+keine tenantweite SharePoint-Baseline, keine tenantweite Request-Allowance und
+keine tenantweite Resource-Unit-Allowance. Der Status dieser drei Aussagen ist
+explizit `NOT_CLAIMED`.
+
+Ergebnisse dürfen weder auf andere Endpunkte noch auf die SharePoint-Kapazität
+des Tenants hochgerechnet werden. Azure-Monitor-Werte sind konservativ
+verwendete, app-weite Deltas der gebundenen Function App. Sie sind keine
+Attribution zum gemessenen Endpunkt und keine SharePoint-Kapazitätsquelle.
+
+## Festes Ziel
 
 | Feld | Exakter Wert |
 | --- | --- |
@@ -25,175 +35,353 @@ Das fachliche Ziel ist unveränderlich:
 | Query | `purpose=view_synthetic_matter_workspace` |
 | Wire-Schema | `nac.workbench.snapshot/v1` |
 
-Redirects, alternative Ziele, Klartext-HTTP und Cache-Busting-Änderungen sind
-verboten. Jede versandte Anfrage muss exakt HTTP `200` erhalten, als
-`nac.workbench.snapshot/v1` validieren und darf höchstens `128 KiB` groß sein.
-Bodies werden im Speicher validiert und niemals aufbewahrt.
-Dabei verwendet der Transport denselben kanonischen Exact-Shape-Validator wie
-die serverseitige Workbench-Projektion. Unbekannte Top-Level- oder
-verschachtelte Felder führen zum Abort. Der gehashte Instanz-Epoch-Header wird
-nur bei einer erfolgreichen Antwort auf genau diese feste Workbench-Route
-ausgegeben, nicht auf Health-, Auth- oder Fehlerantworten.
+Redirects, alternative Hosts, Klartext-HTTP, Cache-Busting und automatische
+Retries sind verboten. Jede Antwort muss HTTP `200`, das exakte Wire-Schema
+und höchstens `128 KiB` erfüllen. Body und Body-Hash werden nicht gespeichert.
 
-## Kapazitäts-Preflight
+## Fester Messplan
 
-Die Live-Ausführung ist `BLOCKED`, solange keine aktuelle autoritative Evidence
-den SharePoint-Service-Tier des Tenants identifiziert und sowohl dessen
-Anfragen-Allowance als auch dessen Resource-Unit-Allowance verifiziert.
-Schätzungen, Defaults und abgeleitete Tiers sind keine autoritative Evidence.
+Ein vollständiger Lauf sendet exakt `500` synthetische GETs. Die
+Phasenallokationen lauten `1, 1, 90, 120, 288`; die wiederholten Intervalle
+lauten `10, 60, 300` Sekunden.
 
-Der Preflight misst außerdem die Baseline-Last des Tenants für Anfragen und RU
-und leitet die Testallokation aus einer konservativen RU-Obergrenze pro Anfrage
-ab. Baseline plus geplante Testlast müssen in jedem durch den autoritativen Tier
-definierten Allowance-Zeitfenster bei höchstens `50 %` beider verifizierter
-Allowances bleiben. Die niedrigere resultierende Rate begrenzt jede Phase.
-Evidence, die älter als 24 Stunden, an einen anderen Tenant/Workspace gebunden
-oder ohne verfügbare Allowance ist, lässt den Status auf `BLOCKED`.
-Die autoritative Bescheinigung wird vor jedem Target-Dispatch sowie nach jeder
-Idle-Phase erneut gelesen und validiert. Das Owner-Gate bindet den initial
-freigegebenen Hash; Zustand und Abschluss-Evidence binden zusätzlich den
-jeweils letzten gültigen Hash. Eine erneuerte Bescheinigung darf die
-freigegebenen Kapazitätsgrenzen nicht verändern.
+| Reihenfolge | Phase | GETs | Intervall |
+| --- | --- | ---: | ---: |
+| 1 | `cold_epoch_baseline` | 1 | sofort |
+| 2 | `cold_epoch_candidate` | 1 | nach 1.200 Sekunden Runner-Idle |
+| 3 | `endpoint_scoped_sample` | 90 | 10 Sekunden |
+| 4 | `sustained_2h` | 120 | 60 Sekunden |
+| 5 | `soak_24h` | 288 | 300 Sekunden |
 
-Der Azure-Preflight liest Azure Monitor und verlangt:
+Es gilt durchgehend Client-Concurrency `1` und ein inklusives Maximum von
+`6` Target-Dispatches pro Minute. Catch-up-Bursts, parallele Phasen und das
+Wiederholen abgeschlossener Phasen sind nicht zulässig. Jeder reservierte
+Versuch zählt; ein unklarer In-Flight-Ausgang wird nach einem Crash nicht
+erneut gesendet.
+Unmittelbar vor dem HTTP-Aufruf persistiert der Runner
+`transport_boundary_crossed` und erhöht
+`completed_network_dispatch_count`. Ein Crash nach dem Dispatch kann dadurch
+die finale Monitor-Untergrenze nicht verringern. Ziel-Drift oder ein anderer
+deterministischer Fehler nach der Reservierung, aber vor dieser Grenze wird
+dagegen als ein fehlgeschlagener Versuch mit null Netzwerk-Dispatches
+abgeschlossen, sodass valide terminale Evidence entsteht.
 
-- `AlwaysReadyUnits=0`
-- prognostizierte und beobachtete Execution Units der Abnahme höchstens am
-  inklusiven Cap von `120.000 GB-s`
-- fortlaufende Monitor-Verfügbarkeit während und nach dem Lauf
+Die Cold-Start-Klassifikation lautet nur dann `VERIFIED`, wenn die gebundene
+Serverinstanz oder Start-Epoch nachweislich gewechselt hat. Sonst lautet sie
+`INCONCLUSIVE`. Rohe Instanz- oder Epoch-Werte werden nicht gespeichert und
+die Infrastruktur wird für die Messung nicht neu gestartet.
 
-Dies sind Read-only-Prüfungen. Sie erlauben keine Kapazitäts-, Berechtigungs-,
-Konfigurations- oder Infrastrukturänderung.
-Azure-Monitor-Evidence besitzt einen eigenen Quellen-Hash und wird nicht als
-SharePoint-Kapazitätsquelle ausgegeben.
+## Azure Monitor
 
-## Globales Dispatch-Budget
+Der Offline-Adapter liegt in
+`src/nac_bff/azure_performance_monitor.py`. Er plant ausschließlich einen
+read-only ARM-GET auf den festen `Microsoft.Insights/metrics`-Pfad der
+gebundenen Function App. Zulässig sind exakt:
 
-Für alle Phasen gilt exakt ein inklusives globales Limit:
+- API-Version `2023-10-01`
+- Namespace `Microsoft.Web/sites`
+- `OnDemandFunctionExecutionUnits`
+- `OnDemandFunctionExecutionCount`
+- `AlwaysReadyFunctionExecutionUnits`
+- `AlwaysReadyUnits`
+- `AlwaysReadyFunctionExecutionCount`
+- Aggregation `Total`, Intervall `PT1M`
+- kein Dimensionfilter; app-weites, ungefiltertes Rollup
+
+Jede Metrik muss pro Teilfenster exakt eine dimensionslose `Total`-Serie
+liefern. Damit bleibt der Messwert ein konservatives app-weites Rollup und
+wird nicht einem Endpunkt oder einer Instanz zugerechnet. Die Fenster müssen
+UTC-minutengenau sein,
+pro ARM-Request zwischen `60` und `86.400` Sekunden liegen und beim Lesen seit
+mindestens `300` Sekunden abgeschlossen sein. Längere Gesamtzeiträume werden
+lückenlos in höchstens 24-stündige Requests zerlegt und anschließend kumulativ
+gebunden. Jede zurückgegebene Serie muss das vollständige `PT1M`-Raster ihres
+Teilfensters enthalten. Unbekannte Felder, fehlende oder mehrere Serien,
+Dimensionswerte, doppelte Zeitstempel sowie nicht gesetzte Fenster blockieren.
+
+Das finale gesetzte Fenster beginnt am Owner-gebundenen
+`monitor_window_anchor` und muss die terminale Messung vollständig abdecken:
+`monitor_window_end_utc` liegt bei oder nach `measurement_finished_at_utc`, und
+`monitor_observed_at_utc` folgt erst nach Fensterende plus 300 Sekunden
+Settlement. Der Abschlussnachweis bindet diese Zeitpunkte und
+`monitor_settlement_delay_seconds`. Ein früheres, bereits gesetztes Fenster reicht auch bei
+eingehaltenem Cap nicht aus.
+
+Bei einem erfolgreichen Lauf muss der Monitor mindestens alle `500` GETs
+zeigen. Bei einem fehlgeschlagenen Lauf ist die Untergrenze nicht die Zahl der
+reservierten Versuche, sondern `completed_network_dispatch_count`: nur
+tatsächlich bis zum Transport gelangte Netzwerkaufrufe werden verlangt. Ein
+Token- oder Zielbindungsfehler vor dem HTTP-Aufruf kann daher mit dem Wert null
+terminalisiert und die Lease trotzdem nachweisbar freigegeben werden.
+
+Die statische Projektion des vollständigen Laufs beträgt exakt `30,000 GB-s`.
+Vor jedem Dispatch wird das verbleibende Budget proportional zu den noch
+offenen GETs plus höchstens `30` noch nicht gesetzten Dispatches berechnet;
+dies entspricht fünf Minuten Monitor-Lag bei maximal sechs Dispatches pro
+Minute. Jede Safety-Beobachtung bindet diesen konservativen
+`projected_remaining_execution_units_gb_seconds`-Wert. Der innere
+Messnachweis darf diese Reserve noch enthalten. Erst der äußere, nach dem
+finalen Settlement erzeugte Abschlussnachweis muss den Wert exakt null binden;
+die separat benannte statische Gesamtlaufprojektion bleibt `30,000 GB-s`. Das app-weite beobachtete Delta plus die Projektion der
+verbleibenden GETs darf den inklusiven Cap von `120,000 GB-s` nicht
+überschreiten. Alle Always-Ready-Metriken müssen exakt null sein. Der gleiche
+Cap gilt nach dem finalen Settling; ein Überschreiten oder eine nicht
+verfügbare Beobachtung bricht fail-closed ab.
+Dies ist eine Ausführungsverbrauchsgrenze und keine monetäre Kostenschätzung.
+Monetäre Kosten bleiben `NOT_CLAIMED`: Gebühren für Ausführungsanzahl,
+Azure-Monitor-Abfragen oder -Ingestion, Blob-Speicher und -Transaktionen,
+Netzwerk, Steuern, Guthaben, Freikontingente und aktuelle Preise sind bewusst
+nicht Teil dieser Aussage.
+
+## Exklusive Lease
+
+Der dedizierte Offline-Adapter liegt in
+`src/nac_bff/azure_performance_lease.py`. Lease-Storage, BFF-Storage und
+WORM-Evidence-Storage müssen getrennt sein. Der Adapter darf nur diese
+Operationen anbieten:
+
+1. `acquire(-1)` mit einer vorab persistent gespeicherten UUID
+2. `assert_held`
+3. `release`
+
+Die persistente State Machine lautet exakt `ACQUIRE_INTENT`,
+`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`. Vor jedem
+Target-Dispatch muss dieselbe Lease-ID auf demselben gebundenen Blob als
+gehalten bestätigt werden. Resume setzt dieselbe Lease-ID, dieselbe
+Zielbindung und dieselbe Lease-Bindung voraus.
+
+Eine verlorene oder fremde Lease sowie Binding-Drift blockieren ohne Dispatch.
+Automatisches Reacquire, Lease-Break und Blob-Delete sind im Runtime-Adapter
+verboten. Ein separater Bootstrap-Adapter darf das exakt gebundene
+Null-Byte-Block-Blob einmalig mit `If-None-Match: *` anlegen oder ein bereits
+vorhandenes Blob nur per `HEAD` prüfen. Überschreiben ist ausgeschlossen; der
+starke ETag aus der Antwort wird zur späteren Lease-Bindung. Ein Ergebnis darf
+ausschließlich im dauerhaft geschriebenen Zustand
+`RELEASED` den Status `PASSED` erhalten. `HELD`, ein unklarer Release-Ausgang
+oder ein lediglich gesendeter Release reichen nicht aus.
+Der finale Release-Receipt muss den Zustand exact `RELEASED` ausweisen; die
+finale Evidence speichert ihn als `lease_release_lifecycle_state` und bindet
+zusätzlich `lease_release_state_evidence_sha256`.
+`target_binding_sha256` und `lease_binding_sha256` müssen zur Messung passen.
+Ein Lifecycle-State-Hash ohne exakten Zustand und passende target binding ist
+kein Release-Nachweis.
+
+Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
+vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren
+Koordinations-Resource-ID sowie Provisioner-Identität an den exakten
+`lease_binding_sha256`, den starken ETag, die Zielbindung und das Token-Subject
+(`oid`) binden. Envelope- und Lease-Hash werden Runtime-Execution-Bindungen.
+Der Lease-Adapter akzeptiert keinen rohen oder nur dekodierten JWT. Der
+Token-Provider muss ein versiegeltes Ergebnis liefern, das Scope,
+Identitätsbindung, `oid`, `tid`, `nbf` und `exp` bindet; `alg:none` wird vor
+State und HTTP verworfen. Die Claims `oid` und `tid` werden gegen die
+owner-gebundene Evidence geprüft. Zusätzlich müssen `aud` exakt
+`https://storage.azure.com` und die numerischen Zeitclaims
+`nbf <= trusted_clock < exp` erfüllen. Jede Abweichung blockiert vor State und
+ohne Acquire-Request.
+Nach einem echten Prozessneustart wird die Infrastruktur ausschließlich
+read-only neu attestiert. Serialisierte Safety-Evidence allein autorisiert
+nichts, weil die prozessgebundene Capability nicht serialisiert wird. Nur eine
+frische Re-Attestation mit identischem Owner, Tenant, Principal, Ziel und
+Lease-Bindung darf die bestehende Lease reconciliieren; der alte abgelaufene
+Nachweis autorisiert keine neue Mutation.
+
+Die Offline-IaC liegt unter
+`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet den
+bestehenden Entra-Service-Principal per Objekt-ID, erlaubt am Storage-Endpunkt
+nur eine explizite Client-IP und setzt die Netzwerk-Defaultregel auf `Deny`.
+Shared Keys, öffentliche Blobs sowie Delete-, Owner- und Container-DataActions
+bleiben ausgeschlossen. Die exakt pfadgebundene Rolle enthält
+`blobs/add/action` für das einmalige bedingte Anlegen, `blobs/read` für den
+Readback und `blobs/write` für Lease-Operationen. Azure autorisiert über die
+Write-DataAction zugleich Overwrite und Lease-Break.
+Darum begrenzen ABAC den Pfad und die versiegelte Anwendungsschnittstelle die
+Operation: Bootstrap nur `PUT` mit Create-Precondition oder `HEAD`, Runtime nur
+Acquire, Assert und Release. Der starke ETag wird anschließend in die
+Runtime-Bindung übernommen. Der Blob-Token wird ausschließlich für den Scope
+`https://storage.azure.com/.default` angefordert.
+
+## Owner-Gate und Evidence
+
+Die kombinierte Infrastruktur- und Live-Abnahme braucht genau eine
+Owner-Freigabe. Vor der Provisionierung bindet sie alle deterministischen
+Eingaben:
+
+- `approved_commit_sha`
+- `approved_tree_sha`
+- `toolchain_attestations_sha256`
+- `contract_sha256`
+- `phase_plan_sha256`
+- `measurement_policy_sha256`
+- `monitor_policy_sha256`
+- `lease_policy_sha256`
+- `lease_bootstrap_policy_sha256`
+- `infrastructure_safety_policy_sha256`
+- `infrastructure_source_sha256`
+- `infrastructure_parameters_sha256`
+- `infrastructure_binding_sha256`
+- `target_binding_sha256`
+- `expected_activation_hash`
+- `correlation_id`
+- `monitor_window_anchor_utc`
+- `monitor_window_anchor_sha256`
+
+`infrastructure_source_sha256` bindet sowohl Bicep-Quellen als auch die mit
+Bicep `0.45.15.27210` kanonisch kompilierten ARM-/Parameter-Artefakte. CI muss
+beide Artefakte bytegenau reproduzieren; der spätere Live-Pfad verwendet nur
+diese gebundene Ausgabe.
+
+Der UTC-minutengenaue `monitor_window_anchor` begrenzt den frühesten
+Monitorzeitpunkt. Unmittelbar vor dem ersten Lease- oder Monitor-Netzwerkzugriff
+werden Commit, Tree, Toolchain, Contract, Infrastrukturquellen und Parameter
+aus den tatsächlichen Quellen neu gemessen. Drift blockiert vor Netzwerk.
+Die TOCTOU-Grenze bleibt während der Ausführung aktiv: Unmittelbar vor jedem
+Target-Dispatch wird die Zielbindung geprüft und unmittelbar vor jedem
+Subprozess wird die versiegelte Azure-CLI-Toolchain neu gemessen. Die
+Zielbindung wird nach der Tokenbeschaffung erneut geprüft; der Request wird
+ausschließlich aus dem zuvor erfassten und gebundenen Endpoint konstruiert. Die
+Monitor-Command-Grenze akzeptiert nur argv-basiertes
+`az rest --method get` mit der exakt vom read-only Adapter erzeugten
+kanonischen URL. Body, abweichende Methode, umsortierte Query oder zusätzliche
+Query-Parameter blockieren. Jeder Monitor-Read verbraucht vor Token- und
+Netzwerkzugriff eine eigene, owner- und policy-gebundene Capability; höchstens
+`2048` Reads sind erlaubt. Dieses Budget ist vom dauerhaften 500-GET-Ledger
+getrennt. Der generische Azure-CLI-Adapter lehnt Monitor-Metrik-URLs ab; nur
+die dedizierte konsumierende Monitor-Methode darf sie ausführen. Target-GET,
+Blob-Bootstrap und Lease-Acquire verbrauchen ihre Capability jeweils vor
+Tokenbeschaffung oder State-Persistenz. Delegierte M365-Tokens werden vor der
+Versiegelung kryptografisch gegen Entra-RS256, Ressource und Scopes validiert.
+Die Parameter binden zusätzlich den exakten Tenant, die Subscription, die
+Resource Group `rg-nac-bff-test`, den Modus `Incremental`, die Region
+`germanywestcentral` und den kanonischen effektiven Tag-Satz aus Owner-Tags
+plus den sieben unveränderlichen NaC-Koordinationstags.
+Die tatsächlichen Resource-IDs des bestehenden BFF-Storage und des
+WORM-Evidence-Storage sind ebenfalls vorab gebunden. Die Namensprüfung vor dem
+Deployment muss belegen, dass das Koordinationskonto noch nicht existiert. Ein
+getrennter Readback nach dem Deployment muss dessen exakte Resource-ID, Region,
+effektive Tags und die vollständige Storage-/Netzwerkkonfiguration bestätigen:
+öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, genau
+eine erlaubte IP-Regel, keine VNet- oder Resource-Access-Regel, keine Shared Keys
+oder öffentlichen Blobs, TLS 1.2 und ausschließlich HTTPS. Der Blob-Service muss
+Versionierung sowie Blob- und Container-Löschaufbewahrung deaktiviert haben. Der
+Lease-Container muss `publicAccess=None` und exakt die gebundenen Metadaten für
+Schema, synthetische Klassifikation, Lock-Pfad, Blob-Typ, Bootstrap,
+Autorisierungsgrenze und Principal-Trennung tragen. Namensprüfung, gebundener
+Deployment-Receipt und Post-Deployment-/RBAC-Readback müssen in dieser
+Reihenfolge liegen und dieselbe Owner-Bindung sowie denselben einmaligen Nonce
+tragen. Der Nonce wird intern erzeugt und gegen Wiederverwendung gesperrt. Alle
+Readbacks binden die tatsächliche versiegelte ausführbare Datei, argv, Toolchain
+und Laufsitzung; die vertrauenswürdige Prüfzeit wird intern erzeugt. Der
+Pre-Deployment-Nachweis darf höchstens 30 Minuten, jeder Post-Deployment- und
+RBAC-Nachweis höchstens fünf Minuten alt sein; mehr als 30 Sekunden
+Zukunftsdrift blockieren. Nach dem Deployment muss der vollständige effektive RBAC-/ABAC-Readback
+beim zum Owner-Tenant passenden Tenant-Root beginnen und
+eine autoritative, geordnete Management-Group-Abstammung der Subscription
+belegen. Er umfasst Tenant-Root, Management-Group-Kette, Subscription, Resource Group, Storage-Konto,
+Blob-Service und Container genau die gebundene Provisioner-Identität sowie alle
+transitiven Entra-Gruppen, Rolle, DataActions, Bedingung und Scope zeigen. Jede
+breitere direkte, gruppenbasierte oder geerbte Data-Plane-Zuweisung sowie jede
+effektive Control-Plane-Zuweisung blockiert Bootstrap und Lease-Acquire.
+Ein vom Aufrufer abweichend gewählter Azure-Scope blockiert vor Netzwerk; das
+Bicep-Template bricht zusätzlich ab, wenn tatsächlicher Tenant, Subscription
+oder Resource Group von den gebundenen Parameterwerten abweichen.
+
+Die Freigabe erlaubt genau die hashgebundene Custom-Role-Definition und
+-Zuweisung aus diesem Infrastrukturplan. Credential-Änderungen und jede andere,
+nicht durch Quellen-, Parameter- und Infrastruktur-Hash gebundene
+Rechteänderung bleiben verboten.
+
+Der reale ETag und daraus abgeleitete `lease_binding_sha256` entstehen erst
+beim gebundenen Bootstrap-Readback. Sie müssen vor dem ersten Target-Dispatch
+in State und Evidence übernommen werden. Jede deterministische Abweichung
+blockiert vor dem Netzwerkzugriff; jeder Readback-Drift blockiert vor dem
+Messlauf. Monitor-, Lease- und Infrastrukturbindung sind voneinander und von
+WORM-Evidence getrennt.
+Das Offline-Gate liefert bewusst nur `owner_execution_bindings`. Erst der
+kanonisch validierte `SAFE`-Readback ergänzt
+`infrastructure_safety_evidence_sha256` und bildet damit vollständige
+Runtime-Execution-Bindungen. Die Komposition nach dem Bootstrap bindet
+zusätzlich `lease_binding_sha256` und
+`lease_acquisition_safety_evidence_sha256`. Sie muss vor Lease-Acquire exakt
+bestätigt sein; vom Aufrufer gelieferte Hashes werden nie ungeprüft in finale
+Evidence übernommen. Unmittelbar nach dem vollständigen Readback werden
+Commit, Tree, Contract, Toolchain, Infrastrukturquellen und Parameter erneut
+gemessen; Drift blockiert noch vor Lease-Acquire. Ein nicht blockierend erworbener lokaler Prozess-Fence
+umfasst den vollständigen Mess- und Finalisierungslebenszyklus eines State-Pfads.
+Ein zweiter Prozess blockiert daher vor Owner-Prüfung und Netzwerkzugriff.
+Der öffentliche Readback-Adapter erzeugt die verifier-fertigen ARM-, Graph- und
+Effective-RBAC-Envelopes selbst aus festen Allowlist-Aufrufen. Seine Umgebung ist
+bereinigt und gebunden; das ausführbare Azure-CLI-Binary wird unmittelbar vor
+jedem Subprozess erneut gemessen. Private, handgefertigte Evidence ist kein
+zulässiger Produktionspfad.
+
+Die Mess-Engine erzeugt zunächst nur einen Nachweis mit
+`final_acceptance_scope: MEASUREMENT_ONLY_LEASE_RELEASE_PENDING`. Erst der
+Runtime-Wrapper darf nach einem unabhängig bestätigten Zustand `RELEASED` den
+finalen Nachweis `nac.m365-bff-performance-final-evidence/v1` mit Status
+`PASSED` erzeugen. Das terminale Messergebnis wird vor dem finalen Monitor-Read
+als `nac.m365-bff-performance-terminal-measurement/v1` persistiert. Ein
+fehlgeschlagener oder noch nicht gesetzter Monitor-Read erhält daher Checkpoint
+und gehaltene Lease; beim Resume wird nur der finale Monitor-Read wiederholt,
+nicht Owner-Preflight, Acquire, Runner oder Target-Traffic. Nach erneuter
+Validierung von Settled-Window-Abdeckung, Monitor-Attestation, Ziel- und
+Hashbindungen sowie dem auf null projizierten Restbudget wird vor dem Release
+ein dauerhafter
+`nac.m365-bff-performance-pending-finalization/v1`-Datensatz geschrieben. Ein
+autoritativer Checkpoint wird mit `O_NOFOLLOW` geöffnet und anhand desselben
+Dateideskriptors per `fstat` geprüft; atomare Ersetzungen verwenden einen zuvor
+auf Eigentümer und Modus geprüften Verzeichnisdeskriptor. Symlinks oder unsichere
+Elternverzeichnisse blockieren. Ein
+crash-sicherer Resume darf den Release nur mit derselben Lease-ID und exakten
+Zielbindung reconciliieren; Acquire, Monitor-Read und Target-Dispatch bleiben
+verboten. Die terminal finalization verlangt einen Receipt mit exact
+`RELEASED`. Wirft der Runner an einem sauberen Checkpoint eine Exception,
+bleibt dieselbe Lease gehalten, bis der Runner fortsetzt oder diesen Checkpoint
+dauerhaft als `FAILED` terminalisiert; der Wrapper gibt die Lease nie vorher
+frei und lässt keinen fortsetzbaren Messzustand zurück. Der finale
+Monitor-Nachweis muss für `PASSED` mindestens die 500 gebundenen
+On-Demand-Ausführungen und für `FAILED` mindestens den verschachtelten,
+dauerhaften `completed_network_dispatch_count` enthalten. Die finale
+Validierung bindet diese abgeleitete Untergrenze und den verschachtelten
+Messstatus an die finale Monitor-Attestation. JSON und Markdown werden erst
+danach jeweils atomar mit Verzeichnis-`fsync` geschrieben. Ein zuletzt
+geschriebenes `nac.m365-bff-performance-completion-manifest/v1` bindet die
+exakten Hashes beider Dateien und den finalen Evidence-Hash und ist der alleinige
+Commit-Punkt; ohne gültiges Manifest existiert keine finale Evidence. Der
+Pending-Datensatz wird erst nach diesem Manifest gelöscht. Ein Crash zwischen terminalem
+Messende und finaler Persistenz kann damit weder einen falschen finalen PASS
+hinterlassen noch Test-Traffic wiederholen.
+Die 500er-Untergrenze gilt nur für `PASSED`. Ein früh abgebrochener, gültiger
+`FAILED`-Lauf verlangt mindestens seine tatsächlich dispatchten Versuche im
+finalen Monitor-Read, gibt dieselbe Lease dennoch dauerhaft frei und schreibt
+redigierte finale Fehler-Evidence.
+Ein späterer Aufruf wiederholt zuerst den aktuellen owner-gebundenen und den
+Infrastruktur-Safety-Preflight. Erst danach validiert und liefert er die fertige
+finale Evidence ohne Lease-, Monitor- oder Target-Netzwerkaktionen zurück.
+
+Evidence enthält nur redigierte Aggregate, die Gate- und Readback-Bindungen, die
+app-weiten Monitor-Deltas, das verbleibende Projektionsbudget,
+Phasenaggregate, Abort-Code und den finalen Lease-Zustand. Die Aussage
+`tenant-wide SharePoint baseline: NOT_CLAIMED`,
+`tenant-wide SharePoint request allowance: NOT_CLAIMED`,
+`tenant-wide SharePoint resource-unit allowance: NOT_CLAIMED` und
+`monetary cost: NOT_CLAIMED` bleiben darin ausdrücklich erhalten.
+Einzelrequests, rohe Antworten, URLs, Header, Bodies, Tokens,
+Tenant-/Benutzer-/Instanz-/Epoch-Werte und die rohe Lease-ID sind verboten.
+
+## Live-Grenze
+
+Der bestehende Planbefehl bleibt offline und sendet null Requests:
 
 ```text
-maximale Target-Dispatches = 50.000
+nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Ein erfolgreicher vollständiger Abnahmelauf verbraucht exakt diese gebundene
-Allokation; wenn der Kapazitäts-Preflight sie nicht sicher zulässt, bleibt der
-Lauf `BLOCKED`. Jeder Target-Versuch zählt,
-einschließlich Versuchen mit Timeout, Authentifizierungsfehler, Redirect,
-Throttling oder Abort. Vor dem Netzwerkversand wird atomar eine Sequenz
-reserviert. Wenn die nächste Sequenz `50.000` überschreiten würde, wird keine
-Anfrage gesendet.
-
-Client-Retries und automatisches Folgen von Redirects sind deaktiviert. Es gibt
-weder eine unbedingte Phase mit 50.000 Anfragen noch die unbedingte Vorgabe,
-50.000 Anfragen innerhalb von zwei Stunden abzuschließen.
-
-## Phasen
-
-Der owner-gebundene Phasenplaner allokiert alle Phasenbudgets vorab. Ihre Summe
-darf höchstens `50.000` betragen; jede Rate wird durch die verifizierten
-50-%-Allowances für Anfragen und RU begrenzt.
-
-| Phase | Sicherheitsgebundenes Verhalten |
-| --- | --- |
-| `cold_epoch_baseline` | Exakt eine gebundene Baseline-Anfrage senden. |
-| `cold_epoch_candidate` | 20 Minuten Runner-Idle-Zeit beobachten, danach exakt eine Anfrage senden; Infrastruktur nicht neu starten. |
-| `capacity_bounded_volume` | 37.758 Dispatches mit höchstens einer Anfrage/Sekunde und maximal zwölf aktiven Stunden ausführen. |
-| `sustained_2h` | Höchstens zwei aktive Stunden mit maximal 1,5 Anfragen/Sekunde ausführen. |
-| `soak_24h` | Höchstens 24 aktive Stunden, nicht schneller als eine Anfrage/Minute und mit höchstens 1.440 Dispatches ausführen. |
-
-Die akzeptierte Fehlerrate beträgt `0 %`. Für jede Anfrage gilt eine
-Latenzobergrenze von `20.000 ms`. Volume- und Sustained-Phase verlangen p95
-höchstens `2.000 ms` und p99 höchstens `5.000 ms`; für Soak gelten p95 höchstens
-`1.500 ms` und p99 höchstens `3.000 ms`. Diese Metriken bleiben reine
-Aggregate.
-
-Die Phasen laufen nacheinander und verwenden keine Catch-up-Bursts. Ein
-restart-sicherer Zustand persistiert die globale Sequenz, verbrauchte
-Allokation sowie alle Vertrags-, Aktivierungs-, Ziel-, Kapazitäts- und
-Phasenplan-Hashes. Jeder Checkpoint wird vor dem nächsten Dispatch dauerhaft
-geschrieben, per SHA-256-Sidecar gebunden und unmittelbar zurückgelesen. Beim
-Neustart ist ausschließlich dieser Store die Resume-Quelle. Ein Resume darf
-keine Zähler verringern, keine Sequenz
-wiederverwenden und keine freigegebene Allokation erhöhen.
-Ein fataler Response-Zustand wird vor der Terminalisierung persistiert. Nach
-einem Crash wird dieser Zustand ohne weiteren Target-Dispatch als fehlgeschlagen
-terminalisiert.
-
-## Cold-Start-Klassifikation
-
-Die 20-minütige Idle-Beobachtung allein weist keinen Plattform-Cold-Start nach.
-`cold_start_classification` ist nur dann `VERIFIED`, wenn autoritative
-Server-Telemetrie beweist, dass sich die Serverinstanz oder die Server-Start-
-Epoch zwischen gebundener Baseline und gemessener Anfrage geändert hat.
-
-Wenn diese Änderung fehlt, unverändert, nicht verfügbar oder nicht beweisbar
-ist, lautet die einzig zulässige Klassifikation `INCONCLUSIVE`. Rohe Instanz-
-und Start-Epoch-Werte werden niemals aufbewahrt. Die Infrastruktur wird nicht
-neu gestartet, um ein Ergebnis zu erzwingen.
-
-## Abort-Verhalten
-
-Die Lane bricht ohne Retry ab bei:
-
-- Authentifizierungsfehler oder Challenge
-- jeder Redirect-Antwort oder jedem `Location`-Signal
-- jedem Throttle-Status oder Throttle-Signal
-- Drift bei Schema, Host, Port, Pfad, Query, DNS, Zertifikat oder Target-Binding
-- Status ungleich `200`, Schemafehler oder Antwort über `128 KiB`
-- Überschreitung der Anfrage- oder aggregierten Phasen-Latenzschwelle
-- ausgeschöpftem globalem Dispatch-, verifiziertem Anfragen-/RU- oder Azure-Execution-Unit-Budget
-- veralteter oder nicht verfügbarer Kapazitäts- oder Azure-Monitor-Evidence
-- beschädigtem Zustand oder fehlgeschlagener Evidence-Redaktion
-
-Ein Abort löst keinen Rollback, keine Löschung, Berechtigungs- oder
-Credential-Änderung und keinen Infrastruktur-Neustart, keine Skalierung oder
-Umkonfiguration aus.
-Kapazitäts- und Azure-Monitor-Abbrüche werden vor einem möglichen Resume als
-terminale fehlgeschlagene Phase persistiert. Scheitert die Prüfung vor der
-ersten Monitor-Beobachtung, bleiben ausschließlich die beiden Monitor-Aggregate
-im Fehlerartefakt `null`; ein `PASSED`-Artefakt darf niemals Nullwerte enthalten.
-
-## Aggregierte Evidence
-
-Die Evidence besteht aus redigiertem JSON und semantisch entsprechendem
-Markdown und enthält ausschließlich Aggregate: Phasenzähler und -metriken,
-globalen Dispatch-Zähler, genutzte Anteile der verifizierten Allowances, Azure
-Execution Units, Always Ready Units, Cold-Start-Klassifikation, den booleschen
-Instanz-/Epoch-Wechsel, Hashbindungen, den finalen Checkpoint-Hash und einen
-Abort-Reason-Code. Der Evidence-Writer akzeptiert ein Artefakt nur, wenn seine
-Aggregate semantisch zum finalen, unmittelbar zurückgelesenen Checkpoint passen.
-
-Die Evidence speichert keinen Einzelrequest-Datensatz, rohe Header, Bodies,
-Body-Hashes, URLs, Pfade, Hosts, Queries, Tokens, Cookies, Credentials,
-Tenant-IDs, Benutzer-IDs, Serverinstanz-IDs, Start-Epochen,
-Provider-Antworten oder Azure-Monitor-Antworten. Unbekannte Evidence-Felder
-führen zur Ablehnung des Artefakts.
-
-## Aktivierungs- und Owner-Gate
-
-Der Offline-Planbefehl ist implementiert:
-
-```text
-nac m365 teams-sharepoint bff-performance-acceptance-plan --expected-activation-hash <sha256> --format json
-```
-
-Ein künftiger Live-Befehl bleibt an redigierte Aktivierungs-Evidence mit
-finalem Status exakt `PASSED` gebunden. Die Owner-Freigabe bindet Aktivierung,
-Vertrag, festes Ziel, Kapazitäts-Preflight, Phasenplan und Correlation-ID. Der
-Aktivierungs-Receipt muss außerdem der aktuellen Azure-BFF-Bindung entsprechen:
-Function-Host, Workspace und synthetische Akte werden gegen das feste
-Performance-Ziel geprüft. Ein erfolgreiches Abschlussartefakt ist nur für den
-kanonischen Phasenplan mit exakt `50.000` Target-Dispatches zulässig. Der
-geplante Befehlsname lautet:
-
-```text
-nac m365 teams-sharepoint bff-performance-acceptance
-```
-
-Er wird erst nach Implementierung der drei Live-Preflight-Adapter aktiviert.
-Der Safety-Runtime ruft Owner-/Aktivierungsverifier, Kapazitätsprovider,
-Runtime-Monitor und den exakten Fixed-Transport-Verifier selbst auf; fertige
-caller-konstruierte Freigabe- oder Kapazitätsobjekte akzeptiert `run()` nicht.
-Fehlende oder
-abweichende Aktivierungs-, Owner-, Kapazitäts- oder Zielbindungen blockieren
-vor jedem Target-Dispatch.
+Issue #733 implementiert die Adapter für Offline-Verifikation, aktiviert aber
+keinen Live-CLI-Befehl, keine Azure-Ressourcenaktion, keine Blob-/Lease-Mutation,
+keinen Monitor-Read und keinen Target-Dispatch. Direkte Adapteraufrufe blockieren
+vor Token-, Netzwerk- oder State-Zugriff, wenn nicht die exakte begrenzte
+Capability aus unveränderlicher Owner-Kommentar- und versiegelter
+Infrastruktur-Safety-Verifikation vorliegt. Eine spätere Live-Komposition
+benötigt diese frische owner-gebundene Capability für jeden Blob-Aufruf,
+Monitor-Read und Target-GET.

@@ -226,6 +226,15 @@ Refresh und Stale-Response-Schutz werden als Verification Contract geprüft.
 Eine Tenant-Bereitstellung erfolgt erst aus geprüftem `main` und bleibt bis
 dahin offen.
 
+M365-Statushinweis 2026-08-03: Issue #733 ersetzt die nicht beschaffbare
+tenantweite SharePoint-Performance-Baseline durch eine konservative,
+endpointgebundene Messspur. Der Offline-Vertrag begrenzt den späteren Lauf auf
+exakt 500 synthetische GETs, Concurrency eins und höchstens sechs Dispatches pro
+Minute. Feste Azure-Monitor-Reads und eine dedizierte Azure-Blob-Lease sind
+offline implementiert und fail-closed gebunden. Tenantweite SharePoint-
+Kapazität und monetäre Kosten bleiben `NOT_CLAIMED`; Azure-Provisionierung und
+Live-Lasttest bleiben bis zu einer einzigen hashgebundenen Owner-Freigabe aus.
+
 ## Regel
 
 Die strikte Qualitätsprüfung umfasst `scripts/validate_gantt_progress.py` und setzt

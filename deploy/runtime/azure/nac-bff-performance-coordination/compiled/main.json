@@ -1,0 +1,356 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.45.15.27210",
+      "templateHash": "3096641433035519500"
+    },
+    "description": "Dedicated Azure Blob coordination boundary for one NaC BFF performance run."
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "germanywestcentral",
+      "allowedValues": [
+        "germanywestcentral"
+      ],
+      "metadata": {
+        "description": "Azure region for the dedicated coordination storage account."
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Entra tenant bound by the combined owner approval."
+      }
+    },
+    "subscriptionId": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Azure subscription bound by the combined owner approval."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Azure resource group bound by the combined owner approval."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 24,
+      "metadata": {
+        "description": "Globally unique name for the dedicated performance-coordination storage account."
+      }
+    },
+    "bffStorageAccountResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Authoritative ARM resource ID of the existing BFF host/deployment storage account. The account name is derived from this ID."
+      }
+    },
+    "wormStorageAccountResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID."
+      }
+    },
+    "provisionerPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Object ID of the dedicated Entra service principal used by both bootstrap and runtime. Blob add creates the bound blob; blob write cannot split overwrite, lease, and break operations."
+      }
+    },
+    "allowedClientIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Single public IPv4 address allowed to reach the dedicated data plane during the approved run."
+      }
+    },
+    "targetBindingSha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Hash binding used as the only lease blob basename."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Additional non-sensitive tags. Coordination boundary tags cannot be overridden."
+      }
+    }
+  },
+  "variables": {
+    "containerName": "nac-bff-performance-leases",
+    "leaseBlobPath": "[format('locks/{0}.lock', parameters('targetBindingSha256'))]",
+    "bffStorageAccountResourceIdSegments": "[split(parameters('bffStorageAccountResourceId'), '/')]",
+    "wormStorageAccountResourceIdSegments": "[split(parameters('wormStorageAccountResourceId'), '/')]",
+    "bffStorageAccountName": "[last(variables('bffStorageAccountResourceIdSegments'))]",
+    "wormStorageAccountName": "[last(variables('wormStorageAccountResourceIdSegments'))]",
+    "validatedDeploymentScope": "[if(and(and(equals(tenant().tenantId, parameters('tenantId')), equals(subscription().subscriptionId, parameters('subscriptionId'))), equals(resourceGroup().name, parameters('resourceGroupName'))), format('{0}/{1}/{2}', parameters('tenantId'), parameters('subscriptionId'), parameters('resourceGroupName')), fail('Performance coordination deployment scope does not match the owner-bound tenant, subscription, and resource group.'))]",
+    "validatedBffStorageAccountResourceId": "[if(and(and(and(and(and(and(and(and(and(and(equals(length(variables('bffStorageAccountResourceIdSegments')), 9), empty(variables('bffStorageAccountResourceIdSegments')[0])), equals(toLower(variables('bffStorageAccountResourceIdSegments')[1]), 'subscriptions')), equals(variables('bffStorageAccountResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('bffStorageAccountResourceIdSegments')[3]), 'resourcegroups')), not(empty(variables('bffStorageAccountResourceIdSegments')[4]))), equals(toLower(variables('bffStorageAccountResourceIdSegments')[5]), 'providers')), equals(toLower(variables('bffStorageAccountResourceIdSegments')[6]), 'microsoft.storage')), equals(toLower(variables('bffStorageAccountResourceIdSegments')[7]), 'storageaccounts')), not(empty(variables('bffStorageAccountName')))), equals(toLower(resourceId(parameters('subscriptionId'), variables('bffStorageAccountResourceIdSegments')[4], 'Microsoft.Storage/storageAccounts', variables('bffStorageAccountName'))), toLower(parameters('bffStorageAccountResourceId')))), parameters('bffStorageAccountResourceId'), fail('BFF storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.'))]",
+    "validatedWormStorageAccountResourceId": "[if(and(and(and(and(and(and(and(and(and(and(equals(length(variables('wormStorageAccountResourceIdSegments')), 9), empty(variables('wormStorageAccountResourceIdSegments')[0])), equals(toLower(variables('wormStorageAccountResourceIdSegments')[1]), 'subscriptions')), equals(variables('wormStorageAccountResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('wormStorageAccountResourceIdSegments')[3]), 'resourcegroups')), not(empty(variables('wormStorageAccountResourceIdSegments')[4]))), equals(toLower(variables('wormStorageAccountResourceIdSegments')[5]), 'providers')), equals(toLower(variables('wormStorageAccountResourceIdSegments')[6]), 'microsoft.storage')), equals(toLower(variables('wormStorageAccountResourceIdSegments')[7]), 'storageaccounts')), not(empty(variables('wormStorageAccountName')))), equals(toLower(resourceId(parameters('subscriptionId'), variables('wormStorageAccountResourceIdSegments')[4], 'Microsoft.Storage/storageAccounts', variables('wormStorageAccountName'))), toLower(parameters('wormStorageAccountResourceId')))), parameters('wormStorageAccountResourceId'), fail('WORM storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.'))]",
+    "coordinationStorageAccountResourceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+    "validatedStorageAccountName": "[if(and(and(and(and(and(and(not(empty(variables('validatedDeploymentScope'))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedBffStorageAccountResourceId'))))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(variables('validatedBffStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('bffStorageAccountName'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('wormStorageAccountName'))))), not(equals(toLower(variables('bffStorageAccountName')), toLower(variables('wormStorageAccountName'))))), parameters('storageAccountName'), fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.'))]",
+    "isolationSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedStorageAccountName'))]",
+    "leaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-read-write-v1')]",
+    "blobReadDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+    "blobAddDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+    "blobWriteDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
+    "exactLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}}) AND !(ActionMatches{{''{2}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{3}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{4}''))', variables('blobReadDataAction'), variables('blobAddDataAction'), variables('blobWriteDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
+    "mandatoryResourceTags": {
+      "blobPrecreation": "owner-gated-before-runtime",
+      "dataClassification": "synthetic-only",
+      "environment": "test",
+      "managedBy": "bicep",
+      "storageBoundary": "dedicated-from-bff-and-worm",
+      "targetBindingSha256": "[parameters('targetBindingSha256')]",
+      "workload": "nac-bff-performance-coordination"
+    },
+    "resourceTags": "[union(parameters('tags'), variables('mandatoryResourceTags'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('validatedStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('resourceTags')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "allowCrossTenantReplication": false,
+        "allowSharedKeyAccess": false,
+        "defaultToOAuthAuthentication": true,
+        "isHnsEnabled": false,
+        "minimumTlsVersion": "TLS1_2",
+        "publicNetworkAccess": "Enabled",
+        "supportsHttpsTrafficOnly": true,
+        "networkAcls": {
+          "bypass": "None",
+          "defaultAction": "Deny",
+          "ipRules": [
+            {
+              "action": "Allow",
+              "value": "[parameters('allowedClientIpAddress')]"
+            }
+          ],
+          "resourceAccessRules": [],
+          "virtualNetworkRules": []
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('validatedStorageAccountName'), 'default')]",
+      "properties": {
+        "isVersioningEnabled": false,
+        "deleteRetentionPolicy": {
+          "enabled": false
+        },
+        "containerDeleteRetentionPolicy": {
+          "enabled": false
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
+      "properties": {
+        "publicAccess": "None",
+        "metadata": {
+          "nac_schema_version": "nac.azure-bff-performance-coordination/v1",
+          "data_classification": "synthetic-only",
+          "lease_blob_path": "[variables('leaseBlobPath')]",
+          "lease_blob_type": "BlockBlob",
+          "lease_blob_content_length": "0",
+          "lease_blob_bootstrap": "owner-gated-put-if-absent-before-runtime",
+          "azure_blob_write_authorization": "includes-create-overwrite-lease-and-break",
+          "operation_restriction_boundary": "sealed-app-api-defense-in-depth-not-azure-enforced",
+          "principal_separation": "single-owner-bound-bootstrap-and-runtime-principal"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('validatedStorageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('leaseDataRoleDefinitionGuid')]",
+      "properties": {
+        "roleName": "[format('NaC BFF Performance Lease Read Write {0}', variables('isolationSuffix'))]",
+        "description": "Read/write one ABAC-conditioned blob path. Write includes create, overwrite, lease, and break; delete, ownership, and container management are excluded.",
+        "type": "CustomRole",
+        "permissions": [
+          {
+            "actions": [],
+            "notActions": [],
+            "dataActions": [
+              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
+            ],
+            "notDataActions": []
+          }
+        ],
+        "assignableScopes": [
+          "[resourceGroup().id]"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), parameters('provisionerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('leaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
+      "properties": {
+        "condition": "[variables('exactLeaseBlobCondition')]",
+        "conditionVersion": "2.0",
+        "description": "Read/write authorization scoped to the exact NaC BFF performance lease blob path; Azure does not filter write operations.",
+        "principalId": "[parameters('provisionerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('leaseDataRoleDefinitionGuid'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
+        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('leaseDataRoleDefinitionGuid'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "contractSchemaVersion": {
+      "type": "string",
+      "value": "nac.azure-bff-performance-coordination/v1"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('validatedStorageAccountName')]"
+    },
+    "storageAccountResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+    },
+    "effectiveTags": {
+      "type": "object",
+      "value": "[variables('resourceTags')]"
+    },
+    "bffStorageAccountResourceIdBinding": {
+      "type": "string",
+      "value": "[variables('validatedBffStorageAccountResourceId')]"
+    },
+    "bffStorageAccountNameBinding": {
+      "type": "string",
+      "value": "[variables('bffStorageAccountName')]"
+    },
+    "wormStorageAccountResourceIdBinding": {
+      "type": "string",
+      "value": "[variables('validatedWormStorageAccountResourceId')]"
+    },
+    "wormStorageAccountNameBinding": {
+      "type": "string",
+      "value": "[variables('wormStorageAccountName')]"
+    },
+    "leaseContainerName": {
+      "type": "string",
+      "value": "[variables('containerName')]"
+    },
+    "leaseContainerResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]"
+    },
+    "leaseBlobPath": {
+      "type": "string",
+      "value": "[variables('leaseBlobPath')]"
+    },
+    "leaseBlobUri": {
+      "type": "string",
+      "value": "[format('{0}{1}/{2}', reference(resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName')), '2023-05-01').primaryEndpoints.blob, variables('containerName'), variables('leaseBlobPath'))]"
+    },
+    "requiredLeaseBlobType": {
+      "type": "string",
+      "value": "BlockBlob"
+    },
+    "requiredLeaseBlobContentLength": {
+      "type": "int",
+      "value": 0
+    },
+    "targetBindingSha256": {
+      "type": "string",
+      "value": "[parameters('targetBindingSha256')]"
+    },
+    "leaseDataRoleDefinitionId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('leaseDataRoleDefinitionGuid'))]"
+    },
+    "provisionerLeaseRoleAssignmentId": {
+      "type": "string",
+      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), parameters('provisionerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('leaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
+    },
+    "exactLeaseBlobCondition": {
+      "type": "string",
+      "value": "[variables('exactLeaseBlobCondition')]"
+    },
+    "allowedDataActions": {
+      "type": "array",
+      "value": [
+        "[variables('blobReadDataAction')]",
+        "[variables('blobAddDataAction')]",
+        "[variables('blobWriteDataAction')]"
+      ]
+    },
+    "deploymentScopeBinding": {
+      "type": "string",
+      "value": "[variables('validatedDeploymentScope')]"
+    },
+    "blobBootstrapRequired": {
+      "type": "bool",
+      "value": true
+    },
+    "blobBootstrapExecutedByTemplate": {
+      "type": "bool",
+      "value": false
+    },
+    "azureRbacWriteAuthorizedOperations": {
+      "type": "array",
+      "value": [
+        "blob-create",
+        "blob-overwrite",
+        "lease-acquire",
+        "lease-release",
+        "lease-break"
+      ]
+    },
+    "azureRbacOperationRestrictionEnforced": {
+      "type": "bool",
+      "value": false
+    },
+    "operationRestrictionDefenseInDepth": {
+      "type": "array",
+      "value": [
+        "dedicated-storage-account",
+        "exact-container-and-blob-path-abac",
+        "sealed-bootstrap-and-runtime-application-apis"
+      ]
+    },
+    "principalSeparationMode": {
+      "type": "string",
+      "value": "SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME"
+    }
+  }
+}

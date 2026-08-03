@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from datetime import UTC, datetime
 import hashlib
 import inspect
 import json
@@ -17,6 +18,8 @@ from unittest.mock import Mock, patch
 
 import nac_bff.azure_cli_sealed_runtime as azure_cli_sealed_runtime
 import nac_bff.azure_live_commands as azure_live_commands
+from nac_bff.azure_performance_monitor import build_metrics_url, monitor_policy_sha256
+from nac_bff.azure_performance_authorization import MONITOR_READ
 from nac_bff.azure_live_commands import (
     ALLOWED_COMMAND_PREFIXES,
     AZURE_CLI_CANDIDATES,
@@ -122,6 +125,134 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             )[2],
             "AZURE_CLI_COMMAND_BLOCKED",
         )
+
+    def test_monitor_get_is_limited_to_exact_adapter_url_shape(self) -> None:
+        url = build_metrics_url(
+            datetime(2026, 8, 3, 12, 0, tzinfo=UTC),
+            datetime(2026, 8, 3, 12, 2, tzinfo=UTC),
+        )
+        valid = ["rest", "--method", "get", "--url", url]
+        command, family, code = azure_live_commands._validated_command(valid)
+        self.assertEqual(command, valid)
+        self.assertEqual(family, ("rest",))
+        self.assertEqual(code, "AZURE_CLI_OK")
+
+        query_parts = url.split("?", 1)[1].split("&")
+        reordered = (
+            f"{url.split('?', 1)[0]}?{query_parts[1]}&{query_parts[0]}&"
+            + "&".join(query_parts[2:])
+        )
+        blocked_urls = (
+            "https://management.azure.com/",
+            azure_live_commands._RESOURCE_GRAPH_URL,
+            url.replace("aggregation=Total", "aggregation=Average"),
+            url.replace("Microsoft.Web%2Fsites", "Microsoft.Web%2Fserverfarms"),
+            f"{url}&top=1",
+            reordered,
+        )
+        for blocked_url in blocked_urls:
+            with self.subTest(url=blocked_url):
+                self.assertEqual(
+                    azure_live_commands._validated_command(
+                        ["rest", "--method", "get", "--url", blocked_url]
+                    )[2],
+                    "AZURE_CLI_COMMAND_BLOCKED",
+                )
+
+    def test_generic_adapter_rejects_monitor_url_before_process_resolution(self) -> None:
+        url = build_metrics_url(
+            datetime(2026, 8, 3, 12, 0, tzinfo=UTC),
+            datetime(2026, 8, 3, 12, 2, tzinfo=UTC),
+        )
+        adapter = AzureCliAdapter(binary="/must/not/be-resolved")
+
+        result = adapter.run(["rest", "--method", "get", "--url", url])
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["code"], "AZURE_CLI_COMMAND_BLOCKED")
+
+    def test_all_generic_adapter_entries_reject_reordered_monitor_options(self) -> None:
+        url = build_metrics_url(
+            datetime(2026, 8, 3, 12, 0, tzinfo=UTC),
+            datetime(2026, 8, 3, 12, 2, tzinfo=UTC),
+        )
+        adapter = AzureCliAdapter(binary="/must/not/be-resolved")
+        command = ["rest", "--url", url, "--method", "get"]
+        calls = (
+            lambda: run_azure_cli(command, binary="/must/not/be-resolved"),
+            lambda: adapter.run(command),
+            lambda: adapter.run_with_timeout(command, timeout_seconds=1),
+            lambda: adapter.run_bound(command, {}),
+            lambda: adapter.run_bound_with_timeout(
+                command, {}, timeout_seconds=1
+            ),
+        )
+
+        for call in calls:
+            with self.subTest(call=call):
+                result = call()
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["code"], "AZURE_CLI_COMMAND_BLOCKED")
+
+    def test_dedicated_monitor_method_consumes_exact_bound_capability(self) -> None:
+        url = build_metrics_url(
+            datetime(2026, 8, 3, 12, 0, tzinfo=UTC),
+            datetime(2026, 8, 3, 12, 2, tzinfo=UTC),
+        )
+        capability = object()
+        target = "a" * 64
+        expected = {"ok": True, "data": {}}
+        adapter = AzureCliAdapter(binary="/sealed/az")
+
+        with patch(
+            "nac_bff.azure_performance_authorization._authorize_live_action"
+        ) as authorize, patch.object(
+            azure_live_commands, "_run_azure_cli", return_value=expected
+        ) as execute:
+            result = adapter.run_monitor_metrics(
+                ["rest", "--method", "get", "--url", url],
+                live_action_capability=capability,  # type: ignore[arg-type]
+                target_binding_sha256=target,
+            )
+
+        self.assertIs(result, expected)
+        authorize.assert_called_once_with(
+            capability,
+            action=MONITOR_READ,
+            target_binding_sha256=target,
+            binding_sha256=monitor_policy_sha256(),
+            consume=True,
+        )
+        self.assertIs(
+            execute.call_args.kwargs["_monitor_execution_authority"],
+            azure_live_commands._MONITOR_EXECUTION_AUTHORITY,
+        )
+
+        blocked_commands = (
+            ["rest", "--method", "post", "--url", url],
+            [
+                "rest",
+                "--method",
+                "get",
+                "--url",
+                url,
+                "--body",
+                azure_live_commands._RESOURCE_GRAPH_BODY,
+            ],
+            [
+                "rest",
+                "--method",
+                "get",
+                "--url",
+                azure_live_commands._APP_SETTINGS_URL,
+            ],
+        )
+        for blocked in blocked_commands:
+            with self.subTest(command=blocked):
+                self.assertEqual(
+                    azure_live_commands._validated_command(blocked)[2],
+                    "AZURE_CLI_COMMAND_BLOCKED",
+                )
 
     def test_resource_graph_projection_rejects_paging_and_count_drift(self) -> None:
         complete = {
