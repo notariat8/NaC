@@ -1,9 +1,9 @@
 # Implementation Plan: Conservative BFF Measurement Adapters
 
-Issue: [#733](https://github.com/notariat8/NaC/issues/733)  
-Spec: [Conservative BFF Measurement](../specs/2026-08-03-bff-conservative-measurement-adapters-design.md)  
-Contract: [m365-bff-performance-acceptance.contract.json](../../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)  
-Status: offline implementation; live execution and provisioning blocked.
+- Issue: [#733](https://github.com/notariat8/NaC/issues/733)
+- Spec: [Conservative BFF Measurement](../specs/2026-08-03-bff-conservative-measurement-adapters-design.md)
+- Contract: [m365-bff-performance-acceptance.contract.json](../../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
+- Status: offline implementation; live execution and provisioning blocked.
 
 The planning boundary carries four separate statements: `tenant_wide_sharepoint_baseline_claim: NOT_CLAIMED`, `tenant_wide_sharepoint_request_allowance_claim: NOT_CLAIMED`, `tenant_wide_sharepoint_resource_unit_allowance_claim: NOT_CLAIMED`, and `monetary_cost_claim: NOT_CLAIMED`.
 
