@@ -1409,6 +1409,8 @@ def main() -> int:
         ),
         QUALITY_GATE_WORKFLOW: (
             "az bicep install --version v0.45.15",
+            '"$HOME/.azure/bin/bicep" build',
+            "DOTNET_BUNDLE_EXTRACT_BASE_DIR",
             "nac-bff-performance-coordination/main.bicep",
             "validate_nac_bff_performance_coordination_arm.py",
         ),

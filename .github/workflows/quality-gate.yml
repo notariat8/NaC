@@ -179,9 +179,11 @@ jobs:
           az bicep install --version v0.45.15
 
       - name: Reproduce and validate Azure BFF performance coordination Bicep
+        env:
+          DOTNET_BUNDLE_EXTRACT_BASE_DIR: /tmp/nac-bff-dotnet
         run: |
-          az bicep build --file deploy/runtime/azure/nac-bff-performance-coordination/main.bicep --stdout > /tmp/nac-bff-performance-coordination-main.json
-          az bicep build-params --file deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam --stdout > /tmp/nac-bff-performance-coordination-main-params.json
+          "$HOME/.azure/bin/bicep" build deploy/runtime/azure/nac-bff-performance-coordination/main.bicep --stdout > /tmp/nac-bff-performance-coordination-main.json
+          "$HOME/.azure/bin/bicep" build-params deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam --stdout > /tmp/nac-bff-performance-coordination-main-params.json
           cmp /tmp/nac-bff-performance-coordination-main.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.json
           cmp /tmp/nac-bff-performance-coordination-main-params.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.example.json
           python scripts/validate_nac_bff_performance_coordination_arm.py /tmp/nac-bff-performance-coordination-main.json /tmp/nac-bff-performance-coordination-main-params.json
