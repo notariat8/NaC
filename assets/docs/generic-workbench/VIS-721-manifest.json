@@ -25,7 +25,7 @@
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "dc07b80b06ae0ad29c3b368c16eeabe070278c6d0a23a27689fb47c1c8ea26c2"
+      "sha256": "bc7489f2ea01465c27d994951dc83f0f9f03d164bcf7f658ec7a82b1163ba76a"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",

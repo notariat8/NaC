@@ -520,6 +520,17 @@ def _validate_m365_command(argv: Sequence[str]) -> None:
         ("m365", "status", "--output", "json"),
         (
             "m365",
+            "util",
+            "accesstoken",
+            "get",
+            "--resource",
+            _EXPECTED_API_RESOURCE,
+            "--new",
+            "--output",
+            "json",
+        ),
+        (
+            "m365",
             "spo",
             "serviceprincipal",
             "grant",

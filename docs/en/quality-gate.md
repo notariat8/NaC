@@ -119,6 +119,10 @@ CI:
 
 75. `business_case_type_immutable_evidence_s6` only in `strict`
 
+Additional M365 BFF check: `m365_azure_bff_performance_acceptance` (strict
+only) validates the capacity- and cost-bounded offline plan, dispatch journal
+boundary and verification contract; it does not run a live load test.
+
 ## Artifacts
 
 Default output:

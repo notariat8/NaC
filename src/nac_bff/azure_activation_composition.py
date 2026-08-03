@@ -271,6 +271,10 @@ _TERMINALIZATION_COMMENT_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/(?:717|719)"
     r"#issuecomment-([1-9][0-9]*)$"
 )
+_PERFORMANCE_ACCEPTANCE_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/731"
+    r"#issuecomment-([1-9][0-9]*)$"
+)
 _APPROVED_OWNER_LOGIN = "ofunk"
 CANONICAL_INTERRUPTION_OWNER_LOGIN = _APPROVED_OWNER_LOGIN
 _APPROVED_OWNER_ASSOCIATIONS = ("OWNER", "MEMBER")
@@ -500,6 +504,52 @@ class GitHubApprovalVerifier:
             "immutable": True,
             "reference": reference,
             "body": body,
+            "body_sha256": expected_body_sha256,
+        }
+
+    def verify_performance_owner_comment(
+        self,
+        *,
+        reference: str,
+        expected_body: str,
+        expected_body_sha256: str,
+    ) -> dict[str, Any]:
+        """Verify the exact immutable owner comment for performance Issue #731."""
+
+        match = _PERFORMANCE_ACCEPTANCE_COMMENT_RE.fullmatch(reference)
+        if (
+            self._binary is None
+            or match is None
+            or not isinstance(expected_body, str)
+            or _sha256_text(expected_body) != expected_body_sha256
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
+        comment = self._gh_json(
+            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}")
+        )
+        if comment is None:
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
+        author = comment.get("user")
+        body = comment.get("body")
+        if (
+            not isinstance(author, dict)
+            or author.get("login") != _APPROVED_OWNER_LOGIN
+            or comment.get("author_association")
+            not in _APPROVED_OWNER_ASSOCIATIONS
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
+        if (
+            comment.get("html_url") != reference
+            or comment.get("created_at") != comment.get("updated_at")
+            or body != expected_body
+            or _sha256_text(body) != expected_body_sha256
+        ):
+            return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_MISMATCH"}
+        return {
+            "status": "VERIFIED",
+            "owner_login": _APPROVED_OWNER_LOGIN,
+            "immutable": True,
+            "reference": reference,
             "body_sha256": expected_body_sha256,
         }
 

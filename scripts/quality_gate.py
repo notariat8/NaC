@@ -441,6 +441,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_azure_bff_live_activation.py"],
                 ),
                 (
+                    "m365_azure_bff_performance_acceptance",
+                    "M365 Azure BFF Performance Acceptance",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_azure_bff_performance_acceptance.py",
+                    ],
+                ),
+                (
                     "m365_sharepoint_bpmn_viewer_adapter",
                     "M365 SharePoint BPMN Viewer Adapter",
                     [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],

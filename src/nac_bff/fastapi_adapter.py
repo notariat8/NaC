@@ -16,6 +16,7 @@ from .workbench_endpoint import WorkbenchEndpoint, WorkbenchResponse
 
 
 REQUEST_TIMEOUT_SECONDS = 20.0
+_INSTANCE_EPOCH = uuid.uuid4().hex
 _REQUEST_DEADLINE: ContextVar[float | None] = ContextVar(
     "nac_bff_request_deadline", default=None
 )
@@ -97,6 +98,8 @@ def create_fastapi_app(
                 response = _workbench_http_response(Response, _workbench_error(503))
         for name, value in _security_headers().items():
             response.headers[name] = value
+        if _should_emit_instance_epoch(request.url.path, response.status_code):
+            response.headers["X-NaC-Instance-Epoch"] = _INSTANCE_EPOCH
         response.headers["X-Correlation-ID"] = correlation_id
         return response
 
@@ -185,6 +188,10 @@ def create_fastapi_app(
         )
 
     return app
+
+
+def _should_emit_instance_epoch(path: str, status_code: int) -> bool:
+    return _is_workbench_path(path) and status_code == 200
 
 
 

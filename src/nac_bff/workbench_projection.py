@@ -120,6 +120,106 @@ def serialize_workbench_projection(payload: Mapping[str, Any]) -> str:
     return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 
 
+def validate_workbench_projection(
+    payload: Mapping[str, Any],
+    *,
+    observed_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Validate an existing wire snapshot against the exact projection contract."""
+
+    item = _exact(
+        payload,
+        "snapshot",
+        {
+            "schemaVersion",
+            "generatedAt",
+            "expiresAt",
+            "producer",
+            "scope",
+            "access",
+            "matter",
+            "tasks",
+            "attention",
+            "decisions",
+            "evidence",
+            "capabilities",
+            "agents",
+            "redaction",
+        },
+    )
+    if item["schemaVersion"] != SCHEMA_VERSION:
+        raise WorkbenchProjectionError("snapshot schema version is invalid")
+    observed = observed_at or datetime.now(timezone.utc)
+    generated = _timestamp(item["generatedAt"])
+    expires = _timestamp(item["expiresAt"])
+    if generated > observed or expires <= observed:
+        raise WorkbenchProjectionError("projection is not currently valid")
+    if expires <= generated or (expires - generated).total_seconds() > MAX_LEASE_SECONDS:
+        raise WorkbenchProjectionError("projection lease is invalid")
+
+    producer = _exact(item["producer"], "producer", {"id", "version"})
+    if producer["id"] != PRODUCER_ID:
+        raise WorkbenchProjectionError("producer is invalid")
+    scope = _exact(
+        item["scope"],
+        "scope",
+        {"workspaceId", "matterId", "purpose"},
+    )
+    projected: dict[str, Any] = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAt": item["generatedAt"],
+        "expiresAt": item["expiresAt"],
+        "producer": {
+            "id": PRODUCER_ID,
+            "version": _id(producer["version"], "producer.version"),
+        },
+        "scope": {
+            "workspaceId": _id(scope["workspaceId"], "scope.workspaceId"),
+            "matterId": _id(scope["matterId"], "scope.matterId"),
+            "purpose": _id(scope["purpose"], "scope.purpose"),
+        },
+    }
+    access_input = _mapping(item["access"], "access")
+    projected["access"] = _project_access(
+        access_input,
+        generated,
+        expires,
+        observed,
+        workspace_id=projected["scope"]["workspaceId"],
+        matter_id=projected["scope"]["matterId"],
+        purpose=projected["scope"]["purpose"],
+        actor_id=access_input.get("subjectId"),
+        actor_role=access_input.get("role"),
+    )
+    projected["matter"] = _project_matter(_mapping(item["matter"], "matter"))
+    projected["tasks"] = _project_collection(item["tasks"], "tasks", _project_task)
+    projected["attention"] = _project_collection(
+        item["attention"], "attention", _project_attention
+    )
+    projected["decisions"] = _project_collection(
+        item["decisions"], "decisions", _project_decision
+    )
+    projected["evidence"] = _project_collection(
+        item["evidence"], "evidence", _project_evidence
+    )
+    projected["capabilities"] = _project_collection(
+        item["capabilities"], "capabilities", _project_capability
+    )
+    projected["agents"] = _project_collection(item["agents"], "agents", _project_agent)
+    _validate_references(projected)
+    projected["redaction"] = _project_redaction(
+        _mapping(item["redaction"], "redaction"),
+        generated=generated,
+        observed=observed,
+        content_sha256=workbench_projection_content_sha256(projected),
+    )
+    if projected != dict(item):
+        raise WorkbenchProjectionError("snapshot canonical projection mismatch")
+    if len(serialize_workbench_projection(projected).encode("utf-8")) > MAX_SNAPSHOT_BYTES:
+        raise WorkbenchProjectionError("projection exceeds wire size limit")
+    return projected
+
+
 def _canonical_json(value: Mapping[str, Any]) -> bytes:
     return json.dumps(
         value,

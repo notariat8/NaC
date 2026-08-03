@@ -7926,6 +7926,13 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    performance_plan_index = _bff_performance_acceptance_plan_command_index(
+        effective_argv
+    )
+    if performance_plan_index is not None:
+        return _run_bff_performance_acceptance_plan_command(
+            effective_argv, performance_plan_index
+        )
     live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
     if live_activation_index is not None:
         return _run_bff_azure_activate_live_command(effective_argv, live_activation_index)
@@ -7983,6 +7990,70 @@ def main(argv: list[str] | None = None) -> int:
         )
     args = build_parser().parse_args(effective_argv)
     return args.func(args)
+
+
+def _bff_performance_acceptance_plan_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "bff-performance-acceptance-plan",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_bff_performance_acceptance_plan_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint bff-performance-acceptance-plan",
+        description=(
+            "Erzeugt den read-only Kapazitaets-, Kosten- und Safety-Plan fuer "
+            "die gebuendelte BFF-Performance-Abnahme."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument("--expected-activation-hash", required=True)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    try:
+        from nac_bff.azure_performance_acceptance import (
+            CONTRACT_RELATIVE_PATH,
+            build_performance_acceptance_plan,
+        )
+
+        contract_path = (args.repo_root / CONTRACT_RELATIVE_PATH).resolve()
+        contract_sha256 = sha256(contract_path.read_bytes()).hexdigest()
+        payload = build_performance_acceptance_plan(
+            args.expected_activation_hash,
+            contract_sha256,
+        )
+    except Exception:
+        payload = {
+            "schema_version": (
+                "nac.m365-azure-bff-performance-acceptance-plan/v1"
+            ),
+            "status": "BLOCKED",
+            "error": {"code": "PERFORMANCE_PLAN_BINDING_INVALID"},
+        }
+        if args.format == "json":
+            print(json.dumps(payload, sort_keys=True))
+        else:
+            print("BLOCKED: PERFORMANCE_PLAN_BINDING_INVALID")
+        return 2
+    if args.format == "json":
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(f"Status: {payload['status']}")
+        print(f"Plan SHA-256: {payload['plan_sha256']}")
+        print(f"Globale Request-Obergrenze: {payload['budgets']['total_request_limit']}")
+        print("Live-Ausfuehrung: BLOCKED bis Kapazitaets-, Meter- und Lease-Preflight")
+    return 0
 
 
 def _bff_azure_activate_live_command_index(argv: list[str]) -> int | None:

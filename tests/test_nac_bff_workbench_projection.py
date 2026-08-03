@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 from nac_bff.workbench_projection import (
     WorkbenchProjectionError,
     build_workbench_projection,
     serialize_workbench_projection,
+    validate_workbench_projection,
     workbench_projection_content_sha256,
 )
 
@@ -21,6 +23,23 @@ class WorkbenchProjectionTests(unittest.TestCase):
         self.assertEqual(payload["decisions"][0]["id"], "decision:001")
         self.assertEqual(payload["capabilities"][0]["decision"], "deny")
         self.assertEqual(payload["redaction"]["status"], "verified")
+        self.assertEqual(
+            validate_workbench_projection(
+                payload,
+                observed_at=_observed_at(),
+            ),
+            payload,
+        )
+
+    def test_wire_validator_rejects_missing_nested_and_unknown_fields(self) -> None:
+        missing = _projection()
+        del missing["tasks"]
+        with self.assertRaisesRegex(WorkbenchProjectionError, "fields"):
+            validate_workbench_projection(missing, observed_at=_observed_at())
+        unknown = _projection()
+        unknown["matter"]["internal"] = "must-not-pass"
+        with self.assertRaisesRegex(WorkbenchProjectionError, "fields"):
+            validate_workbench_projection(unknown, observed_at=_observed_at())
 
     def test_rejects_deny_snapshot_and_unbounded_deputy(self) -> None:
         with self.assertRaisesRegex(WorkbenchProjectionError, "deny"):
@@ -301,6 +320,12 @@ def _agent() -> dict:
 def _conformance_fixture() -> dict:
     path = Path(__file__).resolve().parents[1] / "workflows" / "fixtures" / "generic-workbench-conformance.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _observed_at() -> datetime:
+    return datetime.fromisoformat(
+        _conformance_fixture()["accepted"]["observed_at"].replace("Z", "+00:00")
+    )
 
 
 if __name__ == "__main__":

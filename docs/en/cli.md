@@ -70,6 +70,7 @@ python scripts/nac.py contracts verify
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format json
 python scripts/nac.py m365 teams-sharepoint bff-azure-readiness --format json
+python scripts/nac.py m365 teams-sharepoint bff-performance-acceptance-plan --expected-activation-hash <sha256> --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -145,6 +146,7 @@ nac contracts verify
 nac config list
 nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint bff-azure-readiness --format json
+nac m365 teams-sharepoint bff-performance-acceptance-plan --expected-activation-hash <sha256> --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json

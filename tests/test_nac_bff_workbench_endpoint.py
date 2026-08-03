@@ -10,7 +10,7 @@ from nac_bff.bpmn_asset import (
     CANONICAL_BPMN_SHA256,
     CanonicalBpmnAssetFilePort,
 )
-from nac_bff.fastapi_adapter import create_fastapi_app
+from nac_bff.fastapi_adapter import create_fastapi_app, _should_emit_instance_epoch
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -104,6 +104,16 @@ class _BpmnPort:
 
 
 class WorkbenchEndpointTests(unittest.TestCase):
+    def test_instance_epoch_is_scoped_to_successful_workbench_response(self) -> None:
+        path = (
+            f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/"
+            f"{ALLOWED_MATTER_ID}/workbench-snapshot"
+        )
+        self.assertTrue(_should_emit_instance_epoch(path, 200))
+        self.assertFalse(_should_emit_instance_epoch(path, 401))
+        self.assertFalse(_should_emit_instance_epoch(path, 403))
+        self.assertFalse(_should_emit_instance_epoch("/healthz", 200))
+
     def setUp(self) -> None:
         self.claims = ValidatedClaims(
             object_id=ACTOR_ID,
@@ -490,6 +500,7 @@ class WorkbenchEndpointTests(unittest.TestCase):
         self.assertEqual(response.headers["content-type"], "application/json; charset=utf-8")
         self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertEqual(response.headers["pragma"], "no-cache")
+        self.assertRegex(response.headers["x-nac-instance-epoch"], r"^[0-9a-f]{32}$")
 
         baseline = client.get(path + "?purpose=wrong")
         self.assertEqual(

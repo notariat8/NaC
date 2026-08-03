@@ -119,6 +119,11 @@ CI:
 
 75. `business_case_type_immutable_evidence_s6` (nur `strict`)
 
+Zusätzliche M365-BFF-Prüfung: `m365_azure_bff_performance_acceptance`
+(nur `strict`) validiert den kapazitäts- und kostenbegrenzten Offline-Plan,
+die Dispatch-Journal-Grenze und den Verification Contract; sie führt keinen
+Live-Lasttest aus.
+
 ## Artefakte
 
 Standardausgabe:
