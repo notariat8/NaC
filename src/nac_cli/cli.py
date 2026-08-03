@@ -7926,6 +7926,13 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    performance_owner_gate_index = (
+        _bff_performance_infrastructure_owner_gate_command_index(effective_argv)
+    )
+    if performance_owner_gate_index is not None:
+        return _run_bff_performance_infrastructure_owner_gate_command(
+            effective_argv, performance_owner_gate_index
+        )
     performance_plan_index = _bff_performance_acceptance_plan_command_index(
         effective_argv
     )
@@ -7992,6 +7999,92 @@ def main(argv: list[str] | None = None) -> int:
     return args.func(args)
 
 
+def _bff_performance_infrastructure_owner_gate_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "bff-performance-infrastructure-owner-gate",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_bff_performance_infrastructure_owner_gate_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog=(
+            "nac m365 teams-sharepoint "
+            "bff-performance-infrastructure-owner-gate"
+        ),
+        description=(
+            "Erzeugt genau eine offline hashgebundene Freigabe fuer die "
+            "dedizierte Infrastruktur und den vollstaendigen Messlauf."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument("--expected-activation-hash", required=True)
+    parser.add_argument("--correlation-id", required=True)
+    parser.add_argument("--monitor-window-anchor-utc", required=True)
+    parser.add_argument(
+        "--toolchain-attestations-json",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument(
+        "--infrastructure-parameters-json",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    try:
+        from nac_bff.azure_performance_owner_gate import (
+            build_performance_infrastructure_owner_gate,
+            format_performance_infrastructure_owner_gate,
+        )
+
+        parameters = json.loads(
+            args.infrastructure_parameters_json.read_text(encoding="utf-8")
+        )
+        toolchain_attestations = json.loads(
+            args.toolchain_attestations_json.read_text(encoding="utf-8")
+        )
+        payload = build_performance_infrastructure_owner_gate(
+            args.repo_root,
+            expected_activation_hash=args.expected_activation_hash,
+            toolchain_attestations=toolchain_attestations,
+            infrastructure_parameters=parameters,
+            correlation_id=args.correlation_id,
+            monitor_window_anchor_utc=args.monitor_window_anchor_utc,
+        )
+    except Exception:
+        payload = {
+            "schema_version": (
+                "nac.m365-bff-performance-infrastructure-live-owner-gate/v1"
+            ),
+            "status": "NOT_READY",
+            "error_code": "PERFORMANCE_INFRASTRUCTURE_OWNER_GATE_FAILED",
+        }
+    if args.format == "json":
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        if "format_performance_infrastructure_owner_gate" in locals():
+            print(
+                format_performance_infrastructure_owner_gate(payload),
+                end="",
+            )
+        else:
+            print(f"STATUS: {payload['status']}")
+            print(payload["error_code"])
+    return 0 if payload.get("status") == "READY" else 2
+
+
 def _bff_performance_acceptance_plan_command_index(
     argv: list[str],
 ) -> int | None:
@@ -8012,8 +8105,9 @@ def _run_bff_performance_acceptance_plan_command(
     parser = argparse.ArgumentParser(
         prog="nac m365 teams-sharepoint bff-performance-acceptance-plan",
         description=(
-            "Erzeugt den read-only Kapazitaets-, Kosten- und Safety-Plan fuer "
-            "die gebuendelte BFF-Performance-Abnahme."
+            "Erzeugt den konservativ begrenzten, endpointbezogenen Mess-, "
+            "Ausführungsverbrauchs- und Safety-Plan ohne tenantweite "
+            "SharePoint-Baseline oder monetäre Kostenbehauptung."
         ),
     )
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
@@ -8036,7 +8130,7 @@ def _run_bff_performance_acceptance_plan_command(
     except Exception:
         payload = {
             "schema_version": (
-                "nac.m365-azure-bff-performance-acceptance-plan/v1"
+                "nac.m365-azure-bff-performance-acceptance-plan/v2"
             ),
             "status": "BLOCKED",
             "error": {"code": "PERFORMANCE_PLAN_BINDING_INVALID"},

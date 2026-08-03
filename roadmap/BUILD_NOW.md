@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-07-29
+Last update: 2026-08-03
 Branch: `main`
 
 ## What Is Being Built
@@ -53,6 +53,7 @@ for Fachpersonal without exposing `value` fields.
 | SPFx roles and deadline cockpit | Implemented offline (#710) | Read-only roles/deputy state, explicit-time deadline traffic light, task filters, Current/Selected BPMN navigation, retry/empty states, container-responsive light/dark layout, 82 SPFx tests and six synthetic visual-contract evidence views; no tenant access or write path. |
 | Generic Workbench live-read binding | Protected PR in progress (#725) | A bounded `AadHttpClient -> NaC BFF` snapshot route binds the generic Workbench to the single synthetic matter in `notary_team_01`; exact Entra subject/tenant, assigned/deputy access, no-store, 128 KiB, stale-response and fail-closed contracts are enforced. Tenant deployment remains blocked until reviewed main. |
 | Azure Functions BFF for the M365 test environment | Final live closure pending (#620/#632) | Python/FastAPI, Entra validation, Graph v1.0 projection, deployment and bounded permissions are prepared. Close only after the current complete 12-step run, idempotency, tamper matrix and SharePoint/Teams render evidence pass. |
+| BFF endpoint performance acceptance | Ready offline for one owner-gated live lane (#733) | Exactly 500 synthetic GETs, concurrency one and at most six dispatches per minute are bound to one endpoint. Azure Monitor and a dedicated Blob lease are implemented offline; tenant-wide SharePoint capacity and monetary cost remain `NOT_CLAIMED`. No Azure resources or live load were created by this slice. |
 
 ## Sprint 0 Development Board
 
@@ -89,6 +90,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0029 | BusinessCaseType S4g production edge composition | Done offline (#709) | Redacted identity inspection, exact site roles, trusted-local database separation and strict Azure Blob WORM REST transport are composed; live activation remains blocked on the enumerated central controls. |
 | DEV-0030 | SPFx role and deadline cockpit | Implemented offline (#710) | Pure explicit-time view model, assigned/deputy role visibility, task filters, Current/Selected BPMN consistency, fail-closed retry, responsive light/dark UI and versioned synthetic screenshot evidence; live tenant deployment is unchanged and separately gated. |
 | DEV-0031 | Generic Workbench live-read binding | Protected PR in progress (#725) | The single synthetic `notary_team_01` matter is projected through an exact, read-only BFF route into the generic SPFx Workbench with canonical roles, short access lease, deterministic denial, bounded wire response, refresh and stale-generation protection; deployment occurs only from reviewed main. |
+| DEV-0032 | BFF endpoint-scoped conservative performance lane | Ready offline (#733) | Exact 500-GET plan, concurrency/rate ceilings, fail-closed Azure Monitor budget, dedicated Blob lease, crash-safe finalization, exact infrastructure readback, redacted evidence and one combined future owner gate pass offline. Tenant-wide SharePoint capacity, monetary costs, Azure provisioning and live load remain unclaimed or unexecuted. |
 
 ## Roadmap Review Notes
 

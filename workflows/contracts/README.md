@@ -111,10 +111,11 @@ machen die Abnahmeharness agentisch lesbar.
   Zugriffstests, Idempotenz und redigierte Evidence; Live-Aktionen bleiben bis
   zum einzigen konsolidierten Owner-Gate ausgesetzt.
 - [workflows/contracts/m365-bff-performance-acceptance.contract.json](m365-bff-performance-acceptance.contract.json):
-  Kapazitäts-, kosten- und hashgebundener Abnahmevertrag für maximal 50.000
-  synthetische Workbench-Reads mit SharePoint-RU-Preflight, Azure-Meter-Limit,
-  Start-Epoch-Prüfung, zweistündiger Last, 24-Stunden-Soak, Remote-Lease und
-  aggregierter redigierter Evidence; der Live-Adapter bleibt Owner-gated.
+  Endpointgebundener, konservativer Abnahmevertrag für exakt 500 synthetische
+  Workbench-Reads mit tenantweiter SharePoint-Baseline, Request-Allowance und
+  Resource-Unit-Allowance jeweils `NOT_CLAIMED`, app-weitem Azure-Monitor-Cap,
+  final gesetztem Monitorfenster, Remote-Lease und aggregierter redigierter
+  Evidence; Live-Ausführung und Provisionierung bleiben Owner-gated.
 - [workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json](m365-sharepoint-bpmn-viewer-adapter.contract.json):
   Vertrag für einen späteren read-only SPFx-BPMN-Viewer in SharePoint mit
   `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder
