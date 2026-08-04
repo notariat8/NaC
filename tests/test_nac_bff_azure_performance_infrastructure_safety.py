@@ -18,10 +18,12 @@ from nac_bff.azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureReadbackAdapter,
     AzurePerformanceInfrastructureReadbackCapability,
     AzurePerformanceInfrastructureReadbackResult,
+    AzurePerformanceInfrastructureRestartReceiptStore,
     AzurePerformanceInfrastructureSafetyError,
     AzurePerformanceInfrastructureSafetyVerification,
     CONTAINER_NAME,
     begin_azure_performance_infrastructure_readback_session,
+    build_infrastructure_restart_receipt_binding,
     canonical_observation_sha256,
     effective_coordination_tags,
     exact_bootstrap_lease_blob_condition,
@@ -126,6 +128,47 @@ def _json_sha256(value: object) -> str:
             sort_keys=True,
         ).encode("ascii")
     ).hexdigest()
+
+
+def _infrastructure_parameters() -> dict[str, object]:
+    return {
+        "tenantId": TENANT_ID,
+        "subscriptionId": SUBSCRIPTION_ID,
+        "resourceGroupName": RESOURCE_GROUP,
+        "storageAccountName": COORDINATION_NAME,
+        "bootstrapPrincipalId": PRINCIPAL_ID,
+        "runtimePrincipalId": RUNTIME_PRINCIPAL_ID,
+        "allowedClientIpAddress": ALLOWED_IP,
+        "targetBindingSha256": TARGET_BINDING,
+        "location": LOCATION,
+        "tags": TAGS,
+    }
+
+
+def _restart_binding() -> dict[str, str]:
+    parameters = _infrastructure_parameters()
+    return build_infrastructure_restart_receipt_binding(
+        owner_binding_sha256=OWNER_BINDING,
+        deployment_id=DEPLOYMENT_ID,
+        infrastructure_approval={
+            "infrastructure_binding_sha256": "b" * 64,
+            "infrastructure_parameters_sha256": _json_sha256(parameters),
+            "infrastructure_source_sha256": "c" * 64,
+            "toolchain_attestations_sha256": "d" * 64,
+        },
+        infrastructure_parameters=parameters,
+    )
+
+
+def _coordination_resources() -> dict[str, str]:
+    return {
+        "coordination_storage_account_resource_id": COORDINATION_ID,
+        "lease_container_resource_id": CONTAINER_SCOPE,
+        "bootstrap_lease_data_role_definition_id": ROLE_DEFINITION_ID,
+        "runtime_lease_data_role_definition_id": RUNTIME_ROLE_DEFINITION_ID,
+        "bootstrap_lease_role_assignment_id": ROLE_ASSIGNMENT_ID,
+        "runtime_lease_role_assignment_id": RUNTIME_ROLE_ASSIGNMENT_ID,
+    }
 
 
 def _storage(name: str, resource_id: str) -> dict[str, object]:
@@ -253,18 +296,7 @@ def _role_assignment(*, runtime: bool = False) -> dict[str, object]:
 
 
 def _deployment() -> dict[str, object]:
-    parameters = {
-        "tenantId": TENANT_ID,
-        "subscriptionId": SUBSCRIPTION_ID,
-        "resourceGroupName": RESOURCE_GROUP,
-        "storageAccountName": COORDINATION_NAME,
-        "bootstrapPrincipalId": PRINCIPAL_ID,
-        "runtimePrincipalId": RUNTIME_PRINCIPAL_ID,
-        "allowedClientIpAddress": ALLOWED_IP,
-        "targetBindingSha256": TARGET_BINDING,
-        "location": LOCATION,
-        "tags": TAGS,
-    }
+    parameters = _infrastructure_parameters()
     return {
         "id": DEPLOYMENT_ID,
         "properties": {
@@ -1376,7 +1408,177 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             validated = validate_infrastructure_safety_evidence(evidence)
         self.assertEqual(validated["bootstrap_principal_id"], PRINCIPAL_ID)
 
-    def test_existing_name_requires_exact_restart_timeline(self) -> None:
+    def test_persists_create_once_receipts_and_reconciles_exact_deployment(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            arguments, _ = _build_arguments(root)
+            store = AzurePerformanceInfrastructureRestartReceiptStore(
+                root / "restart-receipts", binding=_restart_binding()
+            )
+            original = store.persist_original_name_available(
+                arguments["coordination_name_readback_envelope"]
+            )
+            successful = store.persist_successful_deployment(
+                arguments["deployment_receipt_envelope"],
+                coordination_resources=_coordination_resources(),
+                create_deployment_receipt_sha256="e" * 64,
+                deployment_outputs_sha256="f" * 64,
+            )
+
+            state = store.load()
+            reconciled = store.reconcile_successful_deployment(
+                arguments["deployment_receipt_envelope"]
+            )
+            fabricated_arguments = dict(arguments)
+            fabricated_arguments["coordination_name_readback_envelope"] = dict(
+                original
+            )
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "^INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_CAPABILITY_REQUIRED$",
+            ):
+                verify_azure_performance_infrastructure_safety(
+                    **fabricated_arguments
+                )
+            arguments["coordination_name_readback_envelope"] = original
+            with patch(
+                "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+                return_value=VERIFY_AT,
+            ):
+                evidence = verify_azure_performance_infrastructure_safety(
+                    **arguments
+                )
+
+            self.assertEqual(state["status"], "COMPLETE")
+            self.assertEqual(evidence["status"], "SAFE")
+            self.assertEqual(
+                successful["original_name_receipt_sha256"],
+                original["observation_sha256"],
+            )
+            self.assertEqual(reconciled, successful)
+            self.assertEqual(
+                stat.S_IMODE(
+                    (store.directory / store._NAME_FILE).stat().st_mode
+                ),
+                0o400,
+            )
+            self.assertEqual(
+                stat.S_IMODE(
+                    (store.directory / store._DEPLOYMENT_FILE).stat().st_mode
+                ),
+                0o400,
+            )
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "^INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_ALREADY_EXISTS$",
+            ):
+                store.persist_original_name_available(
+                    arguments["coordination_name_readback_envelope"]
+                )
+
+    def test_restart_receipt_tamper_and_incomplete_pair_block(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            arguments, _ = _build_arguments(root)
+            store = AzurePerformanceInfrastructureRestartReceiptStore(
+                root / "restart-receipts", binding=_restart_binding()
+            )
+            store.persist_original_name_available(
+                arguments["coordination_name_readback_envelope"]
+            )
+            store.persist_successful_deployment(
+                arguments["deployment_receipt_envelope"],
+                coordination_resources=_coordination_resources(),
+                create_deployment_receipt_sha256="e" * 64,
+                deployment_outputs_sha256="f" * 64,
+            )
+            name_path = store.directory / store._NAME_FILE
+            name_path.chmod(0o600)
+            tampered = json.loads(name_path.read_text(encoding="ascii"))
+            tampered["observed_at_utc"] = "2026-08-03T11:59:59Z"
+            name_path.write_text(json.dumps(tampered) + "\n", encoding="ascii")
+            name_path.chmod(0o400)
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "^INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID$",
+            ):
+                store.load()
+
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            arguments, _ = _build_arguments(root)
+            store = AzurePerformanceInfrastructureRestartReceiptStore(
+                root / "restart-receipts", binding=_restart_binding()
+            )
+            store.persist_original_name_available(
+                arguments["coordination_name_readback_envelope"]
+            )
+            store.persist_successful_deployment(
+                arguments["deployment_receipt_envelope"],
+                coordination_resources=_coordination_resources(),
+                create_deployment_receipt_sha256="e" * 64,
+                deployment_outputs_sha256="f" * 64,
+            )
+            (store.directory / store._NAME_FILE).unlink()
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "^INFRASTRUCTURE_RESTART_RECEIPTS_INCOMPLETE$",
+            ):
+                store.load()
+
+    def test_running_failed_replaced_or_mismatched_deployment_blocks(self) -> None:
+        variants = {
+            "running": ("provisioningState", "Running", "INVALID"),
+            "failed": ("provisioningState", "Failed", "INVALID"),
+            "replaced": ("timestamp", "2026-08-03T12:00:02Z", "REPLACED"),
+            "mismatch": ("targetBindingSha256", "9" * 64, "INVALID"),
+        }
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            initial = root / "initial"
+            initial.mkdir()
+            arguments, _ = _build_arguments(initial)
+            store = AzurePerformanceInfrastructureRestartReceiptStore(
+                root / "restart-receipts", binding=_restart_binding()
+            )
+            store.persist_original_name_available(
+                arguments["coordination_name_readback_envelope"]
+            )
+            store.persist_successful_deployment(
+                arguments["deployment_receipt_envelope"],
+                coordination_resources=_coordination_resources(),
+                create_deployment_receipt_sha256="e" * 64,
+                deployment_outputs_sha256="f" * 64,
+            )
+            for index, (label, (field, changed, code)) in enumerate(variants.items()):
+                with self.subTest(label=label):
+                    responses = _responses()
+                    deployment = responses[
+                        f"https://management.azure.com{DEPLOYMENT_ID}"
+                        "?api-version=2022-09-01"
+                    ]
+                    if field == "targetBindingSha256":
+                        deployment["properties"]["parameters"][field]["value"] = changed
+                    else:
+                        deployment["properties"][field] = changed
+                    current = root / f"current-{index}"
+                    current.mkdir()
+                    with patch(__name__ + "._responses", return_value=responses):
+                        changed_arguments, _ = _build_arguments(current)
+                    expected_code = (
+                        "INFRASTRUCTURE_DEPLOYMENT_REPLACED"
+                        if code == "REPLACED"
+                        else "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID"
+                    )
+                    with self.assertRaisesRegex(
+                        AzurePerformanceInfrastructureSafetyError,
+                        f"^{expected_code}$",
+                    ):
+                        store.reconcile_successful_deployment(
+                            changed_arguments["deployment_receipt_envelope"]
+                        )
+
+    def test_existing_name_never_authorizes_reconciliation(self) -> None:
         responses = _responses()
         name_url = (
             f"https://management.azure.com/subscriptions/{SUBSCRIPTION_ID}/providers/"
@@ -1392,28 +1594,9 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             return_value=VERIFY_AT,
         ), self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
-            "^READBACK_TIMESTAMP_CONTINUITY_INVALID$",
+            "^COORDINATION_NAME_READBACK_INVALID$",
         ):
             verify_azure_performance_infrastructure_safety(**arguments)
-
-        with tempfile.TemporaryDirectory() as value, patch(
-            __name__ + "._responses", return_value=responses
-        ):
-            reconciled, _ = _build_arguments(
-                Path(value),
-                name_at=datetime(2026, 8, 3, 12, 0, 3, 500000, tzinfo=UTC),
-            )
-        with patch(
-            "nac_bff.azure_performance_infrastructure_safety._trusted_now",
-            return_value=VERIFY_AT,
-        ):
-            evidence = verify_azure_performance_infrastructure_safety(
-                **reconciled
-            )
-        self.assertEqual(
-            evidence["coordination_storage_account_resource_id"],
-            COORDINATION_ID,
-        )
 
     def test_rejects_authoritative_bff_and_worm_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as value:

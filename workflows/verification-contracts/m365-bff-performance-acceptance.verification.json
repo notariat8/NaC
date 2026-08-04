@@ -156,6 +156,11 @@
       "test_required_sequence_is_fail_closed_and_ordered",
       "test_validator_performs_no_io_or_environment_access",
       "test_live_entrypoint_rejects_closed_gate_before_any_io",
+      "test_fresh_path_persists_both_receipts_around_deployment",
+      "test_complete_restart_is_read_only_and_uses_no_name_probe",
+      "test_name_only_restart_requires_new_available_probe_before_create",
+      "test_name_only_unavailable_blocks_without_deployment_create",
+      "test_missing_reconciliation_deployment_blocks_without_fallback",
       "test_public_exports_contain_no_test_capability_or_unsafe_factory"
     ],
     "owner_gate": [
@@ -194,7 +199,10 @@
     "infrastructure_safety": [
       "test_accepts_only_the_exact_offline_safety_observation",
       "test_rejects_tampered_safety_evidence",
-      "test_existing_name_requires_exact_restart_timeline",
+      "test_persists_create_once_receipts_and_reconciles_exact_deployment",
+      "test_restart_receipt_tamper_and_incomplete_pair_block",
+      "test_running_failed_replaced_or_mismatched_deployment_blocks",
+      "test_existing_name_never_authorizes_reconciliation",
       "test_rejects_equal_bootstrap_and_runtime_principals",
       "test_rejects_bootstrap_or_runtime_role_data_action_drift",
       "test_rejects_authoritative_bff_and_worm_mismatch",
@@ -236,7 +244,8 @@
     "Lease break, delete, runtime blob create and automatic reacquire are forbidden; the separately bound bootstrap may create the exact absent zero-byte blob once.",
     "The exact zero-byte lock blob is bootstrapped once with If-None-Match:* and a strong ETag readback; overwrite and delete are forbidden.",
     "The Blob token scope is exactly https://storage.azure.com/.default.",
-    "The coordination account name must be available, the BFF and WORM storage accounts are bound by authoritative resource IDs, and all three accounts are distinct.",
+    "A first deployment persists the immutable original nameAvailable=true receipt before mutation and the exact successful deployment receipt afterward; complete retries use zero name probes and zero deployment creates, validate a fresh GET of the same deterministic deployment, then repeat fresh safety readbacks.",
+    "A name-only retry may return to the fresh path only after a new current nameAvailable=true probe; unavailable names and running, failed, missing, replaced, incomplete, tampered, or mismatched deployment evidence block without redeployment based on history alone.",
     "Effective RBAC and ABAC are expanded and checked at subscription, resource-group, storage-account, blob-service and container scopes; exactly one expected assignment and no broader data assignment are allowed.",
     "One combined offline owner gate binds commit, tree, toolchain, activation, contract, phase, measurement, monitor, lease, bootstrap and infrastructure inputs.",
     "The exact owner gate binds approved commit, tree, toolchain, contract, phase plan, measurement policy, monitor, lease and infrastructure hashes.",

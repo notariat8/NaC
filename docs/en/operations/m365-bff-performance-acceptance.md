@@ -259,6 +259,20 @@ owner tags plus the seven immutable NaC coordination tags.
 The actual resource IDs of the existing BFF storage and WORM evidence storage
 are also bound in advance. The predeployment name check must prove that the
 coordination account does not yet exist. A separate postdeployment readback
+is preceded by create-once restart receipts: the first successful run persists
+the original `nameAvailable=true` receipt before the first deployment and an
+exact `Succeeded` deployment receipt immediately after coordination deployment.
+On restart with a complete receipt pair, a fresh GET of the same deterministic
+deployment is validated before any provider mutation. Owner, target, source,
+parameter, and hash bindings must match; this path performs exactly zero name
+probes and zero deployment creates, then repeats all safety readbacks freshly.
+`Running`, `Failed`, missing, replaced, incomplete, tampered, or mismatched
+receipts block. If a crash leaves only the original name receipt, the fresh-name
+path may continue only after a new current `nameAvailable=true` probe; otherwise
+it blocks without redeployment. Historical receipt state alone never authorizes
+a deployment. The strict temporal relation is
+`original observed < started <= completed < current reconciliation observed`.
+The postdeployment readback
 must prove its exact resource ID, location, effective tags, and complete
 storage/network configuration: public network enabled, default `Deny`, bypass
 `None`, exactly one allowed IP rule, no VNet or resource-access rule, no shared

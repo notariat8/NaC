@@ -273,6 +273,22 @@ plus den sieben unveränderlichen NaC-Koordinationstags.
 Die tatsächlichen Resource-IDs des bestehenden BFF-Storage und des
 WORM-Evidence-Storage sind ebenfalls vorab gebunden. Die Namensprüfung vor dem
 Deployment muss belegen, dass das Koordinationskonto noch nicht existiert. Ein
+erfolgreicher Erstlauf persistiert diesen ursprünglichen
+`nameAvailable=true`-Receipt unveränderlich vor dem ersten Deployment und einen
+exakten `Succeeded`-Deployment-Receipt unmittelbar nach dem
+Koordinationsdeployment. Bei einem Neustart mit vollständigem Receipt-Paar wird
+vor jeder Provider-Mutation ein frisches GET desselben deterministischen
+Deployments geprüft. Owner-, Ziel-, Quell-, Parameter- und Hashbindungen müssen
+übereinstimmen; es erfolgen dabei exakt null Namensprüfungen und null
+Deployment-Creates. Danach werden die vollständigen Safety-Readbacks frisch
+wiederholt. `Running`, `Failed`, fehlende, ersetzte, unvollständige, manipulierte
+oder abweichende Receipts blockieren. Liegt nach einem Absturz nur der
+ursprüngliche Namens-Receipt vor, darf der Fresh-Name-Pfad ausschließlich nach
+einer neuen aktuellen Prüfung mit `nameAvailable=true` fortgesetzt werden;
+andernfalls wird ohne Redeployment blockiert. Der historische Receipt allein
+autorisiert nie ein Deployment. Es gilt strikt
+`original observed < started <= completed < current reconciliation observed`.
+Ein
 getrennter Readback nach dem Deployment muss dessen exakte Resource-ID, Region,
 effektive Tags und die vollständige Storage-/Netzwerkkonfiguration bestätigen:
 öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, genau

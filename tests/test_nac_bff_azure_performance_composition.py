@@ -7,6 +7,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -27,6 +28,167 @@ from nac_bff.azure_performance_storage_ports import (
 
 
 EXPECTED_MISSING_PORTS: list[str] = []
+
+
+def _coordination_resources() -> dict[str, str]:
+    base = "/subscriptions/s/resourceGroups/rg"
+    storage = f"{base}/providers/Microsoft.Storage/storageAccounts/stcoord"
+    container = (
+        f"{storage}/blobServices/default/containers/nac-bff-performance-leases"
+    )
+    return {
+        "coordination_storage_account_resource_id": storage,
+        "lease_container_resource_id": container,
+        "bootstrap_lease_data_role_definition_id": (
+            f"{base}/providers/Microsoft.Authorization/roleDefinitions/bootstrap"
+        ),
+        "runtime_lease_data_role_definition_id": (
+            f"{base}/providers/Microsoft.Authorization/roleDefinitions/runtime"
+        ),
+        "bootstrap_lease_role_assignment_id": (
+            f"{container}/providers/Microsoft.Authorization/roleAssignments/bootstrap"
+        ),
+        "runtime_lease_role_assignment_id": (
+            f"{container}/providers/Microsoft.Authorization/roleAssignments/runtime"
+        ),
+    }
+
+
+class _TraceReadback:
+    def __init__(self, trace: list[str], *, name_available: bool = True) -> None:
+        self.trace = trace
+        self.name_available = name_available
+        self.verification_capability = object()
+
+    def check_storage_account_name_availability(self, **_kwargs: object) -> object:
+        self.trace.append("provider:name-probe")
+        return {"payload": {"name_available": self.name_available}}
+
+    def execute_read(self, *, observation_kind: str, **_kwargs: object) -> object:
+        self.trace.append(f"provider:get:{observation_kind}")
+        return {"kind": observation_kind}
+
+    def read_management_group_ancestry(self, **_kwargs: object) -> object:
+        self.trace.append("provider:get:subscription-ancestry")
+        return {"payload": {"management_group_relationships": []}}
+
+    def read_effective_rbac(self, *, principal_id: str, **_kwargs: object) -> object:
+        self.trace.append(f"provider:get:effective-rbac:{principal_id}")
+        return {"principal_id": principal_id}
+
+
+class _TraceReceiptStore:
+    def __init__(
+        self,
+        trace: list[str],
+        *,
+        status: str,
+        name_available: bool = True,
+    ) -> None:
+        self.trace = trace
+        self.status = status
+        self.name_available = name_available
+        self.original = {"schema_version": "original"}
+
+    def load(self) -> dict[str, object]:
+        self.trace.append("receipt:load")
+        result: dict[str, object] = {"status": self.status}
+        if self.status in {"NAME_ONLY", "COMPLETE"}:
+            result["original_name_receipt"] = self.original
+        return result
+
+    def persist_original_name_available(self, _value: object) -> None:
+        self.trace.append("receipt:create:original-name")
+
+    def require_current_name_available(self, _value: object) -> None:
+        self.trace.append("receipt:validate:current-name")
+        if not self.name_available:
+            raise ValueError("COORDINATION_STORAGE_NAME_UNAVAILABLE")
+
+    def persist_successful_deployment(self, _value: object, **_kwargs: object) -> None:
+        self.trace.append("receipt:create:successful-deployment")
+
+    def reconcile_successful_deployment(self, _value: object) -> dict[str, object]:
+        self.trace.append("receipt:validate:successful-deployment")
+        return {"coordination_resources": _coordination_resources()}
+
+
+def _trace_infrastructure_path(
+    status: str, *, name_available: bool = True
+) -> list[str]:
+    trace: list[str] = []
+    readback = _TraceReadback(trace, name_available=name_available)
+    store = _TraceReceiptStore(
+        trace, status=status, name_available=name_available
+    )
+    resources = _coordination_resources()
+    coordination = SimpleNamespace(
+        **resources,
+        deployment_receipt_sha256="1" * 64,
+        outputs_sha256="2" * 64,
+    )
+
+    def worm_deploy(_authority: object) -> object:
+        trace.append("provider:create:worm-deployment")
+        return object()
+
+    def worm_readback(_authority: object, _receipt: object) -> object:
+        trace.append("provider:get:worm-baseline-readback")
+        return object()
+
+    def coordination_deploy(_authority: object, _readback: object) -> object:
+        trace.append("provider:create:coordination-deployment")
+        return coordination
+
+    parameters = {
+        "tenantId": "tenant",
+        "subscriptionId": "s",
+        "resourceGroupName": "rg",
+        "storageAccountName": "stcoord",
+        "bffStorageAccountResourceId": "bff",
+        "wormStorageAccountResourceId": "worm",
+        "bootstrapPrincipalId": "bootstrap",
+        "runtimePrincipalId": "runtime",
+        "targetBindingSha256": "a" * 64,
+        "location": "location",
+        "tags": {},
+        "allowedClientIpAddress": "127.0.0.1",
+    }
+    with (
+        patch.object(
+            composition,
+            "UnlockedWormBaselineDeploymentPort",
+            return_value=SimpleNamespace(deploy=worm_deploy),
+        ),
+        patch.object(
+            composition,
+            "UnlockedWormBaselineReadbackPort",
+            return_value=SimpleNamespace(
+                verify_exact_unlocked_baseline=worm_readback
+            ),
+        ),
+        patch.object(
+            composition,
+            "PerformanceCoordinationDeploymentPort",
+            return_value=SimpleNamespace(deploy=coordination_deploy),
+        ),
+    ):
+        prepared, name, deployment = composition._prepare_performance_infrastructure(
+            readback=readback,
+            receipt_store=store,
+            deployment_authority=object(),
+            executor=object(),
+            deployment_id="deployment",
+            infrastructure_parameters=parameters,
+        )
+    composition._infrastructure_verification_arguments(
+        readback=readback,
+        name_readback=name,
+        deployment_readback=deployment,
+        coordination=prepared,
+        infrastructure_parameters=parameters,
+    )
+    return trace
 
 
 class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
@@ -73,6 +235,7 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
                 "unlocked_worm_baseline_deployment",
                 "unlocked_worm_baseline_exact_readback",
                 "performance_coordination_deployment",
+                "immutable_infrastructure_restart_receipts",
                 "performance_coordination_safety_readback",
                 "lease_blob_bootstrap",
                 "durable_bootstrap_lease_binding_handoff",
@@ -88,6 +251,107 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         self.assertEqual(result["summary"]["azure_calls"], 0)
         self.assertEqual(result["summary"]["tenant_writes"], 0)
         self.assertEqual(result["summary"]["credential_reads"], 0)
+
+    def test_fresh_path_persists_both_receipts_around_deployment(self) -> None:
+        trace = _trace_infrastructure_path("EMPTY")
+
+        self.assertEqual(
+            trace[:9],
+            [
+                "receipt:load",
+                "provider:name-probe",
+                "receipt:create:original-name",
+                "provider:create:worm-deployment",
+                "provider:get:worm-baseline-readback",
+                "provider:create:coordination-deployment",
+                "provider:get:coordination-deployment-receipt",
+                "receipt:create:successful-deployment",
+                "provider:get:subscription-ancestry",
+            ],
+        )
+
+    def test_complete_restart_is_read_only_and_uses_no_name_probe(self) -> None:
+        trace = _trace_infrastructure_path("COMPLETE")
+
+        self.assertEqual(
+            trace[:4],
+            [
+                "receipt:load",
+                "provider:get:coordination-deployment-receipt",
+                "receipt:validate:successful-deployment",
+                "provider:get:subscription-ancestry",
+            ],
+        )
+        self.assertNotIn("provider:name-probe", trace)
+        self.assertFalse(any(item.startswith("provider:create:") for item in trace))
+        self.assertIn("provider:get:coordination-storage-account-configuration", trace)
+        self.assertIn("provider:get:effective-rbac:runtime", trace)
+
+    def test_name_only_restart_requires_new_available_probe_before_create(self) -> None:
+        trace = _trace_infrastructure_path("NAME_ONLY")
+        self.assertEqual(
+            trace[:5],
+            [
+                "receipt:load",
+                "provider:name-probe",
+                "receipt:validate:current-name",
+                "provider:create:worm-deployment",
+                "provider:get:worm-baseline-readback",
+            ],
+        )
+
+    def test_name_only_unavailable_blocks_without_deployment_create(self) -> None:
+        trace: list[str] = []
+        readback = _TraceReadback(trace, name_available=False)
+        store = _TraceReceiptStore(
+            trace, status="NAME_ONLY", name_available=False
+        )
+        with self.assertRaisesRegex(
+            ValueError, "^COORDINATION_STORAGE_NAME_UNAVAILABLE$"
+        ):
+            composition._prepare_performance_infrastructure(
+                readback=readback,
+                receipt_store=store,
+                deployment_authority=object(),
+                executor=object(),
+                deployment_id="deployment",
+                infrastructure_parameters={
+                    "subscriptionId": "s",
+                    "storageAccountName": "stcoord",
+                },
+            )
+        self.assertEqual(
+            trace,
+            [
+                "receipt:load",
+                "provider:name-probe",
+                "receipt:validate:current-name",
+            ],
+        )
+
+    def test_missing_reconciliation_deployment_blocks_without_fallback(self) -> None:
+        trace: list[str] = []
+        readback = _TraceReadback(trace)
+
+        def missing(**_kwargs: object) -> object:
+            trace.append("provider:get:coordination-deployment-receipt")
+            raise ValueError("DEPLOYMENT_MISSING")
+
+        readback.execute_read = missing  # type: ignore[method-assign]
+        store = _TraceReceiptStore(trace, status="COMPLETE")
+        with self.assertRaisesRegex(ValueError, "^DEPLOYMENT_MISSING$"):
+            composition._prepare_performance_infrastructure(
+                readback=readback,
+                receipt_store=store,
+                deployment_authority=object(),
+                executor=object(),
+                deployment_id="deployment",
+                infrastructure_parameters={},
+            )
+        self.assertEqual(
+            trace,
+            ["receipt:load", "provider:get:coordination-deployment-receipt"],
+        )
 
     def test_validator_performs_no_io_or_environment_access(self) -> None:
         with (

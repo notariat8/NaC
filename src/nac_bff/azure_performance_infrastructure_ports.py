@@ -45,6 +45,12 @@ DEPLOYMENT_SEQUENCE = (
     "execute_endpoint_scoped_conservative_measurement",
     "release_lease_and_finalize_redacted_evidence",
 )
+RESTART_RECONCILIATION_SEQUENCE = (
+    "load_immutable_original_name_and_successful_deployment_receipts",
+    "get_same_deterministic_coordination_deployment",
+    "validate_owner_target_source_parameters_hashes_and_success",
+    "execute_fresh_coordination_and_effective_rbac_readbacks",
+)
 WORM_TEMPLATE_RELATIVE_PATH = Path(
     "deploy/runtime/azure/immutable-evidence/compiled/main.json"
 )
@@ -1276,6 +1282,7 @@ __all__ = [
     "OwnerBoundInfrastructureDeploymentAuthority",
     "PerformanceCoordinationDeploymentPort",
     "PerformanceCoordinationDeploymentReceipt",
+    "RESTART_RECONCILIATION_SEQUENCE",
     "UnlockedWormBaselineDeploymentPort",
     "UnlockedWormBaselineDeploymentReceipt",
     "UnlockedWormBaselineReadbackPort",

@@ -435,7 +435,7 @@
     "implementation_path_exact": "src/nac_bff/azure_performance_infrastructure_safety.py",
     "test_path_exact": "tests/test_nac_bff_azure_performance_infrastructure_safety.py",
     "arm_validator_path_exact": "scripts/validate_nac_bff_performance_coordination_arm.py",
-    "coordination_storage_account_name_policy_exact": "new_name_or_exact_bound_incremental_reconciliation",
+    "coordination_storage_account_name_policy_exact": "immutable-original-available-or-read-only-exact-success-reconciliation",
     "postdeployment_coordination_storage_configuration_readback_required": true,
     "readback_freshness_seconds_exact": {
       "predeployment_maximum": 1800,
@@ -455,8 +455,22 @@
     "process_restart_requires_fresh_read_only_infrastructure_reattestation": true,
     "exact_readback_argv_api_resource_and_response_digest_required": true,
     "helper_fabricated_readback_envelopes_allowed": false,
-    "new_name_or_exact_prior_deployment_receipt_before_postdeployment_readback_required": true,
+    "immutable_original_name_available_receipt_persisted_before_deployment_required": true,
+    "immutable_exact_successful_deployment_receipt_persisted_after_deployment_required": true,
     "deployment_receipt_owner_nonce_and_timestamp_continuity_required": true,
+    "restart_reconciliation_exact": {
+      "complete_receipt_pair_required": true,
+      "fresh_get_same_deterministic_successful_deployment_required": true,
+      "matching_owner_target_source_parameters_and_hashes_required": true,
+      "name_availability_probe_count_exact": 0,
+      "deployment_create_count_exact": 0,
+      "fresh_postdeployment_safety_readbacks_required": true,
+      "running_failed_missing_replaced_or_mismatch_behavior": "block_before_provider_mutation",
+      "name_only_retry_requires_new_current_name_available_true": true,
+      "name_only_retry_name_unavailable_behavior": "block_without_deployment_create",
+      "historical_name_receipt_alone_authorizes_redeployment": false,
+      "temporal_relation_exact": "original_observed_lt_started_lte_completed_lt_current_reconciliation_observed"
+    },
     "owner_bound_tenant_subscription_resource_group_storage_bootstrap_runtime_principals_location_tags_and_network_required": true,
     "effective_tags_are_canonical_union_and_owner_bound": true,
     "postdeployment_storage_and_network_configuration_exact": {

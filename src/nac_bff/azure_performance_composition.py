@@ -35,7 +35,9 @@ from .azure_performance_acceptance import (
 )
 from .azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureReadbackAdapter,
+    AzurePerformanceInfrastructureRestartReceiptStore,
     begin_azure_performance_infrastructure_readback_session,
+    build_infrastructure_restart_receipt_binding,
     calculate_toolchain_attestations_sha256,
 )
 from .azure_performance_authorization import VerifiedInfrastructureSafetySource
@@ -158,6 +160,28 @@ _PORTS = (
         "PerformanceCoordinationDeploymentPort.deploy",
         "PerformanceCoordinationDeploymentPort",
         ((PerformanceCoordinationDeploymentPort, "deploy"),),
+        owner_bound=True,
+    ),
+    _PortRequirement(
+        "immutable_infrastructure_restart_receipts",
+        "coordination_infrastructure",
+        "AzurePerformanceInfrastructureRestartReceiptStore.reconcile_successful_deployment",
+        "AzurePerformanceInfrastructureRestartReceiptStore",
+        (
+            (AzurePerformanceInfrastructureRestartReceiptStore, "load"),
+            (
+                AzurePerformanceInfrastructureRestartReceiptStore,
+                "persist_original_name_available",
+            ),
+            (
+                AzurePerformanceInfrastructureRestartReceiptStore,
+                "persist_successful_deployment",
+            ),
+            (
+                AzurePerformanceInfrastructureRestartReceiptStore,
+                "reconcile_successful_deployment",
+            ),
+        ),
         owner_bound=True,
     ),
     _PortRequirement(
@@ -374,6 +398,7 @@ def run_azure_performance_acceptance_live(
     plan = build_performance_acceptance_plan(
         expected_activation_hash, contract_sha256
     )
+    artifact_store = PerformanceArtifactStore(root, plan["plan_sha256"])
     if infrastructure_parameters.get("targetBindingSha256") != plan[
         "target_binding_sha256"
     ]:
@@ -474,11 +499,6 @@ def run_azure_performance_acceptance_live(
         readback_session,
         toolchain_attestations=toolchain_attestations,
     )
-    name_readback = readback.check_storage_account_name_availability(
-        subscription_id=str(infrastructure_parameters["subscriptionId"]),
-        storage_account_name=str(infrastructure_parameters["storageAccountName"]),
-    )
-
     azure_cli = AzureCliAdapter(
         binary=AZURE_CLI_EXECUTION_PATH,
         expected_binary_sha256=toolchain_attestations[
@@ -488,21 +508,35 @@ def run_azure_performance_acceptance_live(
     executor = AzureCliPerformanceInfrastructureCommandExecutor(
         azure_cli, exact_rest_executor=azure_cli
     )
-    worm_receipt = UnlockedWormBaselineDeploymentPort(executor).deploy(
-        deployment_authority
+    deployment_id = _coordination_deployment_id(
+        infrastructure_parameters=infrastructure_parameters,
+        infrastructure_approval=infrastructure_approval,
     )
-    worm_readback = UnlockedWormBaselineReadbackPort(
-        executor
-    ).verify_exact_unlocked_baseline(deployment_authority, worm_receipt)
-    coordination = PerformanceCoordinationDeploymentPort(executor).deploy(
-        deployment_authority, worm_readback
+    restart_store = AzurePerformanceInfrastructureRestartReceiptStore(
+        artifact_store.run_dir / "infrastructure-restart-receipts",
+        binding=build_infrastructure_restart_receipt_binding(
+            owner_binding_sha256=authorization.owner_approval_body_sha256,
+            deployment_id=deployment_id,
+            infrastructure_approval=infrastructure_approval,
+            infrastructure_parameters=infrastructure_parameters,
+        ),
+    )
+    coordination, name_readback, deployment_readback = (
+        _prepare_performance_infrastructure(
+            readback=readback,
+            receipt_store=restart_store,
+            deployment_authority=deployment_authority,
+            executor=executor,
+            deployment_id=deployment_id,
+            infrastructure_parameters=infrastructure_parameters,
+        )
     )
 
     verification_arguments = _infrastructure_verification_arguments(
         readback=readback,
         name_readback=name_readback,
+        deployment_readback=deployment_readback,
         coordination=coordination,
-        infrastructure_approval=infrastructure_approval,
         infrastructure_parameters=infrastructure_parameters,
     )
     safety_source = VerifiedInfrastructureSafetySource(
@@ -553,7 +587,6 @@ def run_azure_performance_acceptance_live(
     lease_binding = bootstrap_adapter.bootstrap(
         bootstrap_authority.capability
     )
-    artifact_store = PerformanceArtifactStore(root, plan["plan_sha256"])
     handoff = DurableLeaseBindingHandoff(
         artifact_store.run_dir / "lease-binding-handoff.redacted.json",
         expected_owner_approval_body_sha256=(
@@ -652,27 +685,124 @@ def run_azure_performance_acceptance_live(
     }
 
 
-def _infrastructure_verification_arguments(
+@dataclass(frozen=True, slots=True)
+class _CoordinationResources:
+    coordination_storage_account_resource_id: str
+    lease_container_resource_id: str
+    bootstrap_lease_data_role_definition_id: str
+    runtime_lease_data_role_definition_id: str
+    bootstrap_lease_role_assignment_id: str
+    runtime_lease_role_assignment_id: str
+
+
+def _prepare_performance_infrastructure(
     *,
-    readback: AzurePerformanceInfrastructureReadbackAdapter,
-    name_readback: Any,
-    coordination: Any,
-    infrastructure_approval: dict[str, str],
+    readback: Any,
+    receipt_store: Any,
+    deployment_authority: OwnerBoundInfrastructureDeploymentAuthority,
+    executor: AzureCliPerformanceInfrastructureCommandExecutor,
+    deployment_id: str,
     infrastructure_parameters: dict[str, Any],
-) -> dict[str, Any]:
-    parameters = infrastructure_parameters
-    coordination_id = coordination.coordination_storage_account_resource_id
-    blob_service_id = f"{coordination_id}/blobServices/default"
-    deployment_id = (
-        f"/subscriptions/{parameters['subscriptionId']}/resourceGroups/"
-        f"{parameters['resourceGroupName']}/providers/Microsoft.Resources/"
-        "deployments/"
-        f"{_deployment_name(infrastructure_approval['infrastructure_binding_sha256'])}"
+) -> tuple[Any, Any, Any]:
+    """Choose the fresh or strictly read-only restart path before mutation."""
+
+    state = receipt_store.load()
+    status = state.get("status") if isinstance(state, dict) else None
+    if status == "COMPLETE":
+        deployment = readback.execute_read(
+            observation_kind="coordination-deployment-receipt",
+            resource_id=deployment_id,
+        )
+        successful = receipt_store.reconcile_successful_deployment(deployment)
+        resources = successful.get("coordination_resources")
+        if not isinstance(resources, dict):
+            raise ValueError("PERFORMANCE_INFRASTRUCTURE_RESTART_RECEIPT_INVALID")
+        return (
+            _CoordinationResources(**resources),
+            state["original_name_receipt"],
+            deployment,
+        )
+    if status not in {"EMPTY", "NAME_ONLY"}:
+        raise ValueError("PERFORMANCE_INFRASTRUCTURE_RESTART_RECEIPT_INVALID")
+
+    name_readback = readback.check_storage_account_name_availability(
+        subscription_id=str(infrastructure_parameters["subscriptionId"]),
+        storage_account_name=str(infrastructure_parameters["storageAccountName"]),
+    )
+    if status == "EMPTY":
+        receipt_store.persist_original_name_available(name_readback)
+    else:
+        receipt_store.require_current_name_available(name_readback)
+
+    worm_receipt = UnlockedWormBaselineDeploymentPort(executor).deploy(
+        deployment_authority
+    )
+    worm_readback = UnlockedWormBaselineReadbackPort(
+        executor
+    ).verify_exact_unlocked_baseline(deployment_authority, worm_receipt)
+    coordination = PerformanceCoordinationDeploymentPort(executor).deploy(
+        deployment_authority, worm_readback
     )
     deployment = readback.execute_read(
         observation_kind="coordination-deployment-receipt",
         resource_id=deployment_id,
     )
+    receipt_store.persist_successful_deployment(
+        deployment,
+        coordination_resources=_coordination_resource_bindings(coordination),
+        create_deployment_receipt_sha256=(
+            coordination.deployment_receipt_sha256
+        ),
+        deployment_outputs_sha256=coordination.outputs_sha256,
+    )
+    return coordination, name_readback, deployment
+
+
+def _coordination_resource_bindings(coordination: Any) -> dict[str, str]:
+    return {
+        "coordination_storage_account_resource_id": (
+            coordination.coordination_storage_account_resource_id
+        ),
+        "lease_container_resource_id": coordination.lease_container_resource_id,
+        "bootstrap_lease_data_role_definition_id": (
+            coordination.bootstrap_lease_data_role_definition_id
+        ),
+        "runtime_lease_data_role_definition_id": (
+            coordination.runtime_lease_data_role_definition_id
+        ),
+        "bootstrap_lease_role_assignment_id": (
+            coordination.bootstrap_lease_role_assignment_id
+        ),
+        "runtime_lease_role_assignment_id": (
+            coordination.runtime_lease_role_assignment_id
+        ),
+    }
+
+
+def _coordination_deployment_id(
+    *,
+    infrastructure_parameters: dict[str, Any],
+    infrastructure_approval: dict[str, str],
+) -> str:
+    return (
+        f"/subscriptions/{infrastructure_parameters['subscriptionId']}/resourceGroups/"
+        f"{infrastructure_parameters['resourceGroupName']}/providers/"
+        "Microsoft.Resources/deployments/"
+        f"{_deployment_name(infrastructure_approval['infrastructure_binding_sha256'])}"
+    )
+
+
+def _infrastructure_verification_arguments(
+    *,
+    readback: AzurePerformanceInfrastructureReadbackAdapter,
+    name_readback: Any,
+    deployment_readback: Any,
+    coordination: Any,
+    infrastructure_parameters: dict[str, Any],
+) -> dict[str, Any]:
+    parameters = infrastructure_parameters
+    coordination_id = coordination.coordination_storage_account_resource_id
+    blob_service_id = f"{coordination_id}/blobServices/default"
     ancestry = readback.read_management_group_ancestry(
         tenant_id=str(parameters["tenantId"]),
         subscription_id=str(parameters["subscriptionId"]),
@@ -699,7 +829,7 @@ def _infrastructure_verification_arguments(
         "readback_session": readback.verification_capability,
         "coordination_storage_account_name": parameters["storageAccountName"],
         "coordination_name_readback_envelope": name_readback,
-        "deployment_receipt_envelope": deployment,
+        "deployment_receipt_envelope": deployment_readback,
         "coordination_storage_readback_envelope": readback.execute_read(
             observation_kind="coordination-storage-account-configuration",
             resource_id=coordination_id,

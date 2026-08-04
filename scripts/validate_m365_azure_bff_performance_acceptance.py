@@ -756,6 +756,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         errors.append("combined owner gate must bind the exact Azure deployment scope")
 
     infrastructure_safety = _mapping(contract.get("infrastructure_safety"))
+    restart_reconciliation = _mapping(
+        infrastructure_safety.get("restart_reconciliation_exact")
+    )
     if (
         infrastructure_safety.get("implementation_path_exact")
         != str(INFRA_SAFETY)
@@ -766,7 +769,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or infrastructure_safety.get(
             "coordination_storage_account_name_policy_exact"
         )
-        != "new_name_or_exact_bound_incremental_reconciliation"
+        != "immutable-original-available-or-read-only-exact-success-reconciliation"
         or infrastructure_safety.get(
             "postdeployment_coordination_storage_configuration_readback_required"
         )
@@ -826,9 +829,33 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not False
         or infrastructure_safety.get(
-            "new_name_or_exact_prior_deployment_receipt_before_postdeployment_readback_required"
+            "immutable_original_name_available_receipt_persisted_before_deployment_required"
         )
         is not True
+        or infrastructure_safety.get(
+            "immutable_exact_successful_deployment_receipt_persisted_after_deployment_required"
+        )
+        is not True
+        or restart_reconciliation
+        != {
+            "complete_receipt_pair_required": True,
+            "fresh_get_same_deterministic_successful_deployment_required": True,
+            "matching_owner_target_source_parameters_and_hashes_required": True,
+            "name_availability_probe_count_exact": 0,
+            "deployment_create_count_exact": 0,
+            "fresh_postdeployment_safety_readbacks_required": True,
+            "running_failed_missing_replaced_or_mismatch_behavior": (
+                "block_before_provider_mutation"
+            ),
+            "name_only_retry_requires_new_current_name_available_true": True,
+            "name_only_retry_name_unavailable_behavior": (
+                "block_without_deployment_create"
+            ),
+            "historical_name_receipt_alone_authorizes_redeployment": False,
+            "temporal_relation_exact": (
+                "original_observed_lt_started_lte_completed_lt_current_reconciliation_observed"
+            ),
+        }
         or infrastructure_safety.get(
             "deployment_receipt_owner_nonce_and_timestamp_continuity_required"
         )
@@ -1481,6 +1508,10 @@ def main() -> int:
             '"network_calls": 0',
             '"azure_calls": 0',
             '"tenant_writes": 0',
+            "_prepare_performance_infrastructure",
+            "reconcile_successful_deployment",
+            "persist_original_name_available",
+            "persist_successful_deployment",
         ),
         OWNER_GATE: (
             "ACTION = OWNER_ACTION",
@@ -1510,6 +1541,7 @@ def main() -> int:
             "class UnlockedWormBaselineReadbackPort",
             "class PerformanceCoordinationDeploymentPort",
             "class AzureCliPerformanceInfrastructureCommandExecutor",
+            "RESTART_RECONCILIATION_SEQUENCE",
         ),
         STORAGE_PORTS: (
             "class DurableLeaseBindingHandoff",
@@ -1520,7 +1552,9 @@ def main() -> int:
             "def infrastructure_safety_policy_sha256(",
             "def validate_infrastructure_safety_evidence(",
             "infrastructure_safety_evidence_sha256",
-            "new_name_or_exact_bound_incremental_reconciliation",
+            "immutable-original-available-or-read-only-exact-success-reconciliation",
+            "class AzurePerformanceInfrastructureRestartReceiptStore",
+            "original_observed_lt_started_lte_completed_lt_reconciliation_observed",
             "postdeployment_coordination_resource_readback_required",
             "BROADER_EFFECTIVE_CONTROL_PLANE_ASSIGNMENT_PRESENT",
             "canonical_observation_command_sha256",
@@ -1628,6 +1662,9 @@ def main() -> int:
         "terminal",
         "Markdown",
         "completion-manifest",
+        "nameAvailable=true",
+        "Succeeded",
+        "original observed < started <= completed < current reconciliation observed",
     )
     for path in (DOC_DE, DOC_EN):
         content = texts.get(path, "")
