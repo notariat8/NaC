@@ -7926,6 +7926,13 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    performance_acceptance_index = _bff_performance_acceptance_command_index(
+        effective_argv
+    )
+    if performance_acceptance_index is not None:
+        return _run_bff_performance_acceptance_command(
+            effective_argv, performance_acceptance_index
+        )
     performance_owner_gate_index = (
         _bff_performance_infrastructure_owner_gate_command_index(effective_argv)
     )
@@ -7997,6 +8004,185 @@ def main(argv: list[str] | None = None) -> int:
         )
     args = build_parser().parse_args(effective_argv)
     return args.func(args)
+
+
+def _bff_performance_acceptance_command_index(argv: list[str]) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "bff-performance-acceptance",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+class _RedactedPerformanceAcceptanceParser(argparse.ArgumentParser):
+    def error(self, _message: str) -> None:
+        raise ValueError("PERFORMANCE_ACCEPTANCE_INPUT_INVALID")
+
+
+def _run_bff_performance_acceptance_command(
+    argv: list[str], command_index: int
+) -> int:
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    output_format = _bff_performance_acceptance_output_format(command_argv)
+    if (
+        command_argv.count("--owner-approved") != 1
+        or command_argv.count("--execute-live-acceptance") != 1
+    ):
+        return _emit_bff_performance_acceptance_error(
+            "PERFORMANCE_ACCEPTANCE_OWNER_GATE_CLOSED",
+            output_format,
+            live_execution_invoked=False,
+        )
+
+    parser = _RedactedPerformanceAcceptanceParser(
+        prog="nac m365 teams-sharepoint bff-performance-acceptance",
+        description=(
+            "Fuehrt die eine owner-freigegebene, hashgebundene Azure-BFF-"
+            "Performance-Abnahme aus."
+        ),
+    )
+    parser.add_argument("--repo-root", type=Path, required=True)
+    parser.add_argument("--owner-approved", action="store_true")
+    parser.add_argument("--execute-live-acceptance", action="store_true")
+    parser.add_argument("--approval-reference", required=True)
+    parser.add_argument("--expected-activation-hash", required=True)
+    parser.add_argument("--correlation-id", required=True)
+    parser.add_argument("--monitor-window-anchor-utc", required=True)
+    parser.add_argument("--toolchain-attestations-json", type=Path, required=True)
+    parser.add_argument("--infrastructure-parameters-json", type=Path, required=True)
+    parser.add_argument("--worm-baseline-parameters-json", type=Path, required=True)
+    parser.add_argument("--provisioner-state", type=Path, required=True)
+    parser.add_argument("--provisioner-certificate-path", type=Path, required=True)
+    parser.add_argument("--provisioner-private-key-path", type=Path, required=True)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    try:
+        args = parser.parse_args(command_argv)
+        repo_root = resolve_repo_root(args.repo_root)
+        toolchain_attestations = _read_bff_performance_acceptance_json(
+            args.toolchain_attestations_json
+        )
+        infrastructure_parameters = _read_bff_performance_acceptance_json(
+            args.infrastructure_parameters_json
+        )
+        worm_baseline_parameters = _read_bff_performance_acceptance_json(
+            args.worm_baseline_parameters_json
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return _emit_bff_performance_acceptance_error(
+            "PERFORMANCE_ACCEPTANCE_INPUT_INVALID",
+            output_format,
+            live_execution_invoked=False,
+        )
+
+    try:
+        from nac_bff.azure_performance_composition import (
+            run_azure_performance_acceptance_live,
+        )
+    except Exception:
+        return _emit_bff_performance_acceptance_error(
+            "PERFORMANCE_ACCEPTANCE_RUNTIME_UNAVAILABLE",
+            args.format,
+            live_execution_invoked=False,
+        )
+
+    try:
+        result = run_azure_performance_acceptance_live(
+            repo_root=repo_root,
+            owner_approved=True,
+            execute_live_acceptance=True,
+            approval_reference=args.approval_reference,
+            expected_activation_hash=args.expected_activation_hash,
+            correlation_id=args.correlation_id,
+            monitor_window_anchor_utc=args.monitor_window_anchor_utc,
+            toolchain_attestations=toolchain_attestations,
+            infrastructure_parameters=infrastructure_parameters,
+            worm_baseline_parameters=worm_baseline_parameters,
+            provisioner_state_path=args.provisioner_state,
+            provisioner_certificate_path=args.provisioner_certificate_path,
+            provisioner_private_key_path=args.provisioner_private_key_path,
+        )
+    except Exception:
+        return _emit_bff_performance_acceptance_error(
+            "PERFORMANCE_ACCEPTANCE_EXECUTION_FAILED",
+            args.format,
+            live_execution_invoked=True,
+        )
+
+    if not isinstance(result, dict) or result.get("status") != "PASSED":
+        return _emit_bff_performance_acceptance_error(
+            "PERFORMANCE_ACCEPTANCE_RUN_FAILED",
+            args.format,
+            live_execution_invoked=True,
+        )
+    _print_bff_performance_acceptance_result(result, args.format)
+    return 0
+
+
+def _bff_performance_acceptance_output_format(argv: list[str]) -> str:
+    return (
+        "json"
+        if any(
+            argv[index : index + 2] == ["--format", "json"]
+            for index in range(len(argv) - 1)
+        )
+        else "text"
+    )
+
+
+def _read_bff_performance_acceptance_json(path: Path) -> dict[str, Any]:
+    if path.stat().st_size > 1024 * 1024:
+        raise ValueError("PERFORMANCE_ACCEPTANCE_INPUT_INVALID")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("PERFORMANCE_ACCEPTANCE_INPUT_INVALID")
+    return value
+
+
+def _emit_bff_performance_acceptance_error(
+    code: str,
+    output_format: str,
+    *,
+    live_execution_invoked: bool,
+) -> int:
+    payload = {
+        "schema_version": "nac.m365-bff-performance-acceptance-cli/v1",
+        "status": "BLOCKED",
+        "error": {"code": code},
+        "live_execution_invoked": live_execution_invoked,
+    }
+    _print_bff_performance_acceptance_result(payload, output_format)
+    return 2
+
+
+def _print_bff_performance_acceptance_result(
+    result: dict[str, Any], output_format: str
+) -> None:
+    payload: dict[str, Any] = {
+        "schema_version": "nac.m365-bff-performance-acceptance-cli/v1",
+        "status": result.get("status", "BLOCKED"),
+    }
+    error = result.get("error")
+    if isinstance(error, dict) and isinstance(error.get("code"), str):
+        payload["error"] = {"code": error["code"]}
+    if isinstance(result.get("live_execution_invoked"), bool):
+        payload["live_execution_invoked"] = result["live_execution_invoked"]
+    for key in ("final_evidence_sha256", "completion_manifest_sha256"):
+        value = result.get(key)
+        if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+            payload[key] = value
+    if output_format == "json":
+        print_json(payload)
+        return
+    print(f"STATUS: {payload['status']}")
+    if "error" in payload:
+        print(f"ERROR: {payload['error']['code']}")
+    for key in ("final_evidence_sha256", "completion_manifest_sha256"):
+        if key in payload:
+            print(f"{key.upper()}: {payload[key]}")
 
 
 def _bff_performance_infrastructure_owner_gate_command_index(
