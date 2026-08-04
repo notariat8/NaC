@@ -26,6 +26,7 @@
     "src/nac_bff/azure_performance_monitor.py",
     "src/nac_bff/azure_performance_lease.py",
     "src/nac_bff/azure_performance_runtime.py",
+    "src/nac_bff/azure_performance_composition.py",
     "src/nac_bff/azure_performance_owner_gate.py",
     "src/nac_bff/azure_performance_infrastructure_safety.py",
     "src/nac_bff/azure_live_commands.py",
@@ -45,6 +46,7 @@
     "tests/test_nac_bff_azure_performance_monitor.py",
     "tests/test_nac_bff_azure_performance_lease.py",
     "tests/test_nac_bff_azure_performance_runtime.py",
+    "tests/test_nac_bff_azure_performance_composition.py",
     "tests/test_nac_bff_azure_performance_owner_gate.py",
     "tests/test_nac_bff_azure_performance_infrastructure_safety.py",
     "tests/test_nac_bff_azure_live_commands.py",
@@ -56,7 +58,7 @@
     "python3 scripts/validate_m365_azure_bff_performance_acceptance.py",
     "python3 -m json.tool workflows/contracts/m365-bff-performance-acceptance.contract.json",
     "python3 -m json.tool workflows/verification-contracts/m365-bff-performance-acceptance.verification.json",
-    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_azure_performance_authorization tests.test_nac_bff_azure_performance_acceptance tests.test_nac_bff_azure_performance_monitor tests.test_nac_bff_azure_performance_lease tests.test_nac_bff_azure_performance_runtime tests.test_nac_bff_azure_performance_owner_gate tests.test_nac_bff_azure_performance_infrastructure_safety tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests.test_monitor_get_is_limited_to_exact_adapter_url_shape tests.test_nac_bff_performance_coordination_iac",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_azure_performance_authorization tests.test_nac_bff_azure_performance_acceptance tests.test_nac_bff_azure_performance_monitor tests.test_nac_bff_azure_performance_lease tests.test_nac_bff_azure_performance_runtime tests.test_nac_bff_azure_performance_composition tests.test_nac_bff_azure_performance_owner_gate tests.test_nac_bff_azure_performance_infrastructure_safety tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests.test_monitor_get_is_limited_to_exact_adapter_url_shape tests.test_nac_bff_performance_coordination_iac",
     "az bicep build --file deploy/runtime/azure/nac-bff-performance-coordination/main.bicep --stdout > /tmp/nac-bff-performance-coordination-main.json",
     "az bicep build-params --file deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam --stdout > /tmp/nac-bff-performance-coordination-main-params.json",
     "cmp /tmp/nac-bff-performance-coordination-main.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.json",
@@ -139,6 +141,13 @@
       "test_finalization_blocks_when_monitor_dispatch_count_is_below_limit",
       "test_final_evidence_persists_validated_monitor_cap_binding",
       "test_symlink_in_any_ancestor_blocks_final_and_pending_evidence"
+    ],
+    "composition": [
+      "test_current_stack_is_blocked_on_missing_production_ports",
+      "test_existing_ports_are_reported_without_claiming_readiness",
+      "test_required_sequence_is_fail_closed_and_ordered",
+      "test_validator_performs_no_io_or_environment_access",
+      "test_public_exports_contain_no_test_capability_or_unsafe_factory"
     ],
     "owner_gate": [
       "test_gate_binds_one_combined_infrastructure_and_live_action",

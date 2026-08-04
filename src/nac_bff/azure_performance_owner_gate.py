@@ -53,6 +53,7 @@ INFRASTRUCTURE_SOURCE_PATHS = (
         "compiled/main.example.json"
     ),
     Path("src/nac_bff/azure_performance_runtime.py"),
+    Path("src/nac_bff/azure_performance_composition.py"),
     Path("src/nac_bff/azure_performance_lease.py"),
     Path("src/nac_bff/azure_performance_acceptance.py"),
     Path("src/nac_bff/azure_performance_authorization.py"),

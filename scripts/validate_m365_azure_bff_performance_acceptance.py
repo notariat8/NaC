@@ -21,6 +21,7 @@ AUTHORIZATION = Path("src/nac_bff/azure_performance_authorization.py")
 MONITOR = Path("src/nac_bff/azure_performance_monitor.py")
 LEASE = Path("src/nac_bff/azure_performance_lease.py")
 RUNTIME = Path("src/nac_bff/azure_performance_runtime.py")
+COMPOSITION = Path("src/nac_bff/azure_performance_composition.py")
 OWNER_GATE = Path("src/nac_bff/azure_performance_owner_gate.py")
 INFRA_SAFETY = Path("src/nac_bff/azure_performance_infrastructure_safety.py")
 AZURE_COMMANDS = Path("src/nac_bff/azure_live_commands.py")
@@ -52,6 +53,7 @@ AUTHORIZATION_TESTS = Path("tests/test_nac_bff_azure_performance_authorization.p
 MONITOR_TESTS = Path("tests/test_nac_bff_azure_performance_monitor.py")
 LEASE_TESTS = Path("tests/test_nac_bff_azure_performance_lease.py")
 RUNTIME_TESTS = Path("tests/test_nac_bff_azure_performance_runtime.py")
+COMPOSITION_TESTS = Path("tests/test_nac_bff_azure_performance_composition.py")
 OWNER_GATE_TESTS = Path("tests/test_nac_bff_azure_performance_owner_gate.py")
 INFRA_SAFETY_TESTS = Path(
     "tests/test_nac_bff_azure_performance_infrastructure_safety.py"
@@ -1172,6 +1174,7 @@ def _validate_verification(
         "tests.test_nac_bff_azure_performance_monitor "
         "tests.test_nac_bff_azure_performance_lease "
         "tests.test_nac_bff_azure_performance_runtime "
+        "tests.test_nac_bff_azure_performance_composition "
         "tests.test_nac_bff_azure_performance_owner_gate "
         "tests.test_nac_bff_azure_performance_infrastructure_safety "
         "tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests."
@@ -1206,6 +1209,8 @@ def _validate_verification(
         INFRA_PARAMETERS,
         INFRA_COMPILED,
         INFRA_COMPILED_PARAMETERS,
+        COMPOSITION,
+        COMPOSITION_TESTS,
         WORM_INFRA,
         WORM_INFRA_PARAMETERS,
         WORM_INFRA_COMPILED,
@@ -1269,6 +1274,7 @@ def main() -> int:
         MONITOR,
         LEASE,
         RUNTIME,
+        COMPOSITION,
         OWNER_GATE,
         INFRA_SAFETY,
         AZURE_COMMANDS,
@@ -1284,6 +1290,7 @@ def main() -> int:
         MONITOR_TESTS,
         LEASE_TESTS,
         RUNTIME_TESTS,
+        COMPOSITION_TESTS,
         OWNER_GATE_TESTS,
         INFRA_SAFETY_TESTS,
         AZURE_COMMAND_TESTS,
@@ -1407,6 +1414,14 @@ def main() -> int:
             '"- Tenant-wide SharePoint resource-unit allowance: `NOT_CLAIMED`"',
             '"- Monetary cost: `NOT_CLAIMED`"',
         ),
+        COMPOSITION: (
+            "validate_azure_performance_composition_readiness",
+            "BLOCKED_MISSING_PRODUCTION_PORTS",
+            "missing_ports",
+            '"network_calls": 0',
+            '"azure_calls": 0',
+            '"tenant_writes": 0',
+        ),
         OWNER_GATE: (
             "ACTION = OWNER_ACTION",
             "approved_commit_sha",
@@ -1498,6 +1513,7 @@ def main() -> int:
         ("monitor", MONITOR_TESTS),
         ("lease", LEASE_TESTS),
         ("runtime", RUNTIME_TESTS),
+        ("composition", COMPOSITION_TESTS),
         ("owner_gate", OWNER_GATE_TESTS),
         ("infrastructure_safety", INFRA_SAFETY_TESTS),
         ("command_boundary", AZURE_COMMAND_TESTS),
