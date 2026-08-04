@@ -1,11 +1,11 @@
 # M365-BFF-Performance-Abnahme
 
-Status: Issue #733 definiert einen Offline-Vertrag sowie Offline-Adapter für
-Azure Monitor und eine dedizierte Azure-Blob-Lease. Ein Live-CLI-Befehl und
-eine Live-Aktion sind nicht implementiert.
-Issue #735 bindet zusätzlich die reproduzierbare, noch nicht irreversibel
-gesperrte WORM-Baseline und die Koordinationsinfrastruktur an dieselbe spätere
-Owner-Freigabe. In diesem Offline-Slice werden keine Azure-Ressourcen erstellt.
+Status: Issue #735 implementiert den owner-gebundenen Live-CLI- und
+Kompositionspfad offline. Er bindet die reproduzierbare, noch nicht
+irreversibel gesperrte WORM-Baseline, die Koordinationsinfrastruktur, Azure
+Monitor, die dedizierte Blob-Lease und exakt 500 synthetische GETs an eine
+einzige spätere Owner-Freigabe. In diesem Slice werden keine Azure-Ressourcen
+erstellt und keine Live-Aufrufe ausgeführt.
 
 Die maschinenlesbaren Quellen sind der
 [Abnahmevertrag](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -390,7 +390,7 @@ Der bestehende Planbefehl bleibt offline und sendet null Requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #733 implementiert die Adapter für Offline-Verifikation, aktiviert aber
+Issue #735 implementiert die vollständige Komposition offline, aktiviert aber
 keinen Live-CLI-Befehl, keine Azure-Ressourcenaktion, keine Blob-/Lease-Mutation,
 keinen Monitor-Read und keinen Target-Dispatch. Direkte Adapteraufrufe blockieren
 vor Token-, Netzwerk- oder State-Zugriff, wenn nicht die exakte begrenzte

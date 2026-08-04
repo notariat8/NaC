@@ -1,11 +1,10 @@
 # M365 BFF Performance Acceptance
 
-Status: Issue #733 defines an offline contract and offline adapters for Azure
-Monitor and a dedicated Azure Blob lease. No live CLI command or live action is
-implemented.
-Issue #735 additionally binds the reproducible WORM baseline, before any
-irreversible policy lock, and the coordination infrastructure to the same
-future owner approval. This offline slice creates no Azure resource.
+Status: Issue #735 implements the owner-bound live CLI and composition path
+offline. It binds the reproducible WORM baseline before any irreversible lock,
+coordination infrastructure, Azure Monitor, the dedicated Blob lease, and
+exactly 500 synthetic GETs to one later owner approval. This slice creates no
+Azure resource and performs no live call.
 
 The machine-readable sources are the
 [acceptance contract](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -370,7 +369,7 @@ The existing plan command remains offline and sends zero requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #733 implements the adapters for offline verification, but activates no
+Issue #735 implements the complete composition offline, but activates no
 live CLI command, Azure resource action, Blob or lease mutation, Monitor read,
 or target dispatch. Direct adapter calls fail before token, network, or state
 access unless they receive the exact bounded capability issued after immutable

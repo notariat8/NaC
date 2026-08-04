@@ -24,6 +24,10 @@ RUNTIME = Path("src/nac_bff/azure_performance_runtime.py")
 COMPOSITION = Path("src/nac_bff/azure_performance_composition.py")
 OWNER_GATE = Path("src/nac_bff/azure_performance_owner_gate.py")
 INFRA_SAFETY = Path("src/nac_bff/azure_performance_infrastructure_safety.py")
+INFRASTRUCTURE_PORTS = Path(
+    "src/nac_bff/azure_performance_infrastructure_ports.py"
+)
+STORAGE_PORTS = Path("src/nac_bff/azure_performance_storage_ports.py")
 AZURE_COMMANDS = Path("src/nac_bff/azure_live_commands.py")
 INFRA = Path("deploy/runtime/azure/nac-bff-performance-coordination/main.bicep")
 INFRA_PARAMETERS = Path(
@@ -58,6 +62,12 @@ OWNER_GATE_TESTS = Path("tests/test_nac_bff_azure_performance_owner_gate.py")
 INFRA_SAFETY_TESTS = Path(
     "tests/test_nac_bff_azure_performance_infrastructure_safety.py"
 )
+INFRASTRUCTURE_PORT_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_infrastructure_ports.py"
+)
+STORAGE_PORT_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_storage_ports.py"
+)
 AZURE_COMMAND_TESTS = Path("tests/test_nac_bff_azure_live_commands.py")
 INFRA_TESTS = Path("tests/test_nac_bff_performance_coordination_iac.py")
 CONTRACT_INDEX = Path("workflows/contracts/README.md")
@@ -77,8 +87,8 @@ SPEC_EN = Path(
     "docs/en/superpowers/specs/"
     "2026-08-03-bff-conservative-measurement-adapters-design.md"
 )
-ISSUE = "https://github.com/notariat8/NaC/issues/733"
-ACCEPTANCE_IDS = [f"AC-733-{index:02d}" for index in range(1, 9)]
+ISSUE = "https://github.com/notariat8/NaC/issues/735"
+ACCEPTANCE_IDS = [f"AC-735-{index:02d}" for index in range(1, 10)]
 
 PHASES = [
     ("cold_epoch_baseline", 1, 1),
@@ -399,9 +409,9 @@ def _require_fragments(
 
 def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     if contract.get("leading_issue") != ISSUE:
-        errors.append("domain contract must bind Issue #733")
+        errors.append("domain contract must bind Issue #735")
     if contract.get("acceptance_ids") != ACCEPTANCE_IDS:
-        errors.append("domain contract must bind AC-733-01 through AC-733-08")
+        errors.append("domain contract must bind AC-735-01 through AC-735-09")
     if contract.get("contract_id") != "m365.bff_performance_acceptance":
         errors.append("domain contract ID must match the runtime contract ID")
 
@@ -417,15 +427,22 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     ):
         if scope.get(field) != "NOT_CLAIMED":
             errors.append(f"scope {field} must be NOT_CLAIMED")
-    if scope.get("live_cli_implemented") is not False or scope.get(
-        "live_action_implemented"
-    ) is not False:
-        errors.append("the live CLI and live action must remain unimplemented")
+    if (
+        scope.get("live_cli_implemented_offline") is not True
+        or scope.get("live_action_composition_implemented_offline") is not True
+    ):
+        errors.append("the live CLI and composition must be implemented offline")
     if (
         scope.get("offline_adapters_implemented") is not True
         or scope.get("offline_adapters_are_not_a_live_action") is not True
+        or scope.get("azure_resource_creation_or_change_executed_in_this_pr")
+        is not False
+        or scope.get("live_blob_or_lease_access_executed_in_this_pr") is not False
+        or scope.get("live_target_dispatch_executed_in_this_pr") is not False
+        or scope.get("tenant_wide_monetary_baseline_claim_exact")
+        != "NOT_CLAIMED"
     ):
-        errors.append("offline adapters must not be represented as a live action")
+        errors.append("offline implementation must not claim live execution or cost")
 
     policy = _mapping(contract.get("measurement_policy"))
     if (
@@ -937,17 +954,20 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         errors.append("coordination infrastructure safety contract drifted")
 
     boundary = _mapping(contract.get("live_action_boundary"))
+    if (
+        boundary.get("live_cli_exposed_offline") is not True
+        or boundary.get("live_action_composition_implemented_offline") is not True
+    ):
+        errors.append("owner-gated CLI and composition must be exposed offline")
     if any(
         boundary.get(field) is not False
         for field in (
-            "live_cli_exposed",
-            "live_action_implemented",
             "live_azure_cli_invocation_allowed_by_this_contract_slice",
             "live_blob_or_lease_operation_allowed_by_this_contract_slice",
             "live_target_dispatch_allowed_by_this_contract_slice",
         )
     ):
-        errors.append("contract slice must expose no live CLI or live action")
+        errors.append("contract slice must perform no live action")
     if (
         boundary.get("azure_command_adapter_path_exact") != str(AZURE_COMMANDS)
         or boundary.get("azure_command_adapter_test_path_exact")
@@ -969,7 +989,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or boundary.get(
-            "future_composition_requires_verified_owner_and_infrastructure_capability"
+            "composition_requires_verified_owner_and_infrastructure_capability"
         )
         is not True
         or boundary.get("infrastructure_provenance_requires_sealed_readback_capability")
@@ -1155,9 +1175,9 @@ def _validate_verification(
     verification: dict[str, Any], errors: list[str]
 ) -> None:
     if verification.get("leading_issue") != ISSUE:
-        errors.append("verification contract must bind Issue #733")
+        errors.append("verification contract must bind Issue #735")
     if verification.get("acceptance_ids") != ACCEPTANCE_IDS:
-        errors.append("verification contract must bind AC-733-01 through AC-733-08")
+        errors.append("verification contract must bind AC-735-01 through AC-735-09")
     verification_passed = _mapping(verification.get("pass_condition"))
     for field in (
         "tenant_wide_sharepoint_baseline_claim_exact",
@@ -1177,6 +1197,8 @@ def _validate_verification(
         "tests.test_nac_bff_azure_performance_composition "
         "tests.test_nac_bff_azure_performance_owner_gate "
         "tests.test_nac_bff_azure_performance_infrastructure_safety "
+        "tests.test_nac_bff_azure_performance_infrastructure_ports "
+        "tests.test_nac_bff_azure_performance_storage_ports "
         "tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests."
         "test_monitor_get_is_limited_to_exact_adapter_url_shape "
         "tests.test_nac_bff_performance_coordination_iac"
@@ -1277,6 +1299,8 @@ def main() -> int:
         COMPOSITION,
         OWNER_GATE,
         INFRA_SAFETY,
+        INFRASTRUCTURE_PORTS,
+        STORAGE_PORTS,
         AZURE_COMMANDS,
         INFRA,
         WORM_INFRA,
@@ -1293,6 +1317,8 @@ def main() -> int:
         COMPOSITION_TESTS,
         OWNER_GATE_TESTS,
         INFRA_SAFETY_TESTS,
+        INFRASTRUCTURE_PORT_TESTS,
+        STORAGE_PORT_TESTS,
         AZURE_COMMAND_TESTS,
         INFRA_TESTS,
         CONTRACT_INDEX,
@@ -1416,7 +1442,8 @@ def main() -> int:
         ),
         COMPOSITION: (
             "validate_azure_performance_composition_readiness",
-            "BLOCKED_MISSING_PRODUCTION_PORTS",
+            "run_azure_performance_acceptance_live",
+            '"production_composition_constructed": True',
             "missing_ports",
             '"network_calls": 0',
             '"azure_calls": 0',
@@ -1443,6 +1470,18 @@ def main() -> int:
             '"tags"',
             "build_activation_attestation_plan",
             "network_accessed",
+        ),
+        INFRASTRUCTURE_PORTS: (
+            "class OwnerBoundInfrastructureDeploymentAuthority",
+            "class UnlockedWormBaselineDeploymentPort",
+            "class UnlockedWormBaselineReadbackPort",
+            "class PerformanceCoordinationDeploymentPort",
+            "class AzureCliPerformanceInfrastructureCommandExecutor",
+        ),
+        STORAGE_PORTS: (
+            "class DurableLeaseBindingHandoff",
+            "class AttestedAzureStorageTokenProvider",
+            "AZURE_STORAGE_CREDENTIAL_UNTRUSTED",
         ),
         INFRA_SAFETY: (
             "def infrastructure_safety_policy_sha256(",
@@ -1516,6 +1555,8 @@ def main() -> int:
         ("composition", COMPOSITION_TESTS),
         ("owner_gate", OWNER_GATE_TESTS),
         ("infrastructure_safety", INFRA_SAFETY_TESTS),
+        ("infrastructure_ports", INFRASTRUCTURE_PORT_TESTS),
+        ("storage_ports", STORAGE_PORT_TESTS),
         ("command_boundary", AZURE_COMMAND_TESTS),
         ("infrastructure", INFRA_TESTS),
     ):
@@ -1526,7 +1567,7 @@ def main() -> int:
         _require_fragments(path, texts.get(path, ""), names, errors)
 
     doc_fragments = (
-        "Issue #733",
+        "Issue #735",
         "endpoint_scoped_conservative_measurement",
         "NOT_CLAIMED",
         "500",
