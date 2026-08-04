@@ -1762,6 +1762,16 @@ def _bootstrap_binding_sha256(binding: AzureBlobLeaseBootstrapBinding) -> str:
     )
 
 
+def calculate_azure_blob_lease_bootstrap_binding_sha256(
+    binding: AzureBlobLeaseBootstrapBinding,
+) -> str:
+    """Return the canonical bootstrap binding digest used by the adapter."""
+
+    if type(binding) is not AzureBlobLeaseBootstrapBinding:
+        raise TypeError("binding")
+    return _bootstrap_binding_sha256(binding)
+
+
 def _authorize_blob_capability(
     capability: object,
     *,

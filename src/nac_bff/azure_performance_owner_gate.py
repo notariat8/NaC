@@ -25,6 +25,9 @@ from .azure_performance_acceptance import (
 from .azure_performance_lease import (
     lease_bootstrap_policy_sha256,
 )
+from .azure_performance_composition import (
+    validate_azure_performance_composition_readiness,
+)
 from .azure_performance_infrastructure_safety import (
     effective_coordination_tags,
     infrastructure_safety_policy_sha256,
@@ -173,6 +176,9 @@ def build_performance_infrastructure_owner_gate(
     """Build one offline approval binding infrastructure and the complete run."""
 
     try:
+        composition = validate_azure_performance_composition_readiness()
+        if composition.get("status") != "READY" or composition.get("ready") is not True:
+            raise ValueError("PERFORMANCE_PRODUCTION_COMPOSITION_NOT_READY")
         root = repo_root.expanduser().resolve()
         _require_sha256(expected_activation_hash, "expected_activation_hash")
         measurement = measure_performance_infrastructure_approval(
@@ -279,6 +285,7 @@ def build_performance_infrastructure_owner_gate(
                 "live_target_dispatches": 0,
                 "private_key_read": False,
             },
+            "composition_readiness": composition,
         }
     except Exception as exc:
         code = str(exc)

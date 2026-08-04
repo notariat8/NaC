@@ -350,6 +350,103 @@ def _issue_verified_bootstrap_authority(
     )
 
 
+def _transition_verified_bootstrap_authority(
+    *,
+    bootstrap_authority: object,
+    bootstrap_binding_sha256: str,
+    owner_authorization: object,
+    infrastructure_safety_verification: AzurePerformanceInfrastructureSafetyVerification,
+    execution_bindings: Mapping[str, str],
+    action_bindings: Mapping[str, tuple[str, int]],
+    repo_root: Path,
+    run_binding_sha256: str,
+    checkpoint_commit_path: Path,
+    checkpoint_slot_paths: Mapping[str, Path],
+    final_evidence_path: Path,
+) -> VerifiedPerformanceAuthority:
+    """Replace one exhausted bootstrap capability with one runtime capability."""
+
+    if type(bootstrap_authority) is not VerifiedPerformanceAuthority:
+        raise PerformanceLiveAuthorizationError(
+            "PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID"
+        )
+    _require_sha256(bootstrap_binding_sha256)
+    if BLOB_BOOTSTRAP in action_bindings:
+        raise PerformanceLiveAuthorizationError(
+            "PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID"
+        )
+    new_bindings, target, _owner_binding = _validated_authority_bindings(
+        owner_authorization=owner_authorization,
+        infrastructure_safety_verification=infrastructure_safety_verification,
+        execution_bindings=execution_bindings,
+    )
+    old_bindings = _validated_digest_mapping(
+        bootstrap_authority.execution_bindings
+    )
+    mutable_transition_bindings = {
+        "lease_binding_sha256",
+        "lease_acquisition_safety_evidence_sha256",
+    }
+    if any(
+        old_bindings.get(key) != value
+        for key, value in new_bindings.items()
+        if key not in mutable_transition_bindings
+    ) or any(
+        new_bindings.get(key) != value
+        for key, value in old_bindings.items()
+        if key not in mutable_transition_bindings
+    ):
+        raise PerformanceLiveAuthorizationError(
+            "PERFORMANCE_BOOTSTRAP_TRANSITION_BINDING_MISMATCH"
+        )
+    if (
+        old_bindings.get("lease_binding_sha256") != bootstrap_binding_sha256
+        or old_bindings.get("lease_acquisition_safety_evidence_sha256")
+        != bootstrap_binding_sha256
+    ):
+        raise PerformanceLiveAuthorizationError(
+            "PERFORMANCE_BOOTSTRAP_TRANSITION_BINDING_MISMATCH"
+        )
+
+    capability = bootstrap_authority.capability
+    with _CAPABILITY_LOCK:
+        state = _CAPABILITY_STATES.get(capability._nonce)
+        if state is None or state.capability is not capability:
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_BOOTSTRAP_TRANSITION_REPLAYED"
+            )
+        if (
+            state.target_binding_sha256 != target
+            or dict(state.action_bindings)
+            != {BLOB_BOOTSTRAP: bootstrap_binding_sha256}
+            or state.remaining_uses != {BLOB_BOOTSTRAP: 0}
+            or state.usage_ledger is not None
+        ):
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_BOOTSTRAP_TRANSITION_NOT_READY"
+            )
+        del _CAPABILITY_STATES[capability._nonce]
+    try:
+        return _issue_verified_performance_authority(
+            owner_authorization=owner_authorization,
+            infrastructure_safety_verification=(
+                infrastructure_safety_verification
+            ),
+            execution_bindings=new_bindings,
+            action_bindings=action_bindings,
+            repo_root=repo_root,
+            run_binding_sha256=run_binding_sha256,
+            checkpoint_commit_path=checkpoint_commit_path,
+            checkpoint_slot_paths=checkpoint_slot_paths,
+            final_evidence_path=final_evidence_path,
+        )
+    except Exception:
+        with _CAPABILITY_LOCK:
+            if capability._nonce not in _CAPABILITY_STATES:
+                _CAPABILITY_STATES[capability._nonce] = state
+        raise
+
+
 def _authorize_live_action(
     capability: object,
     *,

@@ -440,6 +440,10 @@ class PerformanceCoordinationDeploymentReceipt:
     owner_binding_sha256: str
     deployment_receipt_sha256: str
     outputs_sha256: str
+    coordination_storage_account_resource_id: str
+    lease_container_resource_id: str
+    lease_data_role_definition_id: str
+    provisioner_lease_role_assignment_id: str
     _authority_id: int
     _seal: object
 
@@ -629,6 +633,18 @@ class PerformanceCoordinationDeploymentPort:
                 owner_binding_sha256=state.owner_binding_sha256,
                 deployment_receipt_sha256=_sha256_json(deployment),
                 outputs_sha256=_sha256_json(outputs),
+                coordination_storage_account_resource_id=outputs[
+                    "storageAccountResourceId"
+                ],
+                lease_container_resource_id=outputs[
+                    "leaseContainerResourceId"
+                ],
+                lease_data_role_definition_id=outputs[
+                    "leaseDataRoleDefinitionId"
+                ],
+                provisioner_lease_role_assignment_id=outputs[
+                    "provisionerLeaseRoleAssignmentId"
+                ],
             )
             authority._finish(stage)
             return receipt

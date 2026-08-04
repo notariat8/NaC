@@ -20,55 +20,27 @@ from nac_bff.azure_performance_composition import (
 )
 
 
-EXPECTED_MISSING_PORTS = [
-    "owner_bound_infrastructure_deployment_authority",
-    "unlocked_worm_baseline_deployment",
-    "unlocked_worm_baseline_exact_readback",
-    "performance_coordination_deployment",
-    "durable_bootstrap_lease_binding_handoff",
-    "attested_azure_storage_token_provider",
-]
+EXPECTED_MISSING_PORTS: list[str] = []
 
 
 class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
-    def test_current_stack_is_blocked_on_missing_production_ports(self) -> None:
+    def test_current_stack_has_all_production_ports_without_live_authority(self) -> None:
         result = validate_azure_performance_composition_readiness()
 
-        self.assertEqual(result["status"], BLOCKED_STATUS)
-        self.assertFalse(result["ready"])
+        self.assertEqual(result["status"], "READY")
+        self.assertTrue(result["ready"])
         self.assertEqual(result["missing_ports"], EXPECTED_MISSING_PORTS)
-        self.assertFalse(result["production_composition_constructed"])
+        self.assertTrue(result["production_composition_constructed"])
         self.assertFalse(result["owner_approval_verified"])
         self.assertFalse(result["live_actions_authorized"])
 
-        ports = {item["id"]: item for item in result["ports"]}
-        for port_id in EXPECTED_MISSING_PORTS:
-            with self.subTest(port_id=port_id):
-                self.assertEqual(ports[port_id]["status"], "MISSING")
-                self.assertIsNone(ports[port_id]["provider"])
-                self.assertRegex(
-                    ports[port_id]["required_interface"],
-                    r"^[A-Za-z][A-Za-z0-9]+\.[a-z][a-z0-9_]+$",
-                )
-                self.assertIsInstance(ports[port_id]["blocking_reason"], str)
-                self.assertTrue(ports[port_id]["blocking_reason"])
-
-    def test_existing_ports_are_reported_without_claiming_readiness(self) -> None:
+    def test_all_ports_are_reported_without_claiming_live_authority(self) -> None:
         result = validate_azure_performance_composition_readiness()
         ports = {item["id"]: item for item in result["ports"]}
 
-        expected_available = {
-            "combined_owner_approval_verification",
-            "performance_coordination_safety_readback",
-            "lease_blob_bootstrap",
-            "dedicated_blob_lease",
-            "azure_monitor_observation",
-            "bounded_500_get_runner",
-            "restartable_final_evidence",
-        }
         self.assertEqual(
             {port_id for port_id, item in ports.items() if item["status"] == "READY"},
-            expected_available,
+            set(ports),
         )
         self.assertTrue(
             ports["combined_owner_approval_verification"]["owner_bound"]
@@ -123,8 +95,34 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         ):
             result = validate_azure_performance_composition_readiness()
 
-        self.assertEqual(result["status"], BLOCKED_STATUS)
+        self.assertEqual(result["status"], "READY")
         self.assertTrue(result["offline_only"])
+
+    def test_live_entrypoint_rejects_closed_gate_before_any_io(self) -> None:
+        with (
+            patch("builtins.open", side_effect=AssertionError("file read")),
+            patch("os.getenv", side_effect=AssertionError("environment read")),
+            patch.object(socket, "socket", side_effect=AssertionError("socket")),
+            patch.object(subprocess, "run", side_effect=AssertionError("subprocess")),
+        ):
+            with self.assertRaisesRegex(
+                ValueError, "^PERFORMANCE_ACCEPTANCE_OWNER_GATE_CLOSED$"
+            ):
+                composition.run_azure_performance_acceptance_live(
+                    repo_root=ROOT,
+                    owner_approved=False,
+                    execute_live_acceptance=False,
+                    approval_reference="issuecomment-1",
+                    expected_activation_hash="1" * 64,
+                    correlation_id="offline-gate-test",
+                    monitor_window_anchor_utc="2026-08-03T00:00:00Z",
+                    toolchain_attestations={},
+                    infrastructure_parameters={},
+                    worm_baseline_parameters={},
+                    provisioner_state_path=ROOT / "not-read.json",
+                    provisioner_certificate_path=ROOT / "not-read.pem",
+                    provisioner_private_key_path=ROOT / "not-read.key",
+                )
 
     def test_missing_existing_method_adds_its_port_to_blockers(self) -> None:
         with patch.object(composition.AzureBlobLeaseAdapter, "acquire", None):
@@ -143,7 +141,7 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         first["ports"][0]["status"] = "TAMPERED"
         second = validate_azure_performance_composition_readiness()
 
-        self.assertEqual(second["missing_ports"], EXPECTED_MISSING_PORTS)
+        self.assertEqual(second["missing_ports"], [])
         self.assertEqual(second["ports"][0]["status"], "READY")
         self.assertEqual(
             list(
@@ -169,6 +167,7 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
             [
                 "BLOCKED_STATUS",
                 "SCHEMA_VERSION",
+                "run_azure_performance_acceptance_live",
                 "validate_azure_performance_composition_readiness",
             ],
         )

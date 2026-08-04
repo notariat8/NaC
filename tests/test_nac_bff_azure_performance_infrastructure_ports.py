@@ -22,6 +22,7 @@ from nac_bff.azure_performance_acceptance import (
     build_performance_acceptance_plan,
 )
 from nac_bff.azure_performance_infrastructure_ports import (
+    AzureCliPerformanceInfrastructureCommandExecutor,
     AzurePerformanceInfrastructurePortError,
     DEPLOYMENT_SEQUENCE,
     OwnerBoundInfrastructureDeploymentAuthority,
@@ -29,6 +30,7 @@ from nac_bff.azure_performance_infrastructure_ports import (
     UnlockedWormBaselineDeploymentPort,
     UnlockedWormBaselineReadbackPort,
 )
+from nac_bff.azure_live_commands import AzureCliAdapter
 from nac_bff.azure_performance_infrastructure_safety import (
     ALLOWED_DATA_ACTIONS,
     CONTAINER_NAME,
@@ -62,6 +64,17 @@ BFF_ID = (
 COORDINATION_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Storage/storageAccounts/"
     f"{COORDINATION_NAME}"
+)
+CONTAINER_ID = (
+    f"{COORDINATION_ID}/blobServices/default/containers/{CONTAINER_NAME}"
+)
+ROLE_DEFINITION_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+    "roleDefinitions/44444444-4444-4444-8444-444444444444"
+)
+ROLE_ASSIGNMENT_ID = (
+    f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
+    "55555555-5555-4555-8555-555555555555"
 )
 
 
@@ -517,6 +530,22 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             coordination.owner_binding_sha256,
         )
         self.assertEqual(
+            coordination.coordination_storage_account_resource_id,
+            COORDINATION_ID,
+        )
+        self.assertEqual(
+            coordination.lease_container_resource_id,
+            CONTAINER_ID,
+        )
+        self.assertEqual(
+            coordination.lease_data_role_definition_id,
+            ROLE_DEFINITION_ID,
+        )
+        self.assertEqual(
+            coordination.provisioner_lease_role_assignment_id,
+            ROLE_ASSIGNMENT_ID,
+        )
+        self.assertEqual(
             [command.operation for command in executor.commands],
             [
                 DEPLOYMENT_SEQUENCE[0],
@@ -702,6 +731,39 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             "AZURE_EXACT_REST_BOUNDARY_INTEGRATION_REQUIRED",
         ):
             executor.execute(command)
+
+    def test_sealed_azure_cli_executes_only_issued_exact_rest_command(self) -> None:
+        azure = AzureCliAdapter(binary="/must/not/execute")
+        executor = AzureCliPerformanceInfrastructureCommandExecutor(
+            azure, exact_rest_executor=azure
+        )
+        command = ports._read_command(
+            "worm_policy_readback",
+            (
+                "rest",
+                "--method",
+                "get",
+                "--url",
+                f"https://management.azure.com{WORM_ID}/blobServices/default/"
+                "containers/nac-worm-tenant/immutabilityPolicies/default"
+                "?api-version=2023-05-01",
+            ),
+        )
+        expected = {"ok": True, "code": "AZURE_CLI_OK", "data": {}}
+
+        with patch(
+            "nac_bff.azure_live_commands._run_azure_cli",
+            return_value=expected,
+        ) as execute:
+            self.assertEqual(executor.execute(command), expected)
+
+        self.assertIs(execute.call_args.kwargs["_performance_infrastructure_command"], command)
+        self.assertIsNotNone(
+            execute.call_args.kwargs[
+                "_performance_infrastructure_rest_authority"
+            ]
+        )
+        self.assertEqual(azure.execute_exact_rest(object())["code"], "AZURE_CLI_COMMAND_BLOCKED")
 
 
 if __name__ == "__main__":

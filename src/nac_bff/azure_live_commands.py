@@ -170,6 +170,7 @@ _MAX_CLOUD_SELECTION_BYTES = 4096
 _MAX_INTERPRETER_LINKS = 8
 _FILE_CHUNK_SIZE = 1024 * 1024
 _MONITOR_EXECUTION_AUTHORITY = object()
+_PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY = object()
 
 
 class AzureCliAdapter:
@@ -226,6 +227,47 @@ class AzureCliAdapter:
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
             _monitor_execution_authority=_MONITOR_EXECUTION_AUTHORITY,
+        )
+
+    def execute_exact_rest(self, command: object) -> dict[str, object]:
+        """Execute one sealed, read-only performance-infrastructure ARM GET."""
+
+        from .azure_performance_infrastructure_ports import BoundAzureCliCommand
+
+        if type(command) is not BoundAzureCliCommand:
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        try:
+            command._assert_issued()
+        except Exception:
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        if (
+            not command.read_only
+            or command.artifacts
+            or command.argv[:1] != ("rest",)
+        ):
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        return _run_azure_cli(
+            command.argv,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=command.timeout_seconds,
+            _performance_infrastructure_command=command,
+            _performance_infrastructure_rest_authority=(
+                _PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY
+            ),
         )
 
     def run_with_timeout(
@@ -1077,10 +1119,38 @@ def _run_azure_cli(
     timeout_seconds: float = 120,
     bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
     _monitor_execution_authority: object | None = None,
+    _performance_infrastructure_command: object | None = None,
+    _performance_infrastructure_rest_authority: object | None = None,
 ) -> dict[str, object]:
     """Internal executor; Monitor authority is not exposed by the public API."""
 
-    command, family, validation_code = _validated_command(argv)
+    if (
+        _performance_infrastructure_rest_authority
+        is _PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY
+    ):
+        from .azure_performance_infrastructure_ports import BoundAzureCliCommand
+
+        candidate = _performance_infrastructure_command
+        try:
+            if type(candidate) is not BoundAzureCliCommand:
+                raise ValueError
+            candidate._assert_issued()
+            if (
+                not candidate.read_only
+                or candidate.artifacts
+                or candidate.argv != tuple(argv)
+                or candidate.argv[:1] != ("rest",)
+            ):
+                raise ValueError
+            command = tuple(candidate.argv)
+            family = ("rest",)
+            validation_code = "AZURE_CLI_OK"
+        except Exception:
+            command = None
+            family = None
+            validation_code = "AZURE_CLI_COMMAND_BLOCKED"
+    else:
+        command, family, validation_code = _validated_command(argv)
     if command is None or family is None:
         return _command_result(
             ok=False,
