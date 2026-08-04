@@ -62,6 +62,8 @@ INFRASTRUCTURE_SOURCE_PATHS = (
     Path("src/nac_bff/azure_performance_authorization.py"),
     Path("src/nac_bff/azure_performance_monitor.py"),
     Path("src/nac_bff/azure_performance_infrastructure_safety.py"),
+    Path("src/nac_bff/azure_performance_infrastructure_ports.py"),
+    Path("src/nac_bff/azure_performance_storage_ports.py"),
     Path("src/nac_bff/azure_performance_owner_gate.py"),
     Path("src/nac_bff/azure_live_commands.py"),
     Path("scripts/validate_m365_azure_bff_performance_acceptance.py"),

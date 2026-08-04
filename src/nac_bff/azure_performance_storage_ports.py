@@ -643,6 +643,8 @@ def _same_credential_snapshot(
 def _trusted_parent_chain(path: Path) -> bool:
     current = path
     try:
+        filesystem_root_uid = Path("/").lstat().st_uid
+        trusted_system_uids = {0, filesystem_root_uid}
         while True:
             metadata = current.lstat()
             if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
@@ -651,11 +653,11 @@ def _trusted_parent_chain(path: Path) -> bool:
                 metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
             )
             trusted_sticky_root = bool(
-                metadata.st_uid == 0
+                metadata.st_uid in trusted_system_uids
                 and metadata.st_mode & stat.S_ISVTX
                 and stat.S_ISDIR(metadata.st_mode)
             )
-            if metadata.st_uid not in {0, os.geteuid()} or (
+            if metadata.st_uid not in {*trusted_system_uids, os.geteuid()} or (
                 writable_by_others and not trusted_sticky_root
             ):
                 return False
