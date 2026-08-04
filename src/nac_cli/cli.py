@@ -8040,6 +8040,11 @@ def _run_bff_performance_infrastructure_owner_gate_command(
         type=Path,
         required=True,
     )
+    parser.add_argument(
+        "--worm-baseline-parameters-json",
+        type=Path,
+        required=True,
+    )
     parser.add_argument("--format", choices=["text", "json"], default="text")
     command_argv = argv[:command_index] + argv[command_index + 3 :]
     args = parser.parse_args(command_argv)
@@ -8055,11 +8060,15 @@ def _run_bff_performance_infrastructure_owner_gate_command(
         toolchain_attestations = json.loads(
             args.toolchain_attestations_json.read_text(encoding="utf-8")
         )
+        worm_baseline_parameters = json.loads(
+            args.worm_baseline_parameters_json.read_text(encoding="utf-8")
+        )
         payload = build_performance_infrastructure_owner_gate(
             args.repo_root,
             expected_activation_hash=args.expected_activation_hash,
             toolchain_attestations=toolchain_attestations,
             infrastructure_parameters=parameters,
+            worm_baseline_parameters=worm_baseline_parameters,
             correlation_id=args.correlation_id,
             monitor_window_anchor_utc=args.monitor_window_anchor_utc,
         )

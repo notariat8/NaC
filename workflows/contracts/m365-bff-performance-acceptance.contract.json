@@ -1,5 +1,5 @@
 {
-  "schema_version": "nac.m365-bff-performance-acceptance/v0.3",
+  "schema_version": "nac.m365-bff-performance-acceptance/v0.4",
   "contract_id": "m365.bff_performance_acceptance",
   "title": "M365 BFF endpoint-scoped conservative performance measurement",
   "status": "offline_contract_and_adapters_only_live_action_not_implemented",
@@ -300,7 +300,7 @@
     "activation_contract_id_exact": "m365.azure_bff_live_activation",
     "activation_final_status_exact": "PASSED",
     "owner_approval_required": true,
-    "owner_approval_action_exact": "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT",
+    "owner_approval_action_exact": "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT",
     "runtime_owner_gate_is_combined_infrastructure_gate": true,
     "owner_approval_binding_fields_exact": [
       "approved_commit_sha",
@@ -318,6 +318,11 @@
       "infrastructure_source_sha256",
       "infrastructure_parameters_sha256",
       "infrastructure_binding_sha256",
+      "worm_baseline_binding_sha256",
+      "worm_baseline_compiled_arm_sha256",
+      "worm_baseline_parameters_sha256",
+      "worm_baseline_source_sha256",
+      "deployment_sequence_sha256",
       "correlation_id",
       "monitor_window_anchor_utc",
       "monitor_window_anchor_sha256"
@@ -342,7 +347,7 @@
   "combined_infrastructure_and_live_owner_gate": {
     "implementation_path_exact": "src/nac_bff/azure_performance_owner_gate.py",
     "test_path_exact": "tests/test_nac_bff_azure_performance_owner_gate.py",
-    "action_exact": "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT",
+    "action_exact": "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT",
     "binding_fields_exact": [
       "approved_commit_sha",
       "approved_tree_sha",
@@ -357,6 +362,11 @@
       "infrastructure_source_sha256",
       "infrastructure_parameters_sha256",
       "infrastructure_binding_sha256",
+      "worm_baseline_binding_sha256",
+      "worm_baseline_compiled_arm_sha256",
+      "worm_baseline_parameters_sha256",
+      "worm_baseline_source_sha256",
+      "deployment_sequence_sha256",
       "target_binding_sha256",
       "expected_activation_hash",
       "correlation_id",
@@ -377,6 +387,29 @@
       "targetBindingSha256",
       "tenantId",
       "wormStorageAccountResourceId"
+    ],
+    "worm_baseline_parameter_fields_exact": [
+      "containerName",
+      "deploymentMode",
+      "encryptionScopeName",
+      "location",
+      "resourceGroupName",
+      "storageAccountName",
+      "subscriptionId",
+      "tags",
+      "tenantId"
+    ],
+    "worm_baseline_compiled_arm_path_exact": "deploy/runtime/azure/immutable-evidence/compiled/main.json",
+    "worm_baseline_compiled_parameters_path_exact": "deploy/runtime/azure/immutable-evidence/compiled/main.parameters.json",
+    "worm_baseline_irreversible_policy_lock_allowed": false,
+    "deployment_sequence_exact": [
+      "deploy_unlocked_worm_baseline",
+      "verify_worm_baseline_readback",
+      "deploy_performance_coordination",
+      "verify_coordination_and_effective_rbac",
+      "bootstrap_exact_zero_byte_lease_blob",
+      "execute_endpoint_scoped_conservative_measurement",
+      "release_lease_and_finalize_redacted_evidence"
     ],
     "deployment_scope_exact": {
       "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",

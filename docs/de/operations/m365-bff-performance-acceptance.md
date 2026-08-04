@@ -3,6 +3,9 @@
 Status: Issue #733 definiert einen Offline-Vertrag sowie Offline-Adapter für
 Azure Monitor und eine dedizierte Azure-Blob-Lease. Ein Live-CLI-Befehl und
 eine Live-Aktion sind nicht implementiert.
+Issue #735 bindet zusätzlich die reproduzierbare, noch nicht irreversibel
+gesperrte WORM-Baseline und die Koordinationsinfrastruktur an dieselbe spätere
+Owner-Freigabe. In diesem Offline-Slice werden keine Azure-Ressourcen erstellt.
 
 Die maschinenlesbaren Quellen sind der
 [Abnahmevertrag](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -220,6 +223,11 @@ Eingaben:
 - `infrastructure_source_sha256`
 - `infrastructure_parameters_sha256`
 - `infrastructure_binding_sha256`
+- `worm_baseline_binding_sha256`
+- `worm_baseline_compiled_arm_sha256`
+- `worm_baseline_parameters_sha256`
+- `worm_baseline_source_sha256`
+- `deployment_sequence_sha256`
 - `target_binding_sha256`
 - `expected_activation_hash`
 - `correlation_id`
@@ -230,6 +238,11 @@ Eingaben:
 Bicep `0.45.15.27210` kanonisch kompilierten ARM-/Parameter-Artefakte. CI muss
 beide Artefakte bytegenau reproduzieren; der spätere Live-Pfad verwendet nur
 diese gebundene Ausgabe.
+
+Die WORM-Baseline wird vor der Koordinationsinfrastruktur in derselben
+Resource Group `rg-nac-bff-test` angelegt und anschließend read-only
+abgeglichen. Der gebundene Ablauf darf keinen irreversiblen Immutability-Lock
+setzen. Ein solcher Lock bleibt eine eigene spätere Governance-Entscheidung.
 
 Der UTC-minutengenaue `monitor_window_anchor` begrenzt den frühesten
 Monitorzeitpunkt. Unmittelbar vor dem ersten Lease- oder Monitor-Netzwerkzugriff

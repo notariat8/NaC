@@ -54,7 +54,7 @@ def _parameters() -> dict[str, object]:
             "providers/Microsoft.Storage/storageAccounts/stnacbfftest001"
         ),
         "wormStorageAccountResourceId": (
-            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/rg-nac-worm/"
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Storage/storageAccounts/stnacwormtest001"
         ),
         "provisionerPrincipalId": "11111111-2222-4333-8444-555555555555",
@@ -67,6 +67,23 @@ def _parameters() -> dict[str, object]:
         "tags": {
             "owner": "notariat8",
             "purpose": "endpoint-scoped-conservative-measurement",
+        },
+    }
+
+
+def _worm_parameters() -> dict[str, object]:
+    return {
+        "location": "germanywestcentral",
+        "tenantId": TENANT_ID,
+        "subscriptionId": SUBSCRIPTION_ID,
+        "resourceGroupName": RESOURCE_GROUP,
+        "deploymentMode": "Incremental",
+        "storageAccountName": "stnacwormtest001",
+        "containerName": "nac-worm-tenant",
+        "encryptionScopeName": "nac-worm-tenant",
+        "tags": {
+            "owner": "notariat8",
+            "purpose": "unlocked-worm-baseline",
         },
     }
 
@@ -91,7 +108,7 @@ def _attestation_measurement(
 
 
 class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
-    def build(self, parameters=None):
+    def build(self, parameters=None, worm_parameters=None):
         with patch(
             "nac_bff.azure_performance_owner_gate._git_snapshot",
             side_effect=[
@@ -109,6 +126,9 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=parameters or _parameters(),
+                worm_baseline_parameters=(
+                    worm_parameters or _worm_parameters()
+                ),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -175,6 +195,50 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
             first["owner_comment_body_sha256"],
             second["owner_comment_body_sha256"],
         )
+
+    def test_worm_baseline_is_derived_and_bound_into_the_same_owner_body(self) -> None:
+        first = self.build()
+        changed = _worm_parameters()
+        changed["containerName"] = "nac-worm-performance"
+        second = self.build(worm_parameters=changed)
+
+        payload = first["owner_approval_payload"]
+        for key in (
+            "worm_baseline_binding_sha256",
+            "worm_baseline_compiled_arm_sha256",
+            "worm_baseline_parameters_sha256",
+            "worm_baseline_source_sha256",
+            "deployment_sequence_sha256",
+        ):
+            self.assertRegex(payload[key], r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                first["owner_execution_bindings"][key], payload[key]
+            )
+        self.assertNotEqual(
+            first["owner_comment_body_sha256"],
+            second["owner_comment_body_sha256"],
+        )
+        self.assertIn(
+            "deploy_exact_unlocked_worm_baseline_without_policy_lock",
+            payload["allowed_infrastructure_actions"],
+        )
+        self.assertIn(
+            "irreversible_worm_policy_lock", payload["forbidden_actions"]
+        )
+
+    def test_worm_resource_id_cannot_drift_from_bound_baseline_parameters(self) -> None:
+        changed = _parameters()
+        changed["wormStorageAccountResourceId"] = (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Storage/storageAccounts/stnacwormother001"
+        )
+        result = self.build(changed)
+
+        self.assertEqual(result["status"], "NOT_READY")
+        self.assertEqual(
+            result["error_code"], "WORM_BASELINE_RESOURCE_BINDING_MISMATCH"
+        )
+        self.assertFalse(result["boundaries"]["network_accessed"])
 
     def test_gate_binds_exact_infrastructure_safety_policy(self) -> None:
         policy_sha256 = "f" * 64
@@ -250,6 +314,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -276,6 +341,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -307,6 +373,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations={"azure_cli_toolchain_sha256": "1" * 64},
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -331,6 +398,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -356,6 +424,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -383,6 +452,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 expected_activation_hash=ACTIVATION,
                 toolchain_attestations=TOOLCHAIN,
                 infrastructure_parameters=_parameters(),
+                worm_baseline_parameters=_worm_parameters(),
                 correlation_id="nac-bff-performance-20260803",
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
@@ -418,6 +488,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                     expected_activation_hash=ACTIVATION,
                     toolchain_attestations=TOOLCHAIN,
                     infrastructure_parameters=_parameters(),
+                    worm_baseline_parameters=_worm_parameters(),
                 )
                 source = root / "src/nac_bff/azure_performance_runtime.py"
                 source.write_text(
@@ -429,6 +500,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                     expected_activation_hash=ACTIVATION,
                     toolchain_attestations=TOOLCHAIN,
                     infrastructure_parameters=_parameters(),
+                    worm_baseline_parameters=_worm_parameters(),
                 )
         self.assertNotEqual(
             first["infrastructure_approval"]["infrastructure_source_sha256"],
@@ -627,6 +699,10 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             parameter_path = Path(directory) / "parameters.json"
             parameter_path.write_text(json.dumps(_parameters()), encoding="utf-8")
+            worm_parameter_path = Path(directory) / "worm-parameters.json"
+            worm_parameter_path.write_text(
+                json.dumps(_worm_parameters()), encoding="utf-8"
+            )
             toolchain_path = Path(directory) / "toolchain.json"
             toolchain_path.write_text(json.dumps(TOOLCHAIN), encoding="utf-8")
             with patch(
@@ -651,6 +727,8 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                         str(toolchain_path),
                         "--infrastructure-parameters-json",
                         str(parameter_path),
+                        "--worm-baseline-parameters-json",
+                        str(worm_parameter_path),
                         "--format",
                         "json",
                     ]

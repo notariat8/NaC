@@ -58,7 +58,10 @@ EVIDENCE_SCHEMA_VERSION = "nac.m365-azure-bff-performance-acceptance-evidence/v2
 CONTRACT_ID = "m365.bff_performance_acceptance"
 PLAN_COMMAND = "nac m365 teams-sharepoint bff-performance-acceptance-plan"
 LIVE_COMMAND = "nac m365 teams-sharepoint bff-performance-acceptance"
-OWNER_ACTION = "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+OWNER_ACTION = (
+    "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_"
+    "M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+)
 REQUIRED_OWNER_LOGIN = "ofunk"
 OUTPUT_ROOT = Path("out/m365/teams-sharepoint/bff-performance-acceptance")
 CONTRACT_RELATIVE_PATH = Path(
@@ -96,7 +99,7 @@ _CORRELATION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _JWT_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 _ERROR_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,79}$")
 _OWNER_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/733#issuecomment-[1-9][0-9]*$"
+    r"^https://github\.com/notariat8/NaC/issues/735#issuecomment-[1-9][0-9]*$"
 )
 _SAFE_HEADERS = {
     "cache-control": "no-store",
@@ -112,6 +115,11 @@ _INFRASTRUCTURE_APPROVAL_KEYS = frozenset(
         "infrastructure_source_sha256",
         "lease_bootstrap_policy_sha256",
         "infrastructure_safety_policy_sha256",
+        "worm_baseline_binding_sha256",
+        "worm_baseline_compiled_arm_sha256",
+        "worm_baseline_parameters_sha256",
+        "worm_baseline_source_sha256",
+        "deployment_sequence_sha256",
     }
 )
 
@@ -816,6 +824,8 @@ def build_owner_comment(
                 "exclusive_remote_lease_required": True,
                 "abort_on_throttle_signal": True,
                 "allowed_infrastructure_actions": [
+                    "deploy_exact_unlocked_worm_baseline_without_policy_lock",
+                    "read_back_exact_unlocked_worm_baseline",
                     "deploy_dedicated_storage_account_container_custom_role_and_assignment",
                     "create_one_exact_zero_byte_coordination_blob_if_absent",
                     "read_back_and_bind_strong_etag",
@@ -828,6 +838,7 @@ def build_owner_comment(
                     "other_workspace_access",
                     "production_data_access",
                     "tenant_wide_sharepoint_capacity_claim",
+                    "irreversible_worm_policy_lock",
                 ],
             }
         )
@@ -1023,6 +1034,7 @@ class BoundPerformanceAuthorizationVerifier:
         infrastructure_approval: Mapping[str, str],
         toolchain_attestations: Mapping[str, str],
         infrastructure_parameters: Mapping[str, Any],
+        worm_baseline_parameters: Mapping[str, Any],
         monitor_window_anchor_utc: str,
         infrastructure_safety_source: VerifiedInfrastructureSafetySource,
     ) -> None:
@@ -1033,6 +1045,7 @@ class BoundPerformanceAuthorizationVerifier:
         )
         self._toolchain_attestations = dict(toolchain_attestations)
         self._infrastructure_parameters = dict(infrastructure_parameters)
+        self._worm_baseline_parameters = dict(worm_baseline_parameters)
         self._monitor_window_anchor_utc = _validate_monitor_window_anchor(
             monitor_window_anchor_utc
         )
@@ -1060,6 +1073,7 @@ class BoundPerformanceAuthorizationVerifier:
             infrastructure_approval=self._infrastructure_approval,
             toolchain_attestations=self._toolchain_attestations,
             infrastructure_parameters=self._infrastructure_parameters,
+            worm_baseline_parameters=self._worm_baseline_parameters,
             monitor_window_anchor_utc=self._monitor_window_anchor_utc,
         )
 
@@ -1183,6 +1197,7 @@ class BoundPerformanceAuthorizationVerifier:
             expected_activation_hash=activation_hash,
             toolchain_attestations=self._toolchain_attestations,
             infrastructure_parameters=self._infrastructure_parameters,
+            worm_baseline_parameters=self._worm_baseline_parameters,
         )
         if (
             remeasurement.get("contract_sha256") != contract_sha256
@@ -1283,6 +1298,7 @@ def verify_performance_execution_authorization(
     infrastructure_approval: Mapping[str, str],
     toolchain_attestations: Mapping[str, str],
     infrastructure_parameters: Mapping[str, Any],
+    worm_baseline_parameters: Mapping[str, Any],
     monitor_window_anchor_utc: str,
 ) -> PerformanceExecutionAuthorization:
     """Verify the immutable owner comment and committed activation receipt."""
@@ -1304,6 +1320,7 @@ def verify_performance_execution_authorization(
         expected_activation_hash=activation_hash,
         toolchain_attestations=toolchain_attestations,
         infrastructure_parameters=infrastructure_parameters,
+        worm_baseline_parameters=worm_baseline_parameters,
     )
     measured_approval = _validate_infrastructure_approval(
         measurement["infrastructure_approval"]
@@ -1346,6 +1363,7 @@ def verify_performance_execution_authorization(
         expected_activation_hash=activation_hash,
         toolchain_attestations=toolchain_attestations,
         infrastructure_parameters=infrastructure_parameters,
+        worm_baseline_parameters=worm_baseline_parameters,
     )
     remeasured_approval = _validate_infrastructure_approval(
         remeasurement["infrastructure_approval"]

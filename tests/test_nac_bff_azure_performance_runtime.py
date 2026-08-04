@@ -82,6 +82,11 @@ EXECUTION_BINDINGS = {
     "infrastructure_safety_policy_sha256": (
         INFRASTRUCTURE_SAFETY_POLICY_SHA256
     ),
+    "worm_baseline_binding_sha256": "4" * 64,
+    "worm_baseline_compiled_arm_sha256": "5" * 64,
+    "worm_baseline_parameters_sha256": "6" * 64,
+    "worm_baseline_source_sha256": "7" * 64,
+    "deployment_sequence_sha256": "9" * 64,
     "infrastructure_safety_evidence_sha256": "a" * 64,
     "lease_acquisition_safety_evidence_sha256": "b" * 64,
     "lease_binding_sha256": "e" * 64,

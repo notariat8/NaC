@@ -35,6 +35,16 @@ INFRA_COMPILED_PARAMETERS = Path(
     "deploy/runtime/azure/nac-bff-performance-coordination/"
     "compiled/main.example.json"
 )
+WORM_INFRA = Path("deploy/runtime/azure/immutable-evidence/main.bicep")
+WORM_INFRA_PARAMETERS = Path(
+    "deploy/runtime/azure/immutable-evidence/main.bicepparam"
+)
+WORM_INFRA_COMPILED = Path(
+    "deploy/runtime/azure/immutable-evidence/compiled/main.json"
+)
+WORM_INFRA_COMPILED_PARAMETERS = Path(
+    "deploy/runtime/azure/immutable-evidence/compiled/main.parameters.json"
+)
 INFRA_ARM_VALIDATOR = Path("scripts/validate_nac_bff_performance_coordination_arm.py")
 QUALITY_GATE_WORKFLOW = Path(".github/workflows/quality-gate.yml")
 TESTS = Path("tests/test_nac_bff_azure_performance_acceptance.py")
@@ -98,6 +108,11 @@ OWNER_FIELDS = {
     "infrastructure_source_sha256",
     "infrastructure_parameters_sha256",
     "infrastructure_binding_sha256",
+    "worm_baseline_binding_sha256",
+    "worm_baseline_compiled_arm_sha256",
+    "worm_baseline_parameters_sha256",
+    "worm_baseline_source_sha256",
+    "deployment_sequence_sha256",
     "correlation_id",
     "monitor_window_anchor_utc",
     "monitor_window_anchor_sha256",
@@ -116,6 +131,11 @@ COMBINED_OWNER_FIELDS = {
     "infrastructure_source_sha256",
     "infrastructure_parameters_sha256",
     "infrastructure_binding_sha256",
+    "worm_baseline_binding_sha256",
+    "worm_baseline_compiled_arm_sha256",
+    "worm_baseline_parameters_sha256",
+    "worm_baseline_source_sha256",
+    "deployment_sequence_sha256",
     "target_binding_sha256",
     "expected_activation_hash",
     "correlation_id",
@@ -158,6 +178,17 @@ INFRASTRUCTURE_PARAMETER_FIELDS = {
     "targetBindingSha256",
     "tenantId",
     "wormStorageAccountResourceId",
+}
+WORM_BASELINE_PARAMETER_FIELDS = {
+    "containerName",
+    "deploymentMode",
+    "encryptionScopeName",
+    "location",
+    "resourceGroupName",
+    "storageAccountName",
+    "subscriptionId",
+    "tags",
+    "tenantId",
 }
 LEASE_STATES = [
     "ACQUIRE_INTENT",
@@ -631,7 +662,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         errors.append("activation receipt binding fields drifted")
     if (
         owner.get("owner_approval_action_exact")
-        != "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+        != "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
         or owner.get("runtime_owner_gate_is_combined_infrastructure_gate")
         is not True
         or owner.get(
@@ -654,11 +685,29 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     )
     if (
         combined_owner.get("action_exact")
-        != "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+        != "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
         or set(combined_owner.get("binding_fields_exact", []))
         != COMBINED_OWNER_FIELDS
         or combined_owner.get("approval_count_exact") != 1
         or combined_owner.get("network_accessed_during_generation") is not False
+        or set(combined_owner.get("worm_baseline_parameter_fields_exact", []))
+        != WORM_BASELINE_PARAMETER_FIELDS
+        or combined_owner.get("worm_baseline_compiled_arm_path_exact")
+        != str(WORM_INFRA_COMPILED)
+        or combined_owner.get("worm_baseline_compiled_parameters_path_exact")
+        != str(WORM_INFRA_COMPILED_PARAMETERS)
+        or combined_owner.get("worm_baseline_irreversible_policy_lock_allowed")
+        is not False
+        or combined_owner.get("deployment_sequence_exact")
+        != [
+            "deploy_unlocked_worm_baseline",
+            "verify_worm_baseline_readback",
+            "deploy_performance_coordination",
+            "verify_coordination_and_effective_rbac",
+            "bootstrap_exact_zero_byte_lease_blob",
+            "execute_endpoint_scoped_conservative_measurement",
+            "release_lease_and_finalize_redacted_evidence",
+        ]
     ):
         errors.append("combined infrastructure/live owner gate drifted")
     deployment_scope = _mapping(combined_owner.get("deployment_scope_exact"))
@@ -1138,6 +1187,7 @@ def _validate_verification(
         "cmp /tmp/nac-bff-performance-coordination-main.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.json",
         "cmp /tmp/nac-bff-performance-coordination-main-params.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.example.json",
         "python3 scripts/validate_nac_bff_performance_coordination_arm.py /tmp/nac-bff-performance-coordination-main.json /tmp/nac-bff-performance-coordination-main-params.json",
+        "python3 scripts/validate_business_case_type_azure_blob_worm.py",
     }
     if not isinstance(checks, list) or not required_iac_checks.issubset(checks):
         errors.append(
@@ -1156,6 +1206,10 @@ def _validate_verification(
         INFRA_PARAMETERS,
         INFRA_COMPILED,
         INFRA_COMPILED_PARAMETERS,
+        WORM_INFRA,
+        WORM_INFRA_PARAMETERS,
+        WORM_INFRA_COMPILED,
+        WORM_INFRA_COMPILED_PARAMETERS,
         QUALITY_GATE_WORKFLOW,
     ):
         if not isinstance(required_context, list) or str(required_path) not in required_context:
@@ -1219,6 +1273,10 @@ def main() -> int:
         INFRA_SAFETY,
         AZURE_COMMANDS,
         INFRA,
+        WORM_INFRA,
+        WORM_INFRA_PARAMETERS,
+        WORM_INFRA_COMPILED,
+        WORM_INFRA_COMPILED_PARAMETERS,
         INFRA_ARM_VALIDATOR,
         QUALITY_GATE_WORKFLOW,
         TESTS,
@@ -1358,6 +1416,11 @@ def main() -> int:
             "measure_performance_infrastructure_approval",
             "infrastructure_binding_sha256",
             "infrastructure_safety_policy_sha256",
+            "worm_baseline_binding_sha256",
+            "worm_baseline_compiled_arm_sha256",
+            "worm_baseline_parameters_sha256",
+            "worm_baseline_source_sha256",
+            "deployment_sequence_sha256",
             '"bffStorageAccountResourceId"',
             '"wormStorageAccountResourceId"',
             '"resourceGroupName"',
@@ -1400,6 +1463,16 @@ def main() -> int:
             "param wormStorageAccountResourceId string",
             "validatedBffStorageAccountResourceId",
             "validatedWormStorageAccountResourceId",
+        ),
+        WORM_INFRA: (
+            "param tenantId string",
+            "param subscriptionId string",
+            "param resourceGroupName string",
+            "param deploymentMode string",
+            "param storageAccountName string",
+            "param containerName string",
+            "param encryptionScopeName string",
+            "output lockActionStatus string = 'OWNER_GATED_NOT_EXECUTED'",
         ),
         INFRA_ARM_VALIDATOR: (
             '"bffStorageAccountResourceId"',

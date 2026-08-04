@@ -272,7 +272,7 @@ _TERMINALIZATION_COMMENT_RE = re.compile(
     r"#issuecomment-([1-9][0-9]*)$"
 )
 _PERFORMANCE_ACCEPTANCE_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/733"
+    r"^https://github\.com/notariat8/NaC/issues/735"
     r"#issuecomment-([1-9][0-9]*)$"
 )
 _APPROVED_OWNER_LOGIN = "ofunk"
@@ -514,7 +514,7 @@ class GitHubApprovalVerifier:
         expected_body: str,
         expected_body_sha256: str,
     ) -> dict[str, Any]:
-        """Verify the exact immutable owner comment for performance Issue #733."""
+        """Verify the exact immutable owner comment for performance Issue #735."""
 
         match = _PERFORMANCE_ACCEPTANCE_COMMENT_RE.fullmatch(reference)
         if (

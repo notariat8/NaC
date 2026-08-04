@@ -3,6 +3,9 @@
 Status: Issue #733 defines an offline contract and offline adapters for Azure
 Monitor and a dedicated Azure Blob lease. No live CLI command or live action is
 implemented.
+Issue #735 additionally binds the reproducible WORM baseline, before any
+irreversible policy lock, and the coordination infrastructure to the same
+future owner approval. This offline slice creates no Azure resource.
 
 The machine-readable sources are the
 [acceptance contract](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -207,6 +210,11 @@ approval. Before provisioning it binds all deterministic inputs:
 - `infrastructure_source_sha256`
 - `infrastructure_parameters_sha256`
 - `infrastructure_binding_sha256`
+- `worm_baseline_binding_sha256`
+- `worm_baseline_compiled_arm_sha256`
+- `worm_baseline_parameters_sha256`
+- `worm_baseline_source_sha256`
+- `deployment_sequence_sha256`
 - `target_binding_sha256`
 - `expected_activation_hash`
 - `correlation_id`
@@ -217,6 +225,11 @@ approval. Before provisioning it binds all deterministic inputs:
 ARM/parameter artifacts compiled with Bicep `0.45.15.27210`. CI must reproduce
 both artifacts byte-for-byte, and the later live path uses only that bound
 output.
+
+The WORM baseline is created before the coordination infrastructure in the
+same `rg-nac-bff-test` resource group and is then read back. The bound sequence
+must not set an irreversible immutability lock. Such a lock remains a separate
+future governance decision.
 
 The whole-minute UTC `monitor_window_anchor` bounds the earliest monitor
 observation. Immediately before the first lease or monitor network call,

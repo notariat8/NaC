@@ -62,6 +62,34 @@ INFRASTRUCTURE_SOURCE_PATHS = (
     Path("src/nac_bff/azure_live_commands.py"),
     Path("scripts/validate_m365_azure_bff_performance_acceptance.py"),
     Path("scripts/validate_nac_bff_performance_coordination_arm.py"),
+    Path("deploy/runtime/azure/immutable-evidence/main.bicep"),
+    Path("deploy/runtime/azure/immutable-evidence/main.bicepparam"),
+    Path("deploy/runtime/azure/immutable-evidence/compiled/main.json"),
+    Path(
+        "deploy/runtime/azure/immutable-evidence/compiled/"
+        "main.parameters.json"
+    ),
+    Path("workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json"),
+    Path(
+        "workflows/verification-contracts/"
+        "business-case-type-azure-blob-worm-s6b.verification.json"
+    ),
+    Path("scripts/validate_business_case_type_azure_blob_worm.py"),
+)
+WORM_BASELINE_SOURCE_PATHS = (
+    Path("deploy/runtime/azure/immutable-evidence/main.bicep"),
+    Path("deploy/runtime/azure/immutable-evidence/main.bicepparam"),
+    Path("deploy/runtime/azure/immutable-evidence/compiled/main.json"),
+    Path(
+        "deploy/runtime/azure/immutable-evidence/compiled/"
+        "main.parameters.json"
+    ),
+    Path("workflows/contracts/business-case-type-azure-blob-worm-s6b.contract.json"),
+    Path(
+        "workflows/verification-contracts/"
+        "business-case-type-azure-blob-worm-s6b.verification.json"
+    ),
+    Path("scripts/validate_business_case_type_azure_blob_worm.py"),
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -116,6 +144,19 @@ _PARAMETER_KEYS = frozenset(
         "tags",
     }
 )
+_WORM_PARAMETER_KEYS = frozenset(
+    {
+        "location",
+        "tenantId",
+        "subscriptionId",
+        "resourceGroupName",
+        "deploymentMode",
+        "storageAccountName",
+        "containerName",
+        "encryptionScopeName",
+        "tags",
+    }
+)
 
 
 def build_performance_infrastructure_owner_gate(
@@ -124,6 +165,7 @@ def build_performance_infrastructure_owner_gate(
     expected_activation_hash: str,
     toolchain_attestations: Mapping[str, str],
     infrastructure_parameters: Mapping[str, Any],
+    worm_baseline_parameters: Mapping[str, Any],
     correlation_id: str,
     monitor_window_anchor_utc: str,
 ) -> dict[str, Any]:
@@ -137,6 +179,7 @@ def build_performance_infrastructure_owner_gate(
             expected_activation_hash=expected_activation_hash,
             toolchain_attestations=toolchain_attestations,
             infrastructure_parameters=infrastructure_parameters,
+            worm_baseline_parameters=worm_baseline_parameters,
         )
         parameters = measurement["parameters"]
         contract_sha256 = measurement["contract_sha256"]
@@ -261,6 +304,7 @@ def measure_performance_infrastructure_approval(
     expected_activation_hash: str,
     toolchain_attestations: Mapping[str, str],
     infrastructure_parameters: Mapping[str, Any],
+    worm_baseline_parameters: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Re-measure every owner-bound source before any network boundary."""
 
@@ -272,7 +316,15 @@ def measure_performance_infrastructure_approval(
     measured_toolchain, measured_toolchain_sha256 = (
         _measure_current_toolchain_attestations(toolchain_attestations)
     )
+    worm_parameters = _validate_worm_parameters(worm_baseline_parameters)
     parameters = _validate_parameters(infrastructure_parameters)
+    expected_worm_resource_id = (
+        f"/subscriptions/{worm_parameters['subscriptionId']}/resourceGroups/"
+        f"{worm_parameters['resourceGroupName']}/providers/Microsoft.Storage/"
+        f"storageAccounts/{worm_parameters['storageAccountName']}"
+    )
+    if parameters["wormStorageAccountResourceId"] != expected_worm_resource_id:
+        raise ValueError("WORM_BASELINE_RESOURCE_BINDING_MISMATCH")
     contract_path = (root / CONTRACT_RELATIVE_PATH).resolve()
     if root not in contract_path.parents or not contract_path.is_file():
         raise ValueError("PERFORMANCE_CONTRACT_NOT_FOUND")
@@ -285,6 +337,22 @@ def measure_performance_infrastructure_approval(
         raise ValueError("INFRASTRUCTURE_TARGET_BINDING_MISMATCH")
     source_sha256 = _source_bundle_sha256(root)
     parameters_sha256 = _sha256_json(parameters)
+    worm_source_sha256 = _source_bundle_sha256(
+        root, relative_paths=WORM_BASELINE_SOURCE_PATHS
+    )
+    worm_parameters_sha256 = _sha256_json(worm_parameters)
+    worm_compiled_arm_sha256 = _sha256_bytes(
+        (root / "deploy/runtime/azure/immutable-evidence/compiled/main.json")
+        .resolve()
+        .read_bytes()
+    )
+    worm_binding_sha256 = _sha256_json(
+        {
+            "worm_baseline_compiled_arm_sha256": worm_compiled_arm_sha256,
+            "worm_baseline_parameters_sha256": worm_parameters_sha256,
+            "worm_baseline_source_sha256": worm_source_sha256,
+        }
+    )
     bootstrap_sha256 = lease_bootstrap_policy_sha256()
     safety_sha256 = infrastructure_safety_policy_sha256()
     infrastructure_binding_sha256 = _sha256_json(
@@ -293,6 +361,21 @@ def measure_performance_infrastructure_approval(
             "infrastructure_source_sha256": source_sha256,
             "lease_bootstrap_policy_sha256": bootstrap_sha256,
             "infrastructure_safety_policy_sha256": safety_sha256,
+        }
+    )
+    deployment_sequence_sha256 = _sha256_json(
+        {
+            "infrastructure_binding_sha256": infrastructure_binding_sha256,
+            "sequence": [
+                "deploy_unlocked_worm_baseline",
+                "verify_worm_baseline_readback",
+                "deploy_performance_coordination",
+                "verify_coordination_and_effective_rbac",
+                "bootstrap_exact_zero_byte_lease_blob",
+                "execute_endpoint_scoped_conservative_measurement",
+                "release_lease_and_finalize_redacted_evidence",
+            ],
+            "worm_baseline_binding_sha256": worm_binding_sha256,
         }
     )
     closing_snapshot = _git_snapshot(root)
@@ -310,6 +393,11 @@ def measure_performance_infrastructure_approval(
             "lease_bootstrap_policy_sha256": bootstrap_sha256,
             "infrastructure_safety_policy_sha256": safety_sha256,
             "toolchain_attestations_sha256": measured_toolchain_sha256,
+            "worm_baseline_binding_sha256": worm_binding_sha256,
+            "worm_baseline_compiled_arm_sha256": worm_compiled_arm_sha256,
+            "worm_baseline_parameters_sha256": worm_parameters_sha256,
+            "worm_baseline_source_sha256": worm_source_sha256,
+            "deployment_sequence_sha256": deployment_sequence_sha256,
         },
     }
 
@@ -398,6 +486,56 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _validate_worm_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != _WORM_PARAMETER_KEYS:
+        raise ValueError("WORM_BASELINE_PARAMETERS_INVALID")
+    result = dict(value)
+    if (
+        result["location"] != "germanywestcentral"
+        or result["tenantId"] != TENANT_ID
+        or result["subscriptionId"] != SUBSCRIPTION_ID
+        or result["resourceGroupName"] != RESOURCE_GROUP
+        or result["deploymentMode"] != "Incremental"
+        or not isinstance(result["storageAccountName"], str)
+        or _STORAGE_ACCOUNT_RE.fullmatch(result["storageAccountName"]) is None
+        or not _valid_container_name(result["containerName"])
+        or not _valid_container_name(result["encryptionScopeName"])
+    ):
+        raise ValueError("WORM_BASELINE_PARAMETERS_INVALID")
+    tags = result["tags"]
+    if (
+        not isinstance(tags, Mapping)
+        or not tags
+        or any(
+            not isinstance(key, str)
+            or not key
+            or len(key) > 128
+            or not isinstance(item, str)
+            or not item
+            or len(item) > 256
+            for key, item in tags.items()
+        )
+    ):
+        raise ValueError("WORM_BASELINE_PARAMETERS_INVALID")
+    return {
+        key: (
+            {tag: tags[tag] for tag in sorted(tags)}
+            if key == "tags"
+            else str(result[key])
+        )
+        for key in sorted(result)
+    }
+
+
+def _valid_container_name(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])", value)
+        is not None
+        and "--" not in value
+    )
+
+
 def _validate_toolchain_attestations(
     value: Mapping[str, str],
 ) -> dict[str, str]:
@@ -448,9 +586,13 @@ def _measure_current_toolchain_attestations(
     return current, combined
 
 
-def _source_bundle_sha256(root: Path) -> str:
+def _source_bundle_sha256(
+    root: Path,
+    *,
+    relative_paths: tuple[Path, ...] | None = None,
+) -> str:
     entries: list[dict[str, str]] = []
-    for relative in INFRASTRUCTURE_SOURCE_PATHS:
+    for relative in relative_paths or INFRASTRUCTURE_SOURCE_PATHS:
         path = (root / relative).resolve()
         if root not in path.parents or not path.is_file():
             raise ValueError("INFRASTRUCTURE_SOURCE_NOT_FOUND")
@@ -528,6 +670,7 @@ def _require_sha256(value: Any, label: str) -> None:
 __all__ = [
     "ACTION",
     "COMMAND",
+    "WORM_BASELINE_SOURCE_PATHS",
     "SCHEMA_VERSION",
     "build_performance_infrastructure_owner_gate",
     "format_performance_infrastructure_owner_gate",
