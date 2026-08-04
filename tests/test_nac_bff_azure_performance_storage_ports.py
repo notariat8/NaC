@@ -31,6 +31,7 @@ from nac_bff.azure_performance_storage_ports import (  # noqa: E402
     AttestedAzureStorageTokenProvider,
     AzurePerformanceStoragePortError,
     DurableLeaseBindingHandoff,
+    PerformanceExecutionFence,
 )
 
 
@@ -169,7 +170,6 @@ class DurableLeaseBindingHandoffTests(unittest.TestCase):
         self.assertEqual(self.path.with_name(self.path.name + ".lock").stat().st_mode & 0o777, 0o600)
         self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o700)
         self.assertFalse(any(self.path.parent.glob("*.tmp")))
-
     def test_exact_owner_target_resource_and_etag_are_immutable(self) -> None:
         self._store().commit_and_load(_binding())
 
@@ -219,6 +219,25 @@ class DurableLeaseBindingHandoffTests(unittest.TestCase):
 
         self.assertFalse(self.path.exists())
         self.assertFalse(any(self.path.parent.glob("*.tmp")))
+
+
+class PerformanceExecutionFenceTests(unittest.TestCase):
+    def test_second_process_boundary_is_rejected_without_waiting(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "run" / "composition.lock"
+            first = PerformanceExecutionFence(path)
+            second = PerformanceExecutionFence(path)
+
+            with first.hold():
+                with self.assertRaisesRegex(
+                    AzurePerformanceStoragePortError,
+                    r"^AZURE_PERFORMANCE_EXECUTION_ALREADY_ACTIVE$",
+                ):
+                    with second.hold():
+                        self.fail("second execution fence must stay closed")
+
+            with second.hold():
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
 
 
 class AttestedAzureStorageTokenProviderTests(unittest.TestCase):
@@ -309,6 +328,19 @@ class AttestedAzureStorageTokenProviderTests(unittest.TestCase):
             self.jwks_calls,
             ["https://login.microsoftonline.com/common/discovery/v2.0/keys"],
         )
+
+    def test_local_credential_preflight_is_redacted_and_network_free(self) -> None:
+        result = self._provider().validate_local_credentials()
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(
+            result["certificate_sha256"], self.expected_certificate_sha256
+        )
+        self.assertEqual(self.http_calls, [])
+        self.assertEqual(self.jwks_calls, [])
+        encoded = json.dumps(result, sort_keys=True)
+        self.assertNotIn(str(self.private_key_path), encoded)
+        self.assertNotIn("PRIVATE KEY", encoded)
 
     def test_scope_and_identity_binding_are_rejected_before_credentials_or_http(self) -> None:
         provider = self._provider()

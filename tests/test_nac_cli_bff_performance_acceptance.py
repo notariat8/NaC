@@ -42,6 +42,9 @@ class BffPerformanceAcceptanceCliTests(unittest.TestCase):
         self.provisioner_state = root / "provisioner-state.json"
         self.certificate_path = root / "provisioner.cert.pem"
         self.private_key_path = root / "provisioner.key.pem"
+        self.runtime_state = root / "runtime-state.json"
+        self.runtime_certificate_path = root / "runtime.cert.pem"
+        self.runtime_private_key_path = root / "runtime.key.pem"
         self.toolchain = {"toolchain": "bound"}
         self.infrastructure = {"infrastructure": "bound"}
         self.worm = {"worm": "bound"}
@@ -53,6 +56,9 @@ class BffPerformanceAcceptanceCliTests(unittest.TestCase):
         self.provisioner_state.write_text("{}", encoding="utf-8")
         self.certificate_path.write_text("certificate", encoding="utf-8")
         self.private_key_path.write_text("private-key", encoding="utf-8")
+        self.runtime_state.write_text("{}", encoding="utf-8")
+        self.runtime_certificate_path.write_text("certificate", encoding="utf-8")
+        self.runtime_private_key_path.write_text("private-key", encoding="utf-8")
 
     def _argv(self, *extra: str) -> list[str]:
         return [
@@ -83,6 +89,12 @@ class BffPerformanceAcceptanceCliTests(unittest.TestCase):
             str(self.certificate_path),
             "--provisioner-private-key-path",
             str(self.private_key_path),
+            "--runtime-state",
+            str(self.runtime_state),
+            "--runtime-certificate-path",
+            str(self.runtime_certificate_path),
+            "--runtime-private-key-path",
+            str(self.runtime_private_key_path),
             *extra,
         ]
 
@@ -157,6 +169,9 @@ class BffPerformanceAcceptanceCliTests(unittest.TestCase):
             "--provisioner-state",
             "--provisioner-certificate-path",
             "--provisioner-private-key-path",
+            "--runtime-state",
+            "--runtime-certificate-path",
+            "--runtime-private-key-path",
         )
         module, run = self._module({"status": "PASSED"})
         with patch.dict(
@@ -280,6 +295,9 @@ class BffPerformanceAcceptanceCliTests(unittest.TestCase):
             provisioner_state_path=self.provisioner_state,
             provisioner_certificate_path=self.certificate_path,
             provisioner_private_key_path=self.private_key_path,
+            runtime_state_path=self.runtime_state,
+            runtime_certificate_path=self.runtime_certificate_path,
+            runtime_private_key_path=self.runtime_private_key_path,
         )
         self.assertEqual(
             json.loads(stdout),

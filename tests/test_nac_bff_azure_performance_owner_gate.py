@@ -57,7 +57,12 @@ def _parameters() -> dict[str, object]:
             f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Storage/storageAccounts/stnacwormtest001"
         ),
-        "provisionerPrincipalId": "11111111-2222-4333-8444-555555555555",
+        "bootstrapPrincipalId": "11111111-2222-4333-8444-555555555555",
+        "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
+        "bootstrapCertificateSha256": TOOLCHAIN[
+            "provisioner_certificate_sha256"
+        ],
+        "runtimeCertificateSha256": "f" * 64,
         "allowedClientIpAddress": "8.8.8.8",
         "targetBindingSha256": target,
         "tenantId": TENANT_ID,
@@ -516,6 +521,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
         }
         expected = performance_sources | {
             Path("src/nac_bff/azure_live_commands.py"),
+            Path("src/nac_cli/cli.py"),
             Path("scripts/validate_m365_azure_bff_performance_acceptance.py"),
             Path("scripts/validate_nac_bff_performance_coordination_arm.py"),
             Path("workflows/contracts/m365-bff-performance-acceptance.contract.json"),
@@ -535,7 +541,10 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
             for path in (REPO_ROOT / "src/nac_bff").glob(
                 "azure_performance_*.py"
             )
-        } | {Path("src/nac_bff/azure_live_commands.py")}
+        } | {
+            Path("src/nac_bff/azure_live_commands.py"),
+            Path("src/nac_cli/cli.py"),
+        }
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

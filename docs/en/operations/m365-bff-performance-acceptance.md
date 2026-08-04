@@ -162,7 +162,8 @@ not release proof.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage
-resource ID and provisioner principal to the exact `lease_binding_sha256`,
+resource ID plus distinct bootstrap and runtime principals to the exact
+`lease_binding_sha256`,
 strong ETag, target binding, and token subject (`oid`). The envelope digest and
 lease digest are runtime execution bindings. The lease adapter accepts neither
 a raw nor a merely decoded JWT. The token provider must return a sealed result
@@ -174,17 +175,19 @@ blocks before state and without an acquire request.
 After a real process restart, infrastructure is re-attested read-only.
 Serialized safety evidence alone authorizes nothing because the process-bound
 capability is not serialized. Only fresh re-attestation preserving the same
-owner, tenant, principal, target, and lease binding may reconcile the existing
+owner, tenant, both principals, target, and lease binding may reconcile the existing
 lease; stale pre-restart evidence cannot authorize another mutation.
 
 The offline IaC is under
-`deploy/runtime/azure/nac-bff-performance-coordination`. It binds the existing
-Entra service principal by object ID, allows only one explicit client IP on the
+`deploy/runtime/azure/nac-bff-performance-coordination`. It binds distinct
+bootstrap and runtime Entra service principals and certificate hashes, allows
+only one explicit client IP on the
 storage endpoint, and sets the network default to `Deny`. Shared keys, public
 blobs, and delete, owner, or container DataActions remain excluded. The
-exact-path role includes `blobs/add/action` for the one-time conditional
-creation, `blobs/read` for readback, and `blobs/write` for lease operations.
-Azure also authorizes overwrite and lease break through the write DataAction.
+bootstrap role contains exactly `blobs/read` and `blobs/add/action`; the
+separate runtime role contains exactly `blobs/read` and `blobs/write`. No
+identity combines add and write. Azure also authorizes overwrite and lease
+break through the runtime write DataAction.
 ABAC therefore fixes the path while
 the sealed application API fixes the operation: bootstrap only uses
 conditional `PUT` or `HEAD`; runtime only acquires, asserts, and releases. The
@@ -273,7 +276,7 @@ future skew. After deployment, complete Effective RBAC/ABAC readback must start
 at the tenant-root management group matching the owner tenant and prove the
 subscription's authoritative ordered management-group ancestry. It covers
 tenant root, the management-group chain, subscription, resource group, storage
-account, blob service, and container must prove the exact provisioner identity,
+account, blob service, and container must prove the exact bootstrap and runtime identities,
 all transitive Entra groups, role, DataActions, condition, and scope; any
 broader direct, group-based, or inherited data-plane assignment, and every
 effective control-plane assignment, blocks bootstrap and lease acquire. A
@@ -369,10 +372,13 @@ The existing plan command remains offline and sends zero requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #735 implements the complete composition offline, but activates no
-live CLI command, Azure resource action, Blob or lease mutation, Monitor read,
-or target dispatch. Direct adapter calls fail before token, network, or state
-access unless they receive the exact bounded capability issued after immutable
-owner-comment and sealed infrastructure-safety verification. A later live
-composition requires that fresh owner-bound capability for every Blob call,
-Monitor read, and target GET.
+This PR performs no live action: no Azure resource action, Blob or lease
+mutation, Monitor read, or target dispatch. The implemented live CLI path,
+`nac m365 teams-sharepoint bff-performance-acceptance`, remains closed by the
+two flags `--owner-approved` and `--execute-live-acceptance`, each required
+exactly once, plus the immutable owner gate. It executes only after a fresh
+hash-bound owner approval. Direct adapter calls fail before token, network, or
+state access unless they receive the exact bounded capability issued after
+immutable owner-comment and sealed infrastructure-safety verification; every
+Blob call, Monitor read, and target GET requires this fresh owner-bound
+capability.

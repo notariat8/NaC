@@ -8058,6 +8058,9 @@ def _run_bff_performance_acceptance_command(
     parser.add_argument("--provisioner-state", type=Path, required=True)
     parser.add_argument("--provisioner-certificate-path", type=Path, required=True)
     parser.add_argument("--provisioner-private-key-path", type=Path, required=True)
+    parser.add_argument("--runtime-state", type=Path, required=True)
+    parser.add_argument("--runtime-certificate-path", type=Path, required=True)
+    parser.add_argument("--runtime-private-key-path", type=Path, required=True)
     parser.add_argument("--format", choices=["text", "json"], default="text")
     try:
         args = parser.parse_args(command_argv)
@@ -8104,6 +8107,9 @@ def _run_bff_performance_acceptance_command(
             provisioner_state_path=args.provisioner_state,
             provisioner_certificate_path=args.provisioner_certificate_path,
             provisioner_private_key_path=args.provisioner_private_key_path,
+            runtime_state_path=args.runtime_state,
+            runtime_certificate_path=args.runtime_certificate_path,
+            runtime_private_key_path=args.runtime_private_key_path,
         )
     except Exception:
         return _emit_bff_performance_acceptance_error(

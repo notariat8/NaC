@@ -194,6 +194,8 @@ def lease_bootstrap_policy() -> dict[str, Any]:
         ),
         "owner_principal_tenant_resource_target_binding_required": True,
         "token_subject_and_tenant_validation_required": True,
+        "distinct_bootstrap_runtime_identity_bindings_required": True,
+        "runtime_binding_handoff_required": True,
         "binding_source": "independent_head_readback",
         "enforcement_boundary": "sealed_application_api_defense_in_depth",
         "azure_rbac_write_operation_filtering": False,
@@ -218,6 +220,9 @@ class AzureBlobLeaseBootstrapBinding:
     target_binding_sha256: str
     read_identity_binding_sha256: str
     write_identity_binding_sha256: str
+    runtime_token_subject: str
+    runtime_read_identity_binding_sha256: str
+    runtime_write_identity_binding_sha256: str
 
     def __post_init__(self) -> None:
         accounts = (
@@ -241,6 +246,20 @@ class AzureBlobLeaseBootstrapBinding:
             or not _is_sha256(self.target_binding_sha256)
             or not _is_sha256(self.read_identity_binding_sha256)
             or not _is_sha256(self.write_identity_binding_sha256)
+            or _canonical_uuid(self.runtime_token_subject) is None
+            or _canonical_uuid(self.runtime_token_subject)
+            == _canonical_uuid(self.token_subject)
+            or not _is_sha256(self.runtime_read_identity_binding_sha256)
+            or not _is_sha256(self.runtime_write_identity_binding_sha256)
+            or len(
+                {
+                    self.read_identity_binding_sha256,
+                    self.write_identity_binding_sha256,
+                    self.runtime_read_identity_binding_sha256,
+                    self.runtime_write_identity_binding_sha256,
+                }
+            )
+            != 4
         ):
             raise ValueError("AZURE_BLOB_LEASE_BOOTSTRAP_BINDING_INVALID")
 
@@ -663,15 +682,15 @@ class AzureBlobLeaseBootstrapAdapter:
             owner_approval_body_sha256=(
                 self._binding.owner_approval_body_sha256
             ),
-            token_subject=self._binding.token_subject,
+            token_subject=self._binding.runtime_token_subject,
             token_tenant_id=self._binding.token_tenant_id,
             target_binding_sha256=self._binding.target_binding_sha256,
             expected_etag=etag,
             read_identity_binding_sha256=(
-                self._binding.read_identity_binding_sha256
+                self._binding.runtime_read_identity_binding_sha256
             ),
             write_identity_binding_sha256=(
-                self._binding.write_identity_binding_sha256
+                self._binding.runtime_write_identity_binding_sha256
             ),
         )
 
@@ -1081,6 +1100,9 @@ class AzureBlobLeaseAdapter:
         lease_id: str,
         capability: VerifiedLiveActionCapability,
     ) -> None:
+        self._authorize_capability(
+            capability, action=BLOB_LEASE_RELEASE, consume=True
+        )
         headers = self._common_headers(
             lease_id, self._binding.write_identity_binding_sha256
         )
@@ -1098,6 +1120,7 @@ class AzureBlobLeaseAdapter:
             b"",
             capability=capability,
             action=BLOB_LEASE_RELEASE,
+            capability_already_consumed=True,
         )
         if result.status in {409, 412}:
             self._raise_put_precondition(result)
@@ -1109,6 +1132,9 @@ class AzureBlobLeaseAdapter:
         capability: VerifiedLiveActionCapability,
         action: str,
     ) -> str:
+        already_consumed = action == BLOB_LEASE_ACQUIRE
+        if not already_consumed:
+            self._authorize_capability(capability, action=action, consume=True)
         headers = self._common_headers(
             lease_id, self._binding.read_identity_binding_sha256
         )
@@ -1120,7 +1146,7 @@ class AzureBlobLeaseAdapter:
             None,
             capability=capability,
             action=action,
-            capability_already_consumed=(action == BLOB_LEASE_ACQUIRE),
+            capability_already_consumed=True,
         )
         if result.status == 200:
             self._validate_success(result, 200)
@@ -1158,6 +1184,9 @@ class AzureBlobLeaseAdapter:
         lease_id: str,
         capability: VerifiedLiveActionCapability,
     ) -> None:
+        self._authorize_capability(
+            capability, action=BLOB_LEASE_RELEASE, consume=True
+        )
         headers = self._common_headers(
             lease_id, self._binding.read_identity_binding_sha256
         )
@@ -1168,6 +1197,7 @@ class AzureBlobLeaseAdapter:
             None,
             capability=capability,
             action=BLOB_LEASE_RELEASE,
+            capability_already_consumed=True,
         )
         if result.status == 200:
             self._validate_success(result, 200)
@@ -1461,7 +1491,7 @@ def _validated_lease_acquisition_safety_evidence(
     token_subject = _canonical_uuid(result.get("token_subject"))
     token_tenant = _canonical_uuid(result.get("token_tenant_id"))
     infrastructure_subject = _canonical_uuid(
-        infrastructure.get("provisioner_principal_id")
+        infrastructure.get("runtime_principal_id")
     )
     infrastructure_tenant = _canonical_uuid(infrastructure.get("tenant_id"))
     bff_account = _storage_account_name_from_resource_id(
@@ -1534,8 +1564,10 @@ def _validated_bootstrap_infrastructure_safety_evidence(
     if (
         infrastructure.get("owner_binding_sha256")
         != binding.owner_approval_body_sha256
-        or _canonical_uuid(infrastructure.get("provisioner_principal_id"))
+        or _canonical_uuid(infrastructure.get("bootstrap_principal_id"))
         != binding.token_subject
+        or _canonical_uuid(infrastructure.get("runtime_principal_id"))
+        != binding.runtime_token_subject
         or _canonical_uuid(infrastructure.get("tenant_id"))
         != binding.token_tenant_id
         or str(
@@ -1747,6 +1779,13 @@ def _bootstrap_binding_sha256(binding: AzureBlobLeaseBootstrapBinding) -> str:
             "owner_approval_body_sha256": binding.owner_approval_body_sha256,
             "read_identity_binding_sha256": (
                 binding.read_identity_binding_sha256
+            ),
+            "runtime_read_identity_binding_sha256": (
+                binding.runtime_read_identity_binding_sha256
+            ),
+            "runtime_token_subject": binding.runtime_token_subject,
+            "runtime_write_identity_binding_sha256": (
+                binding.runtime_write_identity_binding_sha256
             ),
             "scheme": "https",
             "storage_account_name": binding.account_name,

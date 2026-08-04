@@ -99,10 +99,16 @@ _COORDINATION_OUTPUT_KEYS = frozenset(
         "requiredLeaseBlobType",
         "requiredLeaseBlobContentLength",
         "targetBindingSha256",
-        "leaseDataRoleDefinitionId",
-        "provisionerLeaseRoleAssignmentId",
-        "exactLeaseBlobCondition",
-        "allowedDataActions",
+        "bootstrapLeaseDataRoleDefinitionId",
+        "runtimeLeaseDataRoleDefinitionId",
+        "bootstrapLeaseRoleAssignmentId",
+        "runtimeLeaseRoleAssignmentId",
+        "bootstrapCertificateSha256Binding",
+        "runtimeCertificateSha256Binding",
+        "exactBootstrapLeaseBlobCondition",
+        "exactRuntimeLeaseBlobCondition",
+        "bootstrapAllowedDataActions",
+        "runtimeAllowedDataActions",
         "deploymentScopeBinding",
         "blobBootstrapRequired",
         "blobBootstrapExecutedByTemplate",
@@ -442,8 +448,10 @@ class PerformanceCoordinationDeploymentReceipt:
     outputs_sha256: str
     coordination_storage_account_resource_id: str
     lease_container_resource_id: str
-    lease_data_role_definition_id: str
-    provisioner_lease_role_assignment_id: str
+    bootstrap_lease_data_role_definition_id: str
+    runtime_lease_data_role_definition_id: str
+    bootstrap_lease_role_assignment_id: str
+    runtime_lease_role_assignment_id: str
     _authority_id: int
     _seal: object
 
@@ -639,11 +647,17 @@ class PerformanceCoordinationDeploymentPort:
                 lease_container_resource_id=outputs[
                     "leaseContainerResourceId"
                 ],
-                lease_data_role_definition_id=outputs[
-                    "leaseDataRoleDefinitionId"
+                bootstrap_lease_data_role_definition_id=outputs[
+                    "bootstrapLeaseDataRoleDefinitionId"
                 ],
-                provisioner_lease_role_assignment_id=outputs[
-                    "provisionerLeaseRoleAssignmentId"
+                runtime_lease_data_role_definition_id=outputs[
+                    "runtimeLeaseDataRoleDefinitionId"
+                ],
+                bootstrap_lease_role_assignment_id=outputs[
+                    "bootstrapLeaseRoleAssignmentId"
+                ],
+                runtime_lease_role_assignment_id=outputs[
+                    "runtimeLeaseRoleAssignmentId"
                 ],
             )
             authority._finish(stage)
@@ -758,7 +772,20 @@ def _validate_coordination_deployment(
         "requiredLeaseBlobType": "BlockBlob",
         "requiredLeaseBlobContentLength": 0,
         "targetBindingSha256": target,
-        "allowedDataActions": sorted(ALLOWED_DATA_ACTIONS),
+        "bootstrapCertificateSha256Binding": parameters[
+            "bootstrapCertificateSha256"
+        ],
+        "runtimeCertificateSha256Binding": parameters[
+            "runtimeCertificateSha256"
+        ],
+        "bootstrapAllowedDataActions": [
+            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+        ],
+        "runtimeAllowedDataActions": [
+            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
+        ],
         "deploymentScopeBinding": f"{TENANT_ID}/{SUBSCRIPTION_ID}/{RESOURCE_GROUP}",
         "blobBootstrapRequired": True,
         "blobBootstrapExecutedByTemplate": False,
@@ -775,20 +802,27 @@ def _validate_coordination_deployment(
             "exact-container-and-blob-path-abac",
             "sealed-bootstrap-and-runtime-application-apis",
         ],
-        "principalSeparationMode": (
-            "SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME"
-        ),
+        "principalSeparationMode": "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS",
     }
     if any(not _equal_arm(outputs.get(key), value) for key, value in expected.items()):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     for key, prefix in (
         (
-            "leaseDataRoleDefinitionId",
+            "bootstrapLeaseDataRoleDefinitionId",
             f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
             "Microsoft.Authorization/roleDefinitions/",
         ),
         (
-            "provisionerLeaseRoleAssignmentId",
+            "runtimeLeaseDataRoleDefinitionId",
+            f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
+            "Microsoft.Authorization/roleDefinitions/",
+        ),
+        (
+            "bootstrapLeaseRoleAssignmentId",
+            f"{container_id}/providers/Microsoft.Authorization/roleAssignments/",
+        ),
+        (
+            "runtimeLeaseRoleAssignmentId",
             f"{container_id}/providers/Microsoft.Authorization/roleAssignments/",
         ),
     ):
@@ -799,15 +833,19 @@ def _validate_coordination_deployment(
             or _UUID_RE.fullmatch(value.rsplit("/", 1)[-1]) is None
         ):
             _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
-    condition = outputs.get("exactLeaseBlobCondition")
-    if (
-        not isinstance(condition, str)
-        or CONTAINER_NAME not in condition
-        or f"locks/{target}.lock" not in condition
-        or "StringEquals" not in condition
-        or "StringLike" in condition
+    for condition_key in (
+        "exactBootstrapLeaseBlobCondition",
+        "exactRuntimeLeaseBlobCondition",
     ):
-        _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
+        condition = outputs.get(condition_key)
+        if (
+            not isinstance(condition, str)
+            or CONTAINER_NAME not in condition
+            or f"locks/{target}.lock" not in condition
+            or "StringEquals" not in condition
+            or "StringLike" in condition
+        ):
+            _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     return outputs
 
 

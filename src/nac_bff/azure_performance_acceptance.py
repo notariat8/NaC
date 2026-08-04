@@ -1206,9 +1206,10 @@ class BoundPerformanceAuthorizationVerifier:
             "worm_storage_account_resource_id": parameters.get(
                 "wormStorageAccountResourceId"
             ),
-            "provisioner_principal_id": parameters.get(
-                "provisionerPrincipalId"
+            "bootstrap_principal_id": parameters.get(
+                "bootstrapPrincipalId"
             ),
+            "runtime_principal_id": parameters.get("runtimePrincipalId"),
             "tags_sha256": _sha256_json(parameters.get("tags", {})),
             "allowed_client_ip_address_sha256": _sha256_text(
                 str(parameters.get("allowedClientIpAddress", ""))
@@ -1350,7 +1351,7 @@ class BoundPerformanceAuthorizationVerifier:
                 or binding.coordination_storage_account_resource_id.casefold()
                 != expected_resource.casefold()
                 or binding.token_subject.casefold()
-                != str(parameters.get("provisionerPrincipalId", "")).casefold()
+                != str(parameters.get("runtimePrincipalId", "")).casefold()
                 or binding.token_tenant_id.casefold()
                 != str(parameters.get("tenantId", "")).casefold()
             ):

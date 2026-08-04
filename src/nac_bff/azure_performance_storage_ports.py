@@ -40,6 +40,7 @@ __all__ = (
     "AttestedAzureStorageTokenProvider",
     "AzurePerformanceStoragePortError",
     "DurableLeaseBindingHandoff",
+    "PerformanceExecutionFence",
 )
 
 
@@ -92,6 +93,57 @@ class _Rejected(Exception):
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         return None
+
+
+class PerformanceExecutionFence:
+    """Reject a second process before any owner or provider interaction."""
+
+    def __init__(self, path: Path) -> None:
+        if not isinstance(path, Path) or path.name in {"", ".", ".."}:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_EXECUTION_FENCE_CONFIGURATION_INVALID"
+            )
+        self._path = Path(os.path.abspath(path.expanduser()))
+
+    @contextmanager
+    def hold(self) -> Iterator[None]:
+        try:
+            parent_fd = _open_root_anchored_private_parent(
+                self._path, create=True
+            )
+        except SecurePerformancePathError:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_EXECUTION_FENCE_PATH_UNTRUSTED"
+            ) from None
+        if parent_fd is None:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_EXECUTION_FENCE_PATH_UNTRUSTED"
+            )
+        lock_fd: int | None = None
+        try:
+            lock_fd = _open_private_file_at(
+                parent_fd, self._path.name, create=True
+            )
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise AzurePerformanceStoragePortError(
+                    "AZURE_PERFORMANCE_EXECUTION_ALREADY_ACTIVE"
+                ) from None
+            yield
+        except AzurePerformanceStoragePortError:
+            raise
+        except OSError:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_EXECUTION_FENCE_PATH_UNTRUSTED"
+            ) from None
+        finally:
+            if lock_fd is not None:
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(lock_fd)
+            os.close(parent_fd)
 
 
 class DurableLeaseBindingHandoff:
@@ -400,6 +452,52 @@ class AttestedAzureStorageTokenProvider:
             raise AzurePerformanceStoragePortError(
                 "AZURE_STORAGE_TOKEN_UNAVAILABLE"
             ) from None
+
+    def validate_local_credentials(self) -> dict[str, str]:
+        """Validate the exact certificate/key pair without network access."""
+
+        now = _clock_value(self._clock)
+        certificate_bytes = _read_trusted_credential(
+            self._certificate_path,
+            expected_sha256=self._expected_certificate_sha256,
+        )
+        private_key_bytes = _read_trusted_credential(self._private_key_path)
+        certificate, private_key = _load_credential_pair(
+            certificate_bytes,
+            private_key_bytes,
+            password=self._private_key_password,
+            now=now,
+        )
+        public_numbers = private_key.public_key().public_numbers()
+        certificate_numbers = certificate.public_key().public_numbers()
+        if public_numbers != certificate_numbers:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_STORAGE_CREDENTIAL_INVALID"
+            )
+        return {
+            "status": "READY",
+            "tenant_id_sha256": hashlib.sha256(
+                self._tenant_id.encode("ascii")
+            ).hexdigest(),
+            "client_id_sha256": hashlib.sha256(
+                self._client_id.encode("ascii")
+            ).hexdigest(),
+            "token_subject_sha256": hashlib.sha256(
+                self._token_subject.encode("ascii")
+            ).hexdigest(),
+            "certificate_sha256": hashlib.sha256(
+                certificate_bytes
+            ).hexdigest(),
+            "credential_pair_sha256": hashlib.sha256(
+                certificate.fingerprint(hashes.SHA256())
+                + public_numbers.n.to_bytes(
+                    (public_numbers.n.bit_length() + 7) // 8, "big"
+                )
+                + public_numbers.e.to_bytes(
+                    (public_numbers.e.bit_length() + 7) // 8, "big"
+                )
+            ).hexdigest(),
+        }
 
     def _get_token(
         self, identity_binding_sha256: str

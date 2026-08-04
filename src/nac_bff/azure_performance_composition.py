@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import wraps
 import hashlib
 import json
 from pathlib import Path
@@ -26,6 +27,7 @@ from .azure_performance_acceptance import (
     M365DelegatedTokenProvider,
     PerformanceAcceptanceRunner,
     PerformanceArtifactStore,
+    OUTPUT_ROOT,
     TOTAL_REQUEST_LIMIT,
     build_owner_comment,
     build_performance_acceptance_plan,
@@ -56,6 +58,7 @@ from .azure_performance_monitor import AzurePerformanceMonitorAdapter
 from .azure_performance_storage_ports import (
     AttestedAzureStorageTokenProvider,
     DurableLeaseBindingHandoff,
+    PerformanceExecutionFence,
 )
 from .azure_performance_runtime import (
     AzurePerformanceRuntimeAdapter,
@@ -68,6 +71,28 @@ from nac_m365_graph.provisioner_env_bootstrap import load_provisioner_env_state
 
 SCHEMA_VERSION = "nac.m365-azure-bff-performance-composition-readiness/v1"
 BLOCKED_STATUS = "BLOCKED_MISSING_PRODUCTION_PORTS"
+
+
+def _full_lifecycle_fence(function):  # type: ignore[no-untyped-def]
+    """Serialize one full live lifecycle before owner or provider access."""
+
+    @wraps(function)
+    def wrapped(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        if args:
+            raise TypeError("live composition accepts keyword-only arguments")
+        if (
+            kwargs.get("owner_approved") is not True
+            or kwargs.get("execute_live_acceptance") is not True
+        ):
+            return function(**kwargs)
+        root = Path(kwargs["repo_root"]).expanduser().resolve(strict=True)
+        fence = PerformanceExecutionFence(
+            root / OUTPUT_ROOT / ".composition-execution-fence.lock"
+        )
+        with fence.hold():
+            return function(**kwargs)
+
+    return wrapped
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,7 +206,18 @@ _PORTS = (
         "lease_runtime",
         "AttestedAzureStorageTokenProvider.get_token",
         "AttestedAzureStorageTokenProvider",
-        ((AttestedAzureStorageTokenProvider, "get_token"),),
+        (
+            (AttestedAzureStorageTokenProvider, "validate_local_credentials"),
+            (AttestedAzureStorageTokenProvider, "get_token"),
+        ),
+        owner_bound=True,
+    ),
+    _PortRequirement(
+        "full_lifecycle_process_fence",
+        "owner_preflight",
+        "PerformanceExecutionFence.hold",
+        "PerformanceExecutionFence",
+        ((PerformanceExecutionFence, "hold"),),
         owner_bound=True,
     ),
     _PortRequirement(
@@ -294,6 +330,7 @@ def validate_azure_performance_composition_readiness() -> dict[str, Any]:
     }
 
 
+@_full_lifecycle_fence
 def run_azure_performance_acceptance_live(
     *,
     repo_root: Path,
@@ -309,11 +346,17 @@ def run_azure_performance_acceptance_live(
     provisioner_state_path: Path,
     provisioner_certificate_path: Path,
     provisioner_private_key_path: Path,
+    runtime_state_path: Path,
+    runtime_certificate_path: Path,
+    runtime_private_key_path: Path,
 ) -> dict[str, Any]:
     """Execute the exact combined infrastructure and measurement approval."""
 
     if owner_approved is not True or execute_live_acceptance is not True:
         raise ValueError("PERFORMANCE_ACCEPTANCE_OWNER_GATE_CLOSED")
+    readiness = validate_azure_performance_composition_readiness()
+    if readiness.get("ready") is not True:
+        raise ValueError("PERFORMANCE_PRODUCTION_COMPOSITION_NOT_READY")
     from .azure_performance_owner_gate import (
         measure_performance_infrastructure_approval,
     )
@@ -326,8 +369,6 @@ def run_azure_performance_acceptance_live(
         infrastructure_parameters=infrastructure_parameters,
         worm_baseline_parameters=worm_baseline_parameters,
     )
-    if measurement.get("composition_readiness", {}).get("ready") is not True:
-        raise ValueError("PERFORMANCE_PRODUCTION_COMPOSITION_NOT_READY")
     contract_sha256 = str(measurement["contract_sha256"])
     infrastructure_approval = dict(measurement["infrastructure_approval"])
     plan = build_performance_acceptance_plan(
@@ -374,6 +415,53 @@ def run_azure_performance_acceptance_live(
             worm_baseline_parameters=worm_baseline_parameters,
         )
     )
+
+    bootstrap_identity = _load_application_identity(
+        provisioner_state_path,
+        application_key="m365_provisioning_app",
+        expected_display_name="NaC M365 Provisioning",
+    )
+    runtime_identity = _load_application_identity(
+        runtime_state_path,
+        application_key="m365_runtime_app",
+        expected_display_name="NaC M365 Runtime",
+    )
+    expected_tenant_id = str(infrastructure_parameters["tenantId"])
+    if (
+        bootstrap_identity["tenant_id"].casefold()
+        != expected_tenant_id.casefold()
+        or runtime_identity["tenant_id"].casefold()
+        != expected_tenant_id.casefold()
+        or bootstrap_identity["client_id"].casefold()
+        == runtime_identity["client_id"].casefold()
+        or bootstrap_identity["service_principal_id"].casefold()
+        != str(infrastructure_parameters["bootstrapPrincipalId"]).casefold()
+        or runtime_identity["service_principal_id"].casefold()
+        != str(infrastructure_parameters["runtimePrincipalId"]).casefold()
+    ):
+        raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
+    bootstrap_token_provider = AttestedAzureStorageTokenProvider(
+        tenant_id=bootstrap_identity["tenant_id"],
+        client_id=bootstrap_identity["client_id"],
+        token_subject=str(infrastructure_parameters["bootstrapPrincipalId"]),
+        certificate_path=provisioner_certificate_path,
+        private_key_path=provisioner_private_key_path,
+        expected_certificate_sha256=str(
+            infrastructure_parameters["bootstrapCertificateSha256"]
+        ),
+    )
+    runtime_token_provider = AttestedAzureStorageTokenProvider(
+        tenant_id=runtime_identity["tenant_id"],
+        client_id=runtime_identity["client_id"],
+        token_subject=str(infrastructure_parameters["runtimePrincipalId"]),
+        certificate_path=runtime_certificate_path,
+        private_key_path=runtime_private_key_path,
+        expected_certificate_sha256=str(
+            infrastructure_parameters["runtimeCertificateSha256"]
+        ),
+    )
+    bootstrap_token_provider.validate_local_credentials()
+    runtime_token_provider.validate_local_credentials()
 
     toolchain_sha256 = calculate_toolchain_attestations_sha256(
         toolchain_attestations
@@ -431,26 +519,11 @@ def run_azure_performance_acceptance_live(
         monitor_window_anchor_utc=monitor_window_anchor_utc,
         infrastructure_safety_source=safety_source,
     )
-    identity = _load_provisioner_identity(provisioner_state_path)
-    if (
-        identity["tenant_id"].casefold()
-        != str(infrastructure_parameters["tenantId"]).casefold()
-    ):
-        raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
-    storage_token_provider = AttestedAzureStorageTokenProvider(
-        tenant_id=identity["tenant_id"],
-        client_id=identity["client_id"],
-        token_subject=str(infrastructure_parameters["provisionerPrincipalId"]),
-        certificate_path=provisioner_certificate_path,
-        private_key_path=provisioner_private_key_path,
-        expected_certificate_sha256=toolchain_attestations[
-            "provisioner_certificate_sha256"
-        ],
-    )
     bootstrap_binding = _bootstrap_binding(
         authorization=authorization,
         infrastructure_parameters=infrastructure_parameters,
-        identity=identity,
+        bootstrap_identity=bootstrap_identity,
+        runtime_identity=runtime_identity,
     )
     bootstrap_binding_sha256 = (
         calculate_azure_blob_lease_bootstrap_binding_sha256(bootstrap_binding)
@@ -470,7 +543,7 @@ def run_azure_performance_acceptance_live(
     bootstrap_adapter = AzureBlobLeaseBootstrapAdapter(
         binding=bootstrap_binding,
         infrastructure_safety_evidence=safety_verification,
-        token_provider=storage_token_provider,
+        token_provider=bootstrap_token_provider,
     )
     if (
         bootstrap_adapter.bootstrap_binding_sha256
@@ -509,7 +582,7 @@ def run_azure_performance_acceptance_live(
         binding=durable_binding,
         acquisition_safety_evidence=acquisition_safety,
         state_path=artifact_store.run_dir / "lease-lifecycle.redacted.json",
-        token_provider=storage_token_provider,
+        token_provider=runtime_token_provider,
     )
     anchor = _parse_monitor_anchor(monitor_window_anchor_utc)
     lease_id = UUID(
@@ -612,8 +685,13 @@ def _infrastructure_verification_arguments(
         blob_service_id=blob_service_id,
         container_id=coordination.lease_container_resource_id,
     )
-    effective_rbac = readback.read_effective_rbac(
-        principal_id=str(parameters["provisionerPrincipalId"]),
+    bootstrap_effective_rbac = readback.read_effective_rbac(
+        principal_id=str(parameters["bootstrapPrincipalId"]),
+        target_resource_id=coordination.lease_container_resource_id,
+        ancestor_scopes=ancestor_scopes,
+    )
+    runtime_effective_rbac = readback.read_effective_rbac(
+        principal_id=str(parameters["runtimePrincipalId"]),
         target_resource_id=coordination.lease_container_resource_id,
         ancestor_scopes=ancestor_scopes,
     )
@@ -649,18 +727,30 @@ def _infrastructure_verification_arguments(
             observation_kind="worm-storage-account-resource-id",
             resource_id=parameters["wormStorageAccountResourceId"],
         ),
-        "provisioner_principal_id": parameters["provisionerPrincipalId"],
+        "bootstrap_principal_id": parameters["bootstrapPrincipalId"],
+        "runtime_principal_id": parameters["runtimePrincipalId"],
         "target_binding_sha256": parameters["targetBindingSha256"],
-        "role_definition": readback.execute_read(
-            observation_kind="coordination-role-definition",
-            resource_id=coordination.lease_data_role_definition_id,
+        "bootstrap_role_definition": readback.execute_read(
+            observation_kind="coordination-bootstrap-role-definition",
+            resource_id=coordination.bootstrap_lease_data_role_definition_id,
         ),
-        "role_assignment": readback.execute_read(
-            observation_kind="coordination-role-assignment",
-            resource_id=coordination.provisioner_lease_role_assignment_id,
+        "runtime_role_definition": readback.execute_read(
+            observation_kind="coordination-runtime-role-definition",
+            resource_id=coordination.runtime_lease_data_role_definition_id,
+        ),
+        "bootstrap_role_assignment": readback.execute_read(
+            observation_kind="coordination-bootstrap-role-assignment",
+            resource_id=coordination.bootstrap_lease_role_assignment_id,
+        ),
+        "runtime_role_assignment": readback.execute_read(
+            observation_kind="coordination-runtime-role-assignment",
+            resource_id=coordination.runtime_lease_role_assignment_id,
         ),
         "subscription_ancestry_readback_envelope": ancestry,
-        "effective_rbac_readback_envelope": effective_rbac,
+        "bootstrap_effective_rbac_readback_envelope": (
+            bootstrap_effective_rbac
+        ),
+        "runtime_effective_rbac_readback_envelope": runtime_effective_rbac,
         "tenant_id": parameters["tenantId"],
         "subscription_id": parameters["subscriptionId"],
         "resource_group_name": parameters["resourceGroupName"],
@@ -704,7 +794,12 @@ def _effective_ancestor_scopes(
     return scopes
 
 
-def _load_provisioner_identity(path: Path) -> dict[str, str]:
+def _load_application_identity(
+    path: Path,
+    *,
+    application_key: str,
+    expected_display_name: str,
+) -> dict[str, str]:
     metadata = path.stat(follow_symlinks=False)
     if (
         not stat.S_ISREG(metadata.st_mode)
@@ -714,36 +809,54 @@ def _load_provisioner_identity(path: Path) -> dict[str, str]:
         raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
     state = load_provisioner_env_state(path)
     applications = state.get("applications")
-    provisioner = (
-        applications.get("m365_provisioning_app")
+    application = (
+        applications.get(application_key)
         if isinstance(applications, dict)
         else None
     )
-    tenant_id = state.get("tenantId")
-    client_id = provisioner.get("clientId") if isinstance(provisioner, dict) else None
+    tenant_id = state.get("tenantId") or state.get("tenant_id")
+    client_id = (
+        application.get("clientId") or application.get("client_id")
+        if isinstance(application, dict)
+        else None
+    )
+    service_principal_id = (
+        application.get("servicePrincipalId")
+        or application.get("service_principal_id")
+        if isinstance(application, dict)
+        else None
+    )
+    display_name = (
+        application.get("displayName") or application.get("display_name")
+        if isinstance(application, dict)
+        else None
+    )
     if (
         state.get("status") != "PASSED"
         or not isinstance(tenant_id, str)
         or not isinstance(client_id, str)
-        or provisioner.get("displayName") != "NaC M365 Provisioning"
+        or not isinstance(service_principal_id, str)
+        or display_name != expected_display_name
     ):
         raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
-    return {"tenant_id": tenant_id, "client_id": client_id}
+    return {
+        "tenant_id": str(UUID(tenant_id)),
+        "client_id": str(UUID(client_id)),
+        "service_principal_id": str(UUID(service_principal_id)),
+    }
 
 
 def _bootstrap_binding(
     *,
     authorization: Any,
     infrastructure_parameters: dict[str, Any],
-    identity: dict[str, str],
+    bootstrap_identity: dict[str, str],
+    runtime_identity: dict[str, str],
 ) -> AzureBlobLeaseBootstrapBinding:
     parameters = infrastructure_parameters
-    identity_base = {
+    common_identity_binding = {
         "owner_approval_body_sha256": authorization.owner_approval_body_sha256,
         "target_binding_sha256": authorization.target_binding_sha256,
-        "tenant_id": identity["tenant_id"],
-        "client_id": identity["client_id"],
-        "principal_id": parameters["provisionerPrincipalId"],
         "coordination_storage_account_resource_id": (
             f"/subscriptions/{parameters['subscriptionId']}/resourceGroups/"
             f"{parameters['resourceGroupName']}/providers/Microsoft.Storage/"
@@ -758,18 +871,45 @@ def _bootstrap_binding(
         worm_account_name=_storage_account_name(
             str(parameters["wormStorageAccountResourceId"])
         ),
-        coordination_storage_account_resource_id=identity_base[
+        coordination_storage_account_resource_id=common_identity_binding[
             "coordination_storage_account_resource_id"
         ],
         owner_approval_body_sha256=authorization.owner_approval_body_sha256,
-        token_subject=str(parameters["provisionerPrincipalId"]),
-        token_tenant_id=identity["tenant_id"],
+        token_subject=str(parameters["bootstrapPrincipalId"]),
+        token_tenant_id=bootstrap_identity["tenant_id"],
         target_binding_sha256=authorization.target_binding_sha256,
         read_identity_binding_sha256=_sha256_json(
-            {**identity_base, "operation": "blob-read"}
+            {
+                **common_identity_binding,
+                **bootstrap_identity,
+                "principal_id": parameters["bootstrapPrincipalId"],
+                "operation": "blob-read",
+            }
         ),
         write_identity_binding_sha256=_sha256_json(
-            {**identity_base, "operation": "blob-write"}
+            {
+                **common_identity_binding,
+                **bootstrap_identity,
+                "principal_id": parameters["bootstrapPrincipalId"],
+                "operation": "blob-add",
+            }
+        ),
+        runtime_token_subject=str(parameters["runtimePrincipalId"]),
+        runtime_read_identity_binding_sha256=_sha256_json(
+            {
+                **common_identity_binding,
+                **runtime_identity,
+                "principal_id": parameters["runtimePrincipalId"],
+                "operation": "blob-read",
+            }
+        ),
+        runtime_write_identity_binding_sha256=_sha256_json(
+            {
+                **common_identity_binding,
+                **runtime_identity,
+                "principal_id": parameters["runtimePrincipalId"],
+                "operation": "blob-write",
+            }
         ),
     )
 

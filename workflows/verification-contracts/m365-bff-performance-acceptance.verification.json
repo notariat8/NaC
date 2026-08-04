@@ -33,6 +33,7 @@
     "src/nac_bff/azure_performance_infrastructure_ports.py",
     "src/nac_bff/azure_performance_storage_ports.py",
     "src/nac_bff/azure_live_commands.py",
+    "src/nac_cli/cli.py",
     "deploy/runtime/azure/nac-bff-performance-coordination/main.bicep",
     "deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam",
     "deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.json",
@@ -56,6 +57,7 @@
     "tests/test_nac_bff_azure_performance_storage_ports.py",
     "tests/test_nac_bff_azure_live_commands.py",
     "tests/test_nac_bff_performance_coordination_iac.py",
+    "tests/test_nac_cli_bff_performance_acceptance.py",
     "docs/de/operations/m365-bff-performance-acceptance.md",
     "docs/en/operations/m365-bff-performance-acceptance.md"
   ],
@@ -64,6 +66,7 @@
     "python3 -m json.tool workflows/contracts/m365-bff-performance-acceptance.contract.json",
     "python3 -m json.tool workflows/verification-contracts/m365-bff-performance-acceptance.verification.json",
     "PYTHONPATH=src python3 -m unittest tests.test_nac_bff_azure_performance_authorization tests.test_nac_bff_azure_performance_acceptance tests.test_nac_bff_azure_performance_monitor tests.test_nac_bff_azure_performance_lease tests.test_nac_bff_azure_performance_runtime tests.test_nac_bff_azure_performance_composition tests.test_nac_bff_azure_performance_owner_gate tests.test_nac_bff_azure_performance_infrastructure_safety tests.test_nac_bff_azure_performance_infrastructure_ports tests.test_nac_bff_azure_performance_storage_ports tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests.test_monitor_get_is_limited_to_exact_adapter_url_shape tests.test_nac_bff_performance_coordination_iac",
+    "PYTHONPATH=src python3 -m unittest tests.test_nac_cli_bff_performance_acceptance",
     "az bicep build --file deploy/runtime/azure/nac-bff-performance-coordination/main.bicep --stdout > /tmp/nac-bff-performance-coordination-main.json",
     "az bicep build-params --file deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam --stdout > /tmp/nac-bff-performance-coordination-main-params.json",
     "cmp /tmp/nac-bff-performance-coordination-main.json deploy/runtime/azure/nac-bff-performance-coordination/compiled/main.json",
@@ -170,17 +173,30 @@
     "command_boundary": [
       "test_monitor_get_is_limited_to_exact_adapter_url_shape"
     ],
+    "cli": [
+      "test_closed_gate_precedes_files_imports_and_network",
+      "test_every_explicit_input_is_required_with_redacted_error",
+      "test_caller_supplied_binding_hashes_are_rejected",
+      "test_duplicate_live_gate_flags_are_rejected_before_import",
+      "test_invalid_json_stops_before_runtime_import",
+      "test_explicit_inputs_are_forwarded_to_lazy_entry_point_offline",
+      "test_runtime_and_execution_failures_are_fixed_and_redacted",
+      "test_failed_result_cannot_expose_provider_details"
+    ],
     "infrastructure": [
       "test_storage_is_dedicated_from_bff_and_worm",
       "test_storage_disables_shared_keys_public_blobs_and_open_network",
-      "test_deployment_scope_is_fail_closed_inside_template",
-      "test_existing_provisioner_gets_only_blob_add_read_and_write_data_actions",
-      "test_abac_condition_is_exact_container_and_blob_path"
+      "test_deployment_scope_and_resource_ids_fail_closed",
+      "test_source_forces_distinct_bootstrap_and_runtime_principals",
+      "test_source_roles_have_exact_disjoint_write_capabilities",
+      "test_source_abac_conditions_are_identity_specific_and_exact_path"
     ],
     "infrastructure_safety": [
       "test_accepts_only_the_exact_offline_safety_observation",
       "test_rejects_tampered_safety_evidence",
-      "test_rejects_unavailable_or_mismatched_coordination_name",
+      "test_existing_name_requires_exact_restart_timeline",
+      "test_rejects_equal_bootstrap_and_runtime_principals",
+      "test_rejects_bootstrap_or_runtime_role_data_action_drift",
       "test_rejects_authoritative_bff_and_worm_mismatch",
       "test_requires_complete_root_management_group_and_group_attestation",
       "test_rejects_tampered_effective_rbac_provenance",

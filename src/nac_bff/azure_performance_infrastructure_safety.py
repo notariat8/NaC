@@ -28,13 +28,28 @@ from .azure_live_commands import _prepare_bound_runtime
 
 
 CONTAINER_NAME = "nac-bff-performance-leases"
-ALLOWED_DATA_ACTIONS = frozenset(
+_BLOB_READ_DATA_ACTION = (
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
+)
+_BLOB_ADD_DATA_ACTION = (
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action"
+)
+_BLOB_WRITE_DATA_ACTION = (
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
+)
+BOOTSTRAP_ALLOWED_DATA_ACTIONS = frozenset(
     {
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
+        _BLOB_READ_DATA_ACTION,
+        _BLOB_ADD_DATA_ACTION,
     }
 )
+RUNTIME_ALLOWED_DATA_ACTIONS = frozenset(
+    {
+        _BLOB_READ_DATA_ACTION,
+        _BLOB_WRITE_DATA_ACTION,
+    }
+)
+ALLOWED_DATA_ACTIONS = BOOTSTRAP_ALLOWED_DATA_ACTIONS | RUNTIME_ALLOWED_DATA_ACTIONS
 
 PROVENANCE_READBACK_SCHEMA = "nac.azure-provenance-readback/v1"
 EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v1"
@@ -44,7 +59,7 @@ MICROSOFT_GRAPH_API_VERSION = "v1.0"
 DEPLOYMENT_API_VERSION = "2022-09-01"
 MANAGEMENT_GROUP_API_VERSION = "2021-04-01"
 INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA = (
-    "nac.azure-bff-performance-infrastructure-safety-evidence/v3"
+    "nac.azure-bff-performance-infrastructure-safety-evidence/v4"
 )
 READBACK_SESSION_SCHEMA = "nac.azure-bff-performance-readback-session/v1"
 SEALED_AZURE_READ_SCHEMA = "nac.azure-sealed-readback-command/v3"
@@ -81,15 +96,23 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "worm_storage_account_resource_id",
         "lease_container_resource_id",
         "lease_blob_path",
-        "provisioner_principal_id",
-        "role_definition_id",
-        "role_assignment_id",
-        "condition",
+        "bootstrap_principal_id",
+        "runtime_principal_id",
+        "bootstrap_role_definition_id",
+        "runtime_role_definition_id",
+        "bootstrap_role_assignment_id",
+        "runtime_role_assignment_id",
+        "bootstrap_condition",
+        "runtime_condition",
         "condition_version",
-        "data_actions",
-        "effective_assignment_count",
-        "effective_principal_count",
-        "attested_ancestor_scope_count",
+        "bootstrap_data_actions",
+        "runtime_data_actions",
+        "bootstrap_effective_assignment_count",
+        "runtime_effective_assignment_count",
+        "bootstrap_effective_principal_count",
+        "runtime_effective_principal_count",
+        "bootstrap_attested_ancestor_scope_count",
+        "runtime_attested_ancestor_scope_count",
         "tenant_root_management_group_scope",
         "deployment_receipt_sha256",
         "storage_configuration_sha256",
@@ -148,10 +171,13 @@ _READBACK_TRANSCRIPT_KEYS = frozenset(
         "coordination_storage",
         "blob_service",
         "lease_container",
-        "role_definition",
-        "role_assignment",
+        "bootstrap_role_definition",
+        "runtime_role_definition",
+        "bootstrap_role_assignment",
+        "runtime_role_assignment",
         "subscription_ancestry",
-        "effective_rbac",
+        "bootstrap_effective_rbac",
+        "runtime_effective_rbac",
     }
 )
 _SEALED_READ_SPECS = {
@@ -1478,7 +1504,8 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "tenant_id": parameter("tenantId"),
         "coordination_storage_account_resource_id": coordination_id,
         "target_binding_sha256": parameter("targetBindingSha256"),
-        "provisioner_principal_id": parameter("provisionerPrincipalId"),
+        "bootstrap_principal_id": parameter("bootstrapPrincipalId"),
+        "runtime_principal_id": parameter("runtimePrincipalId"),
         "effective_tags_sha256": _sha256_json(tags),
         "storage_configuration_sha256": _sha256_json(storage),
     }
@@ -1565,10 +1592,14 @@ def infrastructure_safety_policy_sha256() -> str:
     """Bind the exact readback-provenance and effective-RBAC safety policy."""
 
     policy = {
-        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v8",
+        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v9",
         "container_name": CONTAINER_NAME,
-        "data_actions": sorted(ALLOWED_DATA_ACTIONS),
-        "predeployment_coordination_name_available_required": True,
+        "bootstrap_data_actions": sorted(BOOTSTRAP_ALLOWED_DATA_ACTIONS),
+        "runtime_data_actions": sorted(RUNTIME_ALLOWED_DATA_ACTIONS),
+        "principal_separation": "distinct-bootstrap-and-runtime-principals",
+        "coordination_name_policy": (
+            "new_name_or_exact_bound_incremental_reconciliation"
+        ),
         "postdeployment_coordination_resource_readback_required": True,
         "exact_full_storage_and_network_readback_required": True,
         "exact_blob_service_resource_readback_required": True,
@@ -1634,7 +1665,9 @@ def infrastructure_safety_policy_sha256() -> str:
         "management_group_parent_child_chain_required": True,
         "subscription_attachment_required": True,
         "deployment_receipt_and_timestamp_continuity_required": True,
-        "expected_effective_assignment_count": 1,
+        "expected_effective_assignment_count_per_principal": 1,
+        "complete_effective_rbac_required_per_principal": True,
+        "bootstrap_and_runtime_conditions_share_exact_resource_path": True,
         "condition_version": "2.0",
     }
     encoded = json.dumps(
@@ -1647,23 +1680,53 @@ def infrastructure_safety_policy_sha256() -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def exact_lease_blob_condition(target_binding_sha256: str) -> str:
-    """Return the one accepted Azure ABAC condition for the lease blob."""
+def _exact_lease_blob_condition(
+    target_binding_sha256: str, data_actions: tuple[str, str]
+) -> str:
+    """Return the exact Azure ABAC condition for one identity boundary."""
 
     _require_sha256(target_binding_sha256)
-    read = "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
-    add = (
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/"
-        "add/action"
-    )
-    write = "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
     path = f"locks/{target_binding_sha256}.lock"
     return (
-        f"((!(ActionMatches{{'{read}'}}) AND !(ActionMatches{{'{add}'}}) AND "
-        f"!(ActionMatches{{'{write}'}})) OR (@Resource[Microsoft.Storage/"
+        f"((!(ActionMatches{{'{data_actions[0]}'}}) AND "
+        f"!(ActionMatches{{'{data_actions[1]}'}})) OR (@Resource[Microsoft.Storage/"
         "storageAccounts/blobServices/containers:name] StringEquals "
         f"'{CONTAINER_NAME}' AND @Resource[Microsoft.Storage/storageAccounts/"
         f"blobServices/containers/blobs:path] StringEquals '{path}'))"
+    )
+
+
+def exact_bootstrap_lease_blob_condition(target_binding_sha256: str) -> str:
+    """Return the bootstrap read/add ABAC condition for the exact lease blob."""
+
+    return _exact_lease_blob_condition(
+        target_binding_sha256,
+        (_BLOB_READ_DATA_ACTION, _BLOB_ADD_DATA_ACTION),
+    )
+
+
+def exact_runtime_lease_blob_condition(target_binding_sha256: str) -> str:
+    """Return the runtime read/write ABAC condition for the exact lease blob."""
+
+    return _exact_lease_blob_condition(
+        target_binding_sha256,
+        (_BLOB_READ_DATA_ACTION, _BLOB_WRITE_DATA_ACTION),
+    )
+
+
+def exact_lease_blob_condition(target_binding_sha256: str) -> str:
+    """Return the legacy combined condition for callers not yet migrated."""
+
+    _require_sha256(target_binding_sha256)
+    path = f"locks/{target_binding_sha256}.lock"
+    return (
+        f"((!(ActionMatches{{'{_BLOB_READ_DATA_ACTION}'}}) AND "
+        f"!(ActionMatches{{'{_BLOB_ADD_DATA_ACTION}'}}) AND "
+        f"!(ActionMatches{{'{_BLOB_WRITE_DATA_ACTION}'}})) OR "
+        "(@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] "
+        f"StringEquals '{CONTAINER_NAME}' AND @Resource[Microsoft.Storage/"
+        "storageAccounts/blobServices/containers/blobs:path] StringEquals "
+        f"'{path}'))"
     )
 
 
@@ -1685,12 +1748,16 @@ def verify_azure_performance_infrastructure_safety(
     worm_storage_account_resource_id: str,
     bff_storage_readback_envelope: Mapping[str, Any],
     worm_storage_readback_envelope: Mapping[str, Any],
-    provisioner_principal_id: str,
+    bootstrap_principal_id: str,
+    runtime_principal_id: str,
     target_binding_sha256: str,
-    role_definition: Mapping[str, Any],
-    role_assignment: Mapping[str, Any],
+    bootstrap_role_definition: Mapping[str, Any],
+    runtime_role_definition: Mapping[str, Any],
+    bootstrap_role_assignment: Mapping[str, Any],
+    runtime_role_assignment: Mapping[str, Any],
     subscription_ancestry_readback_envelope: Mapping[str, Any],
-    effective_rbac_readback_envelope: Mapping[str, Any],
+    bootstrap_effective_rbac_readback_envelope: Mapping[str, Any],
+    runtime_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
@@ -1712,10 +1779,13 @@ def verify_azure_performance_infrastructure_safety(
         lease_container_readback_envelope,
         bff_storage_readback_envelope,
         worm_storage_readback_envelope,
-        role_definition,
-        role_assignment,
+        bootstrap_role_definition,
+        runtime_role_definition,
+        bootstrap_role_assignment,
+        runtime_role_assignment,
         subscription_ancestry_readback_envelope,
-        effective_rbac_readback_envelope,
+        bootstrap_effective_rbac_readback_envelope,
+        runtime_effective_rbac_readback_envelope,
     )
     session = capability.session
     verified_at = _claim_readback_session(session)
@@ -1736,14 +1806,22 @@ def verify_azure_performance_infrastructure_safety(
         worm_storage_account_resource_id=worm_storage_account_resource_id,
         bff_storage_readback_envelope=bff_storage_readback_envelope,
         worm_storage_readback_envelope=worm_storage_readback_envelope,
-        provisioner_principal_id=provisioner_principal_id,
+        bootstrap_principal_id=bootstrap_principal_id,
+        runtime_principal_id=runtime_principal_id,
         target_binding_sha256=target_binding_sha256,
-        role_definition=role_definition,
-        role_assignment=role_assignment,
+        bootstrap_role_definition=bootstrap_role_definition,
+        runtime_role_definition=runtime_role_definition,
+        bootstrap_role_assignment=bootstrap_role_assignment,
+        runtime_role_assignment=runtime_role_assignment,
         subscription_ancestry_readback_envelope=(
             subscription_ancestry_readback_envelope
         ),
-        effective_rbac_readback_envelope=effective_rbac_readback_envelope,
+        bootstrap_effective_rbac_readback_envelope=(
+            bootstrap_effective_rbac_readback_envelope
+        ),
+        runtime_effective_rbac_readback_envelope=(
+            runtime_effective_rbac_readback_envelope
+        ),
         tenant_id=tenant_id,
         subscription_id=subscription_id,
         resource_group_name=resource_group_name,
@@ -1772,12 +1850,16 @@ def _verify_azure_performance_infrastructure_safety(
     worm_storage_account_resource_id: str,
     bff_storage_readback_envelope: Mapping[str, Any],
     worm_storage_readback_envelope: Mapping[str, Any],
-    provisioner_principal_id: str,
+    bootstrap_principal_id: str,
+    runtime_principal_id: str,
     target_binding_sha256: str,
-    role_definition: Mapping[str, Any],
-    role_assignment: Mapping[str, Any],
+    bootstrap_role_definition: Mapping[str, Any],
+    runtime_role_definition: Mapping[str, Any],
+    bootstrap_role_assignment: Mapping[str, Any],
+    runtime_role_assignment: Mapping[str, Any],
     subscription_ancestry_readback_envelope: Mapping[str, Any],
-    effective_rbac_readback_envelope: Mapping[str, Any],
+    bootstrap_effective_rbac_readback_envelope: Mapping[str, Any],
+    runtime_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
@@ -1806,9 +1888,14 @@ def _verify_azure_performance_infrastructure_safety(
     effective_tags = effective_coordination_tags(tags, target_binding_sha256)
     if not isinstance(allowed_client_ip_address, str) or not allowed_client_ip_address:
         _fail("ALLOWED_CLIENT_IP_INVALID")
-    principal_id = _canonical_uuid(
-        provisioner_principal_id, "PROVISIONER_PRINCIPAL_INVALID"
+    bootstrap_principal = _canonical_uuid(
+        bootstrap_principal_id, "BOOTSTRAP_PRINCIPAL_INVALID"
     )
+    runtime_principal = _canonical_uuid(
+        runtime_principal_id, "RUNTIME_PRINCIPAL_INVALID"
+    )
+    if bootstrap_principal == runtime_principal:
+        _fail("BOOTSTRAP_RUNTIME_PRINCIPALS_NOT_DISTINCT")
 
     coordination = _storage_account_id(coordination_storage_account_resource_id)
     bff = _storage_account_id(bff_storage_account_resource_id)
@@ -1827,7 +1914,7 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
-    name_observed_at = _verify_name_readback(
+    name_observed_at, name_available = _verify_name_readback(
         coordination_name_readback_envelope,
         expected_name=coordination_storage_account_name,
         verified_at=verified_at,
@@ -1844,10 +1931,12 @@ def _verify_azure_performance_infrastructure_safety(
         coordination=coordination,
         tenant_id=tenant,
         target_binding_sha256=target_binding_sha256,
-        principal_id=principal_id,
+        bootstrap_principal_id=bootstrap_principal,
+        runtime_principal_id=runtime_principal,
         storage_configuration_sha256=_sha256_json(storage_configuration),
         effective_tags_sha256=_sha256_json(effective_tags),
         name_observed_at=name_observed_at,
+        name_available=name_available,
         verified_at=verified_at,
         session=readback_session,
     )
@@ -1921,31 +2010,80 @@ def _verify_azure_performance_infrastructure_safety(
         f"/subscriptions/{coordination['subscription']}/resourceGroups/"
         f"{coordination['resource_group']}"
     )
-    condition = exact_lease_blob_condition(target_binding_sha256)
-    role_definition_value, role_definition_observed_at = _arm_object_readback(
-        role_definition,
-        observation_kind="coordination-role-definition",
-        observation_source="azure-resource-manager/role-definitions-get",
-        verified_at=verified_at,
-        session=readback_session,
+    bootstrap_condition = exact_bootstrap_lease_blob_condition(
+        target_binding_sha256
     )
-    role_definition_id = _verify_role_definition(
-        role_definition_value, resource_group_scope
+    runtime_condition = exact_runtime_lease_blob_condition(target_binding_sha256)
+    bootstrap_role_definition_value, bootstrap_role_definition_observed_at = (
+        _arm_object_readback(
+            bootstrap_role_definition,
+            observation_kind="coordination-role-definition",
+            observation_source="azure-resource-manager/role-definitions-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
     )
-    role_assignment_value, role_assignment_observed_at = _arm_object_readback(
-        role_assignment,
-        observation_kind="coordination-role-assignment",
-        observation_source="azure-resource-manager/role-assignments-get",
-        verified_at=verified_at,
-        session=readback_session,
+    bootstrap_role_definition_id = _verify_role_definition(
+        bootstrap_role_definition_value,
+        resource_group_scope,
+        expected_data_actions=BOOTSTRAP_ALLOWED_DATA_ACTIONS,
     )
-    role_assignment_id = _verify_role_assignment(
-        role_assignment_value,
-        principal_id=principal_id,
+    runtime_role_definition_value, runtime_role_definition_observed_at = (
+        _arm_object_readback(
+            runtime_role_definition,
+            observation_kind="coordination-role-definition",
+            observation_source="azure-resource-manager/role-definitions-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
+    )
+    runtime_role_definition_id = _verify_role_definition(
+        runtime_role_definition_value,
+        resource_group_scope,
+        expected_data_actions=RUNTIME_ALLOWED_DATA_ACTIONS,
+    )
+    if (
+        bootstrap_role_definition_id.casefold()
+        == runtime_role_definition_id.casefold()
+    ):
+        _fail("BOOTSTRAP_RUNTIME_ROLE_DEFINITIONS_NOT_DISTINCT")
+    bootstrap_role_assignment_value, bootstrap_role_assignment_observed_at = (
+        _arm_object_readback(
+            bootstrap_role_assignment,
+            observation_kind="coordination-role-assignment",
+            observation_source="azure-resource-manager/role-assignments-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
+    )
+    bootstrap_role_assignment_id = _verify_role_assignment(
+        bootstrap_role_assignment_value,
+        principal_id=bootstrap_principal,
         scope=container_scope,
-        role_definition_id=role_definition_id,
-        condition=condition,
+        role_definition_id=bootstrap_role_definition_id,
+        condition=bootstrap_condition,
     )
+    runtime_role_assignment_value, runtime_role_assignment_observed_at = (
+        _arm_object_readback(
+            runtime_role_assignment,
+            observation_kind="coordination-role-assignment",
+            observation_source="azure-resource-manager/role-assignments-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
+    )
+    runtime_role_assignment_id = _verify_role_assignment(
+        runtime_role_assignment_value,
+        principal_id=runtime_principal,
+        scope=container_scope,
+        role_definition_id=runtime_role_definition_id,
+        condition=runtime_condition,
+    )
+    if (
+        bootstrap_role_assignment_id.casefold()
+        == runtime_role_assignment_id.casefold()
+    ):
+        _fail("BOOTSTRAP_RUNTIME_ROLE_ASSIGNMENTS_NOT_DISTINCT")
     ancestry, ancestry_observed_at = _verify_subscription_ancestry_readback(
         subscription_ancestry_readback_envelope,
         tenant_id=tenant,
@@ -1953,14 +2091,28 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
-    rbac = _verify_effective_rbac_readback(
-        effective_rbac_readback_envelope,
+    bootstrap_rbac = _verify_effective_rbac_readback(
+        bootstrap_effective_rbac_readback_envelope,
         coordination=coordination,
-        principal_id=principal_id,
-        expected_assignment_id=role_assignment_id,
+        principal_id=bootstrap_principal,
+        expected_assignment_id=bootstrap_role_assignment_id,
         expected_scope=container_scope,
-        expected_role_definition_id=role_definition_id,
-        expected_condition=condition,
+        expected_role_definition_id=bootstrap_role_definition_id,
+        expected_condition=bootstrap_condition,
+        expected_data_actions=BOOTSTRAP_ALLOWED_DATA_ACTIONS,
+        authoritative_management_group_scopes=ancestry["management_group_scopes"],
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    runtime_rbac = _verify_effective_rbac_readback(
+        runtime_effective_rbac_readback_envelope,
+        coordination=coordination,
+        principal_id=runtime_principal,
+        expected_assignment_id=runtime_role_assignment_id,
+        expected_scope=container_scope,
+        expected_role_definition_id=runtime_role_definition_id,
+        expected_condition=runtime_condition,
+        expected_data_actions=RUNTIME_ALLOWED_DATA_ACTIONS,
         authoritative_management_group_scopes=ancestry["management_group_scopes"],
         verified_at=verified_at,
         session=readback_session,
@@ -1971,10 +2123,13 @@ def _verify_azure_performance_infrastructure_safety(
         "coordination_storage": coordination_observed_at,
         "blob_service": blob_service_observed_at,
         "lease_container": lease_container_observed_at,
-        "role_definition": role_definition_observed_at,
-        "role_assignment": role_assignment_observed_at,
+        "bootstrap_role_definition": bootstrap_role_definition_observed_at,
+        "runtime_role_definition": runtime_role_definition_observed_at,
+        "bootstrap_role_assignment": bootstrap_role_assignment_observed_at,
+        "runtime_role_assignment": runtime_role_assignment_observed_at,
         "subscription_ancestry": ancestry_observed_at,
-        "effective_rbac": rbac["observed_at"],
+        "bootstrap_effective_rbac": bootstrap_rbac["observed_at"],
+        "runtime_effective_rbac": runtime_rbac["observed_at"],
     }
     if any(
         observed_at <= deployment["receipt_observed_at"]
@@ -1990,10 +2145,15 @@ def _verify_azure_performance_infrastructure_safety(
         "coordination_storage": dict(coordination_storage_readback_envelope),
         "blob_service": dict(coordination_blob_service_readback_envelope),
         "lease_container": dict(lease_container_readback_envelope),
-        "role_definition": dict(role_definition),
-        "role_assignment": dict(role_assignment),
+        "bootstrap_role_definition": dict(bootstrap_role_definition),
+        "runtime_role_definition": dict(runtime_role_definition),
+        "bootstrap_role_assignment": dict(bootstrap_role_assignment),
+        "runtime_role_assignment": dict(runtime_role_assignment),
         "subscription_ancestry": dict(subscription_ancestry_readback_envelope),
-        "effective_rbac": dict(effective_rbac_readback_envelope),
+        "bootstrap_effective_rbac": dict(
+            bootstrap_effective_rbac_readback_envelope
+        ),
+        "runtime_effective_rbac": dict(runtime_effective_rbac_readback_envelope),
     }
     evidence = {
         "schema_version": INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA,
@@ -2025,15 +2185,27 @@ def _verify_azure_performance_infrastructure_safety(
         "worm_storage_account_resource_id": worm["id"],
         "lease_container_resource_id": container_scope,
         "lease_blob_path": f"locks/{target_binding_sha256}.lock",
-        "provisioner_principal_id": principal_id,
-        "role_definition_id": role_definition_id,
-        "role_assignment_id": role_assignment_id,
-        "condition": condition,
+        "bootstrap_principal_id": bootstrap_principal,
+        "runtime_principal_id": runtime_principal,
+        "bootstrap_role_definition_id": bootstrap_role_definition_id,
+        "runtime_role_definition_id": runtime_role_definition_id,
+        "bootstrap_role_assignment_id": bootstrap_role_assignment_id,
+        "runtime_role_assignment_id": runtime_role_assignment_id,
+        "bootstrap_condition": bootstrap_condition,
+        "runtime_condition": runtime_condition,
         "condition_version": "2.0",
-        "data_actions": sorted(ALLOWED_DATA_ACTIONS),
-        "effective_assignment_count": 1,
-        "effective_principal_count": rbac["principal_count"],
-        "attested_ancestor_scope_count": rbac["ancestor_scope_count"],
+        "bootstrap_data_actions": sorted(BOOTSTRAP_ALLOWED_DATA_ACTIONS),
+        "runtime_data_actions": sorted(RUNTIME_ALLOWED_DATA_ACTIONS),
+        "bootstrap_effective_assignment_count": 1,
+        "runtime_effective_assignment_count": 1,
+        "bootstrap_effective_principal_count": bootstrap_rbac["principal_count"],
+        "runtime_effective_principal_count": runtime_rbac["principal_count"],
+        "bootstrap_attested_ancestor_scope_count": bootstrap_rbac[
+            "ancestor_scope_count"
+        ],
+        "runtime_attested_ancestor_scope_count": runtime_rbac[
+            "ancestor_scope_count"
+        ],
         "tenant_root_management_group_scope": ancestry[
             "tenant_root_management_group_scope"
         ],
@@ -2081,7 +2253,8 @@ def validate_infrastructure_safety_evidence(
         or not isinstance(result.get("owner_binding_sha256"), str)
         or _SHA256_RE.fullmatch(result["owner_binding_sha256"]) is None
         or not _fresh_evidence_timestamp(result.get("verified_at_utc"))
-        or result.get("effective_assignment_count") != 1
+        or result.get("bootstrap_effective_assignment_count") != 1
+        or result.get("runtime_effective_assignment_count") != 1
         or not isinstance(observation_digests, Mapping)
         or set(observation_digests) != _READBACK_TRANSCRIPT_KEYS
         or any(
@@ -2129,16 +2302,22 @@ def validate_infrastructure_safety_evidence(
             ],
             bff_storage_readback_envelope=transcript["bff_storage"],
             worm_storage_readback_envelope=transcript["worm_storage"],
-            provisioner_principal_id=deployment_inputs[
-                "provisionerPrincipalId"
-            ],
+            bootstrap_principal_id=deployment_inputs["bootstrapPrincipalId"],
+            runtime_principal_id=deployment_inputs["runtimePrincipalId"],
             target_binding_sha256=deployment_inputs["targetBindingSha256"],
-            role_definition=transcript["role_definition"],
-            role_assignment=transcript["role_assignment"],
+            bootstrap_role_definition=transcript["bootstrap_role_definition"],
+            runtime_role_definition=transcript["runtime_role_definition"],
+            bootstrap_role_assignment=transcript["bootstrap_role_assignment"],
+            runtime_role_assignment=transcript["runtime_role_assignment"],
             subscription_ancestry_readback_envelope=transcript[
                 "subscription_ancestry"
             ],
-            effective_rbac_readback_envelope=transcript["effective_rbac"],
+            bootstrap_effective_rbac_readback_envelope=transcript[
+                "bootstrap_effective_rbac"
+            ],
+            runtime_effective_rbac_readback_envelope=transcript[
+                "runtime_effective_rbac"
+            ],
             tenant_id=deployment_inputs["tenantId"],
             subscription_id=deployment_inputs["subscriptionId"],
             resource_group_name=deployment_inputs["resourceGroupName"],
@@ -2227,7 +2406,8 @@ def _deployment_inputs_from_transcript(
         "subscriptionId",
         "resourceGroupName",
         "storageAccountName",
-        "provisionerPrincipalId",
+        "bootstrapPrincipalId",
+        "runtimePrincipalId",
         "allowedClientIpAddress",
         "targetBindingSha256",
         "location",
@@ -2402,7 +2582,7 @@ def _verify_name_readback(
     expected_name: str,
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
-) -> datetime:
+) -> tuple[datetime, bool]:
     prefix = "COORDINATION_NAME_READBACK"
     _verify_envelope_shape_and_digest(
         value,
@@ -2447,9 +2627,7 @@ def _verify_name_readback(
         _fail(f"{prefix}_INVALID")
     if payload["name"] != expected_name:
         _fail("COORDINATION_STORAGE_NAME_MISMATCH")
-    if payload["name_available"] is not True:
-        _fail("COORDINATION_STORAGE_NAME_UNAVAILABLE")
-    return _envelope_observed_at(value)
+    return _envelope_observed_at(value), payload["name_available"]
 
 
 def _expected_storage_configuration(
@@ -2529,14 +2707,20 @@ def _expected_lease_container_configuration(
                 "lease_blob_bootstrap": (
                     "owner-gated-put-if-absent-before-runtime"
                 ),
+                "bootstrap_authorization": (
+                    "blob-read-plus-add-only-no-write-no-delete"
+                ),
+                "runtime_authorization": (
+                    "blob-read-plus-write-only-no-add-no-delete"
+                ),
                 "azure_blob_write_authorization": (
-                    "includes-create-overwrite-lease-and-break"
+                    "runtime-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "sealed-app-api-defense-in-depth-not-azure-enforced"
                 ),
                 "principal_separation": (
-                    "single-owner-bound-bootstrap-and-runtime-principal"
+                    "distinct-owner-bound-bootstrap-and-runtime-principals"
                 ),
             },
         },
@@ -2549,10 +2733,12 @@ def _verify_deployment_receipt(
     coordination: Mapping[str, str],
     tenant_id: str,
     target_binding_sha256: str,
-    principal_id: str,
+    bootstrap_principal_id: str,
+    runtime_principal_id: str,
     storage_configuration_sha256: str,
     effective_tags_sha256: str,
     name_observed_at: datetime,
+    name_available: bool,
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
 ) -> dict[str, datetime]:
@@ -2571,7 +2757,8 @@ def _verify_deployment_receipt(
         "tenant_id",
         "coordination_storage_account_resource_id",
         "target_binding_sha256",
-        "provisioner_principal_id",
+        "bootstrap_principal_id",
+        "runtime_principal_id",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -2610,9 +2797,14 @@ def _verify_deployment_receipt(
         != coordination["id"].casefold()
         or payload.get("target_binding_sha256") != target_binding_sha256
         or _canonical_uuid(
-            payload.get("provisioner_principal_id"), f"{prefix}_INVALID"
+            payload.get("bootstrap_principal_id"), f"{prefix}_INVALID"
         )
-        != principal_id
+        != bootstrap_principal_id
+        or _canonical_uuid(
+            payload.get("runtime_principal_id"), f"{prefix}_INVALID"
+        )
+        != runtime_principal_id
+        or bootstrap_principal_id == runtime_principal_id
         or payload.get("effective_tags_sha256") != effective_tags_sha256
         or payload.get("storage_configuration_sha256")
         != storage_configuration_sha256
@@ -2625,9 +2817,16 @@ def _verify_deployment_receipt(
         payload.get("completed_at_utc"), f"{prefix}_INVALID"
     )
     receipt_observed_at = _envelope_observed_at(value)
-    if not (
-        name_observed_at < started_at <= completed_at <= receipt_observed_at
-    ):
+    fresh_deployment = (
+        name_available is True
+        and name_observed_at < started_at <= completed_at <= receipt_observed_at
+    )
+    exact_reconciliation = (
+        name_available is False
+        and started_at <= completed_at
+        and completed_at <= name_observed_at <= receipt_observed_at
+    )
+    if not (fresh_deployment or exact_reconciliation):
         _fail("READBACK_TIMESTAMP_CONTINUITY_INVALID")
     return {
         "started_at": started_at,
@@ -2776,6 +2975,7 @@ def _verify_effective_rbac_readback(
     expected_scope: str,
     expected_role_definition_id: str,
     expected_condition: str,
+    expected_data_actions: frozenset[str],
     authoritative_management_group_scopes: list[str],
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
@@ -2876,6 +3076,7 @@ def _verify_effective_rbac_readback(
         expected_scope=expected_scope,
         expected_role_definition_id=expected_role_definition_id,
         expected_condition=expected_condition,
+        expected_data_actions=expected_data_actions,
         ancestor_scopes=ancestor_scopes,
     )
     if exact_count != 1:
@@ -2922,7 +3123,10 @@ def _verify_ancestor_scopes(
 
 
 def _verify_role_definition(
-    value: Mapping[str, Any], expected_assignable_scope: str
+    value: Mapping[str, Any],
+    expected_assignable_scope: str,
+    *,
+    expected_data_actions: frozenset[str],
 ) -> str:
     properties = _properties(value, "ROLE_DEFINITION_INVALID")
     permissions = properties.get("permissions")
@@ -2935,7 +3139,7 @@ def _verify_role_definition(
         or permissions[0].get("notActions") != []
         or permissions[0].get("notDataActions") != []
         or _exact_data_actions(permissions[0].get("dataActions"))
-        != ALLOWED_DATA_ACTIONS
+        != expected_data_actions
     ):
         _fail("ROLE_DEFINITION_DATA_ACTIONS_INVALID")
     scopes = properties.get("assignableScopes")
@@ -2997,6 +3201,7 @@ def _verify_effective_assignments(
     expected_scope: str,
     expected_role_definition_id: str,
     expected_condition: str,
+    expected_data_actions: frozenset[str],
     ancestor_scopes: set[str],
 ) -> int:
     if not isinstance(values, list):
@@ -3043,7 +3248,7 @@ def _verify_effective_assignments(
                 != expected_role_definition_id.casefold()
                 or properties.get("condition") != expected_condition
                 or properties.get("conditionVersion") != "2.0"
-                or data_actions != ALLOWED_DATA_ACTIONS
+                or data_actions != expected_data_actions
             ):
                 _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_INVALID")
             exact_count += 1
@@ -3902,6 +4107,7 @@ verify_performance_coordination_infrastructure_safety = (
 
 __all__ = [
     "ALLOWED_DATA_ACTIONS",
+    "BOOTSTRAP_ALLOWED_DATA_ACTIONS",
     "AzurePerformanceInfrastructureReadbackAdapter",
     "AzurePerformanceInfrastructureReadbackCapability",
     "AzurePerformanceInfrastructureReadbackResult",
@@ -3910,11 +4116,14 @@ __all__ = [
     "AzurePerformanceInfrastructureSafetyError",
     "CONTAINER_NAME",
     "MANDATORY_COORDINATION_TAGS",
+    "RUNTIME_ALLOWED_DATA_ACTIONS",
     "begin_azure_performance_infrastructure_readback_session",
     "canonical_observation_command_sha256",
     "canonical_observation_sha256",
     "effective_coordination_tags",
+    "exact_bootstrap_lease_blob_condition",
     "exact_lease_blob_condition",
+    "exact_runtime_lease_blob_condition",
     "infrastructure_safety_policy_sha256",
     "readback_session_attestation",
     "validate_infrastructure_safety_evidence",

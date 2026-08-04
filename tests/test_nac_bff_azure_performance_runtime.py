@@ -429,7 +429,7 @@ def _public_verifier_execution_bindings() -> tuple[dict, dict, dict[str, str]]:
         owner_approval_body_sha256=EXECUTION_BINDINGS[
             "owner_approval_body_sha256"
         ],
-        token_subject=infrastructure["provisioner_principal_id"],
+        token_subject=infrastructure["runtime_principal_id"],
         token_tenant_id=infrastructure["tenant_id"],
         target_binding_sha256=TARGET_BINDING_SHA256,
         expected_etag='"nac-restart-test-etag"',

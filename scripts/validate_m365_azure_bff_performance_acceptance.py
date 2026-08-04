@@ -29,6 +29,7 @@ INFRASTRUCTURE_PORTS = Path(
 )
 STORAGE_PORTS = Path("src/nac_bff/azure_performance_storage_ports.py")
 AZURE_COMMANDS = Path("src/nac_bff/azure_live_commands.py")
+CLI = Path("src/nac_cli/cli.py")
 INFRA = Path("deploy/runtime/azure/nac-bff-performance-coordination/main.bicep")
 INFRA_PARAMETERS = Path(
     "deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam"
@@ -70,6 +71,7 @@ STORAGE_PORT_TESTS = Path(
 )
 AZURE_COMMAND_TESTS = Path("tests/test_nac_bff_azure_live_commands.py")
 INFRA_TESTS = Path("tests/test_nac_bff_performance_coordination_iac.py")
+CLI_TESTS = Path("tests/test_nac_cli_bff_performance_acceptance.py")
 CONTRACT_INDEX = Path("workflows/contracts/README.md")
 DOC_DE = Path("docs/de/operations/m365-bff-performance-acceptance.md")
 DOC_EN = Path("docs/en/operations/m365-bff-performance-acceptance.md")
@@ -168,6 +170,11 @@ EVIDENCE_BINDING_FIELDS = {
     "monitor_window_anchor_sha256",
     "lease_binding_sha256",
     "infrastructure_binding_sha256",
+    "worm_baseline_binding_sha256",
+    "worm_baseline_compiled_arm_sha256",
+    "worm_baseline_parameters_sha256",
+    "worm_baseline_source_sha256",
+    "deployment_sequence_sha256",
     "infrastructure_parameters_sha256",
     "infrastructure_source_sha256",
     "lease_bootstrap_policy_sha256",
@@ -182,8 +189,11 @@ INFRASTRUCTURE_PARAMETER_FIELDS = {
     "bffStorageAccountResourceId",
     "deploymentMode",
     "location",
-    "provisionerPrincipalId",
+    "bootstrapCertificateSha256",
+    "bootstrapPrincipalId",
     "resourceGroupName",
+    "runtimeCertificateSha256",
+    "runtimePrincipalId",
     "storageAccountName",
     "subscriptionId",
     "tags",
@@ -754,9 +764,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or infrastructure_safety.get("arm_validator_path_exact")
         != str(INFRA_ARM_VALIDATOR)
         or infrastructure_safety.get(
-            "predeployment_coordination_storage_account_name_available_required"
+            "coordination_storage_account_name_policy_exact"
         )
-        is not True
+        != "new_name_or_exact_bound_incremental_reconciliation"
         or infrastructure_safety.get(
             "postdeployment_coordination_storage_configuration_readback_required"
         )
@@ -816,7 +826,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not False
         or infrastructure_safety.get(
-            "predeployment_name_check_before_deployment_receipt_before_postdeployment_readback_required"
+            "new_name_or_exact_prior_deployment_receipt_before_postdeployment_readback_required"
         )
         is not True
         or infrastructure_safety.get(
@@ -824,7 +834,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
-            "owner_bound_tenant_subscription_resource_group_storage_principal_location_tags_and_network_required"
+            "owner_bound_tenant_subscription_resource_group_storage_bootstrap_runtime_principals_location_tags_and_network_required"
         )
         is not True
         or infrastructure_safety.get(
@@ -864,9 +874,11 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
                 "lease_blob_type": "BlockBlob",
                 "lease_blob_content_length": "0",
                 "lease_blob_bootstrap": "owner-gated-put-if-absent-before-runtime",
-                "azure_blob_write_authorization": "includes-create-overwrite-lease-and-break",
+                "bootstrap_authorization": "blob-read-plus-add-only-no-write-no-delete",
+                "runtime_authorization": "blob-read-plus-write-only-no-add-no-delete",
+                "azure_blob_write_authorization": "runtime-write-includes-create-overwrite-lease-and-break",
                 "operation_restriction_boundary": "sealed-app-api-defense-in-depth-not-azure-enforced",
-                "principal_separation": "single-owner-bound-bootstrap-and-runtime-principal",
+                "principal_separation": "distinct-owner-bound-bootstrap-and-runtime-principals",
             },
         }
         or infrastructure_safety.get(
@@ -908,7 +920,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or infrastructure_safety.get("effective_control_plane_assignment_allowed")
         is not False
         or infrastructure_safety.get(
-            "expected_effective_assignment_count_exact"
+            "expected_effective_assignment_count_per_principal_exact"
         )
         != 1
         or infrastructure_safety.get("condition_version_exact") != "2.0"
@@ -956,9 +968,20 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     boundary = _mapping(contract.get("live_action_boundary"))
     if (
         boundary.get("live_cli_exposed_offline") is not True
+        or boundary.get("live_cli_command_exact")
+        != "nac m365 teams-sharepoint bff-performance-acceptance"
+        or boundary.get("live_cli_gate_flags_exact")
+        != ["--owner-approved", "--execute-live-acceptance"]
+        or boundary.get("live_cli_requires_each_gate_flag_exactly_once") is not True
+        or boundary.get("live_cli_requires_immutable_owner_gate") is not True
         or boundary.get("live_action_composition_implemented_offline") is not True
+        or boundary.get("contract_slice_executes_live_action") is not False
+        or boundary.get("live_execution_requires_fresh_hash_bound_owner_approval")
+        is not True
     ):
-        errors.append("owner-gated CLI and composition must be exposed offline")
+        errors.append(
+            "live CLI must remain behind both flags and a fresh immutable owner gate"
+        )
     if any(
         boundary.get(field) is not False
         for field in (
@@ -1206,6 +1229,12 @@ def _validate_verification(
     checks = verification.get("checks")
     if not isinstance(checks, list) or expected_test not in checks:
         errors.append("verification contract must execute all focused test modules")
+    expected_cli_test = (
+        "PYTHONPATH=src python3 -m unittest "
+        "tests.test_nac_cli_bff_performance_acceptance"
+    )
+    if not isinstance(checks, list) or expected_cli_test not in checks:
+        errors.append("verification contract must execute the focused CLI test module")
     required_iac_checks = {
         "az bicep build --file deploy/runtime/azure/nac-bff-performance-coordination/main.bicep --stdout > /tmp/nac-bff-performance-coordination-main.json",
         "az bicep build-params --file deploy/runtime/azure/nac-bff-performance-coordination/main.example.bicepparam --stdout > /tmp/nac-bff-performance-coordination-main-params.json",
@@ -1224,6 +1253,8 @@ def _validate_verification(
         AUTHORIZATION_TESTS,
         AZURE_COMMANDS,
         AZURE_COMMAND_TESTS,
+        CLI,
+        CLI_TESTS,
         CONTRACT_INDEX,
         INFRA_SAFETY,
         INFRA_SAFETY_TESTS,
@@ -1302,6 +1333,7 @@ def main() -> int:
         INFRASTRUCTURE_PORTS,
         STORAGE_PORTS,
         AZURE_COMMANDS,
+        CLI,
         INFRA,
         WORM_INFRA,
         WORM_INFRA_PARAMETERS,
@@ -1321,6 +1353,7 @@ def main() -> int:
         STORAGE_PORT_TESTS,
         AZURE_COMMAND_TESTS,
         INFRA_TESTS,
+        CLI_TESTS,
         CONTRACT_INDEX,
         DOC_DE,
         DOC_EN,
@@ -1487,7 +1520,7 @@ def main() -> int:
             "def infrastructure_safety_policy_sha256(",
             "def validate_infrastructure_safety_evidence(",
             "infrastructure_safety_evidence_sha256",
-            "predeployment_coordination_name_available_required",
+            "new_name_or_exact_bound_incremental_reconciliation",
             "postdeployment_coordination_resource_readback_required",
             "BROADER_EFFECTIVE_CONTROL_PLANE_ASSIGNMENT_PRESENT",
             "canonical_observation_command_sha256",
@@ -1509,7 +1542,10 @@ def main() -> int:
             "param tenantId string",
             "param subscriptionId string",
             "param resourceGroupName string",
-            "param provisionerPrincipalId string",
+            "param bootstrapPrincipalId string",
+            "param runtimePrincipalId string",
+            "param bootstrapCertificateSha256 string",
+            "param runtimeCertificateSha256 string",
             "containers/blobs/add/action",
             "containers/blobs:path] StringEquals",
             "blobBootstrapRequired bool = true",
@@ -1558,6 +1594,7 @@ def main() -> int:
         ("infrastructure_ports", INFRASTRUCTURE_PORT_TESTS),
         ("storage_ports", STORAGE_PORT_TESTS),
         ("command_boundary", AZURE_COMMAND_TESTS),
+        ("cli", CLI_TESTS),
         ("infrastructure", INFRA_TESTS),
     ):
         names = focused.get(key)

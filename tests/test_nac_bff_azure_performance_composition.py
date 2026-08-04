@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -14,9 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import nac_bff.azure_performance_composition as composition
+from nac_bff.azure_performance_acceptance import OUTPUT_ROOT
 from nac_bff.azure_performance_composition import (
     BLOCKED_STATUS,
     validate_azure_performance_composition_readiness,
+)
+from nac_bff.azure_performance_storage_ports import (
+    AzurePerformanceStoragePortError,
+    PerformanceExecutionFence,
 )
 
 
@@ -71,6 +77,7 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
                 "lease_blob_bootstrap",
                 "durable_bootstrap_lease_binding_handoff",
                 "attested_azure_storage_token_provider",
+                "full_lifecycle_process_fence",
                 "dedicated_blob_lease",
                 "azure_monitor_observation",
                 "bounded_500_get_runner",
@@ -122,7 +129,129 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
                     provisioner_state_path=ROOT / "not-read.json",
                     provisioner_certificate_path=ROOT / "not-read.pem",
                     provisioner_private_key_path=ROOT / "not-read.key",
+                    runtime_state_path=ROOT / "not-read-runtime.json",
+                    runtime_certificate_path=ROOT / "not-read-runtime.pem",
+                    runtime_private_key_path=ROOT / "not-read-runtime.key",
                 )
+
+    def test_live_entrypoint_fences_full_lifecycle_before_measurement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fence = PerformanceExecutionFence(
+                root / OUTPUT_ROOT / ".composition-execution-fence.lock"
+            )
+            with (
+                fence.hold(),
+                patch.object(
+                    composition,
+                    "validate_azure_performance_composition_readiness",
+                    side_effect=AssertionError("readiness must stay behind fence"),
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    AzurePerformanceStoragePortError,
+                    r"^AZURE_PERFORMANCE_EXECUTION_ALREADY_ACTIVE$",
+                ):
+                    composition.run_azure_performance_acceptance_live(
+                        repo_root=root,
+                        owner_approved=True,
+                        execute_live_acceptance=True,
+                        approval_reference="issuecomment-1",
+                        expected_activation_hash="1" * 64,
+                        correlation_id="offline-fence-test",
+                        monitor_window_anchor_utc="2026-08-03T00:00:00Z",
+                        toolchain_attestations={},
+                        infrastructure_parameters={},
+                        worm_baseline_parameters={},
+                        provisioner_state_path=root / "not-read.json",
+                        provisioner_certificate_path=root / "not-read.pem",
+                        provisioner_private_key_path=root / "not-read.key",
+                        runtime_state_path=root / "not-read-runtime.json",
+                        runtime_certificate_path=root / "not-read-runtime.pem",
+                        runtime_private_key_path=root / "not-read-runtime.key",
+                    )
+
+    def test_ready_composition_advances_without_measurement_readiness_field(self) -> None:
+        contract_sha256 = "f" * 64
+        measurement = {
+            "contract_sha256": contract_sha256,
+            "infrastructure_approval": {},
+        }
+        parameters = {"targetBindingSha256": "0" * 64}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with (
+                patch.object(
+                    composition,
+                    "validate_azure_performance_composition_readiness",
+                    return_value={"ready": True},
+                ),
+                patch(
+                    "nac_bff.azure_performance_owner_gate."
+                    "measure_performance_infrastructure_approval",
+                    return_value=measurement,
+                ) as measure,
+            ):
+                with self.assertRaisesRegex(
+                    ValueError, "^PERFORMANCE_EXECUTION_BINDING_MISMATCH$"
+                ):
+                    composition.run_azure_performance_acceptance_live(
+                        repo_root=root,
+                        owner_approved=True,
+                        execute_live_acceptance=True,
+                        approval_reference="issuecomment-1",
+                        expected_activation_hash="1" * 64,
+                        correlation_id="offline-positive-route-test",
+                        monitor_window_anchor_utc="2026-08-03T00:00:00Z",
+                        toolchain_attestations={},
+                        infrastructure_parameters=parameters,
+                        worm_baseline_parameters={},
+                        provisioner_state_path=root / "not-read.json",
+                        provisioner_certificate_path=root / "not-read.pem",
+                        provisioner_private_key_path=root / "not-read.key",
+                        runtime_state_path=root / "not-read-runtime.json",
+                        runtime_certificate_path=root / "not-read-runtime.pem",
+                        runtime_private_key_path=root / "not-read-runtime.key",
+                    )
+        measure.assert_called_once()
+
+    def test_application_identity_loader_binds_service_principal_and_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_path = root / "runtime-state.json"
+            state_path.write_text(
+                json.dumps(
+                    {
+                        "status": "PASSED",
+                        "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+                        "applications": {
+                            "m365_runtime_app": {
+                                "display_name": "NaC M365 Runtime",
+                                "client_id": "11111111-2222-4333-8444-555555555555",
+                                "service_principal_id": (
+                                    "66666666-7777-4888-8999-aaaaaaaaaaaa"
+                                ),
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            identity = composition._load_application_identity(
+                state_path,
+                application_key="m365_runtime_app",
+                expected_display_name="NaC M365 Runtime",
+            )
+
+        self.assertEqual(
+            identity,
+            {
+                "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+                "client_id": "11111111-2222-4333-8444-555555555555",
+                "service_principal_id": "66666666-7777-4888-8999-aaaaaaaaaaaa",
+            },
+        )
 
     def test_missing_existing_method_adds_its_port_to_blockers(self) -> None:
         with patch.object(composition.AzureBlobLeaseAdapter, "acquire", None):

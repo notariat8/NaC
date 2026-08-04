@@ -171,7 +171,8 @@ kein Release-Nachweis.
 
 Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
 vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren
-Koordinations-Resource-ID sowie Provisioner-Identität an den exakten
+Koordinations-Resource-ID sowie getrennte Bootstrap- und Runtime-Identitäten
+an den exakten
 `lease_binding_sha256`, den starken ETag, die Zielbindung und das Token-Subject
 (`oid`) binden. Envelope- und Lease-Hash werden Runtime-Execution-Bindungen.
 Der Lease-Adapter akzeptiert keinen rohen oder nur dekodierten JWT. Der
@@ -185,19 +186,20 @@ ohne Acquire-Request.
 Nach einem echten Prozessneustart wird die Infrastruktur ausschließlich
 read-only neu attestiert. Serialisierte Safety-Evidence allein autorisiert
 nichts, weil die prozessgebundene Capability nicht serialisiert wird. Nur eine
-frische Re-Attestation mit identischem Owner, Tenant, Principal, Ziel und
+frische Re-Attestation mit identischem Owner, Tenant, beiden Principals, Ziel und
 Lease-Bindung darf die bestehende Lease reconciliieren; der alte abgelaufene
 Nachweis autorisiert keine neue Mutation.
 
 Die Offline-IaC liegt unter
-`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet den
-bestehenden Entra-Service-Principal per Objekt-ID, erlaubt am Storage-Endpunkt
+`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet zwei
+getrennte Entra-Service-Principals und Zertifikat-Hashes, erlaubt am Storage-Endpunkt
 nur eine explizite Client-IP und setzt die Netzwerk-Defaultregel auf `Deny`.
 Shared Keys, öffentliche Blobs sowie Delete-, Owner- und Container-DataActions
-bleiben ausgeschlossen. Die exakt pfadgebundene Rolle enthält
-`blobs/add/action` für das einmalige bedingte Anlegen, `blobs/read` für den
-Readback und `blobs/write` für Lease-Operationen. Azure autorisiert über die
-Write-DataAction zugleich Overwrite und Lease-Break.
+bleiben ausgeschlossen. Die Bootstrap-Rolle enthält exakt `blobs/read` und
+`blobs/add/action`; die davon getrennte Runtime-Rolle enthält exakt
+`blobs/read` und `blobs/write`. Keine Identität kombiniert Add und Write.
+Azure autorisiert über die Runtime-Write-DataAction zugleich Overwrite und
+Lease-Break.
 Darum begrenzen ABAC den Pfad und die versiegelte Anwendungsschnittstelle die
 Operation: Bootstrap nur `PUT` mit Create-Precondition oder `HEAD`, Runtime nur
 Acquire, Assert und Release. Der starke ETag wird anschließend in die
@@ -390,11 +392,15 @@ Der bestehende Planbefehl bleibt offline und sendet null Requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #735 implementiert die vollständige Komposition offline, aktiviert aber
-keinen Live-CLI-Befehl, keine Azure-Ressourcenaktion, keine Blob-/Lease-Mutation,
-keinen Monitor-Read und keinen Target-Dispatch. Direkte Adapteraufrufe blockieren
-vor Token-, Netzwerk- oder State-Zugriff, wenn nicht die exakte begrenzte
-Capability aus unveränderlicher Owner-Kommentar- und versiegelter
-Infrastruktur-Safety-Verifikation vorliegt. Eine spätere Live-Komposition
-benötigt diese frische owner-gebundene Capability für jeden Blob-Aufruf,
-Monitor-Read und Target-GET.
+Dieser PR führt keine Live-Aktion aus: keine Azure-Ressourcenaktion, keine
+Blob-/Lease-Mutation, keinen Monitor-Read und keinen Target-Dispatch. Der
+implementierte Live-CLI-Pfad
+`nac m365 teams-sharepoint bff-performance-acceptance` bleibt durch die beiden
+jeweils genau einmal erforderlichen Flags `--owner-approved` und
+`--execute-live-acceptance` sowie das unveränderliche Owner-Gate geschlossen.
+Er wird erst nach einer frischen hashgebundenen Owner-Freigabe ausgeführt.
+Direkte Adapteraufrufe blockieren vor Token-, Netzwerk- oder State-Zugriff,
+wenn nicht die exakte begrenzte Capability aus unveränderlicher
+Owner-Kommentar- und versiegelter Infrastruktur-Safety-Verifikation vorliegt;
+jeder Blob-Aufruf, Monitor-Read und Target-GET benötigt diese frische
+owner-gebundene Capability.

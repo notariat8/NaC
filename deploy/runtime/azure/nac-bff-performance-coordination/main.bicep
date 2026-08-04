@@ -20,6 +20,12 @@ param subscriptionId string
 @description('Exact Azure resource group bound by the combined owner approval.')
 param resourceGroupName string
 
+@description('Deployment mode binding. The CLI and template accept Incremental only.')
+@allowed([
+  'Incremental'
+])
+param deploymentMode string = 'Incremental'
+
 @description('Globally unique name for the dedicated performance-coordination storage account.')
 @minLength(3)
 @maxLength(24)
@@ -31,8 +37,21 @@ param bffStorageAccountResourceId string
 @description('Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID.')
 param wormStorageAccountResourceId string
 
-@description('Object ID of the dedicated Entra service principal used by both bootstrap and runtime. Blob add creates the bound blob; blob write cannot split overwrite, lease, and break operations.')
-param provisionerPrincipalId string
+@description('Object ID of the dedicated Entra service principal used only to bootstrap the bound blob with read and add. It must differ from runtimePrincipalId and receives no blob write or delete capability.')
+param bootstrapPrincipalId string
+
+@description('Object ID of the dedicated Entra service principal used only at runtime with blob read and write. It must differ from bootstrapPrincipalId and receives no blob add or delete capability.')
+param runtimePrincipalId string
+
+@description('SHA-256 of the bootstrap application certificate bound by the owner approval.')
+@minLength(64)
+@maxLength(64)
+param bootstrapCertificateSha256 string
+
+@description('SHA-256 of the separate runtime application certificate bound by the owner approval.')
+@minLength(64)
+@maxLength(64)
+param runtimeCertificateSha256 string
 
 @description('Single public IPv4 address allowed to reach the dedicated data plane during the approved run.')
 param allowedClientIpAddress string
@@ -51,13 +70,23 @@ var bffStorageAccountResourceIdSegments = split(bffStorageAccountResourceId, '/'
 var wormStorageAccountResourceIdSegments = split(wormStorageAccountResourceId, '/')
 var bffStorageAccountName = last(bffStorageAccountResourceIdSegments)
 var wormStorageAccountName = last(wormStorageAccountResourceIdSegments)
-var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName
+var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName && deploymentMode == 'Incremental'
   ? '${tenantId}/${subscriptionId}/${resourceGroupName}'
   : fail('Performance coordination deployment scope does not match the owner-bound tenant, subscription, and resource group.')
-var validatedBffStorageAccountResourceId = length(bffStorageAccountResourceIdSegments) == 9 && empty(bffStorageAccountResourceIdSegments[0]) && toLower(bffStorageAccountResourceIdSegments[1]) == 'subscriptions' && bffStorageAccountResourceIdSegments[2] == subscriptionId && toLower(bffStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(bffStorageAccountResourceIdSegments[4]) && toLower(bffStorageAccountResourceIdSegments[5]) == 'providers' && toLower(bffStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(bffStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(bffStorageAccountName) && toLower(resourceId(subscriptionId, bffStorageAccountResourceIdSegments[4], 'Microsoft.Storage/storageAccounts', bffStorageAccountName)) == toLower(bffStorageAccountResourceId)
+var validatedBffStorageAccountResourceId = length(bffStorageAccountResourceIdSegments) == 9 && empty(bffStorageAccountResourceIdSegments[0]) && toLower(bffStorageAccountResourceIdSegments[1]) == 'subscriptions' && bffStorageAccountResourceIdSegments[2] == subscriptionId && toLower(bffStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(bffStorageAccountResourceIdSegments[4]) && toLower(bffStorageAccountResourceIdSegments[5]) == 'providers' && toLower(bffStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(bffStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(bffStorageAccountName) && toLower(resourceId(
+    subscriptionId,
+    bffStorageAccountResourceIdSegments[4],
+    'Microsoft.Storage/storageAccounts',
+    bffStorageAccountName
+  )) == toLower(bffStorageAccountResourceId)
   ? bffStorageAccountResourceId
   : fail('BFF storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.')
-var validatedWormStorageAccountResourceId = length(wormStorageAccountResourceIdSegments) == 9 && empty(wormStorageAccountResourceIdSegments[0]) && toLower(wormStorageAccountResourceIdSegments[1]) == 'subscriptions' && wormStorageAccountResourceIdSegments[2] == subscriptionId && toLower(wormStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(wormStorageAccountResourceIdSegments[4]) && toLower(wormStorageAccountResourceIdSegments[5]) == 'providers' && toLower(wormStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(wormStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(wormStorageAccountName) && toLower(resourceId(subscriptionId, wormStorageAccountResourceIdSegments[4], 'Microsoft.Storage/storageAccounts', wormStorageAccountName)) == toLower(wormStorageAccountResourceId)
+var validatedWormStorageAccountResourceId = length(wormStorageAccountResourceIdSegments) == 9 && empty(wormStorageAccountResourceIdSegments[0]) && toLower(wormStorageAccountResourceIdSegments[1]) == 'subscriptions' && wormStorageAccountResourceIdSegments[2] == subscriptionId && toLower(wormStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(wormStorageAccountResourceIdSegments[4]) && toLower(wormStorageAccountResourceIdSegments[5]) == 'providers' && toLower(wormStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(wormStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(wormStorageAccountName) && toLower(resourceId(
+    subscriptionId,
+    wormStorageAccountResourceIdSegments[4],
+    'Microsoft.Storage/storageAccounts',
+    wormStorageAccountName
+  )) == toLower(wormStorageAccountResourceId)
   ? wormStorageAccountResourceId
   : fail('WORM storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.')
 var coordinationStorageAccountResourceId = resourceId('Microsoft.Storage/storageAccounts', storageAccountName)
@@ -65,20 +94,35 @@ var validatedStorageAccountName = !empty(validatedDeploymentScope) && toLower(co
   ? storageAccountName
   : fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.')
 var isolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
-var leaseDataRoleDefinitionGuid = guid(
+var bootstrapLeaseDataRoleDefinitionGuid = guid(
   subscription().id,
   resourceGroup().id,
   validatedStorageAccountName,
   containerName,
-  'nac-bff-performance-lease-read-write-v1'
+  'nac-bff-performance-lease-bootstrap-read-add-v1'
+)
+var runtimeLeaseDataRoleDefinitionGuid = guid(
+  subscription().id,
+  resourceGroup().id,
+  validatedStorageAccountName,
+  containerName,
+  'nac-bff-performance-lease-runtime-read-write-v1'
 )
 var blobReadDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
 var blobAddDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
 var blobWriteDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
-// Azure blob add authorizes creation; blob write authorizes overwrite and lease acquire/release/break.
-// The dedicated account and exact-path ABAC condition limit scope; sealed bootstrap and
-// runtime APIs omit overwrite and break as defense-in-depth, not Azure-enforced filtering.
-var exactLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobAddDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+// Azure blob add authorizes bootstrap creation; blob write authorizes runtime overwrite and
+// lease acquire/release/break. Distinct principals ensure no identity combines add and write.
+// The dedicated account and identity-specific exact-path ABAC conditions limit scope; sealed
+// APIs omit overwrite and break as defense-in-depth, not Azure-enforced filtering.
+var exactBootstrapLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobAddDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+var exactRuntimeLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+var validatedBootstrapPrincipalId = toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId) && bootstrapCertificateSha256 != runtimeCertificateSha256
+  ? bootstrapPrincipalId
+  : fail('Bootstrap and runtime principal and certificate identities must be different.')
+var validatedRuntimePrincipalId = toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId) && bootstrapCertificateSha256 != runtimeCertificateSha256
+  ? runtimePrincipalId
+  : fail('Bootstrap and runtime principal and certificate identities must be different.')
 // Keep this mandatory set aligned with effective_coordination_tags() in the
 // infrastructure safety verifier. union() prevents caller overrides.
 var mandatoryResourceTags = {
@@ -151,18 +195,20 @@ resource leaseContainer 'Microsoft.Storage/storageAccounts/blobServices/containe
       lease_blob_type: 'BlockBlob'
       lease_blob_content_length: '0'
       lease_blob_bootstrap: 'owner-gated-put-if-absent-before-runtime'
-      azure_blob_write_authorization: 'includes-create-overwrite-lease-and-break'
+      bootstrap_authorization: 'blob-read-plus-add-only-no-write-no-delete'
+      runtime_authorization: 'blob-read-plus-write-only-no-add-no-delete'
+      azure_blob_write_authorization: 'runtime-write-includes-create-overwrite-lease-and-break'
       operation_restriction_boundary: 'sealed-app-api-defense-in-depth-not-azure-enforced'
-      principal_separation: 'single-owner-bound-bootstrap-and-runtime-principal'
+      principal_separation: 'distinct-owner-bound-bootstrap-and-runtime-principals'
     }
   }
 }
 
-resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: leaseDataRoleDefinitionGuid
+resource bootstrapLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: bootstrapLeaseDataRoleDefinitionGuid
   properties: {
-    roleName: 'NaC BFF Performance Lease Read Write ${isolationSuffix}'
-    description: 'Read/write one ABAC-conditioned blob path. Write includes create, overwrite, lease, and break; delete, ownership, and container management are excluded.'
+    roleName: 'NaC BFF Performance Lease Bootstrap Read Add ${isolationSuffix}'
+    description: 'Bootstrap-only read/add on one ABAC-conditioned blob path. Write, delete, ownership, and container management are excluded.'
     type: 'CustomRole'
     permissions: [
       {
@@ -171,6 +217,28 @@ resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
         dataActions: [
           'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
           'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
+        ]
+        notDataActions: []
+      }
+    ]
+    assignableScopes: [
+      resourceGroup().id
+    ]
+  }
+}
+
+resource runtimeLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: runtimeLeaseDataRoleDefinitionGuid
+  properties: {
+    roleName: 'NaC BFF Performance Lease Runtime Read Write ${isolationSuffix}'
+    description: 'Runtime-only read/write on one ABAC-conditioned blob path. Add, delete, ownership, and container management are excluded; write includes overwrite and lease operations.'
+    type: 'CustomRole'
+    permissions: [
+      {
+        actions: []
+        notActions: []
+        dataActions: [
+          'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
           'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
         ]
         notDataActions: []
@@ -182,16 +250,29 @@ resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   }
 }
 
-resource provisionerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(leaseContainer.id, provisionerPrincipalId, leaseDataRole.id, leaseBlobPath)
+resource bootstrapLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(leaseContainer.id, validatedBootstrapPrincipalId, bootstrapLeaseDataRole.id, leaseBlobPath)
   scope: leaseContainer
   properties: {
-    condition: exactLeaseBlobCondition
+    condition: exactBootstrapLeaseBlobCondition
     conditionVersion: '2.0'
-    description: 'Read/write authorization scoped to the exact NaC BFF performance lease blob path; Azure does not filter write operations.'
-    principalId: provisionerPrincipalId
+    description: 'Bootstrap-only read/add authorization scoped to the exact NaC BFF performance lease blob path; blob write and delete are excluded.'
+    principalId: validatedBootstrapPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: leaseDataRole.id
+    roleDefinitionId: bootstrapLeaseDataRole.id
+  }
+}
+
+resource runtimeLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(leaseContainer.id, validatedRuntimePrincipalId, runtimeLeaseDataRole.id, leaseBlobPath)
+  scope: leaseContainer
+  properties: {
+    condition: exactRuntimeLeaseBlobCondition
+    conditionVersion: '2.0'
+    description: 'Runtime-only read/write authorization scoped to the exact NaC BFF performance lease blob path; blob add and delete are excluded.'
+    principalId: validatedRuntimePrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: runtimeLeaseDataRole.id
   }
 }
 
@@ -210,12 +291,20 @@ output leaseBlobUri string = '${storageAccount.properties.primaryEndpoints.blob}
 output requiredLeaseBlobType string = 'BlockBlob'
 output requiredLeaseBlobContentLength int = 0
 output targetBindingSha256 string = targetBindingSha256
-output leaseDataRoleDefinitionId string = leaseDataRole.id
-output provisionerLeaseRoleAssignmentId string = provisionerLeaseBinding.id
-output exactLeaseBlobCondition string = exactLeaseBlobCondition
-output allowedDataActions array = [
+output bootstrapLeaseDataRoleDefinitionId string = bootstrapLeaseDataRole.id
+output runtimeLeaseDataRoleDefinitionId string = runtimeLeaseDataRole.id
+output bootstrapLeaseRoleAssignmentId string = bootstrapLeaseBinding.id
+output runtimeLeaseRoleAssignmentId string = runtimeLeaseBinding.id
+output bootstrapCertificateSha256Binding string = bootstrapCertificateSha256
+output runtimeCertificateSha256Binding string = runtimeCertificateSha256
+output exactBootstrapLeaseBlobCondition string = exactBootstrapLeaseBlobCondition
+output exactRuntimeLeaseBlobCondition string = exactRuntimeLeaseBlobCondition
+output bootstrapAllowedDataActions array = [
   blobReadDataAction
   blobAddDataAction
+]
+output runtimeAllowedDataActions array = [
+  blobReadDataAction
   blobWriteDataAction
 ]
 output deploymentScopeBinding string = validatedDeploymentScope
@@ -234,4 +323,4 @@ output operationRestrictionDefenseInDepth array = [
   'exact-container-and-blob-path-abac'
   'sealed-bootstrap-and-runtime-application-apis'
 ]
-output principalSeparationMode string = 'SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME'
+output principalSeparationMode string = 'DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS'

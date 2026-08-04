@@ -66,6 +66,7 @@ INFRASTRUCTURE_SOURCE_PATHS = (
     Path("src/nac_bff/azure_performance_storage_ports.py"),
     Path("src/nac_bff/azure_performance_owner_gate.py"),
     Path("src/nac_bff/azure_live_commands.py"),
+    Path("src/nac_cli/cli.py"),
     Path("scripts/validate_m365_azure_bff_performance_acceptance.py"),
     Path("scripts/validate_nac_bff_performance_coordination_arm.py"),
     Path("deploy/runtime/azure/immutable-evidence/main.bicep"),
@@ -140,7 +141,10 @@ _PARAMETER_KEYS = frozenset(
         "storageAccountName",
         "bffStorageAccountResourceId",
         "wormStorageAccountResourceId",
-        "provisionerPrincipalId",
+        "bootstrapPrincipalId",
+        "runtimePrincipalId",
+        "bootstrapCertificateSha256",
+        "runtimeCertificateSha256",
         "allowedClientIpAddress",
         "targetBindingSha256",
         "tenantId",
@@ -263,8 +267,11 @@ def build_performance_infrastructure_owner_gate(
                 "allowed_client_ip_sha256": _sha256_text(
                     parameters["allowedClientIpAddress"]
                 ),
-                "provisioner_principal_sha256": _sha256_text(
-                    parameters["provisionerPrincipalId"]
+                "bootstrap_principal_sha256": _sha256_text(
+                    parameters["bootstrapPrincipalId"]
+                ),
+                "runtime_principal_sha256": _sha256_text(
+                    parameters["runtimePrincipalId"]
                 ),
                 "storage_account_name_sha256": _sha256_text(
                     parameters["storageAccountName"]
@@ -328,6 +335,11 @@ def measure_performance_infrastructure_approval(
     )
     worm_parameters = _validate_worm_parameters(worm_baseline_parameters)
     parameters = _validate_parameters(infrastructure_parameters)
+    if (
+        parameters["bootstrapCertificateSha256"]
+        != measured_toolchain["provisioner_certificate_sha256"]
+    ):
+        raise ValueError("BOOTSTRAP_CERTIFICATE_BINDING_MISMATCH")
     expected_worm_resource_id = (
         f"/subscriptions/{worm_parameters['subscriptionId']}/resourceGroups/"
         f"{worm_parameters['resourceGroupName']}/providers/Microsoft.Storage/"
@@ -479,13 +491,31 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     try:
-        UUID(str(result["provisionerPrincipalId"]))
+        bootstrap_principal = UUID(str(result["bootstrapPrincipalId"]))
+        runtime_principal = UUID(str(result["runtimePrincipalId"]))
         address = ipaddress.ip_address(str(result["allowedClientIpAddress"]))
     except ValueError:
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID") from None
-    if address.version != 4 or not address.is_global:
+    if (
+        bootstrap_principal == runtime_principal
+        or address.version != 4
+        or not address.is_global
+    ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     _require_sha256(result["targetBindingSha256"], "targetBindingSha256")
+    _require_sha256(
+        result["bootstrapCertificateSha256"],
+        "bootstrapCertificateSha256",
+    )
+    _require_sha256(
+        result["runtimeCertificateSha256"],
+        "runtimeCertificateSha256",
+    )
+    if (
+        result["bootstrapCertificateSha256"]
+        == result["runtimeCertificateSha256"]
+    ):
+        raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     return {
         key: (
             {tag: tags[tag] for tag in sorted(tags)}

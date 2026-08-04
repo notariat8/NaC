@@ -13,7 +13,8 @@ from unittest.mock import patch
 import nac_bff.azure_performance_infrastructure_safety as infrastructure_safety
 from nac_bff.azure_activation_attestations import TOOLCHAIN_ATTESTATION_FIELDS
 from nac_bff.azure_performance_infrastructure_safety import (
-    ALLOWED_DATA_ACTIONS,
+    BOOTSTRAP_ALLOWED_DATA_ACTIONS,
+    RUNTIME_ALLOWED_DATA_ACTIONS,
     AzurePerformanceInfrastructureReadbackAdapter,
     AzurePerformanceInfrastructureReadbackCapability,
     AzurePerformanceInfrastructureReadbackResult,
@@ -23,7 +24,8 @@ from nac_bff.azure_performance_infrastructure_safety import (
     begin_azure_performance_infrastructure_readback_session,
     canonical_observation_sha256,
     effective_coordination_tags,
-    exact_lease_blob_condition,
+    exact_bootstrap_lease_blob_condition,
+    exact_runtime_lease_blob_condition,
     infrastructure_safety_policy_sha256,
     validate_infrastructure_safety_evidence,
     verify_azure_performance_infrastructure_safety,
@@ -34,6 +36,8 @@ SUBSCRIPTION_ID = "37cd9645-6cb9-4278-88ee-e80377cd951c"
 TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
 PRINCIPAL_ID = "abcdef01-2222-4333-8444-555555555555"
 GROUP_ID = "abcdef02-2222-4333-8444-555555555555"
+RUNTIME_PRINCIPAL_ID = "abcdef03-2222-4333-8444-555555555555"
+RUNTIME_GROUP_ID = "abcdef04-2222-4333-8444-555555555555"
 TARGET_BINDING = "a" * 64
 OWNER_BINDING = "8" * 64
 TOOLCHAIN_BINDING = "7" * 64
@@ -63,9 +67,17 @@ ROLE_DEFINITION_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/roleDefinitions/"
     "22222222-2222-4333-8444-555555555555"
 )
+RUNTIME_ROLE_DEFINITION_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/roleDefinitions/"
+    "22222223-2222-4333-8444-555555555555"
+)
 ROLE_ASSIGNMENT_ID = (
     f"{CONTAINER_SCOPE}/providers/Microsoft.Authorization/roleAssignments/"
     "33333333-2222-4333-8444-555555555555"
+)
+RUNTIME_ROLE_ASSIGNMENT_ID = (
+    f"{CONTAINER_SCOPE}/providers/Microsoft.Authorization/roleAssignments/"
+    "33333334-2222-4333-8444-555555555555"
 )
 DEPLOYMENT_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Resources/deployments/"
@@ -180,46 +192,62 @@ def _lease_container() -> dict[str, object]:
                 "lease_blob_bootstrap": (
                     "owner-gated-put-if-absent-before-runtime"
                 ),
+                "bootstrap_authorization": (
+                    "blob-read-plus-add-only-no-write-no-delete"
+                ),
+                "runtime_authorization": (
+                    "blob-read-plus-write-only-no-add-no-delete"
+                ),
                 "azure_blob_write_authorization": (
-                    "includes-create-overwrite-lease-and-break"
+                    "runtime-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "sealed-app-api-defense-in-depth-not-azure-enforced"
                 ),
                 "principal_separation": (
-                    "single-owner-bound-bootstrap-and-runtime-principal"
+                    "distinct-owner-bound-bootstrap-and-runtime-principals"
                 ),
             },
         },
     }
 
 
-def _role_definition() -> dict[str, object]:
+def _role_definition(*, runtime: bool = False) -> dict[str, object]:
     return {
-        "id": ROLE_DEFINITION_ID,
+        "id": RUNTIME_ROLE_DEFINITION_ID if runtime else ROLE_DEFINITION_ID,
         "properties": {
             "type": "CustomRole",
             "assignableScopes": [RESOURCE_GROUP_SCOPE],
             "permissions": [{
                 "actions": [],
                 "notActions": [],
-                "dataActions": sorted(ALLOWED_DATA_ACTIONS),
+                "dataActions": sorted(
+                    RUNTIME_ALLOWED_DATA_ACTIONS
+                    if runtime
+                    else BOOTSTRAP_ALLOWED_DATA_ACTIONS
+                ),
                 "notDataActions": [],
             }],
         },
     }
 
 
-def _role_assignment() -> dict[str, object]:
+def _role_assignment(*, runtime: bool = False) -> dict[str, object]:
     return {
-        "id": ROLE_ASSIGNMENT_ID,
+        "id": RUNTIME_ROLE_ASSIGNMENT_ID if runtime else ROLE_ASSIGNMENT_ID,
         "scope": CONTAINER_SCOPE,
         "properties": {
-            "principalId": PRINCIPAL_ID,
+            "principalId": RUNTIME_PRINCIPAL_ID if runtime else PRINCIPAL_ID,
             "principalType": "ServicePrincipal",
-            "roleDefinitionId": ROLE_DEFINITION_ID,
+            "roleDefinitionId": (
+                RUNTIME_ROLE_DEFINITION_ID if runtime else ROLE_DEFINITION_ID
+            ),
             "conditionVersion": "2.0",
-            "condition": exact_lease_blob_condition(TARGET_BINDING),
+            "condition": (
+                exact_runtime_lease_blob_condition(TARGET_BINDING)
+                if runtime
+                else exact_bootstrap_lease_blob_condition(TARGET_BINDING)
+            ),
         },
     }
 
@@ -230,7 +258,8 @@ def _deployment() -> dict[str, object]:
         "subscriptionId": SUBSCRIPTION_ID,
         "resourceGroupName": RESOURCE_GROUP,
         "storageAccountName": COORDINATION_NAME,
-        "provisionerPrincipalId": PRINCIPAL_ID,
+        "bootstrapPrincipalId": PRINCIPAL_ID,
+        "runtimePrincipalId": RUNTIME_PRINCIPAL_ID,
         "allowedClientIpAddress": ALLOWED_IP,
         "targetBindingSha256": TARGET_BINDING,
         "location": LOCATION,
@@ -271,7 +300,15 @@ def _responses() -> dict[str, object]:
         f"https://management.azure.com{CONTAINER_SCOPE}?api-version=2023-05-01": _lease_container(),
         f"https://management.azure.com{DEPLOYMENT_ID}?api-version=2022-09-01": _deployment(),
         f"https://management.azure.com{ROLE_DEFINITION_ID}?api-version=2022-04-01": _role_definition(),
+        (
+            f"https://management.azure.com{RUNTIME_ROLE_DEFINITION_ID}"
+            "?api-version=2022-04-01"
+        ): _role_definition(runtime=True),
         f"https://management.azure.com{ROLE_ASSIGNMENT_ID}?api-version=2022-04-01": _role_assignment(),
+        (
+            f"https://management.azure.com{RUNTIME_ROLE_ASSIGNMENT_ID}"
+            "?api-version=2022-04-01"
+        ): _role_assignment(runtime=True),
         (
             f"https://management.azure.com{ROOT_MG}?api-version=2021-04-01"
             "&$expand=children&$recurse=true"
@@ -286,6 +323,11 @@ def _responses() -> dict[str, object]:
             f"https://graph.microsoft.com/v1.0/servicePrincipals/{PRINCIPAL_ID}/"
             "transitiveMemberOf/microsoft.graph.group?$select=id"
         ): {"value": [{"id": GROUP_ID}]},
+        (
+            f"https://graph.microsoft.com/v1.0/servicePrincipals/"
+            f"{RUNTIME_PRINCIPAL_ID}/transitiveMemberOf/"
+            "microsoft.graph.group?$select=id"
+        ): {"value": [{"id": RUNTIME_GROUP_ID}]},
     }
     name_resource = (
         f"/subscriptions/{SUBSCRIPTION_ID}/providers/Microsoft.Storage/"
@@ -302,7 +344,11 @@ def _responses() -> dict[str, object]:
             "&$filter=atScope()"
         )
         responses[url] = {
-            "value": [_role_assignment()] if scope == CONTAINER_SCOPE else []
+            "value": (
+                [_role_assignment(), _role_assignment(runtime=True)]
+                if scope == CONTAINER_SCOPE
+                else []
+            )
         }
     return responses
 
@@ -358,6 +404,7 @@ def _build_arguments(
     directory: Path,
     *,
     blob_service_resource_id: str = BLOB_SERVICE_SCOPE,
+    name_at: datetime = NAME_AT,
 ) -> tuple[dict[str, object], Path]:
     fake_az, environment_log = _write_fake_az(directory)
     session = _session()
@@ -387,7 +434,7 @@ def _build_arguments(
         )
         name = _read(
             adapter,
-            NAME_AT,
+            name_at,
             adapter.check_storage_account_name_availability,
             subscription_id=SUBSCRIPTION_ID,
             storage_account_name=COORDINATION_NAME,
@@ -435,26 +482,43 @@ def _build_arguments(
                 observation_kind="worm-storage-account-resource-id",
                 resource_id=WORM_ID,
             ),
-            "provisioner_principal_id": PRINCIPAL_ID,
+            "bootstrap_principal_id": PRINCIPAL_ID,
+            "runtime_principal_id": RUNTIME_PRINCIPAL_ID,
             "target_binding_sha256": TARGET_BINDING,
-            "role_definition": post(
+            "bootstrap_role_definition": post(
                 adapter.execute_read,
                 observation_kind="coordination-role-definition",
                 resource_id=ROLE_DEFINITION_ID,
             ),
-            "role_assignment": post(
+            "runtime_role_definition": post(
+                adapter.execute_read,
+                observation_kind="coordination-role-definition",
+                resource_id=RUNTIME_ROLE_DEFINITION_ID,
+            ),
+            "bootstrap_role_assignment": post(
                 adapter.execute_read,
                 observation_kind="coordination-role-assignment",
                 resource_id=ROLE_ASSIGNMENT_ID,
+            ),
+            "runtime_role_assignment": post(
+                adapter.execute_read,
+                observation_kind="coordination-role-assignment",
+                resource_id=RUNTIME_ROLE_ASSIGNMENT_ID,
             ),
             "subscription_ancestry_readback_envelope": post(
                 adapter.read_management_group_ancestry,
                 tenant_id=TENANT_ID,
                 subscription_id=SUBSCRIPTION_ID,
             ),
-            "effective_rbac_readback_envelope": post(
+            "bootstrap_effective_rbac_readback_envelope": post(
                 adapter.read_effective_rbac,
                 principal_id=PRINCIPAL_ID,
+                target_resource_id=CONTAINER_SCOPE,
+                ancestor_scopes=_ancestor_scopes(),
+            ),
+            "runtime_effective_rbac_readback_envelope": post(
+                adapter.read_effective_rbac,
+                principal_id=RUNTIME_PRINCIPAL_ID,
                 target_resource_id=CONTAINER_SCOPE,
                 ancestor_scopes=_ancestor_scopes(),
             ),
@@ -509,9 +573,32 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             )
             self.assertIs(validated, evidence)
             self.assertEqual(validated["status"], "SAFE")
-            self.assertEqual(validated["effective_assignment_count"], 1)
-            self.assertEqual(validated["effective_principal_count"], 2)
-            self.assertEqual(validated["attested_ancestor_scope_count"], 8)
+            self.assertEqual(
+                validated["bootstrap_effective_assignment_count"], 1
+            )
+            self.assertEqual(
+                validated["runtime_effective_assignment_count"], 1
+            )
+            self.assertEqual(validated["bootstrap_effective_principal_count"], 2)
+            self.assertEqual(validated["runtime_effective_principal_count"], 2)
+            self.assertEqual(
+                validated["bootstrap_attested_ancestor_scope_count"], 8
+            )
+            self.assertEqual(
+                validated["runtime_attested_ancestor_scope_count"], 8
+            )
+            self.assertEqual(
+                validated["bootstrap_data_actions"],
+                sorted(BOOTSTRAP_ALLOWED_DATA_ACTIONS),
+            )
+            self.assertEqual(
+                validated["runtime_data_actions"],
+                sorted(RUNTIME_ALLOWED_DATA_ACTIONS),
+            )
+            self.assertNotEqual(
+                validated["bootstrap_principal_id"],
+                validated["runtime_principal_id"],
+            )
             storage_payload = arguments["coordination_storage_readback_envelope"][
                 "payload"
             ]
@@ -541,6 +628,121 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             self.assertFalse(
                 environment_log.with_name("sitecustomize-loaded").exists()
             )
+
+    def test_rejects_equal_bootstrap_and_runtime_principals(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            arguments, _ = _build_arguments(Path(value))
+        arguments["runtime_principal_id"] = PRINCIPAL_ID
+        with patch(
+            "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+            return_value=VERIFY_AT,
+        ), self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "^BOOTSTRAP_RUNTIME_PRINCIPALS_NOT_DISTINCT$",
+        ):
+            verify_azure_performance_infrastructure_safety(**arguments)
+
+    def test_rejects_bootstrap_or_runtime_role_data_action_drift(self) -> None:
+        variants = {
+            "bootstrap_has_write": (
+                ROLE_DEFINITION_ID,
+                sorted(
+                    BOOTSTRAP_ALLOWED_DATA_ACTIONS
+                    | {
+                        "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                        "blobs/write"
+                    }
+                ),
+            ),
+            "bootstrap_missing_add": (
+                ROLE_DEFINITION_ID,
+                [
+                    "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                    "blobs/read"
+                ],
+            ),
+            "runtime_has_add": (
+                RUNTIME_ROLE_DEFINITION_ID,
+                sorted(
+                    RUNTIME_ALLOWED_DATA_ACTIONS
+                    | {
+                        "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                        "blobs/add/action"
+                    }
+                ),
+            ),
+            "runtime_missing_write": (
+                RUNTIME_ROLE_DEFINITION_ID,
+                [
+                    "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                    "blobs/read"
+                ],
+            ),
+        }
+        for name, (role_id, data_actions) in variants.items():
+            with self.subTest(name=name):
+                responses = _responses()
+                role_url = (
+                    f"https://management.azure.com{role_id}"
+                    "?api-version=2022-04-01"
+                )
+                responses[role_url]["properties"]["permissions"][0][
+                    "dataActions"
+                ] = data_actions
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments, _ = _build_arguments(Path(value))
+                with patch(
+                    "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+                    return_value=VERIFY_AT,
+                ), self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "^ROLE_DEFINITION_DATA_ACTIONS_INVALID$",
+                ):
+                    verify_azure_performance_infrastructure_safety(**arguments)
+
+    def test_rejects_runtime_assignment_condition_or_effective_rbac_gap(self) -> None:
+        assignment_url = (
+            f"https://management.azure.com{RUNTIME_ROLE_ASSIGNMENT_ID}"
+            "?api-version=2022-04-01"
+        )
+        responses = _responses()
+        responses[assignment_url]["properties"]["condition"] = (
+            exact_runtime_lease_blob_condition("b" * 64)
+        )
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments, _ = _build_arguments(Path(value))
+        with patch(
+            "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+            return_value=VERIFY_AT,
+        ), self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "^ROLE_ASSIGNMENT_CONDITION_INVALID$",
+        ):
+            verify_azure_performance_infrastructure_safety(**arguments)
+
+        responses = _responses()
+        container_url = (
+            f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+            "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+            "&$filter=atScope()"
+        )
+        responses[container_url] = {"value": [_role_assignment()]}
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments, _ = _build_arguments(Path(value))
+        with patch(
+            "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+            return_value=VERIFY_AT,
+        ), self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "^EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE$",
+        ):
+            verify_azure_performance_infrastructure_safety(**arguments)
 
     def test_seals_exact_blob_service_and_lease_container_arm_gets(self) -> None:
         with tempfile.TemporaryDirectory() as value:
@@ -1079,7 +1281,7 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
     def test_rejects_tampered_safety_evidence(self) -> None:
         evidence = _issue_evidence()
         fabricated = deepcopy(evidence)
-        fabricated["effective_assignment_count"] = 2
+        fabricated["bootstrap_effective_assignment_count"] = 2
         with patch(
             "nac_bff.azure_performance_infrastructure_safety._trusted_now",
             return_value=VERIFY_AT,
@@ -1091,7 +1293,7 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
 
     def test_verifier_capability_detects_base_dict_mutation(self) -> None:
         evidence = _issue_evidence()
-        dict.__setitem__(evidence, "effective_assignment_count", 2)
+        dict.__setitem__(evidence, "bootstrap_effective_assignment_count", 2)
         with self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
             "^INFRASTRUCTURE_SAFETY_CAPABILITY_INVALID$",
@@ -1101,7 +1303,7 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
     def test_rejects_forged_safe_summary_with_recomputed_digest(self) -> None:
         evidence = _issue_evidence()
         fabricated = deepcopy(evidence)
-        fabricated["effective_principal_count"] = 99
+        fabricated["runtime_effective_principal_count"] = 99
         unsigned = dict(fabricated)
         unsigned.pop("infrastructure_safety_evidence_sha256")
         fabricated["infrastructure_safety_evidence_sha256"] = _json_sha256(unsigned)
@@ -1158,23 +1360,23 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         ] = mixed_principal
         responses[
             f"https://management.azure.com{DEPLOYMENT_ID}?api-version=2022-09-01"
-        ]["properties"]["parameters"]["provisionerPrincipalId"][
+        ]["properties"]["parameters"]["bootstrapPrincipalId"][
             "value"
         ] = mixed_principal
         with tempfile.TemporaryDirectory() as value, patch(
             __name__ + "._responses", return_value=responses
         ):
             arguments, _ = _build_arguments(Path(value))
-        arguments["provisioner_principal_id"] = mixed_principal
+        arguments["bootstrap_principal_id"] = mixed_principal
         with patch(
             "nac_bff.azure_performance_infrastructure_safety._trusted_now",
             return_value=VERIFY_AT,
         ):
             evidence = verify_azure_performance_infrastructure_safety(**arguments)
             validated = validate_infrastructure_safety_evidence(evidence)
-        self.assertEqual(validated["provisioner_principal_id"], PRINCIPAL_ID)
+        self.assertEqual(validated["bootstrap_principal_id"], PRINCIPAL_ID)
 
-    def test_rejects_unavailable_or_mismatched_coordination_name(self) -> None:
+    def test_existing_name_requires_exact_restart_timeline(self) -> None:
         responses = _responses()
         name_url = (
             f"https://management.azure.com/subscriptions/{SUBSCRIPTION_ID}/providers/"
@@ -1190,9 +1392,28 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             return_value=VERIFY_AT,
         ), self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
-            "^COORDINATION_STORAGE_NAME_UNAVAILABLE$",
+            "^READBACK_TIMESTAMP_CONTINUITY_INVALID$",
         ):
             verify_azure_performance_infrastructure_safety(**arguments)
+
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            reconciled, _ = _build_arguments(
+                Path(value),
+                name_at=datetime(2026, 8, 3, 12, 0, 3, 500000, tzinfo=UTC),
+            )
+        with patch(
+            "nac_bff.azure_performance_infrastructure_safety._trusted_now",
+            return_value=VERIFY_AT,
+        ):
+            evidence = verify_azure_performance_infrastructure_safety(
+                **reconciled
+            )
+        self.assertEqual(
+            evidence["coordination_storage_account_resource_id"],
+            COORDINATION_ID,
+        )
 
     def test_rejects_authoritative_bff_and_worm_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as value:
@@ -1225,9 +1446,11 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
     def test_rejects_tampered_effective_rbac_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as value:
             arguments, _ = _build_arguments(Path(value))
-        envelope = deepcopy(arguments["effective_rbac_readback_envelope"])
+        envelope = deepcopy(
+            arguments["bootstrap_effective_rbac_readback_envelope"]
+        )
         envelope["payload"]["transitive_group_principal_ids"] = []
-        arguments["effective_rbac_readback_envelope"] = envelope
+        arguments["bootstrap_effective_rbac_readback_envelope"] = envelope
         with patch(
             "nac_bff.azure_performance_infrastructure_safety._trusted_now",
             return_value=VERIFY_AT,

@@ -32,10 +32,10 @@ from nac_bff.azure_performance_infrastructure_ports import (
 )
 from nac_bff.azure_live_commands import AzureCliAdapter
 from nac_bff.azure_performance_infrastructure_safety import (
-    ALLOWED_DATA_ACTIONS,
     CONTAINER_NAME,
     effective_coordination_tags,
-    exact_lease_blob_condition,
+    exact_bootstrap_lease_blob_condition,
+    exact_runtime_lease_blob_condition,
 )
 
 
@@ -76,6 +76,14 @@ ROLE_ASSIGNMENT_ID = (
     f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
     "55555555-5555-4555-8555-555555555555"
 )
+RUNTIME_ROLE_DEFINITION_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+    "roleDefinitions/66666666-6666-4666-8666-666666666666"
+)
+RUNTIME_ROLE_ASSIGNMENT_ID = (
+    f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
+    "77777777-7777-4777-8777-777777777777"
+)
 
 
 def _sha256_json(value: object) -> str:
@@ -96,7 +104,10 @@ def _infra_parameters() -> dict[str, object]:
         "storageAccountName": COORDINATION_NAME,
         "bffStorageAccountResourceId": BFF_ID,
         "wormStorageAccountResourceId": WORM_ID,
-        "provisionerPrincipalId": PRINCIPAL_ID,
+        "bootstrapPrincipalId": PRINCIPAL_ID,
+        "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
+        "bootstrapCertificateSha256": "a" * 64,
+        "runtimeCertificateSha256": "b" * 64,
         "allowedClientIpAddress": "8.8.8.8",
         "targetBindingSha256": TARGET,
         "tenantId": TENANT_ID,
@@ -411,16 +422,30 @@ class _FakeAzureExecutor:
             "requiredLeaseBlobType": "BlockBlob",
             "requiredLeaseBlobContentLength": 0,
             "targetBindingSha256": TARGET,
-            "leaseDataRoleDefinitionId": (
-                f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
-                "roleDefinitions/44444444-4444-4444-8444-444444444444"
+            "bootstrapLeaseDataRoleDefinitionId": ROLE_DEFINITION_ID,
+            "runtimeLeaseDataRoleDefinitionId": RUNTIME_ROLE_DEFINITION_ID,
+            "bootstrapLeaseRoleAssignmentId": ROLE_ASSIGNMENT_ID,
+            "runtimeLeaseRoleAssignmentId": RUNTIME_ROLE_ASSIGNMENT_ID,
+            "bootstrapCertificateSha256Binding": "a" * 64,
+            "runtimeCertificateSha256Binding": "b" * 64,
+            "exactBootstrapLeaseBlobCondition": (
+                exact_bootstrap_lease_blob_condition(TARGET)
             ),
-            "provisionerLeaseRoleAssignmentId": (
-                f"{container_id}/providers/Microsoft.Authorization/roleAssignments/"
-                "55555555-5555-4555-8555-555555555555"
+            "exactRuntimeLeaseBlobCondition": (
+                exact_runtime_lease_blob_condition(TARGET)
             ),
-            "exactLeaseBlobCondition": exact_lease_blob_condition(TARGET),
-            "allowedDataActions": sorted(ALLOWED_DATA_ACTIONS),
+            "bootstrapAllowedDataActions": [
+                "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                "blobs/read",
+                "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                "blobs/add/action",
+            ],
+            "runtimeAllowedDataActions": [
+                "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                "blobs/read",
+                "Microsoft.Storage/storageAccounts/blobServices/containers/"
+                "blobs/write",
+            ],
             "deploymentScopeBinding": (
                 f"{TENANT_ID}/{SUBSCRIPTION_ID}/{RESOURCE_GROUP}"
             ),
@@ -440,7 +465,7 @@ class _FakeAzureExecutor:
                 "sealed-bootstrap-and-runtime-application-apis",
             ],
             "principalSeparationMode": (
-                "SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME"
+                "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS"
             ),
         }
         return {
@@ -538,12 +563,20 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             CONTAINER_ID,
         )
         self.assertEqual(
-            coordination.lease_data_role_definition_id,
+            coordination.bootstrap_lease_data_role_definition_id,
             ROLE_DEFINITION_ID,
         )
         self.assertEqual(
-            coordination.provisioner_lease_role_assignment_id,
+            coordination.bootstrap_lease_role_assignment_id,
             ROLE_ASSIGNMENT_ID,
+        )
+        self.assertEqual(
+            coordination.runtime_lease_data_role_definition_id,
+            RUNTIME_ROLE_DEFINITION_ID,
+        )
+        self.assertEqual(
+            coordination.runtime_lease_role_assignment_id,
+            RUNTIME_ROLE_ASSIGNMENT_ID,
         )
         self.assertEqual(
             [command.operation for command in executor.commands],

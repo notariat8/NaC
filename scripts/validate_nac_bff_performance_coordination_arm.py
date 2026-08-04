@@ -7,8 +7,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-EXPECTED_DATA_ACTIONS = {
+BOOTSTRAP_DATA_ACTIONS = {
     "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
+}
+RUNTIME_DATA_ACTIONS = {
     "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
     "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
 }
@@ -16,8 +19,8 @@ EXPECTED_RESOURCE_TYPES = {
     "Microsoft.Storage/storageAccounts": 1,
     "Microsoft.Storage/storageAccounts/blobServices": 1,
     "Microsoft.Storage/storageAccounts/blobServices/containers": 1,
-    "Microsoft.Authorization/roleDefinitions": 1,
-    "Microsoft.Authorization/roleAssignments": 1,
+    "Microsoft.Authorization/roleDefinitions": 2,
+    "Microsoft.Authorization/roleAssignments": 2,
 }
 EXPECTED_RESOURCE_API_VERSIONS = {
     "Microsoft.Storage/storageAccounts": "2023-05-01",
@@ -35,14 +38,6 @@ EXPECTED_RESOURCE_DEPENDENCIES = {
     "Microsoft.Storage/storageAccounts/blobServices/containers": [
         "[resourceId('Microsoft.Storage/storageAccounts/blobServices', "
         "variables('validatedStorageAccountName'), 'default')]"
-    ],
-    "Microsoft.Authorization/roleDefinitions": [],
-    "Microsoft.Authorization/roleAssignments": [
-        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', "
-        "variables('validatedStorageAccountName'), 'default', "
-        "variables('containerName'))]",
-        "[resourceId('Microsoft.Authorization/roleDefinitions', "
-        "variables('leaseDataRoleDefinitionGuid'))]",
     ],
 }
 EXPECTED_PARAMETER_SCHEMAS = {
@@ -78,6 +73,16 @@ EXPECTED_PARAMETER_SCHEMAS = {
             )
         },
     },
+    "deploymentMode": {
+        "type": "string",
+        "defaultValue": "Incremental",
+        "allowedValues": ["Incremental"],
+        "metadata": {
+            "description": (
+                "Deployment mode binding. The CLI and template accept Incremental only."
+            )
+        },
+    },
     "storageAccountName": {
         "type": "string",
         "minLength": 3,
@@ -107,13 +112,43 @@ EXPECTED_PARAMETER_SCHEMAS = {
             )
         },
     },
-    "provisionerPrincipalId": {
+    "bootstrapPrincipalId": {
         "type": "string",
         "metadata": {
             "description": (
-                "Object ID of the dedicated Entra service principal used by both "
-                "bootstrap and runtime. Blob add creates the bound blob; blob write "
-                "cannot split overwrite, lease, and break operations."
+                "Object ID of the dedicated Entra service principal used only to "
+                "bootstrap the bound blob with read and add. It must differ from "
+                "runtimePrincipalId and receives no blob write or delete capability."
+            )
+        },
+    },
+    "runtimePrincipalId": {
+        "type": "string",
+        "metadata": {
+            "description": (
+                "Object ID of the dedicated Entra service principal used only at "
+                "runtime with blob read and write. It must differ from "
+                "bootstrapPrincipalId and receives no blob add or delete capability."
+            )
+        },
+    },
+    "bootstrapCertificateSha256": {
+        "type": "string",
+        "minLength": 64,
+        "maxLength": 64,
+        "metadata": {
+            "description": (
+                "SHA-256 of the bootstrap application certificate bound by the owner approval."
+            )
+        },
+    },
+    "runtimeCertificateSha256": {
+        "type": "string",
+        "minLength": 64,
+        "maxLength": 64,
+        "metadata": {
+            "description": (
+                "SHA-256 of the separate runtime application certificate bound by the owner approval."
             )
         },
     },
@@ -161,6 +196,7 @@ EXPECTED_EXAMPLE_PARAMETERS = {
     "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
     "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
     "resourceGroupName": "rg-nac-bff-test",
+    "deploymentMode": "Incremental",
     "storageAccountName": "stnacperflease001",
     "bffStorageAccountResourceId": (
         "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
@@ -172,7 +208,10 @@ EXPECTED_EXAMPLE_PARAMETERS = {
         "resourceGroups/rg-nac-worm/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormoffline001"
     ),
-    "provisionerPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "bootstrapPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
+    "bootstrapCertificateSha256": "1" * 64,
+    "runtimeCertificateSha256": "2" * 64,
     "allowedClientIpAddress": "203.0.113.10",
     "targetBindingSha256": "1" * 64,
     "tags": {
@@ -181,9 +220,10 @@ EXPECTED_EXAMPLE_PARAMETERS = {
     },
 }
 EXPECTED_VALIDATED_DEPLOYMENT_SCOPE = (
-    "[if(and(and(equals(tenant().tenantId, parameters('tenantId')), "
+    "[if(and(and(and(equals(tenant().tenantId, parameters('tenantId')), "
     "equals(subscription().subscriptionId, parameters('subscriptionId'))), "
     "equals(resourceGroup().name, parameters('resourceGroupName'))), "
+    "equals(parameters('deploymentMode'), 'Incremental')), "
     "format('{0}/{1}/{2}', parameters('tenantId'), parameters('subscriptionId'), "
     "parameters('resourceGroupName')), fail('Performance coordination deployment "
     "scope does not match the owner-bound tenant, subscription, and resource group.'))]"
@@ -214,166 +254,11 @@ EXPECTED_CONTAINER_RESOURCE_NAME = (
     "[format('{0}/{1}/{2}', variables('validatedStorageAccountName'), 'default', "
     "variables('containerName'))]"
 )
-EXPECTED_ROLE_DEFINITION_NAME = "[variables('leaseDataRoleDefinitionGuid')]"
 EXPECTED_ROLE_ASSIGNABLE_SCOPES = ["[resourceGroup().id]"]
 EXPECTED_ROLE_ASSIGNMENT_SCOPE = (
     "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', "
     "variables('validatedStorageAccountName'), 'default', variables('containerName'))]"
 )
-EXPECTED_ROLE_ASSIGNMENT_CONDITION = "[variables('exactLeaseBlobCondition')]"
-EXPECTED_ROLE_ASSIGNMENT_PRINCIPAL = "[parameters('provisionerPrincipalId')]"
-EXPECTED_ROLE_ASSIGNMENT_ROLE = (
-    "[resourceId('Microsoft.Authorization/roleDefinitions', "
-    "variables('leaseDataRoleDefinitionGuid'))]"
-)
-EXPECTED_ROLE_ASSIGNMENT_NAME = (
-    "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', "
-    "variables('validatedStorageAccountName'), 'default', variables('containerName')), "
-    "parameters('provisionerPrincipalId'), resourceId('Microsoft.Authorization/"
-    "roleDefinitions', variables('leaseDataRoleDefinitionGuid')), "
-    "variables('leaseBlobPath'))]"
-)
-EXPECTED_EXACT_LEASE_CONDITION = (
-    "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}}) AND "
-    "!(ActionMatches{{''{2}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/"
-    "blobServices/containers:name] StringEquals ''{3}'' AND @Resource[Microsoft."
-    "Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals "
-    "''{4}''))', variables('blobReadDataAction'), variables('blobAddDataAction'), "
-    "variables('blobWriteDataAction'), variables('containerName'), "
-    "variables('leaseBlobPath'))]"
-)
-EXPECTED_OUTPUTS = {
-    "contractSchemaVersion": {
-        "type": "string",
-        "value": "nac.azure-bff-performance-coordination/v1",
-    },
-    "storageAccountName": {
-        "type": "string",
-        "value": "[variables('validatedStorageAccountName')]",
-    },
-    "storageAccountResourceId": {
-        "type": "string",
-        "value": (
-            "[resourceId('Microsoft.Storage/storageAccounts', "
-            "variables('validatedStorageAccountName'))]"
-        ),
-    },
-    "effectiveTags": {
-        "type": "object",
-        "value": "[variables('resourceTags')]",
-    },
-    "bffStorageAccountResourceIdBinding": {
-        "type": "string",
-        "value": "[variables('validatedBffStorageAccountResourceId')]",
-    },
-    "bffStorageAccountNameBinding": {
-        "type": "string",
-        "value": "[variables('bffStorageAccountName')]",
-    },
-    "wormStorageAccountResourceIdBinding": {
-        "type": "string",
-        "value": "[variables('validatedWormStorageAccountResourceId')]",
-    },
-    "wormStorageAccountNameBinding": {
-        "type": "string",
-        "value": "[variables('wormStorageAccountName')]",
-    },
-    "leaseContainerName": {
-        "type": "string",
-        "value": "[variables('containerName')]",
-    },
-    "leaseContainerResourceId": {
-        "type": "string",
-        "value": (
-            "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', "
-            "variables('validatedStorageAccountName'), 'default', "
-            "variables('containerName'))]"
-        ),
-    },
-    "leaseBlobPath": {
-        "type": "string",
-        "value": "[variables('leaseBlobPath')]",
-    },
-    "leaseBlobUri": {
-        "type": "string",
-        "value": (
-            "[format('{0}{1}/{2}', reference(resourceId('Microsoft.Storage/"
-            "storageAccounts', variables('validatedStorageAccountName')), "
-            "'2023-05-01').primaryEndpoints.blob, variables('containerName'), "
-            "variables('leaseBlobPath'))]"
-        ),
-    },
-    "requiredLeaseBlobType": {"type": "string", "value": "BlockBlob"},
-    "requiredLeaseBlobContentLength": {"type": "int", "value": 0},
-    "targetBindingSha256": {
-        "type": "string",
-        "value": "[parameters('targetBindingSha256')]",
-    },
-    "leaseDataRoleDefinitionId": {
-        "type": "string",
-        "value": (
-            "[resourceId('Microsoft.Authorization/roleDefinitions', "
-            "variables('leaseDataRoleDefinitionGuid'))]"
-        ),
-    },
-    "provisionerLeaseRoleAssignmentId": {
-        "type": "string",
-        "value": (
-            "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/"
-            "blobServices/containers', variables('validatedStorageAccountName'), "
-            "'default', variables('containerName')), 'Microsoft.Authorization/"
-            "roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/"
-            "blobServices/containers', variables('validatedStorageAccountName'), "
-            "'default', variables('containerName')), "
-            "parameters('provisionerPrincipalId'), resourceId('Microsoft."
-            "Authorization/roleDefinitions', "
-            "variables('leaseDataRoleDefinitionGuid')), "
-            "variables('leaseBlobPath')))]"
-        ),
-    },
-    "exactLeaseBlobCondition": {
-        "type": "string",
-        "value": "[variables('exactLeaseBlobCondition')]",
-    },
-    "allowedDataActions": {
-        "type": "array",
-        "value": [
-            "[variables('blobReadDataAction')]",
-            "[variables('blobAddDataAction')]",
-            "[variables('blobWriteDataAction')]",
-        ],
-    },
-    "deploymentScopeBinding": {
-        "type": "string",
-        "value": "[variables('validatedDeploymentScope')]",
-    },
-    "blobBootstrapRequired": {"type": "bool", "value": True},
-    "blobBootstrapExecutedByTemplate": {"type": "bool", "value": False},
-    "azureRbacWriteAuthorizedOperations": {
-        "type": "array",
-        "value": [
-            "blob-create",
-            "blob-overwrite",
-            "lease-acquire",
-            "lease-release",
-            "lease-break",
-        ],
-    },
-    "azureRbacOperationRestrictionEnforced": {"type": "bool", "value": False},
-    "operationRestrictionDefenseInDepth": {
-        "type": "array",
-        "value": [
-            "dedicated-storage-account",
-            "exact-container-and-blob-path-abac",
-            "sealed-bootstrap-and-runtime-application-apis",
-        ],
-    },
-    "principalSeparationMode": {
-        "type": "string",
-        "value": "SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME",
-    },
-}
-
 
 def validate_template(template: Mapping[str, Any]) -> list[str]:
     """Return fail-closed errors for an emitted coordination ARM template."""
@@ -418,9 +303,13 @@ def validate_template(template: Mapping[str, Any]) -> list[str]:
         grouped.setdefault(resource["type"], []).append(resource)
     actual_counts = {name: len(items) for name, items in grouped.items()}
     if actual_counts != EXPECTED_RESOURCE_TYPES:
-        errors.append("resource type/count set differs from the five-resource contract")
+        errors.append("resource type/count set differs from the seven-resource contract")
 
-    for resource_type in EXPECTED_RESOURCE_TYPES:
+    for resource_type in (
+        "Microsoft.Storage/storageAccounts",
+        "Microsoft.Storage/storageAccounts/blobServices",
+        "Microsoft.Storage/storageAccounts/blobServices/containers",
+    ):
         _validate_resource_emission(
             _only(grouped, resource_type), resource_type, errors
         )
@@ -437,11 +326,11 @@ def validate_template(template: Mapping[str, Any]) -> list[str]:
         ),
         errors,
     )
-    _validate_role_definition(
-        _only(grouped, "Microsoft.Authorization/roleDefinitions"), errors
+    _validate_role_definitions(
+        grouped.get("Microsoft.Authorization/roleDefinitions", []), errors
     )
-    _validate_role_assignment(
-        _only(grouped, "Microsoft.Authorization/roleAssignments"), errors
+    _validate_role_assignments(
+        grouped.get("Microsoft.Authorization/roleAssignments", []), errors
     )
     _validate_outputs(outputs, errors)
     return errors
@@ -541,8 +430,39 @@ def _validate_id_binding_variables(
     for name, expected in expected_actions.items():
         if variables.get(name) != expected:
             errors.append(f"{name} differs")
-    if variables.get("exactLeaseBlobCondition") != EXPECTED_EXACT_LEASE_CONDITION:
-        errors.append("exact lease condition expression differs")
+    for condition_name, action_name in (
+        ("exactBootstrapLeaseBlobCondition", "blobAddDataAction"),
+        ("exactRuntimeLeaseBlobCondition", "blobWriteDataAction"),
+    ):
+        condition = variables.get(condition_name)
+        if not all(
+            _expression_contains(condition, marker)
+            for marker in (
+                "blobReadDataAction",
+                action_name,
+                "containerName",
+                "leaseBlobPath",
+                "StringEquals",
+            )
+        ) or _expression_contains(condition, "StringLike"):
+            errors.append(f"{condition_name} expression differs")
+    for principal_name, expected_parameter in (
+        ("validatedBootstrapPrincipalId", "bootstrapPrincipalId"),
+        ("validatedRuntimePrincipalId", "runtimePrincipalId"),
+    ):
+        expression = variables.get(principal_name)
+        if not all(
+            _expression_contains(expression, marker)
+            for marker in (
+                expected_parameter,
+                "bootstrapPrincipalId",
+                "runtimePrincipalId",
+                "bootstrapCertificateSha256",
+                "runtimeCertificateSha256",
+                "fail(",
+            )
+        ):
+            errors.append(f"{principal_name} separation guard differs")
     if variables.get("mandatoryResourceTags") != EXPECTED_MANDATORY_TAGS:
         errors.append("mandatory effective tags differ from runtime canonical tags")
     if variables.get("resourceTags") != (
@@ -661,6 +581,17 @@ def _validate_container(
         "lease_blob_type": "BlockBlob",
         "lease_blob_content_length": "0",
         "lease_blob_bootstrap": "owner-gated-put-if-absent-before-runtime",
+        "bootstrap_authorization": "blob-read-plus-add-only-no-write-no-delete",
+        "runtime_authorization": "blob-read-plus-write-only-no-add-no-delete",
+        "azure_blob_write_authorization": (
+            "runtime-write-includes-create-overwrite-lease-and-break"
+        ),
+        "operation_restriction_boundary": (
+            "sealed-app-api-defense-in-depth-not-azure-enforced"
+        ),
+        "principal_separation": (
+            "distinct-owner-bound-bootstrap-and-runtime-principals"
+        ),
     }
     if not isinstance(metadata, Mapping):
         errors.append("lease container metadata is missing")
@@ -672,70 +603,157 @@ def _validate_container(
         errors.append("lease container metadata does not bind the exact blob path")
 
 
-def _validate_role_definition(
-    resource: Mapping[str, Any] | None, errors: list[str]
+def _validate_role_definitions(
+    resources: list[Mapping[str, Any]], errors: list[str]
 ) -> None:
-    if resource is None:
+    expected = {
+        "bootstrapLeaseDataRoleDefinitionGuid": BOOTSTRAP_DATA_ACTIONS,
+        "runtimeLeaseDataRoleDefinitionGuid": RUNTIME_DATA_ACTIONS,
+    }
+    selected: dict[str, Mapping[str, Any]] = {}
+    for resource in resources:
+        name = resource.get("name")
+        matches = [key for key in expected if _expression_contains(name, key)]
+        if len(matches) != 1 or matches[0] in selected:
+            errors.append("custom role identity is ambiguous")
+            continue
+        selected[matches[0]] = resource
+    if set(selected) != set(expected):
+        errors.append("bootstrap/runtime custom roles are incomplete")
         return
-    if resource.get("name") != EXPECTED_ROLE_DEFINITION_NAME:
-        errors.append("custom role resource name differs")
-    properties = resource.get("properties")
-    if not isinstance(properties, Mapping):
-        errors.append("custom role properties are missing")
-        return
-    permissions = properties.get("permissions")
-    if (
-        properties.get("type") != "CustomRole"
-        or not isinstance(permissions, list)
-        or len(permissions) != 1
-        or not isinstance(permissions[0], Mapping)
-    ):
-        errors.append("custom role permission shape differs")
-        return
-    permission = permissions[0]
-    data_actions = permission.get("dataActions")
-    if (
-        not isinstance(data_actions, list)
-        or any(not isinstance(action, str) for action in data_actions)
-        or len(data_actions) != len(set(data_actions))
-        or set(data_actions) != EXPECTED_DATA_ACTIONS
-    ):
-        errors.append("custom role DataActions are not exactly add/read/write")
-    for key in ("actions", "notActions", "notDataActions"):
-        if permission.get(key) != []:
-            errors.append(f"custom role {key} must be empty")
-    if properties.get("assignableScopes") != EXPECTED_ROLE_ASSIGNABLE_SCOPES:
-        errors.append("custom role assignable scope is not the exact resource group")
+    for identity, actions in expected.items():
+        resource = selected[identity]
+        if resource.get("apiVersion") != "2022-04-01":
+            errors.append(f"{identity} apiVersion differs")
+        if resource.get("dependsOn", []) != []:
+            errors.append(f"{identity} dependencies differ")
+        properties = resource.get("properties")
+        permissions = (
+            properties.get("permissions")
+            if isinstance(properties, Mapping)
+            else None
+        )
+        if (
+            not isinstance(properties, Mapping)
+            or properties.get("type") != "CustomRole"
+            or properties.get("assignableScopes")
+            != EXPECTED_ROLE_ASSIGNABLE_SCOPES
+            or not isinstance(permissions, list)
+            or len(permissions) != 1
+            or not isinstance(permissions[0], Mapping)
+        ):
+            errors.append(f"{identity} role shape differs")
+            continue
+        permission = permissions[0]
+        data_actions = permission.get("dataActions")
+        if (
+            not isinstance(data_actions, list)
+            or len(data_actions) != len(set(data_actions))
+            or set(data_actions) != actions
+        ):
+            errors.append(f"{identity} DataActions differ")
+        for key in ("actions", "notActions", "notDataActions"):
+            if permission.get(key) != []:
+                errors.append(f"{identity} {key} must be empty")
 
 
-def _validate_role_assignment(
-    resource: Mapping[str, Any] | None, errors: list[str]
+def _validate_role_assignments(
+    resources: list[Mapping[str, Any]], errors: list[str]
 ) -> None:
-    if resource is None:
+    expected = {
+        "bootstrap": {
+            "principal": "validatedBootstrapPrincipalId",
+            "role": "bootstrapLeaseDataRoleDefinitionGuid",
+            "condition": "exactBootstrapLeaseBlobCondition",
+        },
+        "runtime": {
+            "principal": "validatedRuntimePrincipalId",
+            "role": "runtimeLeaseDataRoleDefinitionGuid",
+            "condition": "exactRuntimeLeaseBlobCondition",
+        },
+    }
+    selected: dict[str, Mapping[str, Any]] = {}
+    for resource in resources:
+        properties = resource.get("properties")
+        principal = properties.get("principalId") if isinstance(properties, Mapping) else None
+        matches = [
+            key
+            for key, values in expected.items()
+            if _expression_contains(principal, values["principal"])
+        ]
+        if len(matches) != 1 or matches[0] in selected:
+            errors.append("role assignment identity is ambiguous")
+            continue
+        selected[matches[0]] = resource
+    if set(selected) != set(expected):
+        errors.append("bootstrap/runtime role assignments are incomplete")
         return
-    properties = resource.get("properties")
-    if not isinstance(properties, Mapping):
-        errors.append("role assignment properties are missing")
-        return
-    if resource.get("scope") != EXPECTED_ROLE_ASSIGNMENT_SCOPE:
-        errors.append("role assignment scope is not the exact lease container")
-    if properties.get("principalId") != EXPECTED_ROLE_ASSIGNMENT_PRINCIPAL:
-        errors.append("role assignment principal is not owner-bound")
-    if properties.get("principalType") != "ServicePrincipal":
-        errors.append("role assignment principal type differs")
-    if properties.get("conditionVersion") != "2.0":
-        errors.append("role assignment condition version differs")
-    if properties.get("condition") != EXPECTED_ROLE_ASSIGNMENT_CONDITION:
-        errors.append("role assignment does not use the exact path condition")
-    if properties.get("roleDefinitionId") != EXPECTED_ROLE_ASSIGNMENT_ROLE:
-        errors.append("role assignment does not use the custom role")
-    if resource.get("name") != EXPECTED_ROLE_ASSIGNMENT_NAME:
-        errors.append("role assignment deterministic name differs")
+    for identity, values in expected.items():
+        resource = selected[identity]
+        properties = resource.get("properties")
+        if not isinstance(properties, Mapping):
+            errors.append(f"{identity} assignment properties are missing")
+            continue
+        if (
+            resource.get("apiVersion") != "2022-04-01"
+            or resource.get("scope") != EXPECTED_ROLE_ASSIGNMENT_SCOPE
+            or properties.get("principalType") != "ServicePrincipal"
+            or properties.get("conditionVersion") != "2.0"
+            or not _expression_contains(properties.get("principalId"), values["principal"])
+            or not _expression_contains(properties.get("condition"), values["condition"])
+            or not _expression_contains(properties.get("roleDefinitionId"), values["role"])
+            or not _expression_contains(resource.get("name"), values["principal"])
+            or not _expression_contains(resource.get("name"), values["role"])
+            or not _expression_contains(resource.get("name"), "leaseBlobPath")
+        ):
+            errors.append(f"{identity} role assignment differs")
+        dependencies = resource.get("dependsOn")
+        if (
+            not isinstance(dependencies, list)
+            or len(dependencies) != 2
+            or not any(_expression_contains(item, "containers") for item in dependencies)
+            or not any(_expression_contains(item, values["role"]) for item in dependencies)
+        ):
+            errors.append(f"{identity} assignment dependencies differ")
 
 
 def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
-    if outputs != EXPECTED_OUTPUTS:
-        errors.append("output key/value/type set differs from the emitted contract")
+    expected_keys = {
+        "contractSchemaVersion",
+        "storageAccountName",
+        "storageAccountResourceId",
+        "effectiveTags",
+        "bffStorageAccountResourceIdBinding",
+        "bffStorageAccountNameBinding",
+        "wormStorageAccountResourceIdBinding",
+        "wormStorageAccountNameBinding",
+        "leaseContainerName",
+        "leaseContainerResourceId",
+        "leaseBlobPath",
+        "leaseBlobUri",
+        "requiredLeaseBlobType",
+        "requiredLeaseBlobContentLength",
+        "targetBindingSha256",
+        "bootstrapLeaseDataRoleDefinitionId",
+        "runtimeLeaseDataRoleDefinitionId",
+        "bootstrapLeaseRoleAssignmentId",
+        "runtimeLeaseRoleAssignmentId",
+        "bootstrapCertificateSha256Binding",
+        "runtimeCertificateSha256Binding",
+        "exactBootstrapLeaseBlobCondition",
+        "exactRuntimeLeaseBlobCondition",
+        "bootstrapAllowedDataActions",
+        "runtimeAllowedDataActions",
+        "deploymentScopeBinding",
+        "blobBootstrapRequired",
+        "blobBootstrapExecutedByTemplate",
+        "azureRbacWriteAuthorizedOperations",
+        "azureRbacOperationRestrictionEnforced",
+        "operationRestrictionDefenseInDepth",
+        "principalSeparationMode",
+    }
+    if set(outputs) != expected_keys:
+        errors.append("output key set differs from the emitted contract")
     if outputs.get("effectiveTags") != {
         "type": "object",
         "value": "[variables('resourceTags')]",
@@ -748,9 +766,14 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
         "wormStorageAccountResourceIdBinding": "validatedWormStorageAccountResourceId",
         "wormStorageAccountNameBinding": "wormStorageAccountName",
         "leaseContainerResourceId": "Microsoft.Storage/storageAccounts/blobServices/containers",
-        "leaseDataRoleDefinitionId": "leaseDataRoleDefinitionGuid",
-        "provisionerLeaseRoleAssignmentId": "Microsoft.Authorization/roleAssignments",
-        "exactLeaseBlobCondition": "exactLeaseBlobCondition",
+        "bootstrapLeaseDataRoleDefinitionId": "bootstrapLeaseDataRoleDefinitionGuid",
+        "runtimeLeaseDataRoleDefinitionId": "runtimeLeaseDataRoleDefinitionGuid",
+        "bootstrapLeaseRoleAssignmentId": "Microsoft.Authorization/roleAssignments",
+        "runtimeLeaseRoleAssignmentId": "Microsoft.Authorization/roleAssignments",
+        "bootstrapCertificateSha256Binding": "bootstrapCertificateSha256",
+        "runtimeCertificateSha256Binding": "runtimeCertificateSha256",
+        "exactBootstrapLeaseBlobCondition": "exactBootstrapLeaseBlobCondition",
+        "exactRuntimeLeaseBlobCondition": "exactRuntimeLeaseBlobCondition",
     }
     for name, marker in bindings.items():
         output = outputs.get(name)
@@ -760,17 +783,38 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
             or not _expression_contains(output.get("value"), marker)
         ):
             errors.append(f"output {name} does not preserve {marker}")
-    allowed = outputs.get("allowedDataActions")
-    values = allowed.get("value") if isinstance(allowed, Mapping) else None
-    if (
-        not isinstance(values, list)
-        or len(values) != 3
-        or not all(
-            any(_expression_contains(value, marker) for value in values)
-            for marker in ("blobAddDataAction", "blobReadDataAction", "blobWriteDataAction")
-        )
+    for name, markers in (
+        ("bootstrapAllowedDataActions", ("blobReadDataAction", "blobAddDataAction")),
+        ("runtimeAllowedDataActions", ("blobReadDataAction", "blobWriteDataAction")),
     ):
-        errors.append("allowedDataActions output differs")
+        output = outputs.get(name)
+        values = output.get("value") if isinstance(output, Mapping) else None
+        if (
+            not isinstance(output, Mapping)
+            or output.get("type") != "array"
+            or not isinstance(values, list)
+            or len(values) != 2
+            or not all(
+                any(_expression_contains(value, marker) for value in values)
+                for marker in markers
+            )
+        ):
+            errors.append(f"{name} output differs")
+    fixed = {
+        "contractSchemaVersion": {"type": "string", "value": "nac.azure-bff-performance-coordination/v1"},
+        "requiredLeaseBlobType": {"type": "string", "value": "BlockBlob"},
+        "requiredLeaseBlobContentLength": {"type": "int", "value": 0},
+        "blobBootstrapRequired": {"type": "bool", "value": True},
+        "blobBootstrapExecutedByTemplate": {"type": "bool", "value": False},
+        "azureRbacOperationRestrictionEnforced": {"type": "bool", "value": False},
+        "principalSeparationMode": {
+            "type": "string",
+            "value": "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS",
+        },
+    }
+    for name, expected in fixed.items():
+        if outputs.get(name) != expected:
+            errors.append(f"{name} output differs")
 
 
 def _only(

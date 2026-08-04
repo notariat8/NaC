@@ -91,7 +91,10 @@ INFRASTRUCTURE_PARAMETERS = {
         "resourceGroups/rg-nac-bff-test/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormtest001"
     ),
-    "provisionerPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "bootstrapPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
+    "bootstrapCertificateSha256": "e" * 64,
+    "runtimeCertificateSha256": "f" * 64,
     "allowedClientIpAddress": "8.8.8.8",
     "targetBindingSha256": "0" * 64,
     "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
@@ -175,7 +178,8 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
         "worm_storage_account_resource_id": parameters[
             "wormStorageAccountResourceId"
         ],
-        "provisioner_principal_id": parameters["provisionerPrincipalId"],
+        "bootstrap_principal_id": parameters["bootstrapPrincipalId"],
+        "runtime_principal_id": parameters["runtimePrincipalId"],
         "tags_sha256": performance._sha256_json(parameters["tags"]),
         "allowed_client_ip_address_sha256": performance._sha256_text(
             parameters["allowedClientIpAddress"]
@@ -1940,8 +1944,11 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "worm_storage_account_resource_id": INFRASTRUCTURE_PARAMETERS[
                 "wormStorageAccountResourceId"
             ],
-            "provisioner_principal_id": INFRASTRUCTURE_PARAMETERS[
-                "provisionerPrincipalId"
+            "bootstrap_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "bootstrapPrincipalId"
+            ],
+            "runtime_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "runtimePrincipalId"
             ],
             "tags_sha256": performance._sha256_json(
                 INFRASTRUCTURE_PARAMETERS["tags"]
