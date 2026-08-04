@@ -34,8 +34,7 @@ from nac_bff.azure_live_commands import AzureCliAdapter
 from nac_bff.azure_performance_infrastructure_safety import (
     CONTAINER_NAME,
     effective_coordination_tags,
-    exact_bootstrap_lease_blob_condition,
-    exact_runtime_lease_blob_condition,
+    exact_broker_lease_blob_condition,
 )
 
 
@@ -51,10 +50,16 @@ WORM_NAME = "stnacwormoffline001"
 COORDINATION_NAME = "stnacperflease001"
 BFF_NAME = "stnacbffoffline001"
 PRINCIPAL_ID = "11111111-2222-4333-8444-555555555555"
+CALLER_PRINCIPAL_ID = "22222222-3333-4444-8555-666666666666"
+PACKAGE_SHA256 = "a" * 64
+TICKET_CERTIFICATE_SHA256 = "b" * 64
 TARGET = build_performance_acceptance_plan(
     ACTIVATION_SHA256, CONTRACT_SHA256
 )["target_binding_sha256"]
 RESOURCE_GROUP_SCOPE = f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}"
+FUNCTION_APP_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Web/sites/fn-nac-bff-test"
+)
 WORM_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Storage/storageAccounts/{WORM_NAME}"
 )
@@ -76,14 +81,6 @@ ROLE_ASSIGNMENT_ID = (
     f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
     "55555555-5555-4555-8555-555555555555"
 )
-RUNTIME_ROLE_DEFINITION_ID = (
-    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
-    "roleDefinitions/66666666-6666-4666-8666-666666666666"
-)
-RUNTIME_ROLE_ASSIGNMENT_ID = (
-    f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
-    "77777777-7777-4777-8777-777777777777"
-)
 
 
 def _sha256_json(value: object) -> str:
@@ -104,11 +101,12 @@ def _infra_parameters() -> dict[str, object]:
         "storageAccountName": COORDINATION_NAME,
         "bffStorageAccountResourceId": BFF_ID,
         "wormStorageAccountResourceId": WORM_ID,
-        "bootstrapPrincipalId": PRINCIPAL_ID,
-        "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
-        "bootstrapCertificateSha256": "a" * 64,
-        "runtimeCertificateSha256": "b" * 64,
-        "allowedClientIpAddress": "8.8.8.8",
+        "brokerPrincipalId": PRINCIPAL_ID,
+        "brokerCallerServicePrincipalId": CALLER_PRINCIPAL_ID,
+        "brokerFunctionAppResourceId": FUNCTION_APP_ID,
+        "brokerFunctionPackageSha256": PACKAGE_SHA256,
+        "brokerTicketVerificationCertificateSha256": TICKET_CERTIFICATE_SHA256,
+        "brokerOutboundIpAddresses": ["8.8.8.8"],
         "targetBindingSha256": TARGET,
         "tenantId": TENANT_ID,
         "subscriptionId": SUBSCRIPTION_ID,
@@ -422,25 +420,19 @@ class _FakeAzureExecutor:
             "requiredLeaseBlobType": "BlockBlob",
             "requiredLeaseBlobContentLength": 0,
             "targetBindingSha256": TARGET,
-            "bootstrapLeaseDataRoleDefinitionId": ROLE_DEFINITION_ID,
-            "runtimeLeaseDataRoleDefinitionId": RUNTIME_ROLE_DEFINITION_ID,
-            "bootstrapLeaseRoleAssignmentId": ROLE_ASSIGNMENT_ID,
-            "runtimeLeaseRoleAssignmentId": RUNTIME_ROLE_ASSIGNMENT_ID,
-            "bootstrapCertificateSha256Binding": "a" * 64,
-            "runtimeCertificateSha256Binding": "b" * 64,
-            "exactBootstrapLeaseBlobCondition": (
-                exact_bootstrap_lease_blob_condition(TARGET)
+            "brokerLeaseDataRoleDefinitionId": ROLE_DEFINITION_ID,
+            "brokerLeaseRoleAssignmentId": ROLE_ASSIGNMENT_ID,
+            "brokerPrincipalIdBinding": PRINCIPAL_ID,
+            "brokerCallerServicePrincipalIdBinding": CALLER_PRINCIPAL_ID,
+            "brokerFunctionAppResourceIdBinding": FUNCTION_APP_ID,
+            "brokerFunctionPackageSha256Binding": PACKAGE_SHA256,
+            "brokerTicketVerificationCertificateSha256Binding": (
+                TICKET_CERTIFICATE_SHA256
             ),
-            "exactRuntimeLeaseBlobCondition": (
-                exact_runtime_lease_blob_condition(TARGET)
+            "exactBrokerLeaseBlobCondition": (
+                exact_broker_lease_blob_condition(TARGET)
             ),
-            "bootstrapAllowedDataActions": [
-                "Microsoft.Storage/storageAccounts/blobServices/containers/"
-                "blobs/read",
-                "Microsoft.Storage/storageAccounts/blobServices/containers/"
-                "blobs/add/action",
-            ],
-            "runtimeAllowedDataActions": [
+            "brokerAllowedDataActions": [
                 "Microsoft.Storage/storageAccounts/blobServices/containers/"
                 "blobs/read",
                 "Microsoft.Storage/storageAccounts/blobServices/containers/"
@@ -462,11 +454,11 @@ class _FakeAzureExecutor:
             "operationRestrictionDefenseInDepth": [
                 "dedicated-storage-account",
                 "exact-container-and-blob-path-abac",
-                "sealed-bootstrap-and-runtime-application-apis",
+                "non-exportable-function-managed-identity",
+                "owner-ticketed-fixed-broker-api",
             ],
-            "principalSeparationMode": (
-                "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS"
-            ),
+            "localRunnerStorageDataActions": [],
+            "credentialBoundaryMode": "BFF_BROKER_UAMI_ONLY",
         }
         return {
             "id": (
@@ -563,20 +555,32 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             CONTAINER_ID,
         )
         self.assertEqual(
-            coordination.bootstrap_lease_data_role_definition_id,
+            coordination.broker_lease_data_role_definition_id,
             ROLE_DEFINITION_ID,
         )
         self.assertEqual(
-            coordination.bootstrap_lease_role_assignment_id,
+            coordination.broker_lease_role_assignment_id,
             ROLE_ASSIGNMENT_ID,
         )
+        self.assertEqual(coordination.lease_blob_path, f"locks/{TARGET}.lock")
+        self.assertEqual(coordination.broker_principal_id, PRINCIPAL_ID)
         self.assertEqual(
-            coordination.runtime_lease_data_role_definition_id,
-            RUNTIME_ROLE_DEFINITION_ID,
+            coordination.broker_caller_service_principal_id,
+            CALLER_PRINCIPAL_ID,
         )
         self.assertEqual(
-            coordination.runtime_lease_role_assignment_id,
-            RUNTIME_ROLE_ASSIGNMENT_ID,
+            coordination.broker_function_app_resource_id, FUNCTION_APP_ID
+        )
+        self.assertEqual(
+            coordination.broker_function_package_sha256, PACKAGE_SHA256
+        )
+        self.assertEqual(
+            coordination.broker_ticket_verification_certificate_sha256,
+            TICKET_CERTIFICATE_SHA256,
+        )
+        self.assertEqual(
+            coordination.broker_outbound_ip_addresses_sha256,
+            _sha256_json(["8.8.8.8"]),
         )
         self.assertEqual(
             [command.operation for command in executor.commands],

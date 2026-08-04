@@ -30,9 +30,9 @@ from .azure_performance_acceptance import (
     build_performance_acceptance_plan,
 )
 from .azure_performance_infrastructure_safety import (
-    ALLOWED_DATA_ACTIONS,
     CONTAINER_NAME,
     effective_coordination_tags,
+    exact_broker_lease_blob_condition,
 )
 
 
@@ -41,7 +41,9 @@ DEPLOYMENT_SEQUENCE = (
     "verify_worm_baseline_readback",
     "deploy_performance_coordination",
     "verify_coordination_and_effective_rbac",
-    "bootstrap_exact_zero_byte_lease_blob",
+    "ensure_exact_performance_lease_app_role_assignment",
+    "configure_and_verify_broker_function_settings",
+    "acquire_owner_ticketed_broker_lease",
     "execute_endpoint_scoped_conservative_measurement",
     "release_lease_and_finalize_redacted_evidence",
 )
@@ -105,23 +107,23 @@ _COORDINATION_OUTPUT_KEYS = frozenset(
         "requiredLeaseBlobType",
         "requiredLeaseBlobContentLength",
         "targetBindingSha256",
-        "bootstrapLeaseDataRoleDefinitionId",
-        "runtimeLeaseDataRoleDefinitionId",
-        "bootstrapLeaseRoleAssignmentId",
-        "runtimeLeaseRoleAssignmentId",
-        "bootstrapCertificateSha256Binding",
-        "runtimeCertificateSha256Binding",
-        "exactBootstrapLeaseBlobCondition",
-        "exactRuntimeLeaseBlobCondition",
-        "bootstrapAllowedDataActions",
-        "runtimeAllowedDataActions",
+        "brokerLeaseDataRoleDefinitionId",
+        "brokerLeaseRoleAssignmentId",
+        "brokerPrincipalIdBinding",
+        "brokerCallerServicePrincipalIdBinding",
+        "brokerFunctionAppResourceIdBinding",
+        "brokerFunctionPackageSha256Binding",
+        "brokerTicketVerificationCertificateSha256Binding",
+        "exactBrokerLeaseBlobCondition",
+        "brokerAllowedDataActions",
         "deploymentScopeBinding",
         "blobBootstrapRequired",
         "blobBootstrapExecutedByTemplate",
         "azureRbacWriteAuthorizedOperations",
         "azureRbacOperationRestrictionEnforced",
         "operationRestrictionDefenseInDepth",
-        "principalSeparationMode",
+        "localRunnerStorageDataActions",
+        "credentialBoundaryMode",
     }
 )
 
@@ -454,10 +456,15 @@ class PerformanceCoordinationDeploymentReceipt:
     outputs_sha256: str
     coordination_storage_account_resource_id: str
     lease_container_resource_id: str
-    bootstrap_lease_data_role_definition_id: str
-    runtime_lease_data_role_definition_id: str
-    bootstrap_lease_role_assignment_id: str
-    runtime_lease_role_assignment_id: str
+    lease_blob_path: str
+    broker_principal_id: str
+    broker_caller_service_principal_id: str
+    broker_function_app_resource_id: str
+    broker_function_package_sha256: str
+    broker_ticket_verification_certificate_sha256: str
+    broker_outbound_ip_addresses_sha256: str
+    broker_lease_data_role_definition_id: str
+    broker_lease_role_assignment_id: str
     _authority_id: int
     _seal: object
 
@@ -653,17 +660,28 @@ class PerformanceCoordinationDeploymentPort:
                 lease_container_resource_id=outputs[
                     "leaseContainerResourceId"
                 ],
-                bootstrap_lease_data_role_definition_id=outputs[
-                    "bootstrapLeaseDataRoleDefinitionId"
+                lease_blob_path=outputs["leaseBlobPath"],
+                broker_principal_id=outputs["brokerPrincipalIdBinding"],
+                broker_caller_service_principal_id=outputs[
+                    "brokerCallerServicePrincipalIdBinding"
                 ],
-                runtime_lease_data_role_definition_id=outputs[
-                    "runtimeLeaseDataRoleDefinitionId"
+                broker_function_app_resource_id=outputs[
+                    "brokerFunctionAppResourceIdBinding"
                 ],
-                bootstrap_lease_role_assignment_id=outputs[
-                    "bootstrapLeaseRoleAssignmentId"
+                broker_function_package_sha256=outputs[
+                    "brokerFunctionPackageSha256Binding"
                 ],
-                runtime_lease_role_assignment_id=outputs[
-                    "runtimeLeaseRoleAssignmentId"
+                broker_ticket_verification_certificate_sha256=outputs[
+                    "brokerTicketVerificationCertificateSha256Binding"
+                ],
+                broker_outbound_ip_addresses_sha256=_sha256_json(
+                    state.infrastructure_parameters["brokerOutboundIpAddresses"]
+                ),
+                broker_lease_data_role_definition_id=outputs[
+                    "brokerLeaseDataRoleDefinitionId"
+                ],
+                broker_lease_role_assignment_id=outputs[
+                    "brokerLeaseRoleAssignmentId"
                 ],
             )
             authority._finish(stage)
@@ -778,17 +796,20 @@ def _validate_coordination_deployment(
         "requiredLeaseBlobType": "BlockBlob",
         "requiredLeaseBlobContentLength": 0,
         "targetBindingSha256": target,
-        "bootstrapCertificateSha256Binding": parameters[
-            "bootstrapCertificateSha256"
+        "brokerPrincipalIdBinding": parameters["brokerPrincipalId"],
+        "brokerCallerServicePrincipalIdBinding": parameters[
+            "brokerCallerServicePrincipalId"
         ],
-        "runtimeCertificateSha256Binding": parameters[
-            "runtimeCertificateSha256"
+        "brokerFunctionAppResourceIdBinding": parameters[
+            "brokerFunctionAppResourceId"
         ],
-        "bootstrapAllowedDataActions": [
-            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
-            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+        "brokerFunctionPackageSha256Binding": parameters[
+            "brokerFunctionPackageSha256"
         ],
-        "runtimeAllowedDataActions": [
+        "brokerTicketVerificationCertificateSha256Binding": parameters[
+            "brokerTicketVerificationCertificateSha256"
+        ],
+        "brokerAllowedDataActions": [
             "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
             "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
         ],
@@ -806,29 +827,26 @@ def _validate_coordination_deployment(
         "operationRestrictionDefenseInDepth": [
             "dedicated-storage-account",
             "exact-container-and-blob-path-abac",
-            "sealed-bootstrap-and-runtime-application-apis",
+            "non-exportable-function-managed-identity",
+            "owner-ticketed-fixed-broker-api",
         ],
-        "principalSeparationMode": "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS",
+        "localRunnerStorageDataActions": [],
+        "credentialBoundaryMode": "BFF_BROKER_UAMI_ONLY",
     }
     if any(not _equal_arm(outputs.get(key), value) for key, value in expected.items()):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
+    if str(parameters["brokerPrincipalId"]).casefold() == str(
+        parameters["brokerCallerServicePrincipalId"]
+    ).casefold():
+        _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     for key, prefix in (
         (
-            "bootstrapLeaseDataRoleDefinitionId",
+            "brokerLeaseDataRoleDefinitionId",
             f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
             "Microsoft.Authorization/roleDefinitions/",
         ),
         (
-            "runtimeLeaseDataRoleDefinitionId",
-            f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
-            "Microsoft.Authorization/roleDefinitions/",
-        ),
-        (
-            "bootstrapLeaseRoleAssignmentId",
-            f"{container_id}/providers/Microsoft.Authorization/roleAssignments/",
-        ),
-        (
-            "runtimeLeaseRoleAssignmentId",
+            "brokerLeaseRoleAssignmentId",
             f"{container_id}/providers/Microsoft.Authorization/roleAssignments/",
         ),
     ):
@@ -839,19 +857,10 @@ def _validate_coordination_deployment(
             or _UUID_RE.fullmatch(value.rsplit("/", 1)[-1]) is None
         ):
             _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
-    for condition_key in (
-        "exactBootstrapLeaseBlobCondition",
-        "exactRuntimeLeaseBlobCondition",
+    if outputs.get("exactBrokerLeaseBlobCondition") != exact_broker_lease_blob_condition(
+        target
     ):
-        condition = outputs.get(condition_key)
-        if (
-            not isinstance(condition, str)
-            or CONTAINER_NAME not in condition
-            or f"locks/{target}.lock" not in condition
-            or "StringEquals" not in condition
-            or "StringLike" in condition
-        ):
-            _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
+        _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     return outputs
 
 
