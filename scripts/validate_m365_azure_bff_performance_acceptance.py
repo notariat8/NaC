@@ -19,7 +19,19 @@ VERIFICATION = Path(
 IMPLEMENTATION = Path("src/nac_bff/azure_performance_acceptance.py")
 AUTHORIZATION = Path("src/nac_bff/azure_performance_authorization.py")
 MONITOR = Path("src/nac_bff/azure_performance_monitor.py")
-LEASE = Path("src/nac_bff/azure_performance_lease.py")
+LEASE_BROKER = Path("src/nac_bff/azure_performance_lease_broker.py")
+LEASE_BROKER_STORAGE = Path(
+    "src/nac_bff/azure_performance_lease_broker_storage.py"
+)
+LEASE_BROKER_AUTH = Path("src/nac_bff/azure_performance_lease_broker_auth.py")
+LEASE_BROKER_CLIENT = Path(
+    "src/nac_bff/azure_performance_lease_broker_client.py"
+)
+LEASE_BROKER_COMPOSITION = Path(
+    "src/nac_bff/azure_performance_lease_broker_composition.py"
+)
+BFF_COMPOSITION = Path("src/nac_bff/composition.py")
+FASTAPI_ADAPTER = Path("src/nac_bff/fastapi_adapter.py")
 RUNTIME = Path("src/nac_bff/azure_performance_runtime.py")
 COMPOSITION = Path("src/nac_bff/azure_performance_composition.py")
 OWNER_GATE = Path("src/nac_bff/azure_performance_owner_gate.py")
@@ -27,7 +39,6 @@ INFRA_SAFETY = Path("src/nac_bff/azure_performance_infrastructure_safety.py")
 INFRASTRUCTURE_PORTS = Path(
     "src/nac_bff/azure_performance_infrastructure_ports.py"
 )
-STORAGE_PORTS = Path("src/nac_bff/azure_performance_storage_ports.py")
 AZURE_COMMANDS = Path("src/nac_bff/azure_live_commands.py")
 CLI = Path("src/nac_cli/cli.py")
 INFRA = Path("deploy/runtime/azure/nac-bff-performance-coordination/main.bicep")
@@ -56,7 +67,24 @@ QUALITY_GATE_WORKFLOW = Path(".github/workflows/quality-gate.yml")
 TESTS = Path("tests/test_nac_bff_azure_performance_acceptance.py")
 AUTHORIZATION_TESTS = Path("tests/test_nac_bff_azure_performance_authorization.py")
 MONITOR_TESTS = Path("tests/test_nac_bff_azure_performance_monitor.py")
-LEASE_TESTS = Path("tests/test_nac_bff_azure_performance_lease.py")
+LEASE_BROKER_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_lease_broker.py"
+)
+LEASE_BROKER_STORAGE_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_lease_broker_storage.py"
+)
+LEASE_BROKER_AUTH_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_lease_broker_auth.py"
+)
+LEASE_BROKER_CLIENT_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_lease_broker_client.py"
+)
+LEASE_BROKER_COMPOSITION_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_lease_broker_composition.py"
+)
+LEASE_BROKER_FASTAPI_TESTS = Path(
+    "tests/test_nac_bff_performance_lease_broker_fastapi.py"
+)
 RUNTIME_TESTS = Path("tests/test_nac_bff_azure_performance_runtime.py")
 COMPOSITION_TESTS = Path("tests/test_nac_bff_azure_performance_composition.py")
 OWNER_GATE_TESTS = Path("tests/test_nac_bff_azure_performance_owner_gate.py")
@@ -65,9 +93,6 @@ INFRA_SAFETY_TESTS = Path(
 )
 INFRASTRUCTURE_PORT_TESTS = Path(
     "tests/test_nac_bff_azure_performance_infrastructure_ports.py"
-)
-STORAGE_PORT_TESTS = Path(
-    "tests/test_nac_bff_azure_performance_storage_ports.py"
 )
 AZURE_COMMAND_TESTS = Path("tests/test_nac_bff_azure_live_commands.py")
 INFRA_TESTS = Path("tests/test_nac_bff_performance_coordination_iac.py")
@@ -117,7 +142,7 @@ OWNER_FIELDS = {
     "measurement_policy_sha256",
     "monitor_policy_sha256",
     "lease_policy_sha256",
-    "lease_bootstrap_policy_sha256",
+    "lease_broker_policy_sha256",
     "infrastructure_safety_policy_sha256",
     "infrastructure_source_sha256",
     "infrastructure_parameters_sha256",
@@ -140,7 +165,7 @@ COMBINED_OWNER_FIELDS = {
     "measurement_policy_sha256",
     "monitor_policy_sha256",
     "lease_policy_sha256",
-    "lease_bootstrap_policy_sha256",
+    "lease_broker_policy_sha256",
     "infrastructure_safety_policy_sha256",
     "infrastructure_source_sha256",
     "infrastructure_parameters_sha256",
@@ -177,7 +202,7 @@ EVIDENCE_BINDING_FIELDS = {
     "deployment_sequence_sha256",
     "infrastructure_parameters_sha256",
     "infrastructure_source_sha256",
-    "lease_bootstrap_policy_sha256",
+    "lease_broker_policy_sha256",
     "infrastructure_safety_policy_sha256",
     "infrastructure_safety_evidence_sha256",
     "lease_acquisition_safety_evidence_sha256",
@@ -185,21 +210,25 @@ EVIDENCE_BINDING_FIELDS = {
     "target_binding_sha256",
 }
 INFRASTRUCTURE_PARAMETER_FIELDS = {
-    "allowedClientIpAddress",
     "bffStorageAccountResourceId",
+    "brokerCallerServicePrincipalId",
+    "brokerFunctionAppResourceId",
+    "brokerFunctionPackageSha256",
+    "brokerOutboundIpAddresses",
+    "brokerPrincipalId",
+    "brokerTicketVerificationCertificateSha256",
     "deploymentMode",
     "location",
-    "bootstrapCertificateSha256",
-    "bootstrapPrincipalId",
     "resourceGroupName",
-    "runtimeCertificateSha256",
-    "runtimePrincipalId",
     "storageAccountName",
     "subscriptionId",
     "tags",
     "targetBindingSha256",
     "tenantId",
     "wormStorageAccountResourceId",
+}
+VERIFICATION_EVIDENCE_BINDING_FIELDS = EVIDENCE_BINDING_FIELDS - {
+    "lease_broker_policy_sha256"
 }
 WORM_BASELINE_PARAMETER_FIELDS = {
     "containerName",
@@ -590,29 +619,65 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
 
     lease = _mapping(contract.get("exclusive_lease"))
     if (
-        lease.get("operations_exact")
-        != ["acquire(-1)", "assert_held", "release"]
+        lease.get("architecture_exact") != "owner_ticketed_bff_broker_uami"
+        or lease.get("local_adapter_path_exact") != str(LEASE_BROKER_CLIENT)
+        or lease.get("broker_path_exact") != str(LEASE_BROKER)
+        or lease.get("broker_storage_path_exact") != str(LEASE_BROKER_STORAGE)
+        or lease.get("local_auth_path_exact") != str(LEASE_BROKER_AUTH)
+        or lease.get("broker_composition_path_exact")
+        != str(LEASE_BROKER_COMPOSITION)
+        or lease.get("broker_test_path_exact") != str(LEASE_BROKER_TESTS)
+        or lease.get("broker_storage_test_path_exact")
+        != str(LEASE_BROKER_STORAGE_TESTS)
+        or lease.get("local_auth_test_path_exact") != str(LEASE_BROKER_AUTH_TESTS)
+        or lease.get("local_client_test_path_exact")
+        != str(LEASE_BROKER_CLIENT_TESTS)
+        or lease.get("broker_composition_test_path_exact")
+        != str(LEASE_BROKER_COMPOSITION_TESTS)
+        or lease.get("broker_fastapi_test_path_exact")
+        != str(LEASE_BROKER_FASTAPI_TESTS)
+        or lease.get("broker_routes_exact")
+        != [
+            "POST /v1/internal/performance-lease/acquire",
+            "POST /v1/internal/performance-lease/assert",
+            "POST /v1/internal/performance-lease/release",
+        ]
+        or lease.get("broker_operations_exact")
+        != ["acquire", "assert_held", "release"]
         or lease.get("state_machine_exact") != LEASE_STATES
         or lease.get("automatic_reacquire_allowed") is not False
-        or lease.get("break_exposed_by_sealed_runtime_api") is not False
+        or lease.get("break_exposed_by_broker_or_local_api") is not False
         or lease.get("azure_rbac_write_data_action_can_break_or_overwrite")
         is not True
         or lease.get("delete_allowed") is not False
-        or lease.get("token_claim_audience_exact")
-        != "https://storage.azure.com"
-        or lease.get("token_exp_and_nbf_numeric_date_required") is not True
-        or lease.get("token_result_requires_sealed_provider_attestation")
+        or lease.get("private_lease_id_is_generated_and_persisted_only_inside_broker")
         is not True
-        or lease.get(
-            "token_provider_attestation_binds_scope_identity_subject_tenant_and_lifetime"
-        )
+        or lease.get("local_runner_lease_id_is_fence_only_and_never_sent")
         is not True
-        or lease.get("raw_or_alg_none_token_result_behavior")
-        != "BLOCKED_before_state_or_http"
-        or lease.get("token_lifetime_condition_exact")
-        != "nbf <= trusted_clock < exp"
-        or lease.get("invalid_audience_or_lifetime_behavior")
-        != "BLOCKED_before_state_or_http"
+        or lease.get("storage_token_holder_exact") != "broker_uami_only"
+        or lease.get("broker_storage_token_scope_exact")
+        != "https://storage.azure.com/.default"
+        or lease.get("local_runner_storage_token_allowed") is not False
+        or lease.get("local_runner_token_scope_exact")
+        != "api://funktion8.de/nac-bff/.default"
+        or lease.get("local_runner_token_audience_exact")
+        != "api://funktion8.de/nac-bff"
+        or lease.get("local_runner_may_request_any_other_token_scope") is not False
+        or lease.get("local_runner_storage_data_actions_exact") != []
+        or lease.get("local_runner_storage_url_header_method_or_lease_id_surface_allowed")
+        is not False
+        or lease.get("broker_app_role_exact") != "Performance.Lease"
+        or lease.get("broker_ticket_scope_exact") != "nac.performance.lease"
+        or lease.get("ticket_schema_exact")
+        != "nac.azure-performance-lease-activation-ticket/v1"
+        or lease.get("receipt_schema_exact")
+        != "nac.azure-performance-lease-broker-receipt/v1"
+        or lease.get("ticket_signature_algorithm_exact") != "RS256"
+        or lease.get("ticket_lifetime_seconds_maximum") != 60
+        or lease.get("ticket_actions_count_exact") != 1
+        or lease.get("ticket_operation_must_equal_requested_broker_route")
+        is not True
+        or lease.get("ticket_future_skew_seconds_maximum") != 5
         or lease.get("successful_final_measurement_requires_state_exact")
         != "RELEASED"
         or lease.get("release_receipt_state_exact") != "RELEASED"
@@ -629,55 +694,59 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "release_lifecycle_state_hash_without_exact_released_state_is_sufficient"
         )
         is not False
-        or lease.get(
-            "acquire_receipt_must_match_safety_bound_coordination_resource_id"
-        )
+        or lease.get("broker_receipt_binding_fingerprint_must_match_owner_bound_broker")
         is not True
-        or lease.get("acquire_receipt_must_match_safety_bound_blob_etag")
-        is not True
-        or lease.get(
-            "acquire_token_subject_and_tenant_must_match_owner_bound_principal_and_tenant"
-        )
-        is not True
-        or lease.get(
-            "lease_binding_sha256_must_bind_account_resource_etag_token_subject_tenant_and_target"
-        )
+        or lease.get("broker_never_receipts_private_lease_id_storage_url_token_or_raw_ticket")
         is not True
     ):
-        errors.append("exclusive lease operations, state machine or final gate drifted")
+        errors.append("brokered exclusive lease boundary or final gate drifted")
 
-    bootstrap = _mapping(contract.get("exclusive_lease_bootstrap"))
+    broker_boundary = _mapping(contract.get("lease_broker_boundary"))
     if (
-        bootstrap.get("operations_exact")
-        != ["put_blob_if_absent", "head_blob"]
-        or bootstrap.get("put_precondition_exact") != "If-None-Match:*"
-        or bootstrap.get("content_length_exact") != 0
-        or bootstrap.get("strong_etag_readback_required") is not True
-        or bootstrap.get("overwrite_delete_or_lease_operation_allowed") is not False
-        or bootstrap.get(
-            "current_owner_bound_safe_infrastructure_evidence_required_before_http"
-        )
+        broker_boundary.get("credential_boundary_exact") != "BFF_BROKER_UAMI_ONLY"
+        or broker_boundary.get("broker_principal_parameter_exact")
+        != "brokerPrincipalId"
+        or broker_boundary.get("broker_caller_service_principal_parameter_exact")
+        != "brokerCallerServicePrincipalId"
+        or broker_boundary.get("broker_caller_and_broker_principals_must_be_distinct")
         is not True
-        or bootstrap.get(
-            "bootstrap_token_oid_and_tid_must_match_owner_bound_principal_and_tenant"
-        )
-        is not True
-        or bootstrap.get(
-            "bootstrap_token_audience_and_lifetime_must_be_valid_before_http"
-        )
-        is not True
-        or bootstrap.get("missing_stale_or_foreign_safety_evidence_behavior")
-        != "BLOCKED_without_http"
-        or bootstrap.get("required_data_actions_exact")
+        or broker_boundary.get("broker_function_app_resource_id_parameter_exact")
+        != "brokerFunctionAppResourceId"
+        or broker_boundary.get("broker_function_package_sha256_parameter_exact")
+        != "brokerFunctionPackageSha256"
+        or broker_boundary.get("broker_ticket_certificate_sha256_parameter_exact")
+        != "brokerTicketVerificationCertificateSha256"
+        or broker_boundary.get("broker_outbound_ip_addresses_parameter_exact")
+        != "brokerOutboundIpAddresses"
+        or broker_boundary.get("broker_allowed_data_actions_exact")
         != [
-            "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
             "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
             "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
         ]
+        or broker_boundary.get("local_runner_storage_data_actions_exact") != []
+        or broker_boundary.get("local_runner_storage_token_or_certificate_allowed")
+        is not False
+        or broker_boundary.get("local_runner_bff_app_token_scope_exact")
+        != "api://funktion8.de/nac-bff/.default"
+        or broker_boundary.get(
+            "local_runner_bff_app_token_is_certificate_authenticated"
+        )
+        is not True
+        or broker_boundary.get(
+            "local_runner_signs_one_operation_ticket_with_60_second_lifetime"
+        )
+        is not True
+        or broker_boundary.get("put_precondition_exact") != "If-None-Match:*"
+        or broker_boundary.get("content_length_exact") != 0
+        or broker_boundary.get("strong_etag_readback_required") is not True
+        or broker_boundary.get("delete_or_break_operation_exposed") is not False
+        or broker_boundary.get("lease_broker_policy_sha256_required") is not True
+        or broker_boundary.get(
+            "server_side_state_machine_is_atomic_durable_idempotent_and_restart_reconcilable"
+        )
+        is not True
     ):
-        errors.append("exclusive lease bootstrap policy drifted")
-    if lease.get("token_scope_exact") != "https://storage.azure.com/.default":
-        errors.append("Azure Blob lease token scope must use the Blob .default scope")
+        errors.append("BFF broker UAMI and local-runner isolation policy drifted")
 
     owner = _mapping(contract.get("activation_and_owner_gate"))
     if set(owner.get("owner_approval_binding_fields_exact", [])) != OWNER_FIELDS:
@@ -733,7 +802,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "verify_worm_baseline_readback",
             "deploy_performance_coordination",
             "verify_coordination_and_effective_rbac",
-            "bootstrap_exact_zero_byte_lease_blob",
+            "acquire_owner_ticketed_broker_lease",
             "execute_endpoint_scoped_conservative_measurement",
             "release_lease_and_finalize_redacted_evidence",
         ]
@@ -861,7 +930,27 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
-            "owner_bound_tenant_subscription_resource_group_storage_bootstrap_runtime_principals_location_tags_and_network_required"
+            "owner_bound_tenant_subscription_resource_group_storage_broker_and_caller_principals_function_package_certificate_outbound_ips_location_tags_and_network_required"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "broker_caller_service_principal_has_no_storage_data_action"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "broker_function_app_resource_id_and_uami_assignment_readback_required"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "broker_function_package_and_ticket_certificate_hashes_readback_required"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "broker_outbound_ip_readback_must_exactly_match_storage_firewall_rules"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "local_runner_has_no_storage_token_certificate_or_data_action"
         )
         is not True
         or infrastructure_safety.get(
@@ -883,7 +972,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "public_network_access": "Enabled",
             "default_action": "Deny",
             "bypass": "None",
-            "allowed_ip_rule_count_exact": 1,
+            "allowed_ip_rules_exactly_equal_bound_broker_outbound_ip_addresses": True,
             "virtual_network_rule_count_exact": 0,
             "resource_access_rule_count_exact": 0,
             "shared_key_access_allowed": False,
@@ -900,12 +989,13 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
                 "lease_blob_path": "locks/<target_binding_sha256>.lock",
                 "lease_blob_type": "BlockBlob",
                 "lease_blob_content_length": "0",
-                "lease_blob_bootstrap": "owner-gated-put-if-absent-before-runtime",
-                "bootstrap_authorization": "blob-read-plus-add-only-no-write-no-delete",
-                "runtime_authorization": "blob-read-plus-write-only-no-add-no-delete",
-                "azure_blob_write_authorization": "runtime-write-includes-create-overwrite-lease-and-break",
-                "operation_restriction_boundary": "sealed-app-api-defense-in-depth-not-azure-enforced",
-                "principal_separation": "distinct-owner-bound-bootstrap-and-runtime-principals",
+                "lease_blob_bootstrap": "broker-internal-put-if-absent-before-acquire",
+                "broker_authorization": "non-exportable-managed-identity-read-write-no-delete",
+                "azure_blob_write_authorization": "broker-uami-write-includes-create-overwrite-lease-and-break",
+                "operation_restriction_boundary": "owner-ticketed-fixed-function-route",
+                "local_runner_storage_authorization": "none",
+                "brokerFunctionPackageSha256": "<owner_bound_sha256>",
+                "brokerTicketVerificationCertificateSha256": "<owner_bound_sha256>",
             },
         }
         or infrastructure_safety.get(
@@ -941,13 +1031,13 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
-            "safety_evidence_maximum_age_seconds_at_bootstrap_and_acquire"
+            "safety_evidence_maximum_age_seconds_at_broker_acquire"
         )
         != 300
         or infrastructure_safety.get("effective_control_plane_assignment_allowed")
         is not False
         or infrastructure_safety.get(
-            "expected_effective_assignment_count_per_principal_exact"
+            "expected_effective_broker_assignment_count_exact"
         )
         != 1
         or infrastructure_safety.get("condition_version_exact") != "2.0"
@@ -1045,15 +1135,33 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or boundary.get("infrastructure_provenance_requires_sealed_readback_capability")
         is not True
         or boundary.get(
-            "every_blob_monitor_and_target_call_requires_exact_action_target_and_binding"
+            "every_broker_monitor_and_target_call_requires_exact_action_target_and_binding"
         )
         is not True
         or boundary.get("live_action_capability_use_is_bounded_and_non_replayable")
         is not True
         or boundary.get(
-            "target_bootstrap_and_lease_acquire_capability_consumed_before_token_or_state"
+            "broker_ticket_and_broker_api_capability_consumed_before_broker_state_or_storage_token"
         )
         is not True
+        or boundary.get("broker_routes_exact")
+        != [
+            "/v1/internal/performance-lease/acquire",
+            "/v1/internal/performance-lease/assert",
+            "/v1/internal/performance-lease/release",
+        ]
+        or boundary.get(
+            "local_runner_may_call_only_fixed_broker_routes_for_lease_lifecycle"
+        )
+        is not True
+        or boundary.get("local_runner_broker_token_scope_exact")
+        != "api://funktion8.de/nac-bff/.default"
+        or boundary.get("local_runner_ticket_lifetime_seconds_exact") != 60
+        or boundary.get("local_runner_ticket_actions_count_exact") != 1
+        or boundary.get(
+            "local_runner_storage_token_url_headers_data_actions_or_private_lease_id_allowed"
+        )
+        is not False
         or boundary.get(
             "m365_delegated_token_requires_cryptographic_entra_rs256_validation"
         )
@@ -1062,7 +1170,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "m365_delegated_token_attestation_binds_resource_and_scopes"
         )
         is not True
-        or boundary.get("direct_adapter_invocation_without_capability_behavior")
+        or boundary.get(
+            "direct_broker_or_local_adapter_invocation_without_authority_behavior"
+        )
         != "BLOCKED_before_token_network_or_state"
     ):
         errors.append("verified live-action capability boundary drifted")
@@ -1088,11 +1198,19 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or resumable.get("concurrent_same_state_path_behavior")
         != "BLOCKED_before_owner_or_network"
         or resumable.get(
+            "same_broker_operation_nonce_ticket_target_and_lease_binding_required_on_resume"
+        )
+        is not True
+        or resumable.get(
+            "broker_private_lease_id_is_server_side_and_not_reconstructed_by_local_runner"
+        )
+        is not True
+        or resumable.get(
             "process_restart_requires_fresh_read_only_infrastructure_reattestation"
         )
         is not True
         or resumable.get(
-            "fresh_reattestation_must_preserve_owner_tenant_principal_target_and_lease_binding"
+            "fresh_reattestation_must_preserve_owner_tenant_broker_principal_function_package_certificate_outbound_ips_target_and_lease_binding"
         )
         is not True
         or resumable.get(
@@ -1131,7 +1249,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "every_redacted_terminal_measurement_evidence_must_persist_pending_finalization_before_release"
         )
         is not True
-        or resumable.get("same_lease_id_release_reconciliation_after_crash_allowed")
+        or resumable.get(
+            "same_broker_operation_id_release_reconciliation_after_crash_allowed"
+        )
         is not True
         or resumable.get(
             "pending_finalization_cleared_only_after_json_and_markdown_are_durable"
@@ -1237,25 +1357,7 @@ def _validate_verification(
     ):
         if verification_passed.get(field) != "NOT_CLAIMED":
             errors.append(f"verification pass condition {field} must be NOT_CLAIMED")
-    expected_test = (
-        "PYTHONPATH=src python3 -m unittest "
-        "tests.test_nac_bff_azure_performance_authorization "
-        "tests.test_nac_bff_azure_performance_acceptance "
-        "tests.test_nac_bff_azure_performance_monitor "
-        "tests.test_nac_bff_azure_performance_lease "
-        "tests.test_nac_bff_azure_performance_runtime "
-        "tests.test_nac_bff_azure_performance_composition "
-        "tests.test_nac_bff_azure_performance_owner_gate "
-        "tests.test_nac_bff_azure_performance_infrastructure_safety "
-        "tests.test_nac_bff_azure_performance_infrastructure_ports "
-        "tests.test_nac_bff_azure_performance_storage_ports "
-        "tests.test_nac_bff_azure_live_commands.AzureLiveCommandTests."
-        "test_monitor_get_is_limited_to_exact_adapter_url_shape "
-        "tests.test_nac_bff_performance_coordination_iac"
-    )
     checks = verification.get("checks")
-    if not isinstance(checks, list) or expected_test not in checks:
-        errors.append("verification contract must execute all focused test modules")
     expected_cli_test = (
         "PYTHONPATH=src python3 -m unittest "
         "tests.test_nac_cli_bff_performance_acceptance"
@@ -1323,7 +1425,9 @@ def _validate_verification(
         errors.append("verification thresholds do not match the conservative plan")
 
     evidence = verification.get("required_evidence")
-    if not isinstance(evidence, list) or not EVIDENCE_BINDING_FIELDS.issubset(evidence):
+    if not isinstance(evidence, list) or not VERIFICATION_EVIDENCE_BINDING_FIELDS.issubset(
+        evidence
+    ):
         errors.append("verification evidence must carry every exact owner binding")
     elif not {
         "final_measurement_attestation_sha256",
@@ -1352,13 +1456,18 @@ def main() -> int:
         AUTHORIZATION,
         IMPLEMENTATION,
         MONITOR,
-        LEASE,
+        LEASE_BROKER,
+        LEASE_BROKER_STORAGE,
+        LEASE_BROKER_AUTH,
+        LEASE_BROKER_CLIENT,
+        LEASE_BROKER_COMPOSITION,
+        BFF_COMPOSITION,
+        FASTAPI_ADAPTER,
         RUNTIME,
         COMPOSITION,
         OWNER_GATE,
         INFRA_SAFETY,
         INFRASTRUCTURE_PORTS,
-        STORAGE_PORTS,
         AZURE_COMMANDS,
         CLI,
         INFRA,
@@ -1371,13 +1480,17 @@ def main() -> int:
         TESTS,
         AUTHORIZATION_TESTS,
         MONITOR_TESTS,
-        LEASE_TESTS,
+        LEASE_BROKER_TESTS,
+        LEASE_BROKER_STORAGE_TESTS,
+        LEASE_BROKER_AUTH_TESTS,
+        LEASE_BROKER_CLIENT_TESTS,
+        LEASE_BROKER_COMPOSITION_TESTS,
+        LEASE_BROKER_FASTAPI_TESTS,
         RUNTIME_TESTS,
         COMPOSITION_TESTS,
         OWNER_GATE_TESTS,
         INFRA_SAFETY_TESTS,
         INFRASTRUCTURE_PORT_TESTS,
-        STORAGE_PORT_TESTS,
         AZURE_COMMAND_TESTS,
         INFRA_TESTS,
         CLI_TESTS,
@@ -1444,27 +1557,80 @@ def main() -> int:
             "PERFORMANCE_MONITOR_WINDOW_NOT_SETTLED",
             "app_wide_delta_is_conservative_and_not_attributable_solely_to_test_traffic",
         ),
-        LEASE: (
-            '"ACQUIRE_INTENT"',
-            '"ACQUIRE_IN_FLIGHT"',
-            '"HELD"',
-            '"RELEASE_INTENT"',
-            '"RELEASED"',
-            '"x-ms-lease-action": "acquire"',
-            '"x-ms-lease-duration": "-1"',
-            '"x-ms-lease-action": "release"',
+        LEASE_BROKER: (
+            'TICKET_VERSION = "nac.azure-performance-lease-activation-ticket/v1"',
+            'RECEIPT_VERSION = "nac.azure-performance-lease-broker-receipt/v1"',
+            "MAX_TICKET_LIFETIME_SECONDS = 60",
+            "MAX_FUTURE_SKEW_SECONDS = 5",
+            "class RsaCertificateTicketSignatureVerifier",
+            "class AttestedStorageBinding",
+            "class BrokerRoleScopeClaims",
+            "class AtomicLeaseStateMachinePort",
+            "class AzurePerformanceLeaseBroker",
+            '"function_package_sha256"',
+            '"owner_binding_sha256"',
+            '"target_binding_sha256"',
             "def acquire(",
             "def assert_held(",
             "def release(",
-            "AZURE_BLOB_LEASE_REACQUIRE_FORBIDDEN",
-            "class AzureBlobLeaseBootstrapAdapter",
+        ),
+        LEASE_BROKER_STORAGE: (
+            'AZURE_STORAGE_SCOPE = "https://storage.azure.com/.default"',
+            "class AzureBlobAtomicLeaseStateMachine",
+            '_ACQUIRE_INTENT = "ACQUIRE_INTENT"',
+            '_ACQUIRE_IN_FLIGHT = "ACQUIRE_IN_FLIGHT"',
+            '_HELD = "HELD"',
+            '_RELEASE_INTENT = "RELEASE_INTENT"',
+            '_RELEASED = "RELEASED"',
+            '"x-ms-lease-action": action',
+            'if action == "acquire":',
+            'headers["x-ms-lease-duration"] = "-1"',
+            'elif action == "release":',
             '"If-None-Match": "*"',
-            "lease_bootstrap_policy_sha256",
+            "def _reconcile_acquire(",
+            "def _set_metadata(",
+        ),
+        LEASE_BROKER_AUTH: (
+            'BFF_API_AUDIENCE = "api://funktion8.de/nac-bff"',
+            'BFF_APP_TOKEN_SCOPE = f"{BFF_API_AUDIENCE}/.default"',
+            "class CertificateBffAppTokenProvider",
+            "class RsaActivationTicketSigner",
+            "credential.get_token(BFF_APP_TOKEN_SCOPE).token",
+            'if operation not in {"acquire", "assert", "release"}:',
+            "actions=(operation,)",
+            "expires_at=now + MAX_TICKET_LIFETIME_SECONDS",
+        ),
+        LEASE_BROKER_CLIENT: (
+            "class BrokeredAzureBlobLeaseAdapter",
+            'frozenset({"acquire", "assert", "release"})',
+            'f"{self._base_url}/v1/internal/performance-lease/{operation}"',
+            'body = _canonical_json({"ticket": ticket})',
+            'method="POST"',
             "def execution_fence(",
-            "AZURE_BLOB_LEASE_CONCURRENT_RUN",
-            "class AttestedAzureStorageAccessToken",
-            "source_attestation_sha256",
-            '!= "RS256"',
+            "broker_receipt_sha256",
+        ),
+        LEASE_BROKER_COMPOSITION: (
+            'PERFORMANCE_LEASE_APP_ROLE = "Performance.Lease"',
+            'PERFORMANCE_LEASE_TICKET_SCOPE = "nac.performance.lease"',
+            "class PerformanceLeaseBrokerSettings",
+            "def build_performance_lease_broker(",
+            "ManagedIdentityCredential",
+            'managed_identity_client_id=_required(values, "AZURE_CLIENT_ID")',
+            "RsaCertificateTicketSignatureVerifier",
+            "AzureBlobAtomicLeaseStateMachine",
+        ),
+        BFF_COMPOSITION: (
+            "build_performance_lease_broker",
+            'values.get("NAC_BFF_PERFORMANCE_LEASE_ENABLED") == "true"',
+            "required_roles={PERFORMANCE_LEASE_APP_ROLE}",
+            "performance_lease_claims_dependency",
+        ),
+        FASTAPI_ADAPTER: (
+            'if operation not in {"acquire", "assert", "release"}:',
+            '"assert": "assert_held"',
+            '"/v1/internal/performance-lease/{operation}"',
+            'methods=["POST"]',
+            "include_in_schema=False",
         ),
         RUNTIME: (
             "class AzurePerformanceRuntimeAdapter",
@@ -1543,11 +1709,6 @@ def main() -> int:
             "class AzureCliPerformanceInfrastructureCommandExecutor",
             "RESTART_RECONCILIATION_SEQUENCE",
         ),
-        STORAGE_PORTS: (
-            "class DurableLeaseBindingHandoff",
-            "class AttestedAzureStorageTokenProvider",
-            "AZURE_STORAGE_CREDENTIAL_UNTRUSTED",
-        ),
         INFRA_SAFETY: (
             "def infrastructure_safety_policy_sha256(",
             "def validate_infrastructure_safety_evidence(",
@@ -1576,11 +1737,16 @@ def main() -> int:
             "param tenantId string",
             "param subscriptionId string",
             "param resourceGroupName string",
-            "param bootstrapPrincipalId string",
-            "param runtimePrincipalId string",
-            "param bootstrapCertificateSha256 string",
-            "param runtimeCertificateSha256 string",
-            "containers/blobs/add/action",
+            "param brokerPrincipalId string",
+            "param brokerCallerServicePrincipalId string",
+            "param brokerFunctionAppResourceId string",
+            "param brokerFunctionPackageSha256 string",
+            "param brokerTicketVerificationCertificateSha256 string",
+            "param brokerOutboundIpAddresses array",
+            "toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)",
+            "output brokerCallerServicePrincipalIdBinding string",
+            "output localRunnerStorageDataActions array = []",
+            "output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'",
             "containers/blobs:path] StringEquals",
             "blobBootstrapRequired bool = true",
             "param bffStorageAccountResourceId string",
@@ -1620,22 +1786,78 @@ def main() -> int:
         ("authorization", AUTHORIZATION_TESTS),
         ("acceptance", TESTS),
         ("monitor", MONITOR_TESTS),
-        ("lease", LEASE_TESTS),
         ("runtime", RUNTIME_TESTS),
         ("composition", COMPOSITION_TESTS),
         ("owner_gate", OWNER_GATE_TESTS),
         ("infrastructure_safety", INFRA_SAFETY_TESTS),
         ("infrastructure_ports", INFRASTRUCTURE_PORT_TESTS),
-        ("storage_ports", STORAGE_PORT_TESTS),
         ("command_boundary", AZURE_COMMAND_TESTS),
         ("cli", CLI_TESTS),
-        ("infrastructure", INFRA_TESTS),
     ):
         names = focused.get(key)
         if not isinstance(names, list) or not names:
             errors.append(f"verification focused_test_names.{key} must not be empty")
             continue
         _require_fragments(path, texts.get(path, ""), names, errors)
+
+    broker_focused_tests = {
+        LEASE_BROKER_TESTS: (
+            "test_valid_ticket_is_verified_over_canonical_payload",
+            "test_owner_role_and_scope_are_bound_on_server_and_in_trusted_claims",
+            "test_request_facing_methods_have_no_storage_or_http_controls",
+            "test_crash_and_retry_outcomes_have_explicit_directives",
+            "test_concurrent_replay_creates_exactly_one_lease",
+        ),
+        LEASE_BROKER_STORAGE_TESTS: (
+            "test_adapter_implements_port_and_exposes_only_broker_commands",
+            "test_acquire_persists_exact_intent_before_one_lease_acquire",
+            "test_acquire_crash_points_are_conservative_and_reconcilable",
+            "test_release_crash_points_reconcile_without_unknown_lease_ids",
+            "test_token_scope_is_fixed_and_failures_are_redacted",
+        ),
+        LEASE_BROKER_AUTH_TESTS: (
+            "test_token_provider_requests_only_fixed_bff_scope",
+            "test_local_credential_validation_is_redacted",
+            "test_private_key_must_not_be_group_or_world_readable",
+            "test_ticket_is_single_operation_short_lived_and_verifiable",
+            "test_ticket_tampering_breaks_signature",
+        ),
+        LEASE_BROKER_CLIENT_TESTS: (
+            "test_only_fixed_broker_routes_are_called_and_local_id_is_not_sent",
+            "test_request_surface_has_no_storage_controls",
+            "test_execution_fence_rejects_concurrent_local_runs",
+            "test_configuration_is_https_fixed_root_and_digest_bound",
+        ),
+        LEASE_BROKER_COMPOSITION_TESTS: (
+            "test_settings_and_composition_bind_exact_server_side_boundary",
+            "test_disabled_missing_and_noncanonical_values_fail_generically",
+        ),
+        LEASE_BROKER_FASTAPI_TESTS: (
+            "test_fixed_routes_accept_only_exact_ticket_envelope",
+            "test_invalid_shapes_and_provider_errors_are_generic",
+            "test_unknown_operation_and_oversized_body_are_rejected",
+        ),
+        INFRA_TESTS: (
+            "test_source_binds_non_exportable_broker_identity_and_package",
+            "test_source_role_is_exclusive_to_the_broker_uami",
+            "test_source_assignment_binds_only_broker_uami_to_exact_path",
+            "test_compiled_parameter_contract_binds_broker_boundary",
+            "test_compiled_outputs_are_unambiguous_for_broker_boundary",
+        ),
+    }
+    for path, names in broker_focused_tests.items():
+        _require_fragments(path, texts.get(path, ""), names, errors)
+
+    local_auth = texts.get(LEASE_BROKER_AUTH, "")
+    local_client = texts.get(LEASE_BROKER_CLIENT, "")
+    for forbidden in (
+        "https://storage.azure.com/.default",
+        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/",
+    ):
+        if forbidden in local_auth or forbidden in local_client:
+            errors.append(
+                "local broker auth/client must contain no Storage scope or DataAction"
+            )
 
     doc_fragments = (
         "Issue #735",
