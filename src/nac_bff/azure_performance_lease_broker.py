@@ -14,6 +14,11 @@ from enum import Enum
 from typing import Any, Callable, Mapping, Protocol, runtime_checkable
 from uuid import UUID
 
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+
 
 TICKET_VERSION = "nac.azure-performance-lease-activation-ticket/v1"
 RECEIPT_VERSION = "nac.azure-performance-lease-broker-receipt/v1"
@@ -23,15 +28,25 @@ MAX_FUTURE_SKEW_SECONDS = 5
 _TICKET_FIELDS = frozenset({"key_id", "payload", "signature"})
 _PAYLOAD_FIELDS = frozenset(
     {
+        "actions",
+        "actor_id",
         "audience",
+        "blob_path",
+        "commit_sha",
         "expires_at",
+        "function_package_sha256",
         "issued_at",
         "issuer",
         "nonce",
+        "owner_binding_sha256",
         "owner_subject",
+        "plan_sha256",
         "role",
         "scope",
         "storage_binding",
+        "target_binding_sha256",
+        "tenant_id",
+        "tree_sha",
         "version",
     }
 )
@@ -93,6 +108,62 @@ class TicketSignatureVerifier(Protocol):
     ) -> bool: ...
 
 
+class RsaCertificateTicketSignatureVerifier:
+    """Verify one pinned RS256 ticket-signing certificate."""
+
+    def __init__(
+        self,
+        *,
+        key_id: str,
+        certificate_bytes: bytes,
+        certificate_sha256: str,
+    ) -> None:
+        if (
+            type(key_id) is not str
+            or _KEY_ID_RE.fullmatch(key_id) is None
+            or type(certificate_bytes) is not bytes
+            or not _canonical_sha256(certificate_sha256)
+            or not hmac.compare_digest(
+                hashlib.sha256(certificate_bytes).hexdigest(), certificate_sha256
+            )
+        ):
+            raise ValueError("LEASE_BROKER_CERTIFICATE_INVALID")
+        try:
+            certificate = (
+                x509.load_pem_x509_certificate(certificate_bytes)
+                if certificate_bytes.startswith(b"-----BEGIN CERTIFICATE-----")
+                else x509.load_der_x509_certificate(certificate_bytes)
+            )
+            public_key = certificate.public_key()
+            key_usage = certificate.extensions.get_extension_for_class(
+                x509.KeyUsage
+            ).value
+        except Exception:
+            raise ValueError("LEASE_BROKER_CERTIFICATE_INVALID") from None
+        if (
+            not isinstance(public_key, rsa.RSAPublicKey)
+            or not 2048 <= public_key.key_size <= 4096
+            or key_usage.digital_signature is not True
+        ):
+            raise ValueError("LEASE_BROKER_CERTIFICATE_INVALID")
+        self._key_id = key_id
+        self._public_key = public_key
+
+    def verify(self, *, key_id: str, payload: bytes, signature: bytes) -> bool:
+        if not hmac.compare_digest(key_id, self._key_id):
+            return False
+        try:
+            self._public_key.verify(
+                signature,
+                payload,
+                padding.PKCS1v15(),
+                hashes.SHA256(),
+            )
+        except (InvalidSignature, TypeError, ValueError):
+            return False
+        return True
+
+
 @dataclass(frozen=True, slots=True)
 class AttestedStorageBinding:
     """Opaque deployment attestation, loaded and pinned outside request input."""
@@ -151,8 +222,18 @@ class BrokerRoleScopeClaims:
 class ActivationTicketPayload:
     version: str
     issuer: str
+    tenant_id: str
     audience: str
+    actor_id: str
     owner_subject: str
+    owner_binding_sha256: str
+    commit_sha: str
+    tree_sha: str
+    function_package_sha256: str
+    plan_sha256: str
+    target_binding_sha256: str
+    blob_path: str
+    actions: tuple[str, ...]
     role: str
     scope: str
     storage_binding: str
@@ -163,15 +244,25 @@ class ActivationTicketPayload:
     def canonical_bytes(self) -> bytes:
         return _canonical_json(
             {
+                "actions": list(self.actions),
+                "actor_id": self.actor_id,
                 "audience": self.audience,
+                "blob_path": self.blob_path,
+                "commit_sha": self.commit_sha,
                 "expires_at": self.expires_at,
+                "function_package_sha256": self.function_package_sha256,
                 "issued_at": self.issued_at,
                 "issuer": self.issuer,
                 "nonce": self.nonce,
+                "owner_binding_sha256": self.owner_binding_sha256,
                 "owner_subject": self.owner_subject,
+                "plan_sha256": self.plan_sha256,
                 "role": self.role,
                 "scope": self.scope,
                 "storage_binding": self.storage_binding,
+                "target_binding_sha256": self.target_binding_sha256,
+                "tenant_id": self.tenant_id,
+                "tree_sha": self.tree_sha,
                 "version": self.version,
             }
         )
@@ -198,8 +289,18 @@ class SignedActivationTicket:
             payload = ActivationTicketPayload(
                 version=raw_payload["version"],
                 issuer=raw_payload["issuer"],
+                tenant_id=raw_payload["tenant_id"],
                 audience=raw_payload["audience"],
+                actor_id=raw_payload["actor_id"],
                 owner_subject=raw_payload["owner_subject"],
+                owner_binding_sha256=raw_payload["owner_binding_sha256"],
+                commit_sha=raw_payload["commit_sha"],
+                tree_sha=raw_payload["tree_sha"],
+                function_package_sha256=raw_payload["function_package_sha256"],
+                plan_sha256=raw_payload["plan_sha256"],
+                target_binding_sha256=raw_payload["target_binding_sha256"],
+                blob_path=raw_payload["blob_path"],
+                actions=tuple(raw_payload["actions"]),
                 role=raw_payload["role"],
                 scope=raw_payload["scope"],
                 storage_binding=raw_payload["storage_binding"],
@@ -277,8 +378,17 @@ class AzurePerformanceLeaseBroker:
         binding_provider: FixedStorageBindingProvider,
         state_machine: AtomicLeaseStateMachinePort,
         issuer: str,
+        tenant_id: str,
         audience: str,
+        actor_id: str,
         owner_subject: str,
+        owner_binding_sha256: str,
+        commit_sha: str,
+        tree_sha: str,
+        function_package_sha256: str,
+        plan_sha256: str,
+        target_binding_sha256: str,
+        blob_path: str,
         required_role: str,
         required_scope: str,
         clock: Callable[[], float] = time.time,
@@ -288,8 +398,22 @@ class AzurePerformanceLeaseBroker:
             or not isinstance(binding_provider, FixedStorageBindingProvider)
             or not isinstance(state_machine, AtomicLeaseStateMachinePort)
             or not _valid_identifier(issuer)
+            or _canonical_uuid(tenant_id) is None
             or not _valid_identifier(audience)
+            or _canonical_uuid(actor_id) is None
             or _canonical_uuid(owner_subject) is None
+            or not all(
+                _canonical_sha256(value)
+                for value in (
+                    owner_binding_sha256,
+                    tree_sha,
+                    function_package_sha256,
+                    plan_sha256,
+                    target_binding_sha256,
+                )
+            )
+            or not _canonical_git_sha(commit_sha)
+            or not _valid_blob_path(blob_path, target_binding_sha256)
             or not _valid_identifier(required_role)
             or not _valid_identifier(required_scope)
             or not callable(clock)
@@ -304,8 +428,17 @@ class AzurePerformanceLeaseBroker:
         self._signature_verifier = signature_verifier
         self._state_machine = state_machine
         self._issuer = issuer
+        self._tenant_id = tenant_id
         self._audience = audience
+        self._actor_id = actor_id
         self._owner_subject = owner_subject
+        self._owner_binding_sha256 = owner_binding_sha256
+        self._commit_sha = commit_sha
+        self._tree_sha = tree_sha
+        self._function_package_sha256 = function_package_sha256
+        self._plan_sha256 = plan_sha256
+        self._target_binding_sha256 = target_binding_sha256
+        self._blob_path = blob_path
         self._required_role = required_role
         self._required_scope = required_scope
         self._clock = clock
@@ -325,7 +458,7 @@ class AzurePerformanceLeaseBroker:
         ticket: Mapping[str, Any],
         claims: BrokerRoleScopeClaims,
     ) -> LeaseBrokerReceipt:
-        verified = self._verify(ticket, claims)
+        verified = self._verify(ticket, claims, operation="acquire")
         command = LeaseAcquireCommand(
             operation_id=verified.operation_id,
             nonce_key=verified.nonce_key,
@@ -351,7 +484,7 @@ class AzurePerformanceLeaseBroker:
         ticket: Mapping[str, Any],
         claims: BrokerRoleScopeClaims,
     ) -> LeaseBrokerReceipt:
-        verified = self._verify(ticket, claims)
+        verified = self._verify(ticket, claims, operation="assert")
         outcome = self._call_state(
             "assert_held", self._command(verified), AssertOutcome
         )
@@ -373,7 +506,7 @@ class AzurePerformanceLeaseBroker:
         ticket: Mapping[str, Any],
         claims: BrokerRoleScopeClaims,
     ) -> LeaseBrokerReceipt:
-        verified = self._verify(ticket, claims)
+        verified = self._verify(ticket, claims, operation="release")
         outcome = self._call_state(
             "release", self._command(verified), ReleaseOutcome
         )
@@ -394,6 +527,8 @@ class AzurePerformanceLeaseBroker:
         self,
         ticket_value: Mapping[str, Any],
         claims: BrokerRoleScopeClaims,
+        *,
+        operation: str,
     ) -> _VerifiedTicket:
         if type(claims) is not BrokerRoleScopeClaims:
             raise LeaseBrokerError("LEASE_BROKER_CLAIMS_INVALID")
@@ -416,8 +551,24 @@ class AzurePerformanceLeaseBroker:
         if (
             payload.version != TICKET_VERSION
             or not hmac.compare_digest(payload.issuer, self._issuer)
+            or not hmac.compare_digest(payload.tenant_id, self._tenant_id)
             or not hmac.compare_digest(payload.audience, self._audience)
+            or not hmac.compare_digest(payload.actor_id, self._actor_id)
             or not hmac.compare_digest(payload.storage_binding, self._binding_id)
+            or not hmac.compare_digest(
+                payload.owner_binding_sha256, self._owner_binding_sha256
+            )
+            or not hmac.compare_digest(payload.commit_sha, self._commit_sha)
+            or not hmac.compare_digest(payload.tree_sha, self._tree_sha)
+            or not hmac.compare_digest(
+                payload.function_package_sha256, self._function_package_sha256
+            )
+            or not hmac.compare_digest(payload.plan_sha256, self._plan_sha256)
+            or not hmac.compare_digest(
+                payload.target_binding_sha256, self._target_binding_sha256
+            )
+            or not hmac.compare_digest(payload.blob_path, self._blob_path)
+            or payload.actions != (operation,)
             or payload.expires_at <= now
             or payload.issued_at > now + MAX_FUTURE_SKEW_SECONDS
             or payload.expires_at - payload.issued_at
@@ -503,8 +654,20 @@ def _valid_payload_shape(value: ActivationTicketPayload) -> bool:
     return (
         type(value.version) is str
         and _valid_identifier(value.issuer)
+        and _canonical_uuid(value.tenant_id) is not None
         and _valid_identifier(value.audience)
+        and _canonical_uuid(value.actor_id) is not None
         and _canonical_uuid(value.owner_subject) is not None
+        and _canonical_sha256(value.owner_binding_sha256)
+        and _canonical_git_sha(value.commit_sha)
+        and _canonical_sha256(value.tree_sha)
+        and _canonical_sha256(value.function_package_sha256)
+        and _canonical_sha256(value.plan_sha256)
+        and _canonical_sha256(value.target_binding_sha256)
+        and _valid_blob_path(value.blob_path, value.target_binding_sha256)
+        and type(value.actions) is tuple
+        and len(value.actions) == 1
+        and value.actions[0] in {"acquire", "assert", "release"}
         and _valid_identifier(value.role)
         and _valid_identifier(value.scope)
         and type(value.storage_binding) is str
@@ -518,6 +681,31 @@ def _valid_payload_shape(value: ActivationTicketPayload) -> bool:
 
 def _valid_identifier(value: object) -> bool:
     return type(value) is str and _IDENTIFIER_RE.fullmatch(value) is not None
+
+
+def _canonical_sha256(value: object) -> bool:
+    return (
+        type(value) is str
+        and len(value) == 64
+        and value == value.lower()
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _canonical_git_sha(value: object) -> bool:
+    return (
+        type(value) is str
+        and len(value) == 40
+        and value == value.lower()
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _valid_blob_path(value: object, target_binding_sha256: object) -> bool:
+    return (
+        _canonical_sha256(target_binding_sha256)
+        and value == f"locks/{target_binding_sha256}.lock"
+    )
 
 
 def _canonical_uuid(value: object) -> str | None:

@@ -8,6 +8,7 @@ from functools import wraps
 import hashlib
 import json
 from pathlib import Path
+import re
 import stat
 from typing import Any
 from uuid import UUID
@@ -18,7 +19,10 @@ from .azure_activation_attestations import (
     M365_CLI_EXECUTION_PATH,
     M365_NODE_EXECUTION_PATH,
 )
-from .azure_activation_composition import GitHubApprovalVerifier
+from .azure_activation_composition import (
+    GitHubApprovalVerifier,
+    _bound_provisioner_token_provider,
+)
 from .azure_live_commands import AzureCliAdapter
 from .azure_performance_acceptance import (
     BoundPerformanceAuthorizationVerifier,
@@ -32,6 +36,10 @@ from .azure_performance_acceptance import (
     build_owner_comment,
     build_performance_acceptance_plan,
     verify_performance_execution_authorization,
+)
+from .azure_performance_broker_activation import (
+    BrokerFunctionSettingsPort,
+    build_broker_function_settings,
 )
 from .azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureReadbackAdapter,
@@ -49,24 +57,27 @@ from .azure_performance_infrastructure_ports import (
     UnlockedWormBaselineReadbackPort,
     _deployment_name,
 )
-from .azure_performance_lease import (
-    AzureBlobLeaseAdapter,
-    AzureBlobLeaseBootstrapBinding,
-    AzureBlobLeaseBootstrapAdapter,
-    build_lease_acquisition_safety_evidence,
-    calculate_azure_blob_lease_bootstrap_binding_sha256,
+from .azure_performance_lease_broker_auth import (
+    CertificateBffAppTokenProvider,
+    RsaActivationTicketSigner,
+    broker_binding_fingerprint,
+    broker_storage_attestation,
+)
+from .azure_performance_lease_broker_client import (
+    BrokeredAzureBlobLeaseAdapter,
+)
+from .azure_performance_lease_broker_storage import (
+    AzureBlobAtomicLeaseStateMachine,
 )
 from .azure_performance_monitor import AzurePerformanceMonitorAdapter
-from .azure_performance_storage_ports import (
-    AttestedAzureStorageTokenProvider,
-    DurableLeaseBindingHandoff,
-    PerformanceExecutionFence,
-)
+from .azure_performance_storage_ports import PerformanceExecutionFence
 from .azure_performance_runtime import (
     AzurePerformanceRuntimeAdapter,
     LeaseBoundPerformanceAcceptance,
     PerformanceFinalEvidenceStore,
 )
+from .graph_activation import ensure_provisioner_performance_lease
+from nac_m365_graph.graph_client import GraphRestClient
 from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
 from nac_m365_graph.provisioner_env_bootstrap import load_provisioner_env_state
 
@@ -207,33 +218,38 @@ _PORTS = (
         owner_bound=True,
     ),
     _PortRequirement(
-        "lease_blob_bootstrap",
-        "lease_bootstrap",
-        "AzureBlobLeaseBootstrapPort.bootstrap",
-        "AzureBlobLeaseBootstrapAdapter",
-        ((AzureBlobLeaseBootstrapAdapter, "bootstrap"),),
+        "provisioner_performance_lease_app_role",
+        "broker_activation",
+        "ensure_provisioner_performance_lease",
+        "GraphRestClient",
+        ((ensure_provisioner_performance_lease, "__call__"),),
         owner_bound=True,
     ),
     _PortRequirement(
-        "durable_bootstrap_lease_binding_handoff",
-        "lease_bootstrap",
-        "DurableLeaseBindingHandoffPort.commit_and_load",
-        "DurableLeaseBindingHandoff",
+        "broker_function_settings_activation",
+        "broker_activation",
+        "BrokerFunctionSettingsPort.configure_and_verify",
+        "BrokerFunctionSettingsPort",
+        ((BrokerFunctionSettingsPort, "configure_and_verify"),),
+        owner_bound=True,
+    ),
+    _PortRequirement(
+        "owner_bound_bff_app_token",
+        "lease_broker_client",
+        "CertificateBffAppTokenProvider.__call__",
+        "CertificateBffAppTokenProvider",
         (
-            (DurableLeaseBindingHandoff, "commit_and_load"),
-            (DurableLeaseBindingHandoff, "load"),
+            (CertificateBffAppTokenProvider, "validate_local_credentials"),
+            (CertificateBffAppTokenProvider, "__call__"),
         ),
         owner_bound=True,
     ),
     _PortRequirement(
-        "attested_azure_storage_token_provider",
-        "lease_runtime",
-        "AttestedAzureStorageTokenProvider.get_token",
-        "AttestedAzureStorageTokenProvider",
-        (
-            (AttestedAzureStorageTokenProvider, "validate_local_credentials"),
-            (AttestedAzureStorageTokenProvider, "get_token"),
-        ),
+        "short_lived_signed_broker_ticket",
+        "lease_broker_client",
+        "RsaActivationTicketSigner.__call__",
+        "RsaActivationTicketSigner",
+        ((RsaActivationTicketSigner, "__call__"),),
         owner_bound=True,
     ),
     _PortRequirement(
@@ -245,15 +261,27 @@ _PORTS = (
         owner_bound=True,
     ),
     _PortRequirement(
-        "dedicated_blob_lease",
+        "brokered_dedicated_blob_lease",
         "lease_runtime",
         "AzureBlobLeasePort.acquire",
-        "AzureBlobLeaseAdapter",
+        "BrokeredAzureBlobLeaseAdapter",
         (
-            (AzureBlobLeaseAdapter, "acquire"),
-            (AzureBlobLeaseAdapter, "assert_held"),
-            (AzureBlobLeaseAdapter, "release"),
-            (AzureBlobLeaseAdapter, "execution_fence"),
+            (BrokeredAzureBlobLeaseAdapter, "acquire"),
+            (BrokeredAzureBlobLeaseAdapter, "assert_held"),
+            (BrokeredAzureBlobLeaseAdapter, "release"),
+            (BrokeredAzureBlobLeaseAdapter, "execution_fence"),
+        ),
+        owner_bound=True,
+    ),
+    _PortRequirement(
+        "server_side_atomic_blob_lease_state_machine",
+        "lease_broker_server",
+        "AzureBlobAtomicLeaseStateMachine.acquire/assert_held/release",
+        "AzureBlobAtomicLeaseStateMachine",
+        (
+            (AzureBlobAtomicLeaseStateMachine, "acquire"),
+            (AzureBlobAtomicLeaseStateMachine, "assert_held"),
+            (AzureBlobAtomicLeaseStateMachine, "release"),
         ),
         owner_bound=True,
     ),
@@ -370,11 +398,13 @@ def run_azure_performance_acceptance_live(
     provisioner_state_path: Path,
     provisioner_certificate_path: Path,
     provisioner_private_key_path: Path,
-    runtime_state_path: Path,
-    runtime_certificate_path: Path,
-    runtime_private_key_path: Path,
+    runtime_state_path: Path | None = None,
+    runtime_certificate_path: Path | None = None,
+    runtime_private_key_path: Path | None = None,
 ) -> dict[str, Any]:
     """Execute the exact combined infrastructure and measurement approval."""
+
+    del runtime_state_path, runtime_certificate_path, runtime_private_key_path
 
     if owner_approved is not True or execute_live_acceptance is not True:
         raise ValueError("PERFORMANCE_ACCEPTANCE_OWNER_GATE_CLOSED")
@@ -441,52 +471,46 @@ def run_azure_performance_acceptance_live(
         )
     )
 
-    bootstrap_identity = _load_application_identity(
+    broker_caller_identity = _load_application_identity(
         provisioner_state_path,
         application_key="m365_provisioning_app",
         expected_display_name="NaC M365 Provisioning",
     )
-    runtime_identity = _load_application_identity(
-        runtime_state_path,
-        application_key="m365_runtime_app",
-        expected_display_name="NaC M365 Runtime",
-    )
     expected_tenant_id = str(infrastructure_parameters["tenantId"])
     if (
-        bootstrap_identity["tenant_id"].casefold()
+        broker_caller_identity["tenant_id"].casefold()
         != expected_tenant_id.casefold()
-        or runtime_identity["tenant_id"].casefold()
-        != expected_tenant_id.casefold()
-        or bootstrap_identity["client_id"].casefold()
-        == runtime_identity["client_id"].casefold()
-        or bootstrap_identity["service_principal_id"].casefold()
-        != str(infrastructure_parameters["bootstrapPrincipalId"]).casefold()
-        or runtime_identity["service_principal_id"].casefold()
-        != str(infrastructure_parameters["runtimePrincipalId"]).casefold()
+        or broker_caller_identity["service_principal_id"].casefold()
+        != str(
+            infrastructure_parameters["brokerCallerServicePrincipalId"]
+        ).casefold()
+        or broker_caller_identity["service_principal_id"].casefold()
+        == str(infrastructure_parameters["brokerPrincipalId"]).casefold()
     ):
         raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
-    bootstrap_token_provider = AttestedAzureStorageTokenProvider(
-        tenant_id=bootstrap_identity["tenant_id"],
-        client_id=bootstrap_identity["client_id"],
-        token_subject=str(infrastructure_parameters["bootstrapPrincipalId"]),
+    bff_token_provider = CertificateBffAppTokenProvider(
+        tenant_id=broker_caller_identity["tenant_id"],
+        client_id=broker_caller_identity["client_id"],
+        service_principal_id=broker_caller_identity["service_principal_id"],
         certificate_path=provisioner_certificate_path,
         private_key_path=provisioner_private_key_path,
         expected_certificate_sha256=str(
-            infrastructure_parameters["bootstrapCertificateSha256"]
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
         ),
     )
-    runtime_token_provider = AttestedAzureStorageTokenProvider(
-        tenant_id=runtime_identity["tenant_id"],
-        client_id=runtime_identity["client_id"],
-        token_subject=str(infrastructure_parameters["runtimePrincipalId"]),
-        certificate_path=runtime_certificate_path,
-        private_key_path=runtime_private_key_path,
+    bff_token_provider.validate_local_credentials()
+    performance_lease_assignment = _ensure_performance_lease_app_role(
+        identity=broker_caller_identity,
+        certificate_path=provisioner_certificate_path,
+        private_key_path=provisioner_private_key_path,
         expected_certificate_sha256=str(
-            infrastructure_parameters["runtimeCertificateSha256"]
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
         ),
     )
-    bootstrap_token_provider.validate_local_credentials()
-    runtime_token_provider.validate_local_credentials()
 
     toolchain_sha256 = calculate_toolchain_attestations_sha256(
         toolchain_attestations
@@ -553,14 +577,33 @@ def run_azure_performance_acceptance_live(
         monitor_window_anchor_utc=monitor_window_anchor_utc,
         infrastructure_safety_source=safety_source,
     )
-    bootstrap_binding = _bootstrap_binding(
-        authorization=authorization,
-        infrastructure_parameters=infrastructure_parameters,
-        bootstrap_identity=bootstrap_identity,
-        runtime_identity=runtime_identity,
+    coordination_storage_account_resource_id = (
+        f"/subscriptions/{infrastructure_parameters['subscriptionId']}"
+        f"/resourceGroups/{infrastructure_parameters['resourceGroupName']}"
+        "/providers/Microsoft.Storage/storageAccounts/"
+        f"{infrastructure_parameters['storageAccountName']}"
     )
-    bootstrap_binding_sha256 = (
-        calculate_azure_blob_lease_bootstrap_binding_sha256(bootstrap_binding)
+    storage_binding_id = (
+        "nac-performance-" + authorization.target_binding_sha256[:32]
+    )
+    storage_attestation = broker_storage_attestation(
+        owner_binding_sha256=authorization.owner_approval_body_sha256,
+        target_binding_sha256=authorization.target_binding_sha256,
+        coordination_storage_account_resource_id=(
+            coordination_storage_account_resource_id
+        ),
+        broker_principal_id=str(infrastructure_parameters["brokerPrincipalId"]),
+        broker_function_package_sha256=str(
+            infrastructure_parameters["brokerFunctionPackageSha256"]
+        ),
+        broker_ticket_certificate_sha256=str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
+        ),
+    )
+    lease_binding_sha256 = broker_binding_fingerprint(
+        storage_binding_id, storage_attestation
     )
     bootstrap_authority = (
         verifier.verify_owner_and_infrastructure_before_bootstrap(
@@ -568,54 +611,107 @@ def run_azure_performance_acceptance_live(
             contract_sha256=contract_sha256,
             activation_hash=expected_activation_hash,
             correlation_id=correlation_id,
-            bootstrap_binding_sha256=bootstrap_binding_sha256,
+            bootstrap_binding_sha256=lease_binding_sha256,
         )
     )
     safety_verification = verifier.bootstrap_safety_verification(
         bootstrap_authority
     )
-    bootstrap_adapter = AzureBlobLeaseBootstrapAdapter(
-        binding=bootstrap_binding,
-        infrastructure_safety_evidence=safety_verification,
-        token_provider=bootstrap_token_provider,
-    )
+    ticket_certificate = provisioner_certificate_path.read_bytes()
     if (
-        bootstrap_adapter.bootstrap_binding_sha256
-        != bootstrap_binding_sha256
+        hashlib.sha256(ticket_certificate).hexdigest()
+        != str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
+        )
     ):
-        raise ValueError("PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID")
-    lease_binding = bootstrap_adapter.bootstrap(
-        bootstrap_authority.capability
-    )
-    handoff = DurableLeaseBindingHandoff(
-        artifact_store.run_dir / "lease-binding-handoff.redacted.json",
-        expected_owner_approval_body_sha256=(
-            authorization.owner_approval_body_sha256
+        raise ValueError("PERFORMANCE_BROKER_CERTIFICATE_BINDING_MISMATCH")
+    broker_settings = build_broker_function_settings(
+        tenant_id=broker_caller_identity["tenant_id"],
+        actor_id=broker_caller_identity["service_principal_id"],
+        owner_binding_sha256=authorization.owner_approval_body_sha256,
+        commit_sha=str(infrastructure_approval["approved_commit_sha"]),
+        tree_sha=str(infrastructure_approval["approved_tree_sha"]),
+        function_package_sha256=str(
+            infrastructure_parameters["brokerFunctionPackageSha256"]
         ),
-        expected_target_binding_sha256=authorization.target_binding_sha256,
-        expected_coordination_storage_account_resource_id=(
-            coordination.coordination_storage_account_resource_id
+        plan_sha256=plan["plan_sha256"],
+        target_binding_sha256=authorization.target_binding_sha256,
+        coordination_storage_account_name=str(
+            infrastructure_parameters["storageAccountName"]
+        ),
+        storage_binding_id=storage_binding_id,
+        storage_attestation=storage_attestation,
+        ticket_certificate=ticket_certificate,
+        ticket_certificate_sha256=str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
         ),
     )
-    durable_binding = handoff.commit_and_load(lease_binding)
-    handoff_bindings = verifier.record_durable_bootstrap_handoff(
-        durable_binding
+    broker_function_activation = BrokerFunctionSettingsPort(
+        azure_cli
+    ).configure_and_verify(broker_settings)
+    acquisition_safety_sha256 = _sha256_json(
+        {
+            "broker_binding_fingerprint": lease_binding_sha256,
+            "infrastructure_safety_evidence_sha256": safety_verification[
+                "infrastructure_safety_evidence_sha256"
+            ],
+            "owner_approval_body_sha256": (
+                authorization.owner_approval_body_sha256
+            ),
+            "target_binding_sha256": authorization.target_binding_sha256,
+        }
     )
-    acquisition_safety = build_lease_acquisition_safety_evidence(
-        binding=durable_binding,
-        infrastructure_safety_evidence=safety_verification,
+    handoff_bindings = verifier.record_broker_lease_handoff(
+        lease_binding_sha256=lease_binding_sha256,
+        lease_acquisition_safety_evidence_sha256=(
+            acquisition_safety_sha256
+        ),
     )
-    if (
-        acquisition_safety["lease_acquisition_safety_evidence_sha256"]
-        != handoff_bindings["lease_acquisition_safety_evidence_sha256"]
-    ):
-        raise ValueError("PERFORMANCE_BOOTSTRAP_HANDOFF_INVALID")
-
-    lease = AzureBlobLeaseAdapter(
-        binding=durable_binding,
-        acquisition_safety_evidence=acquisition_safety,
-        state_path=artifact_store.run_dir / "lease-lifecycle.redacted.json",
-        token_provider=runtime_token_provider,
+    ticket_signer = RsaActivationTicketSigner(
+        key_id=str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
+        )[:32],
+        certificate_path=provisioner_certificate_path,
+        private_key_path=provisioner_private_key_path,
+        expected_certificate_sha256=str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
+        ),
+        issuer="nac-performance-owner-gate",
+        tenant_id=broker_caller_identity["tenant_id"],
+        actor_id=broker_caller_identity["service_principal_id"],
+        owner_binding_sha256=authorization.owner_approval_body_sha256,
+        commit_sha=str(infrastructure_approval["approved_commit_sha"]),
+        tree_sha=str(infrastructure_approval["approved_tree_sha"]),
+        function_package_sha256=str(
+            infrastructure_parameters["brokerFunctionPackageSha256"]
+        ),
+        plan_sha256=plan["plan_sha256"],
+        target_binding_sha256=authorization.target_binding_sha256,
+        storage_binding=storage_binding_id,
+    )
+    lease = BrokeredAzureBlobLeaseAdapter(
+        broker_base_url=_function_app_base_url(
+            str(infrastructure_parameters["brokerFunctionAppResourceId"])
+        ),
+        token_provider=bff_token_provider,
+        ticket_provider=ticket_signer,
+        target_binding_sha256=authorization.target_binding_sha256,
+        lease_binding_sha256=handoff_bindings["lease_binding_sha256"],
+        infrastructure_safety_evidence_sha256=safety_verification[
+            "infrastructure_safety_evidence_sha256"
+        ],
+        lease_acquisition_safety_evidence_sha256=handoff_bindings[
+            "lease_acquisition_safety_evidence_sha256"
+        ],
+        expected_broker_binding_fingerprint=lease_binding_sha256,
     )
     anchor = _parse_monitor_anchor(monitor_window_anchor_utc)
     lease_id = UUID(
@@ -678,6 +774,12 @@ def run_azure_performance_acceptance_live(
     return {
         "status": final.get("status"),
         "live_execution_invoked": True,
+        "broker_function_settings_sha256": broker_function_activation.get(
+            "settings_sha256"
+        ),
+        "performance_lease_assignment_sha256": _sha256_json(
+            performance_lease_assignment
+        ),
         "final_evidence_sha256": final.get("final_evidence_sha256"),
         "completion_manifest_sha256": _file_sha256(
             final_store.manifest_path
@@ -689,10 +791,8 @@ def run_azure_performance_acceptance_live(
 class _CoordinationResources:
     coordination_storage_account_resource_id: str
     lease_container_resource_id: str
-    bootstrap_lease_data_role_definition_id: str
-    runtime_lease_data_role_definition_id: str
-    bootstrap_lease_role_assignment_id: str
-    runtime_lease_role_assignment_id: str
+    broker_lease_data_role_definition_id: str
+    broker_lease_role_assignment_id: str
 
 
 def _prepare_performance_infrastructure(
@@ -764,17 +864,11 @@ def _coordination_resource_bindings(coordination: Any) -> dict[str, str]:
             coordination.coordination_storage_account_resource_id
         ),
         "lease_container_resource_id": coordination.lease_container_resource_id,
-        "bootstrap_lease_data_role_definition_id": (
-            coordination.bootstrap_lease_data_role_definition_id
+        "broker_lease_data_role_definition_id": (
+            coordination.broker_lease_data_role_definition_id
         ),
-        "runtime_lease_data_role_definition_id": (
-            coordination.runtime_lease_data_role_definition_id
-        ),
-        "bootstrap_lease_role_assignment_id": (
-            coordination.bootstrap_lease_role_assignment_id
-        ),
-        "runtime_lease_role_assignment_id": (
-            coordination.runtime_lease_role_assignment_id
+        "broker_lease_role_assignment_id": (
+            coordination.broker_lease_role_assignment_id
         ),
     }
 
@@ -815,13 +909,13 @@ def _infrastructure_verification_arguments(
         blob_service_id=blob_service_id,
         container_id=coordination.lease_container_resource_id,
     )
-    bootstrap_effective_rbac = readback.read_effective_rbac(
-        principal_id=str(parameters["bootstrapPrincipalId"]),
+    broker_effective_rbac = readback.read_effective_rbac(
+        principal_id=str(parameters["brokerPrincipalId"]),
         target_resource_id=coordination.lease_container_resource_id,
         ancestor_scopes=ancestor_scopes,
     )
-    runtime_effective_rbac = readback.read_effective_rbac(
-        principal_id=str(parameters["runtimePrincipalId"]),
+    broker_caller_effective_rbac = readback.read_effective_rbac(
+        principal_id=str(parameters["brokerCallerServicePrincipalId"]),
         target_resource_id=coordination.lease_container_resource_id,
         ancestor_scopes=ancestor_scopes,
     )
@@ -857,36 +951,50 @@ def _infrastructure_verification_arguments(
             observation_kind="worm-storage-account-resource-id",
             resource_id=parameters["wormStorageAccountResourceId"],
         ),
-        "bootstrap_principal_id": parameters["bootstrapPrincipalId"],
-        "runtime_principal_id": parameters["runtimePrincipalId"],
+        "broker_principal_id": parameters["brokerPrincipalId"],
+        "broker_caller_service_principal_id": parameters[
+            "brokerCallerServicePrincipalId"
+        ],
+        "broker_function_app_resource_id": parameters[
+            "brokerFunctionAppResourceId"
+        ],
+        "broker_function_package_sha256": parameters[
+            "brokerFunctionPackageSha256"
+        ],
+        "broker_ticket_verification_certificate_sha256": parameters[
+            "brokerTicketVerificationCertificateSha256"
+        ],
+        "broker_outbound_ip_addresses": parameters[
+            "brokerOutboundIpAddresses"
+        ],
         "target_binding_sha256": parameters["targetBindingSha256"],
-        "bootstrap_role_definition": readback.execute_read(
-            observation_kind="coordination-bootstrap-role-definition",
-            resource_id=coordination.bootstrap_lease_data_role_definition_id,
+        "broker_role_definition": readback.execute_read(
+            observation_kind="coordination-broker-role-definition",
+            resource_id=coordination.broker_lease_data_role_definition_id,
         ),
-        "runtime_role_definition": readback.execute_read(
-            observation_kind="coordination-runtime-role-definition",
-            resource_id=coordination.runtime_lease_data_role_definition_id,
+        "broker_role_assignment": readback.execute_read(
+            observation_kind="coordination-broker-role-assignment",
+            resource_id=coordination.broker_lease_role_assignment_id,
         ),
-        "bootstrap_role_assignment": readback.execute_read(
-            observation_kind="coordination-bootstrap-role-assignment",
-            resource_id=coordination.bootstrap_lease_role_assignment_id,
-        ),
-        "runtime_role_assignment": readback.execute_read(
-            observation_kind="coordination-runtime-role-assignment",
-            resource_id=coordination.runtime_lease_role_assignment_id,
+        "broker_function_app_readback_envelope": readback.execute_read(
+            observation_kind="coordination-broker-function-app",
+            resource_id=parameters["brokerFunctionAppResourceId"],
         ),
         "subscription_ancestry_readback_envelope": ancestry,
-        "bootstrap_effective_rbac_readback_envelope": (
-            bootstrap_effective_rbac
+        "broker_effective_rbac_readback_envelope": (
+            broker_effective_rbac
         ),
-        "runtime_effective_rbac_readback_envelope": runtime_effective_rbac,
+        "broker_caller_effective_rbac_readback_envelope": (
+            broker_caller_effective_rbac
+        ),
         "tenant_id": parameters["tenantId"],
         "subscription_id": parameters["subscriptionId"],
         "resource_group_name": parameters["resourceGroupName"],
         "location": parameters["location"],
         "tags": parameters["tags"],
-        "allowed_client_ip_address": parameters["allowedClientIpAddress"],
+        "broker_outbound_ip_addresses": parameters[
+            "brokerOutboundIpAddresses"
+        ],
     }
 
 
@@ -976,72 +1084,52 @@ def _load_application_identity(
     }
 
 
-def _bootstrap_binding(
+def _function_app_base_url(resource_id: str) -> str:
+    segments = resource_id.strip().split("/")
+    if (
+        len(segments) != 9
+        or segments[0] != ""
+        or segments[1].casefold() != "subscriptions"
+        or segments[3].casefold() != "resourcegroups"
+        or segments[5].casefold() != "providers"
+        or segments[6].casefold() != "microsoft.web"
+        or segments[7].casefold() != "sites"
+        or not segments[8]
+    ):
+        raise ValueError("PERFORMANCE_BROKER_FUNCTION_RESOURCE_ID_INVALID")
+    hostname = segments[8].casefold()
+    if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?", hostname):
+        raise ValueError("PERFORMANCE_BROKER_FUNCTION_RESOURCE_ID_INVALID")
+    return f"https://{hostname}.azurewebsites.net"
+
+
+def _ensure_performance_lease_app_role(
     *,
-    authorization: Any,
-    infrastructure_parameters: dict[str, Any],
-    bootstrap_identity: dict[str, str],
-    runtime_identity: dict[str, str],
-) -> AzureBlobLeaseBootstrapBinding:
-    parameters = infrastructure_parameters
-    common_identity_binding = {
-        "owner_approval_body_sha256": authorization.owner_approval_body_sha256,
-        "target_binding_sha256": authorization.target_binding_sha256,
-        "coordination_storage_account_resource_id": (
-            f"/subscriptions/{parameters['subscriptionId']}/resourceGroups/"
-            f"{parameters['resourceGroupName']}/providers/Microsoft.Storage/"
-            f"storageAccounts/{parameters['storageAccountName']}"
-        ),
-    }
-    return AzureBlobLeaseBootstrapBinding(
-        account_name=str(parameters["storageAccountName"]),
-        bff_account_name=_storage_account_name(
-            str(parameters["bffStorageAccountResourceId"])
-        ),
-        worm_account_name=_storage_account_name(
-            str(parameters["wormStorageAccountResourceId"])
-        ),
-        coordination_storage_account_resource_id=common_identity_binding[
-            "coordination_storage_account_resource_id"
-        ],
-        owner_approval_body_sha256=authorization.owner_approval_body_sha256,
-        token_subject=str(parameters["bootstrapPrincipalId"]),
-        token_tenant_id=bootstrap_identity["tenant_id"],
-        target_binding_sha256=authorization.target_binding_sha256,
-        read_identity_binding_sha256=_sha256_json(
+    identity: dict[str, str],
+    certificate_path: Path,
+    private_key_path: Path,
+    expected_certificate_sha256: str,
+) -> dict[str, Any]:
+    graph = GraphRestClient(
+        _bound_provisioner_token_provider(
             {
-                **common_identity_binding,
-                **bootstrap_identity,
-                "principal_id": parameters["bootstrapPrincipalId"],
-                "operation": "blob-read",
-            }
-        ),
-        write_identity_binding_sha256=_sha256_json(
-            {
-                **common_identity_binding,
-                **bootstrap_identity,
-                "principal_id": parameters["bootstrapPrincipalId"],
-                "operation": "blob-add",
-            }
-        ),
-        runtime_token_subject=str(parameters["runtimePrincipalId"]),
-        runtime_read_identity_binding_sha256=_sha256_json(
-            {
-                **common_identity_binding,
-                **runtime_identity,
-                "principal_id": parameters["runtimePrincipalId"],
-                "operation": "blob-read",
-            }
-        ),
-        runtime_write_identity_binding_sha256=_sha256_json(
-            {
-                **common_identity_binding,
-                **runtime_identity,
-                "principal_id": parameters["runtimePrincipalId"],
-                "operation": "blob-write",
-            }
-        ),
+                "M365_TENANT_ID": identity["tenant_id"],
+                "M365_PROVISIONER_CLIENT_ID": identity["client_id"],
+                "M365_PROVISIONER_CLIENT_CERTIFICATE_PATH": str(
+                    certificate_path
+                ),
+                "M365_PROVISIONER_CLIENT_KEY_PATH": str(private_key_path),
+            },
+            expected_certificate_sha256=expected_certificate_sha256,
+        )
     )
+    result = ensure_provisioner_performance_lease(graph)
+    if (
+        result.get("status") != "present"
+        or result.get("assignment_count") != 1
+    ):
+        raise ValueError("PERFORMANCE_LEASE_APP_ROLE_READBACK_MISMATCH")
+    return result
 
 
 def _storage_account_name(resource_id: str) -> str:

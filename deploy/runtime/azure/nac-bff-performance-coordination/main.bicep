@@ -40,6 +40,9 @@ param wormStorageAccountResourceId string
 @description('Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route.')
 param brokerPrincipalId string
 
+@description('Object ID of the owner-gated application service principal allowed to call the fixed broker route. It receives no Storage DataAction.')
+param brokerCallerServicePrincipalId string
+
 @description('Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker.')
 param brokerFunctionAppResourceId string
 
@@ -113,9 +116,9 @@ var exactBrokerLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'
 var validatedBrokerFunctionAppResourceId = length(brokerFunctionAppResourceIdSegments) == 9 && empty(brokerFunctionAppResourceIdSegments[0]) && toLower(brokerFunctionAppResourceIdSegments[1]) == 'subscriptions' && brokerFunctionAppResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionAppResourceIdSegments[3]) == 'resourcegroups' && !empty(brokerFunctionAppResourceIdSegments[4]) && toLower(brokerFunctionAppResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionAppResourceIdSegments[6]) == 'microsoft.web' && toLower(brokerFunctionAppResourceIdSegments[7]) == 'sites' && !empty(brokerFunctionAppResourceIdSegments[8])
   ? brokerFunctionAppResourceId
   : fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.')
-var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && !empty(brokerPrincipalId)
+var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && !empty(brokerPrincipalId) && !empty(brokerCallerServicePrincipalId) && toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)
   ? brokerPrincipalId
-  : fail('Broker managed identity is required.')
+  : fail('Distinct broker managed identity and owner-gated caller service principal are required.')
 var brokerIpRules = [for address in brokerOutboundIpAddresses: {
   action: 'Allow'
   value: address
@@ -251,6 +254,7 @@ output targetBindingSha256 string = targetBindingSha256
 output brokerLeaseDataRoleDefinitionId string = brokerLeaseDataRole.id
 output brokerLeaseRoleAssignmentId string = brokerLeaseBinding.id
 output brokerPrincipalIdBinding string = validatedBrokerPrincipalId
+output brokerCallerServicePrincipalIdBinding string = brokerCallerServicePrincipalId
 output brokerFunctionAppResourceIdBinding string = validatedBrokerFunctionAppResourceId
 output brokerFunctionPackageSha256Binding string = brokerFunctionPackageSha256
 output brokerTicketVerificationCertificateSha256Binding string = brokerTicketVerificationCertificateSha256

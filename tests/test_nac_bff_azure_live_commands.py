@@ -72,6 +72,8 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 ("deployment", "operation", "group", "list"),
                 ("identity", "show"),
                 ("functionapp", "identity", "show"),
+                ("functionapp", "config", "appsettings", "set"),
+                ("functionapp", "config", "appsettings", "list"),
                 ("resource", "list"),
                 ("resource", "show"),
                 ("rest",),

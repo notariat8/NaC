@@ -129,6 +129,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
     def test_source_binds_non_exportable_broker_identity_and_package(self) -> None:
         for marker in (
             "param brokerPrincipalId string",
+            "param brokerCallerServicePrincipalId string",
             "param brokerFunctionAppResourceId string",
             "param brokerFunctionPackageSha256 string",
             "param brokerTicketVerificationCertificateSha256 string",
@@ -144,6 +145,10 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "allowedClientIpAddress",
         ):
             self.assertNotIn(forbidden, self.source)
+        self.assertIn(
+            "toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)",
+            self.source,
+        )
 
     def test_source_role_is_exclusive_to_the_broker_uami(self) -> None:
         broker_match = re.search(
@@ -242,6 +247,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "bffStorageAccountResourceId",
             "wormStorageAccountResourceId",
             "brokerPrincipalId",
+            "brokerCallerServicePrincipalId",
             "brokerFunctionAppResourceId",
             "brokerFunctionPackageSha256",
             "brokerTicketVerificationCertificateSha256",

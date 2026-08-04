@@ -138,10 +138,13 @@ nicht Teil dieser Aussage.
 
 ## Exklusive Lease
 
-Der dedizierte Offline-Adapter liegt in
-`src/nac_bff/azure_performance_lease.py`. Lease-Storage, BFF-Storage und
-WORM-Evidence-Storage müssen getrennt sein. Der Adapter darf nur diese
-Operationen anbieten:
+Die lokale Grenze liegt in
+`src/nac_bff/azure_performance_lease_broker_client.py`; der serverseitige
+Broker und seine persistente State Machine liegen in
+`src/nac_bff/azure_performance_lease_broker.py` und
+`src/nac_bff/azure_performance_lease_broker_storage.py`. Lease-Storage,
+BFF-Storage und WORM-Evidence-Storage müssen getrennt sein. Die Broker-API darf
+nur diese Operationen anbieten:
 
 1. `acquire(-1)` mit einer vorab persistent gespeicherten UUID
 2. `assert_held`
@@ -154,11 +157,12 @@ gehalten bestätigt werden. Resume setzt dieselbe Lease-ID, dieselbe
 Zielbindung und dieselbe Lease-Bindung voraus.
 
 Eine verlorene oder fremde Lease sowie Binding-Drift blockieren ohne Dispatch.
-Automatisches Reacquire, Lease-Break und Blob-Delete sind im Runtime-Adapter
-verboten. Ein separater Bootstrap-Adapter darf das exakt gebundene
-Null-Byte-Block-Blob einmalig mit `If-None-Match: *` anlegen oder ein bereits
-vorhandenes Blob nur per `HEAD` prüfen. Überschreiben ist ausgeschlossen; der
-starke ETag aus der Antwort wird zur späteren Lease-Bindung. Ein Ergebnis darf
+Automatisches Reacquire, Lease-Break und Blob-Delete sind in Broker und lokalem
+Adapter verboten. Die Function-UAMI darf das exakt gebundene
+Null-Byte-Block-Blob intern einmalig mit `If-None-Match: *` anlegen oder ein
+bereits vorhandenes Blob per `HEAD` prüfen. Der Broker erzeugt die private
+Azure-Lease-ID selbst und gibt weder Lease-ID, Storage-Token noch Storage-URL
+an den lokalen Runner zurück. Ein Ergebnis darf
 ausschließlich im dauerhaft geschriebenen Zustand
 `RELEASED` den Status `PASSED` erhalten. `HELD`, ein unklarer Release-Ausgang
 oder ein lediglich gesendeter Release reichen nicht aus.
@@ -171,18 +175,15 @@ kein Release-Nachweis.
 
 Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
 vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren
-Koordinations-Resource-ID sowie getrennte Bootstrap- und Runtime-Identitäten
-an den exakten
-`lease_binding_sha256`, den starken ETag, die Zielbindung und das Token-Subject
-(`oid`) binden. Envelope- und Lease-Hash werden Runtime-Execution-Bindungen.
-Der Lease-Adapter akzeptiert keinen rohen oder nur dekodierten JWT. Der
-Token-Provider muss ein versiegeltes Ergebnis liefern, das Scope,
-Identitätsbindung, `oid`, `tid`, `nbf` und `exp` bindet; `alg:none` wird vor
-State und HTTP verworfen. Die Claims `oid` und `tid` werden gegen die
-owner-gebundene Evidence geprüft. Zusätzlich müssen `aud` exakt
-`https://storage.azure.com` und die numerischen Zeitclaims
-`nbf <= trusted_clock < exp` erfüllen. Jede Abweichung blockiert vor State und
-ohne Acquire-Request.
+Koordinations-Resource-ID, Function-UAMI und Provisioning-Caller an den exakten
+`lease_binding_sha256`, die Zielbindung und das signierte Aktivierungsticket
+binden. Der lokale Runner fordert ausschließlich ein App-Token für
+`api://funktion8.de/nac-bff/.default` an. Der BFF akzeptiert dafür nur die feste
+App-Rolle `Performance.Lease`; das höchstens 60 Sekunden gültige RS256-Ticket
+bindet genau eine Operation sowie Owner, Tenant, Audience, Actor, Commit, Tree,
+Function-Paket, Plan, Ziel, Blob-Pfad und Nonce. Nur die Function-UAMI fordert
+serverseitig `https://storage.azure.com/.default` an. Jede Abweichung blockiert
+vor Broker-State und Storage-HTTP.
 Nach einem echten Prozessneustart wird die Infrastruktur ausschließlich
 read-only neu attestiert. Serialisierte Safety-Evidence allein autorisiert
 nichts, weil die prozessgebundene Capability nicht serialisiert wird. Nur eine
@@ -191,20 +192,18 @@ Lease-Bindung darf die bestehende Lease reconciliieren; der alte abgelaufene
 Nachweis autorisiert keine neue Mutation.
 
 Die Offline-IaC liegt unter
-`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet zwei
-getrennte Entra-Service-Principals und Zertifikat-Hashes, erlaubt am Storage-Endpunkt
-nur eine explizite Client-IP und setzt die Netzwerk-Defaultregel auf `Deny`.
-Shared Keys, öffentliche Blobs sowie Delete-, Owner- und Container-DataActions
-bleiben ausgeschlossen. Die Bootstrap-Rolle enthält exakt `blobs/read` und
-`blobs/add/action`; die davon getrennte Runtime-Rolle enthält exakt
-`blobs/read` und `blobs/write`. Keine Identität kombiniert Add und Write.
-Azure autorisiert über die Runtime-Write-DataAction zugleich Overwrite und
-Lease-Break.
-Darum begrenzen ABAC den Pfad und die versiegelte Anwendungsschnittstelle die
-Operation: Bootstrap nur `PUT` mit Create-Precondition oder `HEAD`, Runtime nur
-Acquire, Assert und Release. Der starke ETag wird anschließend in die
-Runtime-Bindung übernommen. Der Blob-Token wird ausschließlich für den Scope
-`https://storage.azure.com/.default` angefordert.
+`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet die
+Function-UAMI, den davon getrennten Provisioning-Caller, Function-Paket,
+Ticket-Zertifikat und die autoritativen Function-Outbound-IPs. Am
+Storage-Endpunkt sind ausschließlich diese Outbound-IPs erlaubt; die
+Netzwerk-Defaultregel ist `Deny`. Shared Keys, öffentliche Blobs sowie Delete-,
+Owner- und Container-DataActions bleiben ausgeschlossen. Nur die Function-UAMI
+erhält am exakten Container und Blob-Pfad `blobs/read` und `blobs/write`; der
+lokale Caller erhält keine Storage-DataAction. Da Azure `write` auch Overwrite
+und Lease-Break umfasst, erzwingen ABAC und die feste Broker-API gemeinsam die
+engere Operationsgrenze. Vor Acquire werden außerdem die exakte
+`Performance.Lease`-Zuweisung und der hashgebundene Function-Settings-Satz
+gesetzt und ohne Ausgabe seiner Werte zurückgelesen.
 
 ## Owner-Gate und Evidence
 

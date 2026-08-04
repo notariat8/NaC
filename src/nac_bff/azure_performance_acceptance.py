@@ -1206,13 +1206,22 @@ class BoundPerformanceAuthorizationVerifier:
             "worm_storage_account_resource_id": parameters.get(
                 "wormStorageAccountResourceId"
             ),
-            "bootstrap_principal_id": parameters.get(
-                "bootstrapPrincipalId"
+            "broker_principal_id": parameters.get("brokerPrincipalId"),
+            "broker_caller_service_principal_id": parameters.get(
+                "brokerCallerServicePrincipalId"
             ),
-            "runtime_principal_id": parameters.get("runtimePrincipalId"),
+            "broker_function_app_resource_id": parameters.get(
+                "brokerFunctionAppResourceId"
+            ),
+            "broker_function_package_sha256": parameters.get(
+                "brokerFunctionPackageSha256"
+            ),
+            "broker_ticket_verification_certificate_sha256": parameters.get(
+                "brokerTicketVerificationCertificateSha256"
+            ),
             "tags_sha256": _sha256_json(parameters.get("tags", {})),
-            "allowed_client_ip_address_sha256": _sha256_text(
-                str(parameters.get("allowedClientIpAddress", ""))
+            "broker_outbound_ip_addresses_sha256": _sha256_json(
+                parameters.get("brokerOutboundIpAddresses", [])
             ),
             "toolchain_attestations_sha256": self._infrastructure_approval[
                 "toolchain_attestations_sha256"
@@ -1370,6 +1379,39 @@ class BoundPerformanceAuthorizationVerifier:
                 "lease_binding_sha256": self._durable_lease_binding_sha256,
                 "lease_acquisition_safety_evidence_sha256": (
                     self._durable_lease_safety_sha256
+                ),
+            }
+
+    def record_broker_lease_handoff(
+        self,
+        *,
+        lease_binding_sha256: str,
+        lease_acquisition_safety_evidence_sha256: str,
+    ) -> dict[str, str]:
+        """Promote the server-side broker binding without local Storage access."""
+
+        _require_sha256(lease_binding_sha256, "lease_binding_sha256")
+        _require_sha256(
+            lease_acquisition_safety_evidence_sha256,
+            "lease_acquisition_safety_evidence_sha256",
+        )
+        with self._bootstrap_transition_lock:
+            if (
+                self._bootstrap_authority is None
+                or self._bootstrap_safety_evidence is None
+                or self._bootstrap_binding_sha256 is None
+                or self._durable_lease_binding_sha256 is not None
+                or self._bootstrap_binding_sha256 != lease_binding_sha256
+            ):
+                raise ValueError("PERFORMANCE_BROKER_HANDOFF_INVALID")
+            self._durable_lease_binding_sha256 = lease_binding_sha256
+            self._durable_lease_safety_sha256 = (
+                lease_acquisition_safety_evidence_sha256
+            )
+            return {
+                "lease_binding_sha256": lease_binding_sha256,
+                "lease_acquisition_safety_evidence_sha256": (
+                    lease_acquisition_safety_evidence_sha256
                 ),
             }
 

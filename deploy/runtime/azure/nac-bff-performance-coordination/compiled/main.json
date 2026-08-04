@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "15302131147001075426"
+      "templateHash": "17455115071111927619"
     },
     "description": "Dedicated Azure Blob coordination boundary for one NaC BFF performance run."
   },
@@ -72,6 +72,12 @@
       "type": "string",
       "metadata": {
         "description": "Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route."
+      }
+    },
+    "brokerCallerServicePrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Object ID of the owner-gated application service principal allowed to call the fixed broker route. It receives no Storage DataAction."
       }
     },
     "brokerFunctionAppResourceId": {
@@ -149,7 +155,7 @@
     "blobWriteDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
     "exactBrokerLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{2}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{3}''))', variables('blobReadDataAction'), variables('blobWriteDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
     "validatedBrokerFunctionAppResourceId": "[if(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerFunctionAppResourceIdSegments')), 9), empty(variables('brokerFunctionAppResourceIdSegments')[0])), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerFunctionAppResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[3]), 'resourcegroups')), not(empty(variables('brokerFunctionAppResourceIdSegments')[4]))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[6]), 'microsoft.web')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[7]), 'sites')), not(empty(variables('brokerFunctionAppResourceIdSegments')[8]))), parameters('brokerFunctionAppResourceId'), fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.'))]",
-    "validatedBrokerPrincipalId": "[if(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), not(empty(parameters('brokerPrincipalId')))), parameters('brokerPrincipalId'), fail('Broker managed identity is required.'))]",
+    "validatedBrokerPrincipalId": "[if(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), not(empty(parameters('brokerPrincipalId')))), not(empty(parameters('brokerCallerServicePrincipalId')))), not(equals(toLower(parameters('brokerPrincipalId')), toLower(parameters('brokerCallerServicePrincipalId'))))), parameters('brokerPrincipalId'), fail('Distinct broker managed identity and owner-gated caller service principal are required.'))]",
     "mandatoryResourceTags": {
       "blobPrecreation": "owner-gated-before-runtime",
       "dataClassification": "synthetic-only",
@@ -348,6 +354,10 @@
     "brokerPrincipalIdBinding": {
       "type": "string",
       "value": "[variables('validatedBrokerPrincipalId')]"
+    },
+    "brokerCallerServicePrincipalIdBinding": {
+      "type": "string",
+      "value": "[parameters('brokerCallerServicePrincipalId')]"
     },
     "brokerFunctionAppResourceIdBinding": {
       "type": "string",

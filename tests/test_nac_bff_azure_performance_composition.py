@@ -39,17 +39,11 @@ def _coordination_resources() -> dict[str, str]:
     return {
         "coordination_storage_account_resource_id": storage,
         "lease_container_resource_id": container,
-        "bootstrap_lease_data_role_definition_id": (
-            f"{base}/providers/Microsoft.Authorization/roleDefinitions/bootstrap"
+        "broker_lease_data_role_definition_id": (
+            f"{base}/providers/Microsoft.Authorization/roleDefinitions/broker"
         ),
-        "runtime_lease_data_role_definition_id": (
-            f"{base}/providers/Microsoft.Authorization/roleDefinitions/runtime"
-        ),
-        "bootstrap_lease_role_assignment_id": (
-            f"{container}/providers/Microsoft.Authorization/roleAssignments/bootstrap"
-        ),
-        "runtime_lease_role_assignment_id": (
-            f"{container}/providers/Microsoft.Authorization/roleAssignments/runtime"
+        "broker_lease_role_assignment_id": (
+            f"{container}/providers/Microsoft.Authorization/roleAssignments/broker"
         ),
     }
 
@@ -147,12 +141,15 @@ def _trace_infrastructure_path(
         "storageAccountName": "stcoord",
         "bffStorageAccountResourceId": "bff",
         "wormStorageAccountResourceId": "worm",
-        "bootstrapPrincipalId": "bootstrap",
-        "runtimePrincipalId": "runtime",
+        "brokerPrincipalId": "broker",
+        "brokerCallerServicePrincipalId": "caller",
+        "brokerFunctionAppResourceId": "function",
+        "brokerFunctionPackageSha256": "b" * 64,
+        "brokerTicketVerificationCertificateSha256": "c" * 64,
+        "brokerOutboundIpAddresses": ["203.0.113.10"],
         "targetBindingSha256": "a" * 64,
         "location": "location",
         "tags": {},
-        "allowedClientIpAddress": "127.0.0.1",
     }
     with (
         patch.object(
@@ -237,11 +234,13 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
                 "performance_coordination_deployment",
                 "immutable_infrastructure_restart_receipts",
                 "performance_coordination_safety_readback",
-                "lease_blob_bootstrap",
-                "durable_bootstrap_lease_binding_handoff",
-                "attested_azure_storage_token_provider",
+                "provisioner_performance_lease_app_role",
+                "broker_function_settings_activation",
+                "owner_bound_bff_app_token",
+                "short_lived_signed_broker_ticket",
                 "full_lifecycle_process_fence",
-                "dedicated_blob_lease",
+                "brokered_dedicated_blob_lease",
+                "server_side_atomic_blob_lease_state_machine",
                 "azure_monitor_observation",
                 "bounded_500_get_runner",
                 "restartable_final_evidence",
@@ -285,7 +284,8 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         self.assertNotIn("provider:name-probe", trace)
         self.assertFalse(any(item.startswith("provider:create:") for item in trace))
         self.assertIn("provider:get:coordination-storage-account-configuration", trace)
-        self.assertIn("provider:get:effective-rbac:runtime", trace)
+        self.assertIn("provider:get:effective-rbac:broker", trace)
+        self.assertIn("provider:get:effective-rbac:caller", trace)
 
     def test_name_only_restart_requires_new_available_probe_before_create(self) -> None:
         trace = _trace_infrastructure_path("NAME_ONLY")
@@ -517,13 +517,94 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
             },
         )
 
+    def test_performance_lease_role_uses_only_bound_certificate_graph_client(
+        self,
+    ) -> None:
+        identity = {
+            "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+            "client_id": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+            "service_principal_id": "11111111-2222-4333-8444-555555555555",
+        }
+        token_provider = object()
+        expected = {
+            "status": "present",
+            "assignment_count": 1,
+            "application_role": "Performance.Lease",
+        }
+        with (
+            patch.object(
+                composition,
+                "_bound_provisioner_token_provider",
+                return_value=token_provider,
+            ) as provider,
+            patch.object(
+                composition,
+                "ensure_provisioner_performance_lease",
+                return_value=expected,
+            ) as ensure,
+        ):
+            result = composition._ensure_performance_lease_app_role(
+                identity=identity,
+                certificate_path=Path("/tmp/provisioner.cert.pem"),
+                private_key_path=Path("/tmp/provisioner.key.pem"),
+                expected_certificate_sha256="a" * 64,
+            )
+
+        self.assertEqual(result, expected)
+        environment = provider.call_args.args[0]
+        self.assertEqual(
+            set(environment),
+            {
+                "M365_TENANT_ID",
+                "M365_PROVISIONER_CLIENT_ID",
+                "M365_PROVISIONER_CLIENT_CERTIFICATE_PATH",
+                "M365_PROVISIONER_CLIENT_KEY_PATH",
+            },
+        )
+        self.assertNotIn("M365_GRAPH_ACCESS_TOKEN", environment)
+        graph = ensure.call_args.args[0]
+        self.assertIs(graph.token_provider, token_provider)
+
+    def test_performance_lease_role_requires_exact_positive_readback(self) -> None:
+        identity = {
+            "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+            "client_id": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+            "service_principal_id": "11111111-2222-4333-8444-555555555555",
+        }
+        with (
+            patch.object(
+                composition,
+                "_bound_provisioner_token_provider",
+                return_value=object(),
+            ),
+            patch.object(
+                composition,
+                "ensure_provisioner_performance_lease",
+                return_value={"status": "present", "assignment_count": 0},
+            ),
+        ):
+            with self.assertRaisesRegex(
+                ValueError,
+                "^PERFORMANCE_LEASE_APP_ROLE_READBACK_MISMATCH$",
+            ):
+                composition._ensure_performance_lease_app_role(
+                    identity=identity,
+                    certificate_path=Path("/tmp/provisioner.cert.pem"),
+                    private_key_path=Path("/tmp/provisioner.key.pem"),
+                    expected_certificate_sha256="a" * 64,
+                )
+
     def test_missing_existing_method_adds_its_port_to_blockers(self) -> None:
-        with patch.object(composition.AzureBlobLeaseAdapter, "acquire", None):
+        with patch.object(
+            composition.BrokeredAzureBlobLeaseAdapter, "acquire", None
+        ):
             result = validate_azure_performance_composition_readiness()
 
-        self.assertIn("dedicated_blob_lease", result["missing_ports"])
+        self.assertIn("brokered_dedicated_blob_lease", result["missing_ports"])
         port = next(
-            item for item in result["ports"] if item["id"] == "dedicated_blob_lease"
+            item
+            for item in result["ports"]
+            if item["id"] == "brokered_dedicated_blob_lease"
         )
         self.assertEqual(port["status"], "MISSING")
         self.assertIsNone(port["provider"])

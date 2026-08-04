@@ -58,6 +58,13 @@ INFRASTRUCTURE_SOURCE_PATHS = (
     Path("src/nac_bff/azure_performance_runtime.py"),
     Path("src/nac_bff/azure_performance_composition.py"),
     Path("src/nac_bff/azure_performance_lease.py"),
+    Path("src/nac_bff/azure_performance_lease_broker.py"),
+    Path("src/nac_bff/azure_performance_lease_broker_auth.py"),
+    Path("src/nac_bff/azure_performance_lease_broker_client.py"),
+    Path("src/nac_bff/azure_performance_lease_broker_composition.py"),
+    Path("src/nac_bff/azure_performance_lease_broker_storage.py"),
+    Path("src/nac_bff/azure_performance_broker_activation.py"),
+    Path("src/nac_bff/graph_activation.py"),
     Path("src/nac_bff/azure_performance_acceptance.py"),
     Path("src/nac_bff/azure_performance_authorization.py"),
     Path("src/nac_bff/azure_performance_monitor.py"),
@@ -135,17 +142,23 @@ _STORAGE_ACCOUNT_ID_RE = re.compile(
     r"(?P<resource_group>[^/]+)/providers/Microsoft\.Storage/storageAccounts/"
     r"(?P<name>[a-z0-9]{3,24})$"
 )
+_FUNCTION_APP_ID_RE = re.compile(
+    r"^/subscriptions/(?P<subscription>[0-9a-f-]{36})/resourceGroups/"
+    r"(?P<resource_group>[^/]+)/providers/Microsoft\.Web/sites/"
+    r"(?P<name>[a-zA-Z0-9-]{1,60})$"
+)
 _PARAMETER_KEYS = frozenset(
     {
         "location",
         "storageAccountName",
         "bffStorageAccountResourceId",
         "wormStorageAccountResourceId",
-        "bootstrapPrincipalId",
-        "runtimePrincipalId",
-        "bootstrapCertificateSha256",
-        "runtimeCertificateSha256",
-        "allowedClientIpAddress",
+        "brokerPrincipalId",
+        "brokerCallerServicePrincipalId",
+        "brokerFunctionAppResourceId",
+        "brokerFunctionPackageSha256",
+        "brokerTicketVerificationCertificateSha256",
+        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "tenantId",
         "subscriptionId",
@@ -264,15 +277,24 @@ def build_performance_infrastructure_owner_gate(
                 "target_binding_sha256": parameters["targetBindingSha256"],
             },
             "redacted_parameter_bindings": {
-                "allowed_client_ip_sha256": _sha256_text(
-                    parameters["allowedClientIpAddress"]
+                "broker_outbound_ip_addresses_sha256": _sha256_json(
+                    parameters["brokerOutboundIpAddresses"]
                 ),
-                "bootstrap_principal_sha256": _sha256_text(
-                    parameters["bootstrapPrincipalId"]
+                "broker_principal_sha256": _sha256_text(
+                    parameters["brokerPrincipalId"]
                 ),
-                "runtime_principal_sha256": _sha256_text(
-                    parameters["runtimePrincipalId"]
+                "broker_caller_service_principal_sha256": _sha256_text(
+                    parameters["brokerCallerServicePrincipalId"]
                 ),
+                "broker_function_app_resource_id_sha256": _sha256_text(
+                    parameters["brokerFunctionAppResourceId"]
+                ),
+                "broker_function_package_sha256": parameters[
+                    "brokerFunctionPackageSha256"
+                ],
+                "broker_ticket_verification_certificate_sha256": parameters[
+                    "brokerTicketVerificationCertificateSha256"
+                ],
                 "storage_account_name_sha256": _sha256_text(
                     parameters["storageAccountName"]
                 ),
@@ -336,10 +358,10 @@ def measure_performance_infrastructure_approval(
     worm_parameters = _validate_worm_parameters(worm_baseline_parameters)
     parameters = _validate_parameters(infrastructure_parameters)
     if (
-        parameters["bootstrapCertificateSha256"]
+        parameters["brokerTicketVerificationCertificateSha256"]
         != measured_toolchain["provisioner_certificate_sha256"]
     ):
-        raise ValueError("BOOTSTRAP_CERTIFICATE_BINDING_MISMATCH")
+        raise ValueError("BROKER_TICKET_CERTIFICATE_BINDING_MISMATCH")
     expected_worm_resource_id = (
         f"/subscriptions/{worm_parameters['subscriptionId']}/resourceGroups/"
         f"{worm_parameters['resourceGroupName']}/providers/Microsoft.Storage/"
@@ -491,35 +513,43 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     try:
-        bootstrap_principal = UUID(str(result["bootstrapPrincipalId"]))
-        runtime_principal = UUID(str(result["runtimePrincipalId"]))
-        address = ipaddress.ip_address(str(result["allowedClientIpAddress"]))
-    except ValueError:
+        broker_principal = UUID(str(result["brokerPrincipalId"]))
+        broker_caller = UUID(str(result["brokerCallerServicePrincipalId"]))
+        function_app_match = _FUNCTION_APP_ID_RE.fullmatch(
+            str(result["brokerFunctionAppResourceId"])
+        )
+        addresses = [
+            ipaddress.ip_address(str(value))
+            for value in result["brokerOutboundIpAddresses"]
+        ]
+    except (TypeError, ValueError):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID") from None
     if (
-        bootstrap_principal == runtime_principal
-        or address.version != 4
-        or not address.is_global
+        broker_principal == broker_caller
+        or function_app_match is None
+        or function_app_match.group("subscription") != SUBSCRIPTION_ID
+        or function_app_match.group("resource_group") != RESOURCE_GROUP
+        or not isinstance(result["brokerOutboundIpAddresses"], list)
+        or not 1 <= len(addresses) <= 32
+        or len({str(address) for address in addresses}) != len(addresses)
+        or any(address.version != 4 or not address.is_global for address in addresses)
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     _require_sha256(result["targetBindingSha256"], "targetBindingSha256")
     _require_sha256(
-        result["bootstrapCertificateSha256"],
-        "bootstrapCertificateSha256",
+        result["brokerFunctionPackageSha256"],
+        "brokerFunctionPackageSha256",
     )
     _require_sha256(
-        result["runtimeCertificateSha256"],
-        "runtimeCertificateSha256",
+        result["brokerTicketVerificationCertificateSha256"],
+        "brokerTicketVerificationCertificateSha256",
     )
-    if (
-        result["bootstrapCertificateSha256"]
-        == result["runtimeCertificateSha256"]
-    ):
-        raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     return {
         key: (
             {tag: tags[tag] for tag in sorted(tags)}
             if key == "tags"
+            else sorted(str(value) for value in result[key])
+            if key == "brokerOutboundIpAddresses"
             else str(result[key])
         )
         for key in sorted(result)

@@ -10,7 +10,13 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import fields
+from datetime import UTC, datetime, timedelta
 from typing import Any
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.x509.oid import NameOID
 
 from nac_bff.azure_performance_lease_broker import (
     MAX_TICKET_LIFETIME_SECONDS,
@@ -25,6 +31,7 @@ from nac_bff.azure_performance_lease_broker import (
     LeaseBrokerError,
     LeaseCommand,
     ReleaseOutcome,
+    RsaCertificateTicketSignatureVerifier,
     RetryDirective,
 )
 
@@ -32,6 +39,8 @@ from nac_bff.azure_performance_lease_broker import (
 NOW = 1_800_000_000
 OWNER = "11111111-1111-4111-8111-111111111111"
 OTHER_OWNER = "22222222-2222-4222-8222-222222222222"
+TENANT = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
+ACTOR = "33333333-3333-4333-8333-333333333333"
 ROLE = "nac.performance.lease-broker"
 SCOPE = "nac.performance.lease"
 ISSUER = "nac-owner-approval-service"
@@ -39,6 +48,13 @@ AUDIENCE = "nac-azure-performance-lease-broker"
 BINDING = "performance-coordination-v1"
 KEY_ID = "owner-signing-key-v1"
 KEY = b"unit-test-owner-signing-key-not-a-production-secret"
+OWNER_BINDING = "1" * 64
+COMMIT = "2" * 40
+TREE = "3" * 64
+FUNCTION_PACKAGE = "4" * 64
+PLAN = "5" * 64
+TARGET = "6" * 64
+BLOB_PATH = f"locks/{TARGET}.lock"
 
 
 def _b64(value: bytes) -> str:
@@ -80,7 +96,8 @@ class AtomicMemoryStateMachine:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._by_nonce: dict[str, dict[str, Any]] = {}
+        self._by_nonce: dict[str, str] = {}
+        self._state: dict[str, Any] | None = None
         self.acquire_commands: list[LeaseAcquireCommand] = []
         self.assert_commands: list[LeaseCommand] = []
         self.release_commands: list[LeaseCommand] = []
@@ -88,39 +105,50 @@ class AtomicMemoryStateMachine:
     def acquire(self, command: LeaseAcquireCommand, /) -> AcquireOutcome:
         with self._lock:
             self.acquire_commands.append(command)
-            state = self._by_nonce.get(command.nonce_key)
-            if state is None:
-                self._by_nonce[command.nonce_key] = {
+            prior_operation = self._by_nonce.get(command.nonce_key)
+            if prior_operation is not None and prior_operation != command.operation_id:
+                return AcquireOutcome.REPLAY_REJECTED
+            self._by_nonce[command.nonce_key] = command.operation_id
+            if self._state is None:
+                self._state = {
                     "operation_id": command.operation_id,
                     "private_lease_id": command.private_lease_id,
                     "state": "HELD",
                 }
                 return AcquireOutcome.ACQUIRED
-            if state["operation_id"] != command.operation_id:
-                return AcquireOutcome.REPLAY_REJECTED
-            return AcquireOutcome.ALREADY_ACQUIRED
+            return (
+                AcquireOutcome.ALREADY_ACQUIRED
+                if self._state["operation_id"] == command.operation_id
+                else AcquireOutcome.BUSY
+            )
 
     def assert_held(self, command: LeaseCommand, /) -> AssertOutcome:
         with self._lock:
             self.assert_commands.append(command)
-            state = self._by_nonce.get(command.nonce_key)
-            if state is None:
-                return AssertOutcome.NOT_ACQUIRED
-            if state["operation_id"] != command.operation_id:
+            prior_operation = self._by_nonce.get(command.nonce_key)
+            if prior_operation is not None and prior_operation != command.operation_id:
                 return AssertOutcome.REPLAY_REJECTED
-            return AssertOutcome.HELD if state["state"] == "HELD" else AssertOutcome.LOST
+            self._by_nonce[command.nonce_key] = command.operation_id
+            if self._state is None:
+                return AssertOutcome.NOT_ACQUIRED
+            return (
+                AssertOutcome.HELD
+                if self._state["state"] == "HELD"
+                else AssertOutcome.LOST
+            )
 
     def release(self, command: LeaseCommand, /) -> ReleaseOutcome:
         with self._lock:
             self.release_commands.append(command)
-            state = self._by_nonce.get(command.nonce_key)
-            if state is None:
-                return ReleaseOutcome.NOT_ACQUIRED
-            if state["operation_id"] != command.operation_id:
+            prior_operation = self._by_nonce.get(command.nonce_key)
+            if prior_operation is not None and prior_operation != command.operation_id:
                 return ReleaseOutcome.REPLAY_REJECTED
-            if state["state"] == "RELEASED":
+            self._by_nonce[command.nonce_key] = command.operation_id
+            if self._state is None:
+                return ReleaseOutcome.NOT_ACQUIRED
+            if self._state["state"] == "RELEASED":
                 return ReleaseOutcome.ALREADY_RELEASED
-            state["state"] = "RELEASED"
+            self._state["state"] = "RELEASED"
             return ReleaseOutcome.RELEASED
 
 
@@ -138,17 +166,27 @@ class FixedOutcomeStateMachine:
         return self.outcome
 
 
-def make_ticket(**changes: object) -> dict[str, object]:
+def make_ticket(*, operation: str = "acquire", **changes: object) -> dict[str, object]:
     payload: dict[str, object] = {
+        "actions": [operation],
+        "actor_id": ACTOR,
         "audience": AUDIENCE,
+        "blob_path": BLOB_PATH,
+        "commit_sha": COMMIT,
         "expires_at": NOW + 45,
+        "function_package_sha256": FUNCTION_PACKAGE,
         "issued_at": NOW,
         "issuer": ISSUER,
         "nonce": _b64(b"n" * 32),
+        "owner_binding_sha256": OWNER_BINDING,
         "owner_subject": OWNER,
+        "plan_sha256": PLAN,
         "role": ROLE,
         "scope": SCOPE,
         "storage_binding": BINDING,
+        "target_binding_sha256": TARGET,
+        "tenant_id": TENANT,
+        "tree_sha": TREE,
         "version": TICKET_VERSION,
     }
     payload.update(changes)
@@ -174,8 +212,17 @@ def make_broker(
         binding_provider=selected_provider,
         state_machine=selected_state,
         issuer=ISSUER,
+        tenant_id=TENANT,
         audience=AUDIENCE,
+        actor_id=ACTOR,
         owner_subject=OWNER,
+        owner_binding_sha256=OWNER_BINDING,
+        commit_sha=COMMIT,
+        tree_sha=TREE,
+        function_package_sha256=FUNCTION_PACKAGE,
+        plan_sha256=PLAN,
+        target_binding_sha256=TARGET,
+        blob_path=BLOB_PATH,
         required_role=ROLE,
         required_scope=SCOPE,
         clock=clock,  # type: ignore[arg-type]
@@ -187,6 +234,52 @@ CLAIMS = BrokerRoleScopeClaims(owner_subject=OWNER, role=ROLE, scope=SCOPE)
 
 
 class TicketTests(unittest.TestCase):
+    def test_pinned_rsa_certificate_verifier_accepts_only_exact_key(self) -> None:
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "NaC owner gate")])
+        now = datetime.now(UTC)
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now - timedelta(minutes=1))
+            .not_valid_after(now + timedelta(days=30))
+            .add_extension(
+                x509.KeyUsage(
+                    digital_signature=True,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=False,
+                    crl_sign=False,
+                    encipher_only=None,
+                    decipher_only=None,
+                ),
+                critical=True,
+            )
+            .sign(private_key, hashes.SHA256())
+        )
+        encoded = certificate.public_bytes(serialization.Encoding.PEM)
+        verifier = RsaCertificateTicketSignatureVerifier(
+            key_id=KEY_ID,
+            certificate_bytes=encoded,
+            certificate_sha256=hashlib.sha256(encoded).hexdigest(),
+        )
+        payload = b"bound-ticket"
+        signature = private_key.sign(payload, padding.PKCS1v15(), hashes.SHA256())
+        self.assertTrue(
+            verifier.verify(key_id=KEY_ID, payload=payload, signature=signature)
+        )
+        self.assertFalse(
+            verifier.verify(key_id="other-key", payload=payload, signature=signature)
+        )
+        self.assertFalse(
+            verifier.verify(key_id=KEY_ID, payload=b"tampered", signature=signature)
+        )
+
     def test_valid_ticket_is_verified_over_canonical_payload(self) -> None:
         broker, state, verifier, _ = make_broker()
         ticket = make_ticket()
@@ -224,15 +317,25 @@ class TicketTests(unittest.TestCase):
 
     def test_every_signed_payload_field_is_tamper_evident(self) -> None:
         replacements = {
+            "actions": ["release"],
+            "actor_id": OTHER_OWNER,
             "audience": "other-audience",
+            "blob_path": f"locks/{'7' * 64}.lock",
+            "commit_sha": "7" * 40,
             "expires_at": NOW + 44,
+            "function_package_sha256": "7" * 64,
             "issued_at": NOW - 1,
             "issuer": "other-issuer",
             "nonce": _b64(b"x" * 32),
+            "owner_binding_sha256": "7" * 64,
             "owner_subject": OTHER_OWNER,
+            "plan_sha256": "7" * 64,
             "role": "other.role",
             "scope": "other.scope",
             "storage_binding": "other-binding",
+            "target_binding_sha256": "7" * 64,
+            "tenant_id": OTHER_OWNER,
+            "tree_sha": "7" * 64,
             "version": "other/v1",
         }
         original = make_ticket()
@@ -343,6 +446,14 @@ class AuthorizationTests(unittest.TestCase):
             {"storage_binding": "other-binding"},
             {"issuer": "other-issuer"},
             {"audience": "other-audience"},
+            {"tenant_id": OTHER_OWNER},
+            {"actor_id": OTHER_OWNER},
+            {"owner_binding_sha256": "7" * 64},
+            {"commit_sha": "7" * 40},
+            {"tree_sha": "7" * 64},
+            {"function_package_sha256": "7" * 64},
+            {"plan_sha256": "7" * 64},
+            {"target_binding_sha256": "7" * 64},
         ):
             with self.subTest(changes=changes):
                 broker, state, _, _ = make_broker()
@@ -383,7 +494,10 @@ class StateMachineTests(unittest.TestCase):
         provider.load = lambda: AttestedStorageBinding(  # type: ignore[method-assign]
             "changed", b"b" * 64
         )
-        second = broker.assert_held(ticket=make_ticket(), claims=CLAIMS)
+        second = broker.assert_held(
+            ticket=make_ticket(operation="assert", nonce=_b64(b"a" * 32)),
+            claims=CLAIMS,
+        )
         self.assertEqual(provider.calls, 1)
         self.assertEqual(first.binding_fingerprint, second.binding_fingerprint)
         self.assertEqual(
@@ -403,12 +517,14 @@ class StateMachineTests(unittest.TestCase):
 
     def test_lifecycle_is_idempotent_and_redacted(self) -> None:
         broker, _, _, _ = make_broker()
-        ticket = make_ticket()
-        acquired = broker.acquire(ticket=ticket, claims=CLAIMS)
-        repeated = broker.acquire(ticket=ticket, claims=CLAIMS)
-        held = broker.assert_held(ticket=ticket, claims=CLAIMS)
-        released = broker.release(ticket=ticket, claims=CLAIMS)
-        rereleased = broker.release(ticket=ticket, claims=CLAIMS)
+        acquire_ticket = make_ticket()
+        assert_ticket = make_ticket(operation="assert", nonce=_b64(b"a" * 32))
+        release_ticket = make_ticket(operation="release", nonce=_b64(b"r" * 32))
+        acquired = broker.acquire(ticket=acquire_ticket, claims=CLAIMS)
+        repeated = broker.acquire(ticket=acquire_ticket, claims=CLAIMS)
+        held = broker.assert_held(ticket=assert_ticket, claims=CLAIMS)
+        released = broker.release(ticket=release_ticket, claims=CLAIMS)
+        rereleased = broker.release(ticket=release_ticket, claims=CLAIMS)
 
         self.assertEqual(acquired.outcome, "ACQUIRED")
         self.assertEqual(repeated.outcome, "ALREADY_ACQUIRED")
@@ -426,7 +542,10 @@ class StateMachineTests(unittest.TestCase):
         for receipt in (acquired, repeated, held, released, rereleased):
             self.assertEqual(set(receipt.as_dict()), allowed)
             serialized = json.dumps(receipt.as_dict())
-            for secret in (OWNER, ROLE, SCOPE, ISSUER, AUDIENCE, BINDING):
+            for secret in (
+                OWNER, ROLE, SCOPE, ISSUER, AUDIENCE, BINDING, ACTOR,
+                OWNER_BINDING, COMMIT, TREE, FUNCTION_PACKAGE, PLAN, TARGET,
+            ):
                 self.assertNotIn(secret, serialized)
 
     def test_crash_and_retry_outcomes_have_explicit_directives(self) -> None:
@@ -448,14 +567,18 @@ class StateMachineTests(unittest.TestCase):
             FixedOutcomeStateMachine(AssertOutcome.INDETERMINATE_AFTER_CRASH)
         )
         self.assertEqual(
-            broker.assert_held(ticket=make_ticket(), claims=CLAIMS).retry,
+            broker.assert_held(
+                ticket=make_ticket(operation="assert"), claims=CLAIMS
+            ).retry,
             RetryDirective.RETRY_SAME_TICKET,
         )
         broker, _, _, _ = make_broker(
             FixedOutcomeStateMachine(ReleaseOutcome.INDETERMINATE_AFTER_CRASH)
         )
         self.assertEqual(
-            broker.release(ticket=make_ticket(), claims=CLAIMS).retry,
+            broker.release(
+                ticket=make_ticket(operation="release"), claims=CLAIMS
+            ).retry,
             RetryDirective.ASSERT_BEFORE_RETRY,
         )
 
@@ -523,7 +646,8 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
                     tickets,
                 )
             )
-        self.assertEqual(outcomes, ["ACQUIRED"] * len(tickets))
+        self.assertEqual(outcomes.count("ACQUIRED"), 1)
+        self.assertEqual(outcomes.count("BUSY"), len(tickets) - 1)
         self.assertEqual(len(state._by_nonce), len(tickets))
 
 

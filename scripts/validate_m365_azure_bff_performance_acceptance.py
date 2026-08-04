@@ -30,6 +30,10 @@ LEASE_BROKER_CLIENT = Path(
 LEASE_BROKER_COMPOSITION = Path(
     "src/nac_bff/azure_performance_lease_broker_composition.py"
 )
+BROKER_ACTIVATION = Path(
+    "src/nac_bff/azure_performance_broker_activation.py"
+)
+GRAPH_ACTIVATION = Path("src/nac_bff/graph_activation.py")
 BFF_COMPOSITION = Path("src/nac_bff/composition.py")
 FASTAPI_ADAPTER = Path("src/nac_bff/fastapi_adapter.py")
 RUNTIME = Path("src/nac_bff/azure_performance_runtime.py")
@@ -85,6 +89,10 @@ LEASE_BROKER_COMPOSITION_TESTS = Path(
 LEASE_BROKER_FASTAPI_TESTS = Path(
     "tests/test_nac_bff_performance_lease_broker_fastapi.py"
 )
+BROKER_ACTIVATION_TESTS = Path(
+    "tests/test_nac_bff_azure_performance_broker_activation.py"
+)
+GRAPH_ACTIVATION_TESTS = Path("tests/test_nac_bff_graph_activation.py")
 RUNTIME_TESTS = Path("tests/test_nac_bff_azure_performance_runtime.py")
 COMPOSITION_TESTS = Path("tests/test_nac_bff_azure_performance_composition.py")
 OWNER_GATE_TESTS = Path("tests/test_nac_bff_azure_performance_owner_gate.py")
@@ -703,7 +711,64 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
 
     broker_boundary = _mapping(contract.get("lease_broker_boundary"))
     if (
-        broker_boundary.get("credential_boundary_exact") != "BFF_BROKER_UAMI_ONLY"
+        broker_boundary.get("broker_activation_path_exact")
+        != "src/nac_bff/azure_performance_broker_activation.py"
+        or broker_boundary.get("broker_activation_test_path_exact")
+        != "tests/test_nac_bff_azure_performance_broker_activation.py"
+        or broker_boundary.get("graph_activation_path_exact")
+        != "src/nac_bff/graph_activation.py"
+        or broker_boundary.get("graph_activation_test_path_exact")
+        != "tests/test_nac_bff_graph_activation.py"
+        or broker_boundary.get("credential_boundary_exact") != "BFF_BROKER_UAMI_ONLY"
+        or broker_boundary.get("bff_api_application_role_exact")
+        != "Performance.Lease"
+        or broker_boundary.get("bff_api_application_role_member_type_exact")
+        != "Application"
+        or broker_boundary.get(
+            "bff_api_application_role_assignment_principal_exact"
+        )
+        != "NaC M365 Provisioning"
+        or broker_boundary.get("bff_api_application_role_assignment_count_exact")
+        != 1
+        or broker_boundary.get(
+            "bff_api_application_role_assignment_exact_readback_required"
+        )
+        is not True
+        or set(broker_boundary.get("broker_function_setting_names_exact", []))
+        != {
+            "NAC_BFF_PERFORMANCE_LEASE_ACTOR_ID",
+            "NAC_BFF_PERFORMANCE_LEASE_BLOB_PATH",
+            "NAC_BFF_PERFORMANCE_LEASE_BLOB_URL",
+            "NAC_BFF_PERFORMANCE_LEASE_COMMIT_SHA",
+            "NAC_BFF_PERFORMANCE_LEASE_ENABLED",
+            "NAC_BFF_PERFORMANCE_LEASE_FUNCTION_PACKAGE_SHA256",
+            "NAC_BFF_PERFORMANCE_LEASE_OWNER_BINDING_SHA256",
+            "NAC_BFF_PERFORMANCE_LEASE_OWNER_SUBJECT",
+            "NAC_BFF_PERFORMANCE_LEASE_PLAN_SHA256",
+            "NAC_BFF_PERFORMANCE_LEASE_STORAGE_ATTESTATION_B64",
+            "NAC_BFF_PERFORMANCE_LEASE_STORAGE_BINDING_ID",
+            "NAC_BFF_PERFORMANCE_LEASE_TARGET_BINDING_SHA256",
+            "NAC_BFF_PERFORMANCE_LEASE_TENANT_ID",
+            "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_B64",
+            "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_SHA256",
+            "NAC_BFF_PERFORMANCE_LEASE_TICKET_ISSUER",
+            "NAC_BFF_PERFORMANCE_LEASE_TICKET_KEY_ID",
+            "NAC_BFF_PERFORMANCE_LEASE_TREE_SHA",
+        }
+        or broker_boundary.get(
+            "broker_function_settings_merge_preserves_unrelated_settings"
+        )
+        is not True
+        or broker_boundary.get(
+            "broker_function_settings_exact_readback_required"
+        )
+        is not True
+        or broker_boundary.get("unknown_performance_prefixed_setting_behavior")
+        != "BLOCKED"
+        or broker_boundary.get(
+            "broker_function_settings_values_allowed_in_evidence"
+        )
+        is not False
         or broker_boundary.get("broker_principal_parameter_exact")
         != "brokerPrincipalId"
         or broker_boundary.get("broker_caller_service_principal_parameter_exact")
@@ -802,6 +867,8 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "verify_worm_baseline_readback",
             "deploy_performance_coordination",
             "verify_coordination_and_effective_rbac",
+            "ensure_exact_performance_lease_app_role_assignment",
+            "configure_and_verify_broker_function_settings",
             "acquire_owner_ticketed_broker_lease",
             "execute_endpoint_scoped_conservative_measurement",
             "release_lease_and_finalize_redacted_evidence",
@@ -1461,6 +1528,8 @@ def main() -> int:
         LEASE_BROKER_AUTH,
         LEASE_BROKER_CLIENT,
         LEASE_BROKER_COMPOSITION,
+        BROKER_ACTIVATION,
+        GRAPH_ACTIVATION,
         BFF_COMPOSITION,
         FASTAPI_ADAPTER,
         RUNTIME,
@@ -1486,6 +1555,8 @@ def main() -> int:
         LEASE_BROKER_CLIENT_TESTS,
         LEASE_BROKER_COMPOSITION_TESTS,
         LEASE_BROKER_FASTAPI_TESTS,
+        BROKER_ACTIVATION_TESTS,
+        GRAPH_ACTIVATION_TESTS,
         RUNTIME_TESTS,
         COMPOSITION_TESTS,
         OWNER_GATE_TESTS,
@@ -1619,6 +1690,22 @@ def main() -> int:
             "RsaCertificateTicketSignatureVerifier",
             "AzureBlobAtomicLeaseStateMachine",
         ),
+        BROKER_ACTIVATION: (
+            "class BrokerFunctionSettingsPort",
+            "def build_broker_function_settings(",
+            'SETTING_PREFIX = "NAC_BFF_PERFORMANCE_LEASE_"',
+            '"functionapp",',
+            '"appsettings",',
+            '"set",',
+            '"list",',
+            "values_emitted",
+        ),
+        GRAPH_ACTIVATION: (
+            'PERFORMANCE_LEASE_APP_ROLE = "Performance.Lease"',
+            "def ensure_provisioner_performance_lease(",
+            "def inspect_provisioner_performance_lease(",
+            "_inspect_performance_lease_assignments(",
+        ),
         BFF_COMPOSITION: (
             "build_performance_lease_broker",
             'values.get("NAC_BFF_PERFORMANCE_LEASE_ENABLED") == "true"',
@@ -1678,6 +1765,9 @@ def main() -> int:
             "reconcile_successful_deployment",
             "persist_original_name_available",
             "persist_successful_deployment",
+            "_ensure_performance_lease_app_role",
+            "performance_lease_assignment_sha256",
+            "broker_function_settings_sha256",
         ),
         OWNER_GATE: (
             "ACTION = OWNER_ACTION",
@@ -1837,6 +1927,19 @@ def main() -> int:
             "test_invalid_shapes_and_provider_errors_are_generic",
             "test_unknown_operation_and_oversized_body_are_rejected",
         ),
+        BROKER_ACTIVATION_TESTS: (
+            "test_fixed_settings_are_merged_and_read_back_without_values",
+            "test_unknown_performance_setting_fails_readback",
+            "test_tampered_certificate_binding_fails_before_cli",
+            "test_cli_failure_is_redacted",
+        ),
+        GRAPH_ACTIVATION_TESTS: (
+            "test_performance_lease_assignment_create_replay_and_inspect",
+            "test_performance_lease_assignment_readback_is_bounded",
+            "test_performance_lease_assignment_timeout_does_not_repost",
+            "test_performance_lease_assignment_rejects_broader_or_other_principal",
+            "test_performance_lease_assignment_rejects_duplicates",
+        ),
         INFRA_TESTS: (
             "test_source_binds_non_exportable_broker_identity_and_package",
             "test_source_role_is_exclusive_to_the_broker_uami",
@@ -1898,7 +2001,7 @@ def main() -> int:
                 "app-weite",
                 "Resource-IDs",
                 "effektive RBAC",
-                "versiegeltes Ergebnis",
+                "Der BFF akzeptiert dafür nur die feste",
                 "monetary cost: NOT_CLAIMED",
             )
             if path == DOC_DE
@@ -1906,7 +2009,7 @@ def main() -> int:
                 "app-wide",
                 "resource IDs",
                 "Effective RBAC",
-                "sealed result",
+                "The BFF accepts only",
                 "monetary cost: NOT_CLAIMED",
             ),
             errors,

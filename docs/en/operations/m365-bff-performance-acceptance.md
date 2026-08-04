@@ -132,9 +132,12 @@ credits, free grants, and current pricing are deliberately outside this claim.
 
 ## Exclusive Lease
 
-The dedicated offline adapter is
-`src/nac_bff/azure_performance_lease.py`. Lease storage, BFF storage, and WORM
-evidence storage must be separate. The adapter may expose only:
+The local boundary is
+`src/nac_bff/azure_performance_lease_broker_client.py`; the server-side broker
+and durable state machine are in `src/nac_bff/azure_performance_lease_broker.py`
+and `src/nac_bff/azure_performance_lease_broker_storage.py`. Lease storage, BFF
+storage, and WORM evidence storage must be separate. The broker API may expose
+only:
 
 1. `acquire(-1)` with a UUID persisted first
 2. `assert_held`
@@ -146,11 +149,12 @@ dispatch, the same lease ID must be confirmed as held on the same bound blob.
 Resume requires the same lease ID, target binding, and lease binding.
 
 A lost or foreign lease and any binding drift block without dispatch.
-Automatic reacquire, lease break, and blob delete are forbidden in the runtime
-adapter. A separate bootstrap adapter may create the exact bound zero-byte
-block blob once with `If-None-Match: *`, or inspect an existing blob only with
-`HEAD`. Overwrite is forbidden; the strong response ETag becomes part of the
-later lease binding. An outcome may become `PASSED` only after `RELEASED` is
+Automatic reacquire, lease break, and blob delete are forbidden in the broker
+and local adapter. The Function UAMI may internally create the exact bound
+zero-byte block blob once with `If-None-Match: *`, or inspect an existing blob
+with `HEAD`. The broker generates the private Azure lease ID and returns no
+lease ID, Storage token, or Storage URL to the local runner. An outcome may
+become `PASSED` only after `RELEASED` is
 durably stored. `HELD`,
 an uncertain release outcome, or a merely sent release is insufficient.
 The final release receipt must state exact `RELEASED`; final evidence stores it
@@ -162,16 +166,14 @@ not release proof.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage
-resource ID plus distinct bootstrap and runtime principals to the exact
-`lease_binding_sha256`,
-strong ETag, target binding, and token subject (`oid`). The envelope digest and
-lease digest are runtime execution bindings. The lease adapter accepts neither
-a raw nor a merely decoded JWT. The token provider must return a sealed result
-binding scope, identity, `oid`, `tid`, `nbf`, and `exp`; `alg:none` is rejected
-before state or HTTP. The `oid` and `tid` claims are checked against owner-bound
-evidence. In addition, `aud` must equal `https://storage.azure.com` and
-the numeric time claims must satisfy `nbf <= trusted_clock < exp`. Any mismatch
-blocks before state and without an acquire request.
+resource ID, Function UAMI, and provisioning caller to the exact
+`lease_binding_sha256`, target binding, and signed activation ticket. The local
+runner requests only `api://funktion8.de/nac-bff/.default`. The BFF accepts only
+the fixed `Performance.Lease` app role; the RS256 ticket is valid for at most 60
+seconds and binds exactly one operation plus owner, tenant, audience, actor,
+commit, tree, Function package, plan, target, blob path, and nonce. Only the
+Function UAMI requests `https://storage.azure.com/.default` server-side. Any
+mismatch blocks before broker state and Storage HTTP.
 After a real process restart, infrastructure is re-attested read-only.
 Serialized safety evidence alone authorizes nothing because the process-bound
 capability is not serialized. Only fresh re-attestation preserving the same
@@ -179,20 +181,17 @@ owner, tenant, both principals, target, and lease binding may reconcile the exis
 lease; stale pre-restart evidence cannot authorize another mutation.
 
 The offline IaC is under
-`deploy/runtime/azure/nac-bff-performance-coordination`. It binds distinct
-bootstrap and runtime Entra service principals and certificate hashes, allows
-only one explicit client IP on the
-storage endpoint, and sets the network default to `Deny`. Shared keys, public
-blobs, and delete, owner, or container DataActions remain excluded. The
-bootstrap role contains exactly `blobs/read` and `blobs/add/action`; the
-separate runtime role contains exactly `blobs/read` and `blobs/write`. No
-identity combines add and write. Azure also authorizes overwrite and lease
-break through the runtime write DataAction.
-ABAC therefore fixes the path while
-the sealed application API fixes the operation: bootstrap only uses
-conditional `PUT` or `HEAD`; runtime only acquires, asserts, and releases. The
-strong ETag is then carried into the runtime binding. The blob token is
-requested only for scope `https://storage.azure.com/.default`.
+`deploy/runtime/azure/nac-bff-performance-coordination`. It binds the Function
+UAMI, the distinct provisioning caller, Function package, ticket certificate,
+and authoritative Function outbound IPs. Only those outbound IPs are allowed
+at the Storage endpoint and the network default is `Deny`. Shared keys, public
+blobs, and delete, owner, or container DataActions remain excluded. Only the
+Function UAMI receives `blobs/read` and `blobs/write` on the exact container and
+blob path; the local caller receives no Storage DataAction. Because Azure
+`write` also covers overwrite and lease break, ABAC and the fixed broker API
+jointly enforce the narrower operation boundary. Before acquire, the exact
+`Performance.Lease` assignment and hash-bound Function settings are configured
+and read back without exposing their values.
 
 ## Owner Gate And Evidence
 

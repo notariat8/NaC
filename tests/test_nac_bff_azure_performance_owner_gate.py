@@ -57,13 +57,19 @@ def _parameters() -> dict[str, object]:
             f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Storage/storageAccounts/stnacwormtest001"
         ),
-        "bootstrapPrincipalId": "11111111-2222-4333-8444-555555555555",
-        "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
-        "bootstrapCertificateSha256": TOOLCHAIN[
+        "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
+        "brokerCallerServicePrincipalId": (
+            "66666666-7777-4888-8999-aaaaaaaaaaaa"
+        ),
+        "brokerFunctionAppResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Web/sites/func-nac-bff-test-funktion8"
+        ),
+        "brokerFunctionPackageSha256": "e" * 64,
+        "brokerTicketVerificationCertificateSha256": TOOLCHAIN[
             "provisioner_certificate_sha256"
         ],
-        "runtimeCertificateSha256": "f" * 64,
-        "allowedClientIpAddress": "8.8.8.8",
+        "brokerOutboundIpAddresses": ["8.8.8.8"],
         "targetBindingSha256": target,
         "tenantId": TENANT_ID,
         "subscriptionId": SUBSCRIPTION_ID,
@@ -189,7 +195,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
     def test_parameter_change_changes_infrastructure_and_body_bindings(self) -> None:
         first = self.build()
         changed = _parameters()
-        changed["allowedClientIpAddress"] = "1.1.1.1"
+        changed["brokerOutboundIpAddresses"] = ["1.1.1.1"]
         second = self.build(changed)
 
         self.assertNotEqual(

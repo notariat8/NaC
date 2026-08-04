@@ -91,11 +91,18 @@ INFRASTRUCTURE_PARAMETERS = {
         "resourceGroups/rg-nac-bff-test/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormtest001"
     ),
-    "bootstrapPrincipalId": "11111111-2222-4333-8444-555555555555",
-    "runtimePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
-    "bootstrapCertificateSha256": "e" * 64,
-    "runtimeCertificateSha256": "f" * 64,
-    "allowedClientIpAddress": "8.8.8.8",
+    "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "brokerCallerServicePrincipalId": (
+        "66666666-7777-4888-8999-aaaaaaaaaaaa"
+    ),
+    "brokerFunctionAppResourceId": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/"
+        "func-nac-bff-test"
+    ),
+    "brokerFunctionPackageSha256": "e" * 64,
+    "brokerTicketVerificationCertificateSha256": "f" * 64,
+    "brokerOutboundIpAddresses": ["8.8.8.8"],
     "targetBindingSha256": "0" * 64,
     "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
     "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
@@ -178,11 +185,22 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
         "worm_storage_account_resource_id": parameters[
             "wormStorageAccountResourceId"
         ],
-        "bootstrap_principal_id": parameters["bootstrapPrincipalId"],
-        "runtime_principal_id": parameters["runtimePrincipalId"],
+        "broker_principal_id": parameters["brokerPrincipalId"],
+        "broker_caller_service_principal_id": parameters[
+            "brokerCallerServicePrincipalId"
+        ],
+        "broker_function_app_resource_id": parameters[
+            "brokerFunctionAppResourceId"
+        ],
+        "broker_function_package_sha256": parameters[
+            "brokerFunctionPackageSha256"
+        ],
+        "broker_ticket_verification_certificate_sha256": parameters[
+            "brokerTicketVerificationCertificateSha256"
+        ],
         "tags_sha256": performance._sha256_json(parameters["tags"]),
-        "allowed_client_ip_address_sha256": performance._sha256_text(
-            parameters["allowedClientIpAddress"]
+        "broker_outbound_ip_addresses_sha256": performance._sha256_json(
+            parameters["brokerOutboundIpAddresses"]
         ),
         "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
             "toolchain_attestations_sha256"
@@ -1944,17 +1962,28 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "worm_storage_account_resource_id": INFRASTRUCTURE_PARAMETERS[
                 "wormStorageAccountResourceId"
             ],
-            "bootstrap_principal_id": INFRASTRUCTURE_PARAMETERS[
-                "bootstrapPrincipalId"
+            "broker_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerPrincipalId"
             ],
-            "runtime_principal_id": INFRASTRUCTURE_PARAMETERS[
-                "runtimePrincipalId"
+            "broker_caller_service_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerCallerServicePrincipalId"
             ],
+            "broker_function_app_resource_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerFunctionAppResourceId"
+            ],
+            "broker_function_package_sha256": INFRASTRUCTURE_PARAMETERS[
+                "brokerFunctionPackageSha256"
+            ],
+            "broker_ticket_verification_certificate_sha256": (
+                INFRASTRUCTURE_PARAMETERS[
+                    "brokerTicketVerificationCertificateSha256"
+                ]
+            ),
             "tags_sha256": performance._sha256_json(
                 INFRASTRUCTURE_PARAMETERS["tags"]
             ),
-            "allowed_client_ip_address_sha256": performance._sha256_text(
-                INFRASTRUCTURE_PARAMETERS["allowedClientIpAddress"]
+            "broker_outbound_ip_addresses_sha256": performance._sha256_json(
+                INFRASTRUCTURE_PARAMETERS["brokerOutboundIpAddresses"]
             ),
             "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
                 "toolchain_attestations_sha256"

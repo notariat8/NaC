@@ -391,58 +391,46 @@ def _measurement_evidence_for_lease(lease_binding_sha256: str) -> dict:
     return evidence
 
 
-def _public_verifier_execution_bindings() -> tuple[dict, dict, dict[str, str]]:
-    from nac_bff.azure_performance_infrastructure_safety import (
-        validate_infrastructure_safety_evidence,
-    )
-    from nac_bff import azure_performance_infrastructure_safety as safety_module
-    from nac_bff.azure_performance_lease import (
-        AzureBlobLeaseBinding,
-        build_lease_acquisition_safety_evidence,
-    )
-    from tests import test_nac_bff_azure_performance_infrastructure_safety as fixture
-
-    fixture.TARGET_BINDING = TARGET_BINDING_SHA256
-    with tempfile.TemporaryDirectory() as ledger_directory, patch.object(
-        safety_module,
-        "_READBACK_REPLAY_LEDGER_DIRECTORY",
-        Path(ledger_directory) / "ledger",
-    ), patch.object(
-        safety_module,
-        "_trusted_now",
-        return_value=fixture.VERIFY_AT,
-    ):
-        infrastructure = validate_infrastructure_safety_evidence(
-            fixture._issue_evidence()
-        )
-    binding = AzureBlobLeaseBinding(
-        account_name=infrastructure["coordination_storage_account_name"],
-        bff_account_name=infrastructure["bff_storage_account_resource_id"].rsplit(
-            "/", 1
-        )[-1],
-        worm_account_name=infrastructure[
-            "worm_storage_account_resource_id"
-        ].rsplit("/", 1)[-1],
-        coordination_storage_account_resource_id=infrastructure[
-            "coordination_storage_account_resource_id"
-        ],
-        owner_approval_body_sha256=EXECUTION_BINDINGS[
+def _restart_evidence_bindings() -> tuple[dict, dict, dict[str, str]]:
+    infrastructure_payload = {
+        "owner_binding_sha256": EXECUTION_BINDINGS[
             "owner_approval_body_sha256"
         ],
-        token_subject=infrastructure["runtime_principal_id"],
-        token_tenant_id=infrastructure["tenant_id"],
-        target_binding_sha256=TARGET_BINDING_SHA256,
-        expected_etag='"nac-restart-test-etag"',
-        read_identity_binding_sha256="3" * 64,
-        write_identity_binding_sha256="4" * 64,
-    )
-    with patch.object(
-        safety_module, "_trusted_now", return_value=fixture.VERIFY_AT
-    ):
-        acquisition = build_lease_acquisition_safety_evidence(
-            binding=binding,
-            infrastructure_safety_evidence=infrastructure,
-        )
+        "target_binding_sha256": TARGET_BINDING_SHA256,
+        "broker_principal_id": "abcdef01-2222-4333-8444-555555555555",
+        "broker_caller_service_principal_id": (
+            "abcdef03-2222-4333-8444-555555555555"
+        ),
+        "broker_function_package_sha256": "5" * 64,
+        "broker_ticket_verification_certificate_sha256": "6" * 64,
+        "readback_nonce_sha256": os.urandom(32).hex(),
+    }
+    infrastructure = {
+        **infrastructure_payload,
+        "toolchain_attestations_sha256": "3" * 64,
+        "infrastructure_safety_policy_sha256": (
+            INFRASTRUCTURE_SAFETY_POLICY_SHA256
+        ),
+        "infrastructure_safety_evidence_sha256": performance._sha256_json(
+            infrastructure_payload
+        ),
+    }
+    acquisition_payload = {
+        "owner_binding_sha256": EXECUTION_BINDINGS[
+            "owner_approval_body_sha256"
+        ],
+        "target_binding_sha256": TARGET_BINDING_SHA256,
+        "infrastructure_safety_evidence_sha256": infrastructure[
+            "infrastructure_safety_evidence_sha256"
+        ],
+        "lease_binding_sha256": "e" * 64,
+    }
+    acquisition = {
+        **acquisition_payload,
+        "lease_acquisition_safety_evidence_sha256": performance._sha256_json(
+            acquisition_payload
+        ),
+    }
     bindings = {
         **EXECUTION_BINDINGS,
         "toolchain_attestations_sha256": infrastructure[
@@ -479,7 +467,7 @@ def _public_verifier_execution_bindings() -> tuple[dict, dict, dict[str, str]]:
 
 
 def _run_public_verifier_restart_stage(stage: str, evidence_path: str) -> dict:
-    infrastructure, acquisition, bindings = _public_verifier_execution_bindings()
+    infrastructure, acquisition, bindings = _restart_evidence_bindings()
     lease = _Lease(
         infrastructure_safety_evidence_sha256=bindings[
             "infrastructure_safety_evidence_sha256"
@@ -1314,7 +1302,7 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
         self.assertEqual(lease.calls, [])
         self.assertEqual(monitor.calls, [])
 
-    def test_two_process_restart_reattests_public_verifier_evidence(self):
+    def test_two_process_restart_reattests_bound_broker_evidence(self):
         code = (
             "import json,sys; "
             "from tests.test_nac_bff_azure_performance_runtime import "

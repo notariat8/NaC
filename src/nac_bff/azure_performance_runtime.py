@@ -30,7 +30,6 @@ from .azure_performance_authorization import (
     VerifiedPerformanceAuthority,
     _open_root_anchored_private_parent,
 )
-from .azure_performance_lease import AzureBlobLeaseAdapter, AzureBlobLeaseReceipt
 from .azure_performance_monitor import (
     INGESTION_LAG_SECONDS,
     AzurePerformanceMonitorAdapter,
@@ -74,6 +73,26 @@ class FinalEvidencePort(Protocol):
     def clear_pending_finalization(self) -> None: ...
 
 
+class PerformanceLeaseReceiptPort(Protocol):
+    lease_binding_sha256: str
+    target_binding_sha256: str
+    lifecycle_state: str
+    lifecycle_state_sha256: str
+
+
+class PerformanceLeasePort(Protocol):
+    target_binding_sha256: str
+    lease_binding_sha256: str
+
+    def acquire(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def assert_held(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def release(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def execution_fence(self, live_action_capability: object = None) -> AbstractContextManager[None]: ...
+
+
 class AzurePerformanceRuntimeAdapter:
     """Compose the fixed Monitor read and dedicated Blob lease boundaries."""
 
@@ -81,7 +100,7 @@ class AzurePerformanceRuntimeAdapter:
         self,
         *,
         monitor: AzurePerformanceMonitorAdapter,
-        lease: AzureBlobLeaseAdapter,
+        lease: PerformanceLeasePort,
         lease_id: UUID,
         monitor_window_anchor_utc: datetime,
         clock: Callable[[], datetime] | None = None,
@@ -89,7 +108,7 @@ class AzurePerformanceRuntimeAdapter:
     ) -> None:
         if not isinstance(monitor, AzurePerformanceMonitorAdapter):
             raise TypeError("monitor")
-        if not isinstance(lease, AzureBlobLeaseAdapter):
+        if not _is_performance_lease_port(lease):
             raise TypeError("lease")
         if type(lease_id) is not UUID:
             raise TypeError("lease_id")
@@ -117,14 +136,14 @@ class AzurePerformanceRuntimeAdapter:
 
     def acquire(
         self, capability: VerifiedLiveActionCapability
-    ) -> AzureBlobLeaseReceipt:
+    ) -> PerformanceLeaseReceiptPort:
         return self._lease.acquire(
             self._lease_id, live_action_capability=capability
         )
 
     def release(
         self, capability: VerifiedLiveActionCapability
-    ) -> AzureBlobLeaseReceipt:
+    ) -> PerformanceLeaseReceiptPort:
         return self._lease.release(
             self._lease_id, live_action_capability=capability
         )
@@ -158,10 +177,10 @@ class AzurePerformanceRuntimeAdapter:
 
     def completion_bindings(
         self,
-        release_receipt: AzureBlobLeaseReceipt,
+        release_receipt: PerformanceLeaseReceiptPort,
         final_measurement_attestation: Mapping[str, Any],
     ) -> dict[str, Any]:
-        if not isinstance(release_receipt, AzureBlobLeaseReceipt):
+        if not _is_performance_lease_receipt(release_receipt):
             raise ValueError("PERFORMANCE_LEASE_RELEASE_EVIDENCE_INVALID")
         attestation = _validate_final_measurement_attestation(
             final_measurement_attestation,
@@ -316,7 +335,7 @@ class AzurePerformanceRuntimeAdapter:
 
     def _measurement_attestation(
         self,
-        receipt: AzureBlobLeaseReceipt,
+        receipt: PerformanceLeaseReceiptPort,
         observation: AzurePerformanceObservation,
         observed_at: datetime,
     ) -> MeasurementAttestation:
@@ -387,7 +406,7 @@ class AzurePerformanceRuntimeAdapter:
         minimum_window_end_utc: datetime | None = None,
         live_action_capability: VerifiedLiveActionCapability | None = None,
     ) -> tuple[
-        AzureBlobLeaseReceipt,
+        PerformanceLeaseReceiptPort,
         AzurePerformanceObservation,
         datetime,
         datetime,
@@ -2024,17 +2043,43 @@ def _validate_digest_bindings(
 
 
 def _validate_lease_receipt(
-    receipt: AzureBlobLeaseReceipt,
+    receipt: PerformanceLeaseReceiptPort,
     *,
     expected_target_binding_sha256: str,
     expected_lifecycle_state: str,
 ) -> None:
     if (
-        not isinstance(receipt, AzureBlobLeaseReceipt)
+        not _is_performance_lease_receipt(receipt)
         or receipt.target_binding_sha256 != expected_target_binding_sha256
         or receipt.lifecycle_state != expected_lifecycle_state
     ):
         raise ValueError("PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID")
+
+
+def _is_performance_lease_port(value: object) -> bool:
+    return (
+        all(
+            callable(getattr(value, method, None))
+            for method in ("acquire", "assert_held", "release", "execution_fence")
+        )
+        and _is_sha256(getattr(value, "target_binding_sha256", None))
+        and _is_sha256(getattr(value, "lease_binding_sha256", None))
+        and _is_sha256(
+            getattr(value, "infrastructure_safety_evidence_sha256", None)
+        )
+        and _is_sha256(
+            getattr(value, "lease_acquisition_safety_evidence_sha256", None)
+        )
+    )
+
+
+def _is_performance_lease_receipt(value: object) -> bool:
+    return (
+        _is_sha256(getattr(value, "lease_binding_sha256", None))
+        and _is_sha256(getattr(value, "target_binding_sha256", None))
+        and getattr(value, "lifecycle_state", None) in {"HELD", "RELEASED"}
+        and _is_sha256(getattr(value, "lifecycle_state_sha256", None))
+    )
 
 
 def _is_sha256(value: object) -> bool:
