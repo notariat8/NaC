@@ -37,24 +37,26 @@ param bffStorageAccountResourceId string
 @description('Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID.')
 param wormStorageAccountResourceId string
 
-@description('Object ID of the dedicated Entra service principal used only to bootstrap the bound blob with read and add. It must differ from runtimePrincipalId and receives no blob write or delete capability.')
-param bootstrapPrincipalId string
+@description('Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route.')
+param brokerPrincipalId string
 
-@description('Object ID of the dedicated Entra service principal used only at runtime with blob read and write. It must differ from bootstrapPrincipalId and receives no blob add or delete capability.')
-param runtimePrincipalId string
+@description('Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker.')
+param brokerFunctionAppResourceId string
 
-@description('SHA-256 of the bootstrap application certificate bound by the owner approval.')
+@description('SHA-256 of the exact deployed BFF Function package containing the broker implementation.')
 @minLength(64)
 @maxLength(64)
-param bootstrapCertificateSha256 string
+param brokerFunctionPackageSha256 string
 
-@description('SHA-256 of the separate runtime application certificate bound by the owner approval.')
+@description('SHA-256 of the public certificate used by the broker to verify short-lived activation tickets.')
 @minLength(64)
 @maxLength(64)
-param runtimeCertificateSha256 string
+param brokerTicketVerificationCertificateSha256 string
 
-@description('Single public IPv4 address allowed to reach the dedicated data plane during the approved run.')
-param allowedClientIpAddress string
+@description('Exact public IPv4 addresses reported by the bound BFF Function App for broker egress. Local runner addresses are forbidden.')
+@minLength(1)
+@maxLength(32)
+param brokerOutboundIpAddresses array
 
 @description('Hash binding used as the only lease blob basename.')
 @minLength(64)
@@ -68,6 +70,7 @@ var containerName = 'nac-bff-performance-leases'
 var leaseBlobPath = 'locks/${targetBindingSha256}.lock'
 var bffStorageAccountResourceIdSegments = split(bffStorageAccountResourceId, '/')
 var wormStorageAccountResourceIdSegments = split(wormStorageAccountResourceId, '/')
+var brokerFunctionAppResourceIdSegments = split(brokerFunctionAppResourceId, '/')
 var bffStorageAccountName = last(bffStorageAccountResourceIdSegments)
 var wormStorageAccountName = last(wormStorageAccountResourceIdSegments)
 var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName && deploymentMode == 'Incremental'
@@ -94,35 +97,29 @@ var validatedStorageAccountName = !empty(validatedDeploymentScope) && toLower(co
   ? storageAccountName
   : fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.')
 var isolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
-var bootstrapLeaseDataRoleDefinitionGuid = guid(
+var brokerLeaseDataRoleDefinitionGuid = guid(
   subscription().id,
   resourceGroup().id,
   validatedStorageAccountName,
   containerName,
-  'nac-bff-performance-lease-bootstrap-read-add-v1'
-)
-var runtimeLeaseDataRoleDefinitionGuid = guid(
-  subscription().id,
-  resourceGroup().id,
-  validatedStorageAccountName,
-  containerName,
-  'nac-bff-performance-lease-runtime-read-write-v1'
+  'nac-bff-performance-lease-broker-read-write-v1'
 )
 var blobReadDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
-var blobAddDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
 var blobWriteDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
-// Azure blob add authorizes bootstrap creation; blob write authorizes runtime overwrite and
-// lease acquire/release/break. Distinct principals ensure no identity combines add and write.
-// The dedicated account and identity-specific exact-path ABAC conditions limit scope; sealed
-// APIs omit overwrite and break as defense-in-depth, not Azure-enforced filtering.
-var exactBootstrapLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobAddDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
-var exactRuntimeLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
-var validatedBootstrapPrincipalId = toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId) && bootstrapCertificateSha256 != runtimeCertificateSha256
-  ? bootstrapPrincipalId
-  : fail('Bootstrap and runtime principal and certificate identities must be different.')
-var validatedRuntimePrincipalId = toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId) && bootstrapCertificateSha256 != runtimeCertificateSha256
-  ? runtimePrincipalId
-  : fail('Bootstrap and runtime principal and certificate identities must be different.')
+// Blob write includes create, overwrite and every lease action. The credential is therefore
+// assigned only to the non-exportable Function managed identity. The local measurement runner
+// receives no Storage DataAction, token or certificate and can reach only the fixed broker API.
+var exactBrokerLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+var validatedBrokerFunctionAppResourceId = length(brokerFunctionAppResourceIdSegments) == 9 && empty(brokerFunctionAppResourceIdSegments[0]) && toLower(brokerFunctionAppResourceIdSegments[1]) == 'subscriptions' && brokerFunctionAppResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionAppResourceIdSegments[3]) == 'resourcegroups' && !empty(brokerFunctionAppResourceIdSegments[4]) && toLower(brokerFunctionAppResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionAppResourceIdSegments[6]) == 'microsoft.web' && toLower(brokerFunctionAppResourceIdSegments[7]) == 'sites' && !empty(brokerFunctionAppResourceIdSegments[8])
+  ? brokerFunctionAppResourceId
+  : fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.')
+var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && !empty(brokerPrincipalId)
+  ? brokerPrincipalId
+  : fail('Broker managed identity is required.')
+var brokerIpRules = [for address in brokerOutboundIpAddresses: {
+  action: 'Allow'
+  value: address
+}]
 // Keep this mandatory set aligned with effective_coordination_tags() in the
 // infrastructure safety verifier. union() prevents caller overrides.
 var mandatoryResourceTags = {
@@ -157,12 +154,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     networkAcls: {
       bypass: 'None'
       defaultAction: 'Deny'
-      ipRules: [
-        {
-          action: 'Allow'
-          value: allowedClientIpAddress
-        }
-      ]
+      ipRules: brokerIpRules
       resourceAccessRules: []
       virtualNetworkRules: []
     }
@@ -194,44 +186,22 @@ resource leaseContainer 'Microsoft.Storage/storageAccounts/blobServices/containe
       lease_blob_path: leaseBlobPath
       lease_blob_type: 'BlockBlob'
       lease_blob_content_length: '0'
-      lease_blob_bootstrap: 'owner-gated-put-if-absent-before-runtime'
-      bootstrap_authorization: 'blob-read-plus-add-only-no-write-no-delete'
-      runtime_authorization: 'blob-read-plus-write-only-no-add-no-delete'
-      azure_blob_write_authorization: 'runtime-write-includes-create-overwrite-lease-and-break'
-      operation_restriction_boundary: 'sealed-app-api-defense-in-depth-not-azure-enforced'
-      principal_separation: 'distinct-owner-bound-bootstrap-and-runtime-principals'
+      lease_blob_bootstrap: 'broker-internal-put-if-absent-before-acquire'
+      broker_authorization: 'non-exportable-managed-identity-read-write-no-delete'
+      azure_blob_write_authorization: 'broker-uami-write-includes-create-overwrite-lease-and-break'
+      operation_restriction_boundary: 'owner-ticketed-fixed-function-route'
+      local_runner_storage_authorization: 'none'
+      brokerFunctionPackageSha256: brokerFunctionPackageSha256
+      brokerTicketVerificationCertificateSha256: brokerTicketVerificationCertificateSha256
     }
   }
 }
 
-resource bootstrapLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: bootstrapLeaseDataRoleDefinitionGuid
+resource brokerLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: brokerLeaseDataRoleDefinitionGuid
   properties: {
-    roleName: 'NaC BFF Performance Lease Bootstrap Read Add ${isolationSuffix}'
-    description: 'Bootstrap-only read/add on one ABAC-conditioned blob path. Write, delete, ownership, and container management are excluded.'
-    type: 'CustomRole'
-    permissions: [
-      {
-        actions: []
-        notActions: []
-        dataActions: [
-          'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
-          'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
-        ]
-        notDataActions: []
-      }
-    ]
-    assignableScopes: [
-      resourceGroup().id
-    ]
-  }
-}
-
-resource runtimeLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: runtimeLeaseDataRoleDefinitionGuid
-  properties: {
-    roleName: 'NaC BFF Performance Lease Runtime Read Write ${isolationSuffix}'
-    description: 'Runtime-only read/write on one ABAC-conditioned blob path. Add, delete, ownership, and container management are excluded; write includes overwrite and lease operations.'
+    roleName: 'NaC BFF Performance Lease Broker Read Write ${isolationSuffix}'
+    description: 'Broker-only read/write on one ABAC-conditioned blob path. The managed-identity credential is never exported to the local runner.'
     type: 'CustomRole'
     permissions: [
       {
@@ -250,29 +220,16 @@ resource runtimeLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-0
   }
 }
 
-resource bootstrapLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(leaseContainer.id, validatedBootstrapPrincipalId, bootstrapLeaseDataRole.id, leaseBlobPath)
+resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(leaseContainer.id, validatedBrokerPrincipalId, brokerLeaseDataRole.id, leaseBlobPath)
   scope: leaseContainer
   properties: {
-    condition: exactBootstrapLeaseBlobCondition
+    condition: exactBrokerLeaseBlobCondition
     conditionVersion: '2.0'
-    description: 'Bootstrap-only read/add authorization scoped to the exact NaC BFF performance lease blob path; blob write and delete are excluded.'
-    principalId: validatedBootstrapPrincipalId
+    description: 'Non-exportable BFF lease-broker managed identity scoped to the exact performance lease blob path.'
+    principalId: validatedBrokerPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: bootstrapLeaseDataRole.id
-  }
-}
-
-resource runtimeLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(leaseContainer.id, validatedRuntimePrincipalId, runtimeLeaseDataRole.id, leaseBlobPath)
-  scope: leaseContainer
-  properties: {
-    condition: exactRuntimeLeaseBlobCondition
-    conditionVersion: '2.0'
-    description: 'Runtime-only read/write authorization scoped to the exact NaC BFF performance lease blob path; blob add and delete are excluded.'
-    principalId: validatedRuntimePrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: runtimeLeaseDataRole.id
+    roleDefinitionId: brokerLeaseDataRole.id
   }
 }
 
@@ -291,19 +248,14 @@ output leaseBlobUri string = '${storageAccount.properties.primaryEndpoints.blob}
 output requiredLeaseBlobType string = 'BlockBlob'
 output requiredLeaseBlobContentLength int = 0
 output targetBindingSha256 string = targetBindingSha256
-output bootstrapLeaseDataRoleDefinitionId string = bootstrapLeaseDataRole.id
-output runtimeLeaseDataRoleDefinitionId string = runtimeLeaseDataRole.id
-output bootstrapLeaseRoleAssignmentId string = bootstrapLeaseBinding.id
-output runtimeLeaseRoleAssignmentId string = runtimeLeaseBinding.id
-output bootstrapCertificateSha256Binding string = bootstrapCertificateSha256
-output runtimeCertificateSha256Binding string = runtimeCertificateSha256
-output exactBootstrapLeaseBlobCondition string = exactBootstrapLeaseBlobCondition
-output exactRuntimeLeaseBlobCondition string = exactRuntimeLeaseBlobCondition
-output bootstrapAllowedDataActions array = [
-  blobReadDataAction
-  blobAddDataAction
-]
-output runtimeAllowedDataActions array = [
+output brokerLeaseDataRoleDefinitionId string = brokerLeaseDataRole.id
+output brokerLeaseRoleAssignmentId string = brokerLeaseBinding.id
+output brokerPrincipalIdBinding string = validatedBrokerPrincipalId
+output brokerFunctionAppResourceIdBinding string = validatedBrokerFunctionAppResourceId
+output brokerFunctionPackageSha256Binding string = brokerFunctionPackageSha256
+output brokerTicketVerificationCertificateSha256Binding string = brokerTicketVerificationCertificateSha256
+output exactBrokerLeaseBlobCondition string = exactBrokerLeaseBlobCondition
+output brokerAllowedDataActions array = [
   blobReadDataAction
   blobWriteDataAction
 ]
@@ -321,6 +273,8 @@ output azureRbacOperationRestrictionEnforced bool = false
 output operationRestrictionDefenseInDepth array = [
   'dedicated-storage-account'
   'exact-container-and-blob-path-abac'
-  'sealed-bootstrap-and-runtime-application-apis'
+  'non-exportable-function-managed-identity'
+  'owner-ticketed-fixed-broker-api'
 ]
-output principalSeparationMode string = 'DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS'
+output localRunnerStorageDataActions array = []
+output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'

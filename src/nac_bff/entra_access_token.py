@@ -60,7 +60,8 @@ class EntraAccessTokenValidator:
         expected_tenant_id: str,
         expected_audience: str,
         expected_issuer: str,
-        required_scopes: Iterable[str],
+        required_scopes: Iterable[str] | None = None,
+        required_roles: Iterable[str] | None = None,
         jwks_uri: str,
         jwks_fetcher: JwksFetcher | None = None,
         clock_skew_seconds: int = 60,
@@ -77,7 +78,18 @@ class EntraAccessTokenValidator:
         self._expected_issuer = _configuration_string(
             expected_issuer, "expected_issuer"
         )
-        self._required_scopes = _configuration_scopes(required_scopes)
+        if (required_scopes is None) == (required_roles is None):
+            raise ValueError("exactly one delegated-scope or application-role policy is required")
+        self._required_scopes = (
+            _configuration_claim_values(required_scopes, "required_scopes")
+            if required_scopes is not None
+            else None
+        )
+        self._required_roles = (
+            _configuration_claim_values(required_roles, "required_roles")
+            if required_roles is not None
+            else None
+        )
         self._jwks_uri = _configuration_https_url(jwks_uri, "jwks_uri")
 
         if (
@@ -203,9 +215,18 @@ class EntraAccessTokenValidator:
         if claims.get("iss") != self._expected_issuer:
             raise _TokenRejected
 
-        scopes = _token_scopes(claims.get("scp"))
-        if scopes is None or not self._required_scopes.issubset(scopes):
-            raise _TokenRejected
+        if self._required_scopes is not None:
+            scopes = _token_scopes(claims.get("scp"))
+            if scopes is None or not self._required_scopes.issubset(scopes):
+                raise _TokenRejected
+            if claims.get("roles") is not None:
+                raise _TokenRejected
+        else:
+            roles = _token_roles(claims.get("roles"))
+            if roles is None or not self._required_roles.issubset(roles):
+                raise _TokenRejected
+            if claims.get("scp") is not None:
+                raise _TokenRejected
 
         expires_at = _numeric_date(claims.get("exp"))
         not_before = _numeric_date(claims.get("nbf"))
@@ -261,23 +282,25 @@ def _configuration_https_url(value: object, name: str) -> str:
     return normalized
 
 
-def _configuration_scopes(value: Iterable[str]) -> frozenset[str]:
+def _configuration_claim_values(
+    value: Iterable[str], name: str
+) -> frozenset[str]:
     if isinstance(value, (str, bytes)):
-        raise ValueError("required_scopes must be an iterable of scope names")
+        raise ValueError(f"{name} must be an iterable of claim values")
     try:
-        scopes = frozenset(value)
+        values = frozenset(value)
     except TypeError as exc:
-        raise ValueError("required_scopes must be an iterable of scope names") from exc
-    if not scopes or any(
-        not isinstance(scope, str)
-        or not scope
-        or scope != scope.strip()
-        or any(character.isspace() for character in scope)
-        or len(scope) > 256
-        for scope in scopes
+        raise ValueError(f"{name} must be an iterable of claim values") from exc
+    if not values or any(
+        not isinstance(item, str)
+        or not item
+        or item != item.strip()
+        or any(character.isspace() for character in item)
+        or len(item) > 256
+        for item in values
     ):
-        raise ValueError("required_scopes contains an invalid scope name")
-    return scopes
+        raise ValueError(f"{name} contains an invalid claim value")
+    return values
 
 
 def _extract_bearer_token(authorization_header: object) -> str:
@@ -404,6 +427,22 @@ def _token_scopes(value: object) -> frozenset[str] | None:
     ):
         return None
     return frozenset(scopes)
+
+
+def _token_roles(value: object) -> frozenset[str] | None:
+    if not isinstance(value, list) or not 1 <= len(value) <= 64:
+        return None
+    if any(
+        not isinstance(role, str)
+        or not role
+        or role != role.strip()
+        or len(role) > 256
+        or any(character.isspace() for character in role)
+        for role in value
+    ):
+        return None
+    roles = frozenset(value)
+    return roles if len(roles) == len(value) else None
 
 
 def _numeric_date(value: object) -> float | None:

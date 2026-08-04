@@ -33,6 +33,7 @@ AUDIENCE = "api://nac-bff"
 ISSUER = f"https://login.microsoftonline.com/{TENANT_ID}/v2.0"
 JWKS_URI = "https://login.microsoftonline.com/common/discovery/v2.0/keys"
 REQUIRED_SCOPE = "Matter.Read"
+REQUIRED_ROLE = "Performance.Lease"
 
 
 def _b64url(value: bytes) -> str:
@@ -170,6 +171,17 @@ class EntraAccessTokenValidatorTests(unittest.TestCase):
             now=lambda: float(NOW),
         )
 
+    def _application_validator(self) -> EntraAccessTokenValidator:
+        return EntraAccessTokenValidator(
+            expected_tenant_id=TENANT_ID,
+            expected_audience=AUDIENCE,
+            expected_issuer=ISSUER,
+            required_roles={REQUIRED_ROLE},
+            jwks_uri=JWKS_URI,
+            jwks_fetcher=_JwksFetcher({"keys": [_jwk(self.key_1, "key-1")]}),
+            now=lambda: float(NOW),
+        )
+
     def assertRejected(
         self,
         validator: EntraAccessTokenValidator,
@@ -192,6 +204,30 @@ class EntraAccessTokenValidatorTests(unittest.TestCase):
         self.assertEqual(result.tenant_id, TENANT_ID)
         self.assertEqual(result.subject, OBJECT_ID)
         self.assertEqual(fetcher.calls, [JWKS_URI])
+
+    def test_application_token_requires_exact_dedicated_role_shape(self) -> None:
+        claims = _claims(roles=[REQUIRED_ROLE])
+        claims.pop("scp")
+        result = self._application_validator().validate(
+            "Bearer " + _token(self.key_1, claims=claims)
+        )
+        self.assertEqual(result.object_id, OBJECT_ID)
+
+        invalid = (
+            _claims(roles=[REQUIRED_ROLE]),
+            _claims(scp=None, roles=[]),
+            _claims(scp=None, roles=[REQUIRED_ROLE, REQUIRED_ROLE]),
+            _claims(scp=None, roles=["Matter.Read"]),
+            _claims(scp=None, roles=REQUIRED_ROLE),
+        )
+        for candidate in invalid:
+            with self.subTest(candidate=candidate):
+                if candidate.get("scp") is None:
+                    candidate.pop("scp")
+                self.assertRejected(
+                    self._application_validator(),
+                    "Bearer " + _token(self.key_1, claims=candidate),
+                )
 
     def test_bearer_scheme_is_case_insensitive_but_header_shape_is_strict(self) -> None:
         validator = self._validator()
@@ -411,6 +447,8 @@ class EntraAccessTokenValidatorTests(unittest.TestCase):
             {"expected_issuer": ""},
             {"required_scopes": set()},
             {"required_scopes": {"bad scope"}},
+            {"required_scopes": None},
+            {"required_scopes": {REQUIRED_SCOPE}, "required_roles": {REQUIRED_ROLE}},
             {"jwks_uri": ""},
             {"jwks_uri": "http://login.microsoftonline.com/common/keys"},
             {"jwks_uri": "https://login.microsoftonline.com:443/common/keys"},
@@ -425,6 +463,15 @@ class EntraAccessTokenValidatorTests(unittest.TestCase):
             with self.subTest(overrides=overrides):
                 with self.assertRaises(ValueError):
                     EntraAccessTokenValidator(**(base | overrides))
+
+        role_base = dict(base)
+        role_base.pop("required_scopes")
+        for required_roles in (set(), {"bad role"}, REQUIRED_ROLE):
+            with self.subTest(required_roles=required_roles):
+                with self.assertRaises(ValueError):
+                    EntraAccessTokenValidator(
+                        **(role_base | {"required_roles": required_roles})
+                    )
 
 
 if __name__ == "__main__":

@@ -20,14 +20,10 @@ COMPILED_PARAMETERS = INFRA_ROOT / "compiled" / "main.example.json"
 BLOB_READ = (
     "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
 )
-BLOB_ADD = (
-    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action"
-)
 BLOB_WRITE = (
     "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
 )
-BOOTSTRAP_ACTIONS = {BLOB_READ, BLOB_ADD}
-RUNTIME_ACTIONS = {BLOB_READ, BLOB_WRITE}
+BROKER_ACTIONS = {BLOB_READ, BLOB_WRITE}
 EXACT_CONTAINER_SCOPE = (
     "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', "
     "variables('validatedStorageAccountName'), 'default', "
@@ -100,7 +96,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "defaultToOAuthAuthentication: true",
             "publicAccess: 'None'",
             "defaultAction: 'Deny'",
-            "value: allowedClientIpAddress",
+            "ipRules: brokerIpRules",
             "resourceAccessRules: []",
         ):
             self.assertIn(marker, self.source)
@@ -113,13 +109,14 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, lowered)
 
-    def test_owner_gated_blob_bootstrap_contract_matches_runtime_path(self) -> None:
+    def test_owner_gated_broker_contract_matches_runtime_path(self) -> None:
         for marker in (
             "var containerName = 'nac-bff-performance-leases'",
             "var leaseBlobPath = 'locks/${targetBindingSha256}.lock'",
             "lease_blob_type: 'BlockBlob'",
             "lease_blob_content_length: '0'",
-            "lease_blob_bootstrap: 'owner-gated-put-if-absent-before-runtime'",
+            "lease_blob_bootstrap: 'broker-internal-put-if-absent-before-acquire'",
+            "local_runner_storage_authorization: 'none'",
             "output blobBootstrapRequired bool = true",
             "output blobBootstrapExecutedByTemplate bool = false",
         ):
@@ -129,102 +126,73 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             r"@minLength\(64\)\s*@maxLength\(64\)\s*param targetBindingSha256 string",
         )
 
-    def test_source_forces_distinct_bootstrap_and_runtime_principals(self) -> None:
+    def test_source_binds_non_exportable_broker_identity_and_package(self) -> None:
         for marker in (
-            "param bootstrapPrincipalId string",
-            "param runtimePrincipalId string",
-            "toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId)",
-            "fail('Bootstrap and runtime principal and certificate identities must be different.')",
-            "principal_separation: 'distinct-owner-bound-bootstrap-and-runtime-principals'",
-            "output principalSeparationMode string = 'DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS'",
+            "param brokerPrincipalId string",
+            "param brokerFunctionAppResourceId string",
+            "param brokerFunctionPackageSha256 string",
+            "param brokerTicketVerificationCertificateSha256 string",
+            "param brokerOutboundIpAddresses array",
+            "output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'",
+            "output localRunnerStorageDataActions array = []",
         ):
             self.assertIn(marker, self.source)
-        self.assertNotIn("provisionerPrincipalId", self.source)
-        self.assertEqual(
-            self.source.count(
-                "toLower(bootstrapPrincipalId) != toLower(runtimePrincipalId)"
-            ),
-            2,
-        )
+        for forbidden in (
+            "bootstrapPrincipalId",
+            "runtimePrincipalId",
+            "runtimeCertificateSha256",
+            "allowedClientIpAddress",
+        ):
+            self.assertNotIn(forbidden, self.source)
 
-    def test_source_roles_have_exact_disjoint_write_capabilities(self) -> None:
-        bootstrap_match = re.search(
-            r"resource bootstrapLeaseDataRole .*?\n\}\n\nresource runtimeLeaseDataRole",
+    def test_source_role_is_exclusive_to_the_broker_uami(self) -> None:
+        broker_match = re.search(
+            r"resource brokerLeaseDataRole .*?\n\}\n\nresource brokerLeaseBinding",
             self.source,
             flags=re.DOTALL,
         )
-        runtime_match = re.search(
-            r"resource runtimeLeaseDataRole .*?\n\}\n\nresource bootstrapLeaseBinding",
-            self.source,
-            flags=re.DOTALL,
-        )
-        self.assertIsNotNone(bootstrap_match)
-        self.assertIsNotNone(runtime_match)
+        self.assertIsNotNone(broker_match)
 
         action_pattern = r"'(Microsoft\.Storage/storageAccounts/blobServices/containers/blobs/[^']+)'"
-        bootstrap_actions = set(re.findall(action_pattern, bootstrap_match.group(0)))
-        runtime_actions = set(re.findall(action_pattern, runtime_match.group(0)))
-        self.assertEqual(bootstrap_actions, BOOTSTRAP_ACTIONS)
-        self.assertEqual(runtime_actions, RUNTIME_ACTIONS)
-        self.assertNotIn(BLOB_WRITE, bootstrap_actions)
-        self.assertNotIn(BLOB_ADD, runtime_actions)
-        self.assertNotIn("/blobs/delete", bootstrap_match.group(0))
-        self.assertNotIn("/blobs/delete", runtime_match.group(0))
+        broker_actions = set(re.findall(action_pattern, broker_match.group(0)))
+        self.assertEqual(broker_actions, BROKER_ACTIONS)
+        self.assertNotIn("/blobs/delete", broker_match.group(0))
 
-    def test_source_assignments_bind_each_identity_to_its_role_and_condition(self) -> None:
+    def test_source_assignment_binds_only_broker_uami_to_exact_path(self) -> None:
         for marker in (
-            "resource bootstrapLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01'",
-            "principalId: validatedBootstrapPrincipalId",
-            "roleDefinitionId: bootstrapLeaseDataRole.id",
-            "condition: exactBootstrapLeaseBlobCondition",
-            "resource runtimeLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01'",
-            "principalId: validatedRuntimePrincipalId",
-            "roleDefinitionId: runtimeLeaseDataRole.id",
-            "condition: exactRuntimeLeaseBlobCondition",
+            "resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01'",
+            "principalId: validatedBrokerPrincipalId",
+            "roleDefinitionId: brokerLeaseDataRole.id",
+            "condition: exactBrokerLeaseBlobCondition",
         ):
             self.assertIn(marker, self.source)
         self.assertEqual(
             self.source.count(
-                "resource bootstrapLeaseBinding 'Microsoft.Authorization/roleAssignments"
-            ),
-            1,
-        )
-        self.assertEqual(
-            self.source.count(
-                "resource runtimeLeaseBinding 'Microsoft.Authorization/roleAssignments"
+                "resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments"
             ),
             1,
         )
 
-    def test_source_abac_conditions_are_identity_specific_and_exact_path(self) -> None:
-        bootstrap_condition = re.search(
-            r"var exactBootstrapLeaseBlobCondition = (.*)", self.source
+    def test_source_abac_condition_is_exact_path(self) -> None:
+        broker_condition = re.search(
+            r"var exactBrokerLeaseBlobCondition = (.*)", self.source
         ).group(1)
-        runtime_condition = re.search(
-            r"var exactRuntimeLeaseBlobCondition = (.*)", self.source
-        ).group(1)
-        for condition in (bootstrap_condition, runtime_condition):
-            self.assertIn("containers:name] StringEquals", condition)
-            self.assertIn("containers/blobs:path] StringEquals", condition)
-            self.assertIn("${containerName}", condition)
-            self.assertIn("${leaseBlobPath}", condition)
-            self.assertNotIn("StringLike", condition)
-            self.assertNotIn("StringStartsWith", condition)
-        self.assertIn("${blobAddDataAction}", bootstrap_condition)
-        self.assertNotIn("${blobWriteDataAction}", bootstrap_condition)
-        self.assertIn("${blobWriteDataAction}", runtime_condition)
-        self.assertNotIn("${blobAddDataAction}", runtime_condition)
+        self.assertIn("containers:name] StringEquals", broker_condition)
+        self.assertIn("containers/blobs:path] StringEquals", broker_condition)
+        self.assertIn("${containerName}", broker_condition)
+        self.assertIn("${leaseBlobPath}", broker_condition)
+        self.assertIn("${blobWriteDataAction}", broker_condition)
+        self.assertNotIn("StringLike", broker_condition)
+        self.assertNotIn("StringStartsWith", broker_condition)
 
     def test_source_metadata_and_outputs_document_identity_boundaries(self) -> None:
         for marker in (
-            "bootstrap_authorization: 'blob-read-plus-add-only-no-write-no-delete'",
-            "runtime_authorization: 'blob-read-plus-write-only-no-add-no-delete'",
-            "output bootstrapLeaseDataRoleDefinitionId string = bootstrapLeaseDataRole.id",
-            "output runtimeLeaseDataRoleDefinitionId string = runtimeLeaseDataRole.id",
-            "output bootstrapLeaseRoleAssignmentId string = bootstrapLeaseBinding.id",
-            "output runtimeLeaseRoleAssignmentId string = runtimeLeaseBinding.id",
-            "output bootstrapAllowedDataActions array",
-            "output runtimeAllowedDataActions array",
+            "broker_authorization: 'non-exportable-managed-identity-read-write-no-delete'",
+            "operation_restriction_boundary: 'owner-ticketed-fixed-function-route'",
+            "output brokerLeaseDataRoleDefinitionId string = brokerLeaseDataRole.id",
+            "output brokerLeaseRoleAssignmentId string = brokerLeaseBinding.id",
+            "output brokerAllowedDataActions array",
+            "output localRunnerStorageDataActions array = []",
         ):
             self.assertIn(marker, self.source)
         self.assertNotIn("output allowedDataActions array", self.source)
@@ -234,12 +202,12 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
     def test_example_parameters_are_complete_synthetic_and_distinct(self) -> None:
         for marker in (
             "using './main.bicep'",
-            "param bootstrapPrincipalId = '11111111-2222-4333-8444-555555555555'",
-            "param runtimePrincipalId = '66666666-7777-4888-8999-aaaaaaaaaaaa'",
-            "param allowedClientIpAddress = '203.0.113.10'",
+            "param brokerPrincipalId = '11111111-2222-4333-8444-555555555555'",
+            "param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'",
+            "param brokerOutboundIpAddresses = [",
             "param targetBindingSha256 = '1111111111111111111111111111111111111111111111111111111111111111'",
-            "Bootstrap can only read/add the exact bound blob.",
-            "Runtime can only read/write it",
+            "Only the BFF Function managed identity receives exact-path Blob read/write.",
+            "local runner receives a broker API role",
         ):
             self.assertIn(marker, self.example_source)
         self.assertNotIn("provisionerPrincipalId", self.example_source)
@@ -263,7 +231,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         self.assertEqual(self.parameter_artifact["templateSpecId"], None)
         self.assertEqual(self.embedded_template, self.template)
 
-    def test_compiled_parameter_contract_replaces_provisioner(self) -> None:
+    def test_compiled_parameter_contract_binds_broker_boundary(self) -> None:
         expected_parameters = {
             "location",
             "tenantId",
@@ -273,21 +241,17 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "storageAccountName",
             "bffStorageAccountResourceId",
             "wormStorageAccountResourceId",
-            "bootstrapPrincipalId",
-            "runtimePrincipalId",
-            "bootstrapCertificateSha256",
-            "runtimeCertificateSha256",
-            "allowedClientIpAddress",
+            "brokerPrincipalId",
+            "brokerFunctionAppResourceId",
+            "brokerFunctionPackageSha256",
+            "brokerTicketVerificationCertificateSha256",
+            "brokerOutboundIpAddresses",
             "targetBindingSha256",
             "tags",
         }
         self.assertEqual(set(self.template["parameters"]), expected_parameters)
         self.assertEqual(set(self.parameters["parameters"]), expected_parameters)
-        self.assertNotIn("provisionerPrincipalId", self.template["parameters"])
-        self.assertNotEqual(
-            self.parameters["parameters"]["bootstrapPrincipalId"]["value"],
-            self.parameters["parameters"]["runtimePrincipalId"]["value"],
-        )
+        self.assertNotIn("runtimePrincipalId", self.template["parameters"])
 
     def test_compiled_template_has_exact_resource_counts(self) -> None:
         self.assertEqual(
@@ -297,43 +261,23 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
                     "Microsoft.Storage/storageAccounts": 1,
                     "Microsoft.Storage/storageAccounts/blobServices": 1,
                     "Microsoft.Storage/storageAccounts/blobServices/containers": 1,
-                    "Microsoft.Authorization/roleDefinitions": 2,
-                    "Microsoft.Authorization/roleAssignments": 2,
+                    "Microsoft.Authorization/roleDefinitions": 1,
+                    "Microsoft.Authorization/roleAssignments": 1,
                 }
             ),
         )
 
-    def test_compiled_principal_guard_is_fail_closed(self) -> None:
-        expected_guard = (
-            "not(equals(toLower(parameters('bootstrapPrincipalId')), "
-            "toLower(parameters('runtimePrincipalId'))))"
-        )
-        for variable_name, expected_parameter in (
-            ("validatedBootstrapPrincipalId", "bootstrapPrincipalId"),
-            ("validatedRuntimePrincipalId", "runtimePrincipalId"),
-        ):
-            expression = self.template["variables"][variable_name]
-            self.assertIn(expected_guard, expression)
-            self.assertIn(f"parameters('{expected_parameter}')", expression)
-            self.assertIn(
-                "fail('Bootstrap and runtime principal and certificate identities must be different.')",
-                expression,
-            )
-            self.assertIn(
-                "not(equals(parameters('bootstrapCertificateSha256'), "
-                "parameters('runtimeCertificateSha256')))",
-                expression,
-            )
+    def test_compiled_broker_resource_guard_is_fail_closed(self) -> None:
+        expression = self.template["variables"]["validatedBrokerFunctionAppResourceId"]
+        self.assertIn("microsoft.web", expression.lower())
+        self.assertIn("fail('Broker Function App resource ID is not authoritative", expression)
 
-    def test_compiled_custom_roles_are_exact_and_never_combine_add_write(self) -> None:
+    def test_compiled_custom_role_is_exact_and_broker_only(self) -> None:
         roles = resources_of_type(
             self.template, "Microsoft.Authorization/roleDefinitions"
         )
         roles_by_name = {role["name"]: role for role in roles}
-        expected = {
-            "[variables('bootstrapLeaseDataRoleDefinitionGuid')]": BOOTSTRAP_ACTIONS,
-            "[variables('runtimeLeaseDataRoleDefinitionGuid')]": RUNTIME_ACTIONS,
-        }
+        expected = {"[variables('brokerLeaseDataRoleDefinitionGuid')]": BROKER_ACTIONS}
         self.assertEqual(set(roles_by_name), set(expected))
         for name, expected_actions in expected.items():
             permission = roles_by_name[name]["properties"]["permissions"]
@@ -346,10 +290,9 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
                 roles_by_name[name]["properties"]["assignableScopes"],
                 ["[resourceGroup().id]"],
             )
-            self.assertFalse({BLOB_ADD, BLOB_WRITE} <= expected_actions)
             self.assertFalse(any(action.endswith("/delete") for action in expected_actions))
 
-    def test_compiled_assignments_bind_distinct_principals_roles_and_conditions(self) -> None:
+    def test_compiled_assignment_binds_only_broker_principal(self) -> None:
         assignments = resources_of_type(
             self.template, "Microsoft.Authorization/roleAssignments"
         )
@@ -357,16 +300,9 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             assignment["properties"]["principalId"]: assignment
             for assignment in assignments
         }
-        expected = {
-            "[variables('validatedBootstrapPrincipalId')]": (
-                "bootstrapLeaseDataRoleDefinitionGuid",
-                "exactBootstrapLeaseBlobCondition",
-            ),
-            "[variables('validatedRuntimePrincipalId')]": (
-                "runtimeLeaseDataRoleDefinitionGuid",
-                "exactRuntimeLeaseBlobCondition",
-            ),
-        }
+        expected = {"[variables('validatedBrokerPrincipalId')]": (
+            "brokerLeaseDataRoleDefinitionGuid", "exactBrokerLeaseBlobCondition"
+        )}
         self.assertEqual(set(by_principal), set(expected))
         for principal, (role_guid, condition) in expected.items():
             assignment = by_principal[principal]
@@ -384,45 +320,36 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             self.assertIn(principal[1:-1], assignment["name"])
             self.assertIn("variables('leaseBlobPath')", assignment["name"])
 
-    def test_compiled_conditions_bind_only_the_exact_blob_path(self) -> None:
+    def test_compiled_condition_binds_only_the_exact_blob_path(self) -> None:
         variables = self.template["variables"]
-        bootstrap = variables["exactBootstrapLeaseBlobCondition"]
-        runtime = variables["exactRuntimeLeaseBlobCondition"]
-        for condition in (bootstrap, runtime):
-            self.assertIn("containers:name] StringEquals", condition)
-            self.assertIn("containers/blobs:path] StringEquals", condition)
-            self.assertIn("variables('containerName')", condition)
-            self.assertIn("variables('leaseBlobPath')", condition)
-            self.assertNotIn("StringLike", condition)
-            self.assertNotIn("StringStartsWith", condition)
-        self.assertIn("variables('blobAddDataAction')", bootstrap)
-        self.assertNotIn("variables('blobWriteDataAction')", bootstrap)
-        self.assertIn("variables('blobWriteDataAction')", runtime)
-        self.assertNotIn("variables('blobAddDataAction')", runtime)
+        broker = variables["exactBrokerLeaseBlobCondition"]
+        self.assertIn("containers:name] StringEquals", broker)
+        self.assertIn("containers/blobs:path] StringEquals", broker)
+        self.assertIn("variables('containerName')", broker)
+        self.assertIn("variables('leaseBlobPath')", broker)
+        self.assertIn("variables('blobWriteDataAction')", broker)
+        self.assertNotIn("StringLike", broker)
+        self.assertNotIn("StringStartsWith", broker)
 
-    def test_compiled_outputs_are_unambiguous_per_identity(self) -> None:
+    def test_compiled_outputs_are_unambiguous_for_broker_boundary(self) -> None:
         outputs = self.template["outputs"]
         expected = {
-            "bootstrapLeaseDataRoleDefinitionId",
-            "runtimeLeaseDataRoleDefinitionId",
-            "bootstrapLeaseRoleAssignmentId",
-            "runtimeLeaseRoleAssignmentId",
-            "bootstrapAllowedDataActions",
-            "runtimeAllowedDataActions",
-            "principalSeparationMode",
+            "brokerLeaseDataRoleDefinitionId",
+            "brokerLeaseRoleAssignmentId",
+            "brokerAllowedDataActions",
+            "brokerFunctionPackageSha256Binding",
+            "brokerTicketVerificationCertificateSha256Binding",
+            "localRunnerStorageDataActions",
+            "credentialBoundaryMode",
         }
         self.assertTrue(expected <= set(outputs))
         self.assertEqual(
-            outputs["bootstrapAllowedDataActions"]["value"],
-            ["[variables('blobReadDataAction')]", "[variables('blobAddDataAction')]"],
-        )
-        self.assertEqual(
-            outputs["runtimeAllowedDataActions"]["value"],
+            outputs["brokerAllowedDataActions"]["value"],
             ["[variables('blobReadDataAction')]", "[variables('blobWriteDataAction')]"],
         )
         self.assertEqual(
-            outputs["principalSeparationMode"]["value"],
-            "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS",
+            outputs["credentialBoundaryMode"]["value"],
+            "BFF_BROKER_UAMI_ONLY",
         )
         self.assertNotIn("leaseDataRoleDefinitionId", outputs)
         self.assertNotIn("provisionerLeaseRoleAssignmentId", outputs)
@@ -435,16 +362,16 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         )[0]
         metadata = container["properties"]["metadata"]
         self.assertEqual(
-            metadata["bootstrap_authorization"],
-            "blob-read-plus-add-only-no-write-no-delete",
+            metadata["broker_authorization"],
+            "non-exportable-managed-identity-read-write-no-delete",
         )
         self.assertEqual(
-            metadata["runtime_authorization"],
-            "blob-read-plus-write-only-no-add-no-delete",
+            metadata["operation_restriction_boundary"],
+            "owner-ticketed-fixed-function-route",
         )
         self.assertEqual(
-            metadata["principal_separation"],
-            "distinct-owner-bound-bootstrap-and-runtime-principals",
+            metadata["local_runner_storage_authorization"],
+            "none",
         )
 
 

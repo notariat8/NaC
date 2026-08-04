@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "5716215094461638319"
+      "templateHash": "15302131147001075426"
     },
     "description": "Dedicated Azure Blob coordination boundary for one NaC BFF performance run."
   },
@@ -68,38 +68,40 @@
         "description": "Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID."
       }
     },
-    "bootstrapPrincipalId": {
+    "brokerPrincipalId": {
       "type": "string",
       "metadata": {
-        "description": "Object ID of the dedicated Entra service principal used only to bootstrap the bound blob with read and add. It must differ from runtimePrincipalId and receives no blob write or delete capability."
+        "description": "Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route."
       }
     },
-    "runtimePrincipalId": {
+    "brokerFunctionAppResourceId": {
       "type": "string",
       "metadata": {
-        "description": "Object ID of the dedicated Entra service principal used only at runtime with blob read and write. It must differ from bootstrapPrincipalId and receives no blob add or delete capability."
+        "description": "Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker."
       }
     },
-    "bootstrapCertificateSha256": {
+    "brokerFunctionPackageSha256": {
       "type": "string",
       "minLength": 64,
       "maxLength": 64,
       "metadata": {
-        "description": "SHA-256 of the bootstrap application certificate bound by the owner approval."
+        "description": "SHA-256 of the exact deployed BFF Function package containing the broker implementation."
       }
     },
-    "runtimeCertificateSha256": {
+    "brokerTicketVerificationCertificateSha256": {
       "type": "string",
       "minLength": 64,
       "maxLength": 64,
       "metadata": {
-        "description": "SHA-256 of the separate runtime application certificate bound by the owner approval."
+        "description": "SHA-256 of the public certificate used by the broker to verify short-lived activation tickets."
       }
     },
-    "allowedClientIpAddress": {
-      "type": "string",
+    "brokerOutboundIpAddresses": {
+      "type": "array",
+      "minLength": 1,
+      "maxLength": 32,
       "metadata": {
-        "description": "Single public IPv4 address allowed to reach the dedicated data plane during the approved run."
+        "description": "Exact public IPv4 addresses reported by the bound BFF Function App for broker egress. Local runner addresses are forbidden."
       }
     },
     "targetBindingSha256": {
@@ -119,10 +121,21 @@
     }
   },
   "variables": {
+    "copy": [
+      {
+        "name": "brokerIpRules",
+        "count": "[length(parameters('brokerOutboundIpAddresses'))]",
+        "input": {
+          "action": "Allow",
+          "value": "[parameters('brokerOutboundIpAddresses')[copyIndex('brokerIpRules')]]"
+        }
+      }
+    ],
     "containerName": "nac-bff-performance-leases",
     "leaseBlobPath": "[format('locks/{0}.lock', parameters('targetBindingSha256'))]",
     "bffStorageAccountResourceIdSegments": "[split(parameters('bffStorageAccountResourceId'), '/')]",
     "wormStorageAccountResourceIdSegments": "[split(parameters('wormStorageAccountResourceId'), '/')]",
+    "brokerFunctionAppResourceIdSegments": "[split(parameters('brokerFunctionAppResourceId'), '/')]",
     "bffStorageAccountName": "[last(variables('bffStorageAccountResourceIdSegments'))]",
     "wormStorageAccountName": "[last(variables('wormStorageAccountResourceIdSegments'))]",
     "validatedDeploymentScope": "[if(and(and(and(equals(tenant().tenantId, parameters('tenantId')), equals(subscription().subscriptionId, parameters('subscriptionId'))), equals(resourceGroup().name, parameters('resourceGroupName'))), equals(parameters('deploymentMode'), 'Incremental')), format('{0}/{1}/{2}', parameters('tenantId'), parameters('subscriptionId'), parameters('resourceGroupName')), fail('Performance coordination deployment scope does not match the owner-bound tenant, subscription, and resource group.'))]",
@@ -131,15 +144,12 @@
     "coordinationStorageAccountResourceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
     "validatedStorageAccountName": "[if(and(and(and(and(and(and(not(empty(variables('validatedDeploymentScope'))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedBffStorageAccountResourceId'))))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(variables('validatedBffStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('bffStorageAccountName'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('wormStorageAccountName'))))), not(equals(toLower(variables('bffStorageAccountName')), toLower(variables('wormStorageAccountName'))))), parameters('storageAccountName'), fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.'))]",
     "isolationSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedStorageAccountName'))]",
-    "bootstrapLeaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-bootstrap-read-add-v1')]",
-    "runtimeLeaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-runtime-read-write-v1')]",
+    "brokerLeaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-broker-read-write-v1')]",
     "blobReadDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
-    "blobAddDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
     "blobWriteDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
-    "exactBootstrapLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{2}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{3}''))', variables('blobReadDataAction'), variables('blobAddDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
-    "exactRuntimeLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{2}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{3}''))', variables('blobReadDataAction'), variables('blobWriteDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
-    "validatedBootstrapPrincipalId": "[if(and(not(equals(toLower(parameters('bootstrapPrincipalId')), toLower(parameters('runtimePrincipalId')))), not(equals(parameters('bootstrapCertificateSha256'), parameters('runtimeCertificateSha256')))), parameters('bootstrapPrincipalId'), fail('Bootstrap and runtime principal and certificate identities must be different.'))]",
-    "validatedRuntimePrincipalId": "[if(and(not(equals(toLower(parameters('bootstrapPrincipalId')), toLower(parameters('runtimePrincipalId')))), not(equals(parameters('bootstrapCertificateSha256'), parameters('runtimeCertificateSha256')))), parameters('runtimePrincipalId'), fail('Bootstrap and runtime principal and certificate identities must be different.'))]",
+    "exactBrokerLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{2}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{3}''))', variables('blobReadDataAction'), variables('blobWriteDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
+    "validatedBrokerFunctionAppResourceId": "[if(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerFunctionAppResourceIdSegments')), 9), empty(variables('brokerFunctionAppResourceIdSegments')[0])), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerFunctionAppResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[3]), 'resourcegroups')), not(empty(variables('brokerFunctionAppResourceIdSegments')[4]))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[6]), 'microsoft.web')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[7]), 'sites')), not(empty(variables('brokerFunctionAppResourceIdSegments')[8]))), parameters('brokerFunctionAppResourceId'), fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.'))]",
+    "validatedBrokerPrincipalId": "[if(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), not(empty(parameters('brokerPrincipalId')))), parameters('brokerPrincipalId'), fail('Broker managed identity is required.'))]",
     "mandatoryResourceTags": {
       "blobPrecreation": "owner-gated-before-runtime",
       "dataClassification": "synthetic-only",
@@ -175,12 +185,7 @@
         "networkAcls": {
           "bypass": "None",
           "defaultAction": "Deny",
-          "ipRules": [
-            {
-              "action": "Allow",
-              "value": "[parameters('allowedClientIpAddress')]"
-            }
-          ],
+          "ipRules": "[variables('brokerIpRules')]",
           "resourceAccessRules": [],
           "virtualNetworkRules": []
         }
@@ -215,12 +220,13 @@
           "lease_blob_path": "[variables('leaseBlobPath')]",
           "lease_blob_type": "BlockBlob",
           "lease_blob_content_length": "0",
-          "lease_blob_bootstrap": "owner-gated-put-if-absent-before-runtime",
-          "bootstrap_authorization": "blob-read-plus-add-only-no-write-no-delete",
-          "runtime_authorization": "blob-read-plus-write-only-no-add-no-delete",
-          "azure_blob_write_authorization": "runtime-write-includes-create-overwrite-lease-and-break",
-          "operation_restriction_boundary": "sealed-app-api-defense-in-depth-not-azure-enforced",
-          "principal_separation": "distinct-owner-bound-bootstrap-and-runtime-principals"
+          "lease_blob_bootstrap": "broker-internal-put-if-absent-before-acquire",
+          "broker_authorization": "non-exportable-managed-identity-read-write-no-delete",
+          "azure_blob_write_authorization": "broker-uami-write-includes-create-overwrite-lease-and-break",
+          "operation_restriction_boundary": "owner-ticketed-fixed-function-route",
+          "local_runner_storage_authorization": "none",
+          "brokerFunctionPackageSha256": "[parameters('brokerFunctionPackageSha256')]",
+          "brokerTicketVerificationCertificateSha256": "[parameters('brokerTicketVerificationCertificateSha256')]"
         }
       },
       "dependsOn": [
@@ -230,34 +236,10 @@
     {
       "type": "Microsoft.Authorization/roleDefinitions",
       "apiVersion": "2022-04-01",
-      "name": "[variables('bootstrapLeaseDataRoleDefinitionGuid')]",
+      "name": "[variables('brokerLeaseDataRoleDefinitionGuid')]",
       "properties": {
-        "roleName": "[format('NaC BFF Performance Lease Bootstrap Read Add {0}', variables('isolationSuffix'))]",
-        "description": "Bootstrap-only read/add on one ABAC-conditioned blob path. Write, delete, ownership, and container management are excluded.",
-        "type": "CustomRole",
-        "permissions": [
-          {
-            "actions": [],
-            "notActions": [],
-            "dataActions": [
-              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
-              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action"
-            ],
-            "notDataActions": []
-          }
-        ],
-        "assignableScopes": [
-          "[resourceGroup().id]"
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Authorization/roleDefinitions",
-      "apiVersion": "2022-04-01",
-      "name": "[variables('runtimeLeaseDataRoleDefinitionGuid')]",
-      "properties": {
-        "roleName": "[format('NaC BFF Performance Lease Runtime Read Write {0}', variables('isolationSuffix'))]",
-        "description": "Runtime-only read/write on one ABAC-conditioned blob path. Add, delete, ownership, and container management are excluded; write includes overwrite and lease operations.",
+        "roleName": "[format('NaC BFF Performance Lease Broker Read Write {0}', variables('isolationSuffix'))]",
+        "description": "Broker-only read/write on one ABAC-conditioned blob path. The managed-identity credential is never exported to the local runner.",
         "type": "CustomRole",
         "permissions": [
           {
@@ -279,36 +261,18 @@
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
-      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBootstrapPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('bootstrapLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
       "properties": {
-        "condition": "[variables('exactBootstrapLeaseBlobCondition')]",
+        "condition": "[variables('exactBrokerLeaseBlobCondition')]",
         "conditionVersion": "2.0",
-        "description": "Bootstrap-only read/add authorization scoped to the exact NaC BFF performance lease blob path; blob write and delete are excluded.",
-        "principalId": "[variables('validatedBootstrapPrincipalId')]",
+        "description": "Non-exportable BFF lease-broker managed identity scoped to the exact performance lease blob path.",
+        "principalId": "[variables('validatedBrokerPrincipalId')]",
         "principalType": "ServicePrincipal",
-        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('bootstrapLeaseDataRoleDefinitionGuid'))]"
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid'))]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('bootstrapLeaseDataRoleDefinitionGuid'))]",
+        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid'))]",
         "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
-      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedRuntimePrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('runtimeLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
-      "properties": {
-        "condition": "[variables('exactRuntimeLeaseBlobCondition')]",
-        "conditionVersion": "2.0",
-        "description": "Runtime-only read/write authorization scoped to the exact NaC BFF performance lease blob path; blob add and delete are excluded.",
-        "principalId": "[variables('validatedRuntimePrincipalId')]",
-        "principalType": "ServicePrincipal",
-        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('runtimeLeaseDataRoleDefinitionGuid'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
-        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('runtimeLeaseDataRoleDefinitionGuid'))]"
       ]
     }
   ],
@@ -373,46 +337,35 @@
       "type": "string",
       "value": "[parameters('targetBindingSha256')]"
     },
-    "bootstrapLeaseDataRoleDefinitionId": {
+    "brokerLeaseDataRoleDefinitionId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('bootstrapLeaseDataRoleDefinitionGuid'))]"
+      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid'))]"
     },
-    "runtimeLeaseDataRoleDefinitionId": {
+    "brokerLeaseRoleAssignmentId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('runtimeLeaseDataRoleDefinitionGuid'))]"
+      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
     },
-    "bootstrapLeaseRoleAssignmentId": {
+    "brokerPrincipalIdBinding": {
       "type": "string",
-      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBootstrapPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('bootstrapLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
+      "value": "[variables('validatedBrokerPrincipalId')]"
     },
-    "runtimeLeaseRoleAssignmentId": {
+    "brokerFunctionAppResourceIdBinding": {
       "type": "string",
-      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedRuntimePrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('runtimeLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
+      "value": "[variables('validatedBrokerFunctionAppResourceId')]"
     },
-    "bootstrapCertificateSha256Binding": {
+    "brokerFunctionPackageSha256Binding": {
       "type": "string",
-      "value": "[parameters('bootstrapCertificateSha256')]"
+      "value": "[parameters('brokerFunctionPackageSha256')]"
     },
-    "runtimeCertificateSha256Binding": {
+    "brokerTicketVerificationCertificateSha256Binding": {
       "type": "string",
-      "value": "[parameters('runtimeCertificateSha256')]"
+      "value": "[parameters('brokerTicketVerificationCertificateSha256')]"
     },
-    "exactBootstrapLeaseBlobCondition": {
+    "exactBrokerLeaseBlobCondition": {
       "type": "string",
-      "value": "[variables('exactBootstrapLeaseBlobCondition')]"
+      "value": "[variables('exactBrokerLeaseBlobCondition')]"
     },
-    "exactRuntimeLeaseBlobCondition": {
-      "type": "string",
-      "value": "[variables('exactRuntimeLeaseBlobCondition')]"
-    },
-    "bootstrapAllowedDataActions": {
-      "type": "array",
-      "value": [
-        "[variables('blobReadDataAction')]",
-        "[variables('blobAddDataAction')]"
-      ]
-    },
-    "runtimeAllowedDataActions": {
+    "brokerAllowedDataActions": {
       "type": "array",
       "value": [
         "[variables('blobReadDataAction')]",
@@ -450,12 +403,17 @@
       "value": [
         "dedicated-storage-account",
         "exact-container-and-blob-path-abac",
-        "sealed-bootstrap-and-runtime-application-apis"
+        "non-exportable-function-managed-identity",
+        "owner-ticketed-fixed-broker-api"
       ]
     },
-    "principalSeparationMode": {
+    "localRunnerStorageDataActions": {
+      "type": "array",
+      "value": []
+    },
+    "credentialBoundaryMode": {
       "type": "string",
-      "value": "DISTINCT_BOOTSTRAP_AND_RUNTIME_PRINCIPALS"
+      "value": "BFF_BROKER_UAMI_ONLY"
     }
   }
 }
