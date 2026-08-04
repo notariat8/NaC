@@ -583,6 +583,22 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         ):
             return verify_azure_performance_infrastructure_safety(**arguments)
 
+    def _persist_complete_restart(self, root: Path):
+        arguments = _build_arguments(root)
+        store = AzurePerformanceInfrastructureRestartReceiptStore(
+            root / "restart-receipts", binding=_restart_binding()
+        )
+        original = store.persist_original_name_available(
+            arguments["coordination_name_readback_envelope"]
+        )
+        successful = store.persist_successful_deployment(
+            arguments["deployment_receipt_envelope"],
+            coordination_resources=_coordination_resources(),
+            create_deployment_receipt_sha256="e" * 64,
+            deployment_outputs_sha256="f" * 64,
+        )
+        return arguments, store, original, successful
+
     def test_accepts_single_owner_bound_broker_and_zero_action_caller(self) -> None:
         with tempfile.TemporaryDirectory() as value:
             evidence = self._verify(_build_arguments(Path(value)))
@@ -614,6 +630,81 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         )
         self.assertNotIn("bootstrap_principal_id", evidence)
         self.assertNotIn("runtime_principal_id", evidence)
+
+    def test_rejects_same_broker_and_caller_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            arguments = _build_arguments(Path(value))
+        arguments["broker_caller_service_principal_id"] = BROKER_PRINCIPAL_ID
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "BROKER_CALLER_SERVICE_PRINCIPAL_INVALID",
+        ):
+            self._verify(arguments)
+
+    def test_rejects_authoritative_bff_worm_and_coordination_target_mismatch(
+        self,
+    ) -> None:
+        variants = (
+            (
+                "bff_storage_account_resource_id",
+                BFF_ID.replace("stnacbffoffline001", "stnacbffoffline002"),
+                "AUTHORITATIVE_BFF_STORAGE_MISMATCH",
+            ),
+            (
+                "worm_storage_account_resource_id",
+                WORM_ID.replace("stnacwormoffline001", "stnacwormoffline002"),
+                "AUTHORITATIVE_WORM_STORAGE_MISMATCH",
+            ),
+            (
+                "coordination_storage_account_resource_id",
+                COORDINATION_ID.replace(COORDINATION_NAME, "stnacperflease002"),
+                "DEPLOYMENT_RECEIPT_INVALID",
+            ),
+        )
+        for key, mismatched_target, error in variants:
+            with self.subTest(target=key), tempfile.TemporaryDirectory() as value:
+                arguments = _build_arguments(Path(value))
+                arguments[key] = mismatched_target
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError, error
+                ):
+                    self._verify(arguments)
+
+    def test_rejects_management_group_and_ancestor_provenance_tamper(self) -> None:
+        other_management_group = (
+            "/providers/Microsoft.Management/managementGroups/"
+            "nac-tampered-platform"
+        )
+        management_group_url = (
+            f"https://management.azure.com{ROOT_MG}?api-version=2021-04-01"
+            "&$expand=children&$recurse=true"
+        )
+
+        responses = _responses()
+        responses[management_group_url]["properties"]["children"][0]["id"] = (
+            other_management_group
+        )
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "EFFECTIVE_RBAC_ANCESTRY_INVALID",
+        ):
+            self._verify(arguments)
+
+        tampered_scopes = _ancestor_scopes()
+        tampered_scopes[2] = other_management_group
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._ancestor_scopes", return_value=tampered_scopes
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "EFFECTIVE_RBAC_ANCESTRY_INVALID",
+        ):
+            self._verify(arguments)
 
     def test_rejects_broker_role_or_assignment_drift(self) -> None:
         variants = (
@@ -685,21 +776,125 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         ):
             self._verify(arguments)
 
+    def test_rejects_broader_effective_assignment_at_each_ancestor(self) -> None:
+        for index, scope in enumerate(_ancestor_scopes()[:-1]):
+            with self.subTest(scope=scope):
+                responses = _responses()
+                broader = deepcopy(_role_assignment())
+                assignment_scope = "" if scope == "/" else scope
+                broader["id"] = (
+                    f"{assignment_scope}/providers/Microsoft.Authorization/"
+                    "roleAssignments/"
+                    f"{index + 4:08d}-2222-4333-8444-555555555555"
+                )
+                broader["properties"]["principalId"] = BROKER_GROUP_ID
+                broader["properties"]["principalType"] = "Group"
+                url = (
+                    f"https://management.azure.com{assignment_scope}/providers/"
+                    "Microsoft.Authorization/roleAssignments"
+                    "?api-version=2022-04-01&$filter=atScope()"
+                )
+                responses[url]["value"].append(broader)
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "BROADER_EFFECTIVE_ASSIGNMENT_PRESENT",
+                ):
+                    self._verify(arguments)
+
+    def test_rejects_missing_duplicate_or_unresolved_effective_assignment(
+        self,
+    ) -> None:
+        container_url = (
+            f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+            "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+            "&$filter=atScope()"
+        )
+        root_url = (
+            f"https://management.azure.com{ROOT_MG}/providers/"
+            "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+            "&$filter=atScope()"
+        )
+        unresolved_role_id = (
+            f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+            "roleDefinitions/55555555-2222-4333-8444-555555555555"
+        )
+        for variant, error in (
+            ("missing", "EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE"),
+            ("duplicate", "EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE"),
+            ("unresolved", "EFFECTIVE_ASSIGNMENT_DATA_ACTIONS_UNRESOLVED"),
+        ):
+            with self.subTest(variant=variant):
+                responses = _responses()
+                if variant == "missing":
+                    responses[container_url]["value"] = []
+                elif variant == "duplicate":
+                    responses[container_url]["value"].append(
+                        deepcopy(_role_assignment())
+                    )
+                else:
+                    unresolved = deepcopy(_role_assignment())
+                    unresolved["id"] = (
+                        f"{ROOT_MG}/providers/Microsoft.Authorization/"
+                        "roleAssignments/66666666-2222-4333-8444-555555555555"
+                    )
+                    unresolved["properties"]["principalId"] = BROKER_GROUP_ID
+                    unresolved["properties"]["principalType"] = "Group"
+                    unresolved["properties"]["roleDefinitionId"] = (
+                        unresolved_role_id
+                    )
+                    responses[root_url]["value"].append(unresolved)
+                    responses[
+                        f"https://management.azure.com{unresolved_role_id}"
+                        "?api-version=2022-04-01"
+                    ] = {
+                        "id": unresolved_role_id,
+                        "properties": {"permissions": [{"actions": []}]},
+                    }
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError, error
+                ):
+                    self._verify(arguments)
+
+    def test_rejects_tampered_safety_evidence_or_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            evidence = self._verify(_build_arguments(Path(value)))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "INFRASTRUCTURE_SAFETY_CAPABILITY_REQUIRED",
+        ):
+            validate_infrastructure_safety_evidence(deepcopy(evidence))
+
+        with tempfile.TemporaryDirectory() as value:
+            evidence = self._verify(_build_arguments(Path(value)))
+        dict.__setitem__(evidence, "status", "TAMPERED")
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "INFRASTRUCTURE_SAFETY_CAPABILITY_INVALID",
+        ):
+            validate_infrastructure_safety_evidence(evidence)
+
+        with tempfile.TemporaryDirectory() as value:
+            evidence = self._verify(_build_arguments(Path(value)))
+        object.__setattr__(evidence, "_authenticator", b"tampered")
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "INFRASTRUCTURE_SAFETY_CAPABILITY_INVALID",
+        ):
+            validate_infrastructure_safety_evidence(evidence)
+
     def test_restart_receipts_are_create_once_and_reconcile_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as value:
             root = Path(value)
-            arguments = _build_arguments(root)
-            store = AzurePerformanceInfrastructureRestartReceiptStore(
-                root / "restart-receipts", binding=_restart_binding()
-            )
-            original = store.persist_original_name_available(
-                arguments["coordination_name_readback_envelope"]
-            )
-            successful = store.persist_successful_deployment(
-                arguments["deployment_receipt_envelope"],
-                coordination_resources=_coordination_resources(),
-                create_deployment_receipt_sha256="e" * 64,
-                deployment_outputs_sha256="f" * 64,
+            arguments, store, original, successful = (
+                self._persist_complete_restart(root)
             )
             self.assertEqual(store.load()["status"], "COMPLETE")
             self.assertEqual(
@@ -727,6 +922,99 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
                 store.persist_original_name_available(
                     arguments["coordination_name_readback_envelope"]
                 )
+
+    def test_restart_rejects_incomplete_or_tampered_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            arguments = _build_arguments(root)
+            store = AzurePerformanceInfrastructureRestartReceiptStore(
+                root / "restart-receipts", binding=_restart_binding()
+            )
+            store.persist_original_name_available(
+                arguments["coordination_name_readback_envelope"]
+            )
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "INFRASTRUCTURE_RESTART_STATE_INVALID",
+            ):
+                store.reconcile_successful_deployment(
+                    arguments["deployment_receipt_envelope"]
+                )
+
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            _, store, _, _ = self._persist_complete_restart(root)
+            (store.directory / store._NAME_FILE).unlink()
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "INFRASTRUCTURE_RESTART_RECEIPTS_INCOMPLETE",
+            ):
+                store.load()
+
+        for filename, error in (
+            (
+                AzurePerformanceInfrastructureRestartReceiptStore._NAME_FILE,
+                "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+            ),
+            (
+                AzurePerformanceInfrastructureRestartReceiptStore._DEPLOYMENT_FILE,
+                "INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID",
+            ),
+        ):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as value:
+                root = Path(value)
+                _, store, _, _ = self._persist_complete_restart(root)
+                receipt_path = store.directory / filename
+                receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+                receipt["provider_observation_sha256"] = "0" * 64
+                receipt_path.chmod(0o600)
+                receipt_path.write_text(
+                    json.dumps(receipt, sort_keys=True) + "\n", encoding="utf-8"
+                )
+                receipt_path.chmod(0o400)
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError, error
+                ):
+                    store.load()
+
+    def test_restart_rejects_running_failed_missing_or_mismatched_deployment(
+        self,
+    ) -> None:
+        deployment_url = (
+            f"https://management.azure.com{DEPLOYMENT_ID}?api-version=2022-09-01"
+        )
+        for variant in ("running", "failed", "mismatched"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as value:
+                root = Path(value)
+                _, store, _, _ = self._persist_complete_restart(root)
+                responses = _responses()
+                deployment = responses[deployment_url]
+                if variant == "running":
+                    deployment["properties"]["provisioningState"] = "Running"
+                elif variant == "failed":
+                    deployment["properties"]["provisioningState"] = "Failed"
+                else:
+                    deployment["properties"]["parameters"][
+                        "targetBindingSha256"
+                    ]["value"] = "9" * 64
+                current = root / "current"
+                current.mkdir()
+                with patch(__name__ + "._responses", return_value=responses):
+                    arguments = _build_arguments(current)
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+                ):
+                    store.reconcile_successful_deployment(
+                        arguments["deployment_receipt_envelope"]
+                    )
+
+        responses = _responses()
+        responses.pop(deployment_url)
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ), self.assertRaises(AzurePerformanceInfrastructureSafetyError):
+            _build_arguments(Path(value))
 
     def test_restart_rejects_replaced_deployment_and_invalid_time_order(self) -> None:
         with tempfile.TemporaryDirectory() as value:
