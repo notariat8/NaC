@@ -55,6 +55,11 @@ LOCK = ROOT / "workflows/contracts/azure-blob-worm-irreversible-lock-s6b.contrac
 VERIFICATION = ROOT / "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json"
 BICEP = ROOT / "deploy/runtime/azure/immutable-evidence/main.bicep"
 BICEP_PARAMS = ROOT / "deploy/runtime/azure/immutable-evidence/main.bicepparam"
+COMPILED_BICEP = ROOT / "deploy/runtime/azure/immutable-evidence/compiled/main.json"
+COMPILED_BICEP_PARAMS = (
+    ROOT
+    / "deploy/runtime/azure/immutable-evidence/compiled/main.parameters.json"
+)
 MODULE = ROOT / "src/nac_runtime/azure_blob_worm.py"
 QUALITY_GATE = ROOT / "scripts/quality_gate.py"
 CENTRAL_CLI = ROOT / "src/nac_cli/cli.py"
@@ -69,6 +74,8 @@ DOCS = [
     ROOT / "docs/en/superpowers/plans/2026-07-28-business-case-type-azure-blob-worm-s6b.md",
 ]
 EXPECTED_ACCEPTANCE = [f"AC-S6B-{index:02d}" for index in range(1, 8)]
+EXPECTED_COMPILED_BICEP_VERSION = "0.45.15.27210"
+EXPECTED_COMPILED_TEMPLATE_HASH = "17775936280179076332"
 CMK_REF_SHA256 = "c" * 64
 PROVIDER_TENANT_ID = "44444444-4444-4444-8444-444444444444"
 PROVIDER_SUBSCRIPTION_ID = "/subscriptions/55555555-5555-4555-8555-555555555555"
@@ -110,6 +117,18 @@ PROVIDER_CONTEXT_ATTESTATION_SHA256 = azure_provider_context_attestation_sha256(
     PROVIDER_CONTEXT_ATTESTATION
 )
 EXPECTED_BICEP_MARKERS = [
+    "param tenantId string",
+    "param subscriptionId string",
+    "param resourceGroupName string",
+    "param deploymentMode string",
+    "tenant().tenantId == tenantId",
+    "subscription().subscriptionId == subscriptionId",
+    "resourceGroup().name == resourceGroupName",
+    "deploymentMode == 'Incremental'",
+    "var validatedStorageAccountName = !empty(validatedDeploymentScope)",
+    "name: validatedStorageAccountName",
+    "output deploymentScopeBinding string = validatedDeploymentScope",
+    "output deploymentModeBinding string = deploymentMode",
     "allowBlobPublicAccess: false",
     "allowCrossTenantReplication: false",
     "allowSharedKeyAccess: false",
@@ -131,11 +150,11 @@ EXPECTED_BICEP_MARKERS = [
     "Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies/read",
     "Microsoft.Storage/storageAccounts/encryptionScopes/read",
     "subscription().tenantId",
-    "var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, storageAccountName)",
+    "var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)",
     "azure-subscription-resource-tenant-readback",
     "providerBindingMaterial: 'runtime-readback-not-template-metadata'",
     "provider_binding_material: 'runtime-readback-not-template-metadata'",
-    "guid(subscription().id, resourceGroup().id, storageAccountName",
+    "guid(subscription().id, resourceGroup().id, validatedStorageAccountName",
     "roleName: 'NaC WORM Blob Add Read ${targetIsolationSuffix}'",
     "roleName: 'NaC WORM Storage Policy Read ${targetIsolationSuffix}'",
 ]
@@ -567,6 +586,172 @@ def _validate_bicep(errors: list[str]) -> None:
     _expect(bicep_text.count("[") == bicep_text.count("]"), "Bicep bracket imbalance", errors)
     _expect("using './main.bicep'" in params_text, "Bicep parameter binding missing", errors)
     _expect("tenantBindingSha256" not in params_text, "free tenant parameter remains", errors)
+    for marker in (
+        "param tenantId = '870c862b-56f7-4c9b-b0d9-f1f7d32c835c'",
+        "param subscriptionId = '37cd9645-6cb9-4278-88ee-e80377cd951c'",
+        "param resourceGroupName = 'rg-nac-bff-test'",
+        "param deploymentMode = 'Incremental'",
+    ):
+        _expect(marker in params_text, f"Bicep parameter marker missing: {marker}", errors)
+    _validate_compiled_bicep(errors)
+
+
+def _validate_compiled_bicep(errors: list[str]) -> None:
+    template = _load(COMPILED_BICEP, errors)
+    parameter_artifact = _load(COMPILED_BICEP_PARAMS, errors)
+    if not template or not parameter_artifact:
+        return
+
+    generator = template.get("metadata", {})
+    generator = generator.get("_generator", {}) if isinstance(generator, dict) else {}
+    _expect(
+        isinstance(generator, dict)
+        and generator.get("name") == "bicep"
+        and generator.get("version") == EXPECTED_COMPILED_BICEP_VERSION
+        and generator.get("templateHash") == EXPECTED_COMPILED_TEMPLATE_HASH,
+        "compiled Bicep generator drift",
+        errors,
+    )
+    template_parameters = template.get("parameters", {})
+    deployment_mode_schema = (
+        template_parameters.get("deploymentMode", {})
+        if isinstance(template_parameters, dict)
+        else {}
+    )
+    _expect(
+        isinstance(deployment_mode_schema, dict)
+        and deployment_mode_schema.get("allowedValues") == ["Incremental"],
+        "compiled Incremental deployment mode binding missing",
+        errors,
+    )
+    variables = template.get("variables", {})
+    scope_guard = (
+        variables.get("validatedDeploymentScope", "")
+        if isinstance(variables, dict)
+        else ""
+    )
+    for marker in (
+        "parameters('tenantId')",
+        "parameters('subscriptionId')",
+        "parameters('resourceGroupName')",
+        "parameters('deploymentMode')",
+        "Incremental",
+        "fail(",
+    ):
+        _expect(
+            marker in scope_guard,
+            f"compiled deployment scope guard missing: {marker}",
+            errors,
+        )
+    validated_storage_name = (
+        variables.get("validatedStorageAccountName", "")
+        if isinstance(variables, dict)
+        else ""
+    )
+    _expect(
+        "variables('validatedDeploymentScope')" in validated_storage_name,
+        "compiled deployment scope guard does not bind the storage name",
+        errors,
+    )
+    outputs = template.get("outputs", {})
+    deployment_scope_output = (
+        outputs.get("deploymentScopeBinding", {})
+        if isinstance(outputs, dict)
+        else {}
+    )
+    deployment_mode_output = (
+        outputs.get("deploymentModeBinding", {})
+        if isinstance(outputs, dict)
+        else {}
+    )
+    _expect(
+        isinstance(deployment_scope_output, dict)
+        and deployment_scope_output.get("value")
+        == "[variables('validatedDeploymentScope')]"
+        and isinstance(deployment_mode_output, dict)
+        and deployment_mode_output.get("value")
+        == "[parameters('deploymentMode')]",
+        "compiled deployment binding outputs drift",
+        errors,
+    )
+    resources = template.get("resources", [])
+    storage_accounts = [
+        resource
+        for resource in resources
+        if isinstance(resource, dict)
+        and resource.get("type") == "Microsoft.Storage/storageAccounts"
+    ] if isinstance(resources, list) else []
+    _expect(
+        len(storage_accounts) == 1
+        and storage_accounts[0].get("name")
+        == "[variables('validatedStorageAccountName')]",
+        "compiled deployment scope guard does not bind the storage resource",
+        errors,
+    )
+    policies = [
+        resource
+        for resource in resources
+        if isinstance(resource, dict)
+        and str(resource.get("type", "")).endswith("/immutabilityPolicies")
+    ] if isinstance(resources, list) else []
+    _expect(len(policies) == 1, "compiled immutability policy count drift", errors)
+    if len(policies) == 1:
+        properties = policies[0].get("properties", {})
+        _expect(
+            isinstance(properties, dict) and "state" not in properties,
+            "compiled baseline attempts an irreversible policy lock",
+            errors,
+        )
+    _expect(
+        isinstance(resources, list)
+        and all(
+            not isinstance(resource, dict)
+            or resource.get("type") != "Microsoft.Resources/deploymentScripts"
+            for resource in resources
+        ),
+        "compiled baseline contains a deployment script",
+        errors,
+    )
+
+    _expect(
+        parameter_artifact.get("$schema")
+        == "https://schema.management.azure.com/schemas/2019-04-01/"
+        "deploymentParameters.json#"
+        and parameter_artifact.get("contentVersion") == "1.0.0.0",
+        "compiled Bicep parameter artifact header drift",
+        errors,
+    )
+    parameter_values = parameter_artifact.get("parameters", {})
+    expected_values = {
+        "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+        "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+        "resourceGroupName": "rg-nac-bff-test",
+        "deploymentMode": "Incremental",
+        "storageAccountName": "stnacwormoffline001",
+        "tags": {
+            "owner": "replace-before-s7",
+            "purpose": "offline-contract-baseline",
+        },
+    }
+    _expect(
+        isinstance(parameter_values, dict)
+        and set(parameter_values)
+        == {
+            "tenantId",
+            "subscriptionId",
+            "resourceGroupName",
+            "deploymentMode",
+            "storageAccountName",
+            "tags",
+        }
+        and all(
+            isinstance(parameter_values.get(name), dict)
+            and parameter_values[name].get("value") == value
+            for name, value in expected_values.items()
+        ),
+        "compiled deployment parameter bindings drift",
+        errors,
+    )
 
 
 def _validate_docs(errors: list[str]) -> None:

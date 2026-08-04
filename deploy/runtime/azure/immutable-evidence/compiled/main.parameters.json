@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "tenantId": {
+      "value": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
+    },
+    "subscriptionId": {
+      "value": "37cd9645-6cb9-4278-88ee-e80377cd951c"
+    },
+    "resourceGroupName": {
+      "value": "rg-nac-bff-test"
+    },
+    "deploymentMode": {
+      "value": "Incremental"
+    },
+    "storageAccountName": {
+      "value": "stnacwormoffline001"
+    },
+    "tags": {
+      "value": {
+        "owner": "replace-before-s7",
+        "purpose": "offline-contract-baseline"
+      }
+    }
+  }
+}

@@ -1,0 +1,420 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.45.15.27210",
+      "templateHash": "17775936280179076332"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "germanywestcentral",
+      "allowedValues": [
+        "germanywestcentral"
+      ]
+    },
+    "tenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Entra tenant bound by the owner approval."
+      }
+    },
+    "subscriptionId": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Azure subscription bound by the owner approval."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Exact Azure resource group bound by the owner approval."
+      }
+    },
+    "deploymentMode": {
+      "type": "string",
+      "allowedValues": [
+        "Incremental"
+      ],
+      "metadata": {
+        "description": "Owner-bound deployment mode. The caller must also invoke ARM in Incremental mode; templates cannot inspect the outer deployment mode."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 24
+    },
+    "containerName": {
+      "type": "string",
+      "defaultValue": "nac-worm-tenant",
+      "minLength": 3,
+      "maxLength": 63
+    },
+    "encryptionScopeName": {
+      "type": "string",
+      "defaultValue": "nac-worm-tenant",
+      "minLength": 3,
+      "maxLength": 63
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    }
+  },
+  "variables": {
+    "immutableRetentionDays": 3653,
+    "validatedDeploymentScope": "[if(and(and(and(equals(tenant().tenantId, parameters('tenantId')), equals(subscription().subscriptionId, parameters('subscriptionId'))), equals(resourceGroup().name, parameters('resourceGroupName'))), equals(parameters('deploymentMode'), 'Incremental')), format('{0}/{1}/{2}/{3}', parameters('tenantId'), parameters('subscriptionId'), parameters('resourceGroupName'), parameters('deploymentMode')), fail('Immutable evidence baseline deployment scope or mode does not match the owner-bound tenant, subscription, resource group, and Incremental mode.'))]",
+    "validatedStorageAccountName": "[if(not(empty(variables('validatedDeploymentScope'))), parameters('storageAccountName'), fail('Immutable evidence baseline deployment binding is empty.'))]",
+    "targetIsolationSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedStorageAccountName'))]",
+    "keyVaultName": "[format('kv-nacw-{0}', variables('targetIsolationSuffix'))]",
+    "cmkIdentityName": "[format('id-nac-worm-cmk-{0}', variables('targetIsolationSuffix'))]",
+    "writerIdentityName": "[format('id-nac-worm-writer-{0}', variables('targetIsolationSuffix'))]",
+    "keyVaultCryptoServiceEncryptionUserRoleId": "e147488a-f6f5-4113-8e2d-b22465e65bf6",
+    "writerDataRoleId": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), 'nac-worm-blob-add-read-v2')]",
+    "writerManagementReadRoleId": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), 'nac-worm-management-read-v1')]",
+    "baselineTags": "[union(parameters('tags'), createObject('workload', 'nac-immutable-evidence', 'status', 'S6B_AZURE_WORM_ADAPTER_READY_OFFLINE', 'liveStatus', 'BLOCKED_PENDING_S7_APPROVAL', 'providerContextBindingSource', 'azure-subscription-resource-tenant-readback', 'providerBindingMaterial', 'runtime-readback-not-template-metadata', 'dataClassification', 'pseudonymous-personal-data'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('cmkIdentityName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('baselineTags')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('writerIdentityName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('baselineTags')]"
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('baselineTags')]",
+      "properties": {
+        "enablePurgeProtection": true,
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "publicNetworkAccess": "Disabled",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "softDeleteRetentionInDays": 90,
+        "tenantId": "[subscription().tenantId]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'nac-worm-cmk')]",
+      "properties": {
+        "attributes": {
+          "enabled": true,
+          "exportable": false
+        },
+        "keyOps": [
+          "wrapKey",
+          "unwrapKey"
+        ],
+        "keySize": 3072,
+        "kty": "RSA"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName')), variables('keyVaultCryptoServiceEncryptionUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultCryptoServiceEncryptionUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('writerDataRoleId')]",
+      "properties": {
+        "roleName": "[format('NaC WORM Blob Add Read {0}', variables('targetIsolationSuffix'))]",
+        "description": "Add and read immutable evidence blobs without overwrite or lifecycle permissions.",
+        "type": "CustomRole",
+        "permissions": [
+          {
+            "actions": [],
+            "notActions": [],
+            "dataActions": [
+              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
+              "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
+            ],
+            "notDataActions": []
+          }
+        ],
+        "assignableScopes": [
+          "[resourceGroup().id]"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('writerManagementReadRoleId')]",
+      "properties": {
+        "roleName": "[format('NaC WORM Storage Policy Read {0}', variables('targetIsolationSuffix'))]",
+        "description": "Read only the container, immutability policy, and encryption scope required for fail-closed verification.",
+        "type": "CustomRole",
+        "permissions": [
+          {
+            "actions": [
+              "Microsoft.Storage/storageAccounts/blobServices/containers/read",
+              "Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies/read",
+              "Microsoft.Storage/storageAccounts/encryptionScopes/read"
+            ],
+            "notActions": [],
+            "dataActions": [],
+            "notDataActions": []
+          }
+        ],
+        "assignableScopes": [
+          "[resourceGroup().id]"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('validatedStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('baselineTags')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_ZRS"
+      },
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "allowCrossTenantReplication": false,
+        "allowSharedKeyAccess": false,
+        "defaultToOAuthAuthentication": true,
+        "minimumTlsVersion": "TLS1_2",
+        "publicNetworkAccess": "Disabled",
+        "supportsHttpsTrafficOnly": true,
+        "networkAcls": {
+          "bypass": "None",
+          "defaultAction": "Deny",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "encryption": {
+          "identity": {
+            "userAssignedIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName'))]"
+          },
+          "keySource": "Microsoft.Keyvault",
+          "keyvaultproperties": {
+            "keyname": "nac-worm-cmk",
+            "keyvaulturi": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+          },
+          "requireInfrastructureEncryption": true,
+          "services": {
+            "blob": {
+              "enabled": true,
+              "keyType": "Account"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName')), variables('keyVaultCryptoServiceEncryptionUserRoleId')))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'nac-worm-cmk')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/encryptionScopes",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('validatedStorageAccountName'), parameters('encryptionScopeName'))]",
+      "properties": {
+        "keyVaultProperties": {
+          "keyUri": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'nac-worm-cmk'), '2023-07-01').keyUriWithVersion]"
+        },
+        "requireInfrastructureEncryption": true,
+        "source": "Microsoft.KeyVault",
+        "state": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'nac-worm-cmk')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('validatedStorageAccountName'), 'default')]",
+      "properties": {
+        "isVersioningEnabled": true,
+        "changeFeed": {
+          "enabled": true,
+          "retentionInDays": 90
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        },
+        "containerDeleteRetentionPolicy": {
+          "enabled": false
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', variables('validatedStorageAccountName'), 'default', parameters('containerName'))]",
+      "properties": {
+        "defaultEncryptionScope": "[parameters('encryptionScopeName')]",
+        "denyEncryptionScopeOverride": true,
+        "publicAccess": "None",
+        "immutableStorageWithVersioning": {
+          "enabled": true
+        },
+        "metadata": {
+          "nac_schema_version": "nac.azure-blob-worm-container/v0.4",
+          "nac_status": "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE",
+          "provider_context_binding_source": "azure-subscription-resource-tenant-readback",
+          "provider_binding_material": "runtime-readback-not-template-metadata",
+          "legal_hold_capability_source": "container-policy-properties",
+          "minimum_retention_days": "[format('{0}', variables('immutableRetentionDays'))]",
+          "encryption_scope": "[parameters('encryptionScopeName')]",
+          "encryption_key_source": "Microsoft.Keyvault"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('validatedStorageAccountName'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts/encryptionScopes', variables('validatedStorageAccountName'), parameters('encryptionScopeName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', parameters('containerName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', parameters('containerName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName')), resourceId('Microsoft.Authorization/roleDefinitions', variables('writerDataRoleId')))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerDataRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', parameters('containerName'))]",
+        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerDataRoleId'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName')), resourceId('Microsoft.Authorization/roleDefinitions', variables('writerManagementReadRoleId')))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerManagementReadRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName'))]",
+        "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerManagementReadRoleId'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}/{3}', variables('validatedStorageAccountName'), 'default', parameters('containerName'), 'default')]",
+      "properties": {
+        "allowProtectedAppendWrites": false,
+        "allowProtectedAppendWritesAll": false,
+        "immutabilityPeriodSinceCreationInDays": "[variables('immutableRetentionDays')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', parameters('containerName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "offlineStatus": {
+      "type": "string",
+      "value": "S6B_AZURE_WORM_ADAPTER_READY_OFFLINE"
+    },
+    "liveStatus": {
+      "type": "string",
+      "value": "BLOCKED_PENDING_S7_APPROVAL"
+    },
+    "lockActionStatus": {
+      "type": "string",
+      "value": "OWNER_GATED_NOT_EXECUTED"
+    },
+    "lockTargetResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies', variables('validatedStorageAccountName'), 'default', parameters('containerName'), 'default')]"
+    },
+    "configuredContainerName": {
+      "type": "string",
+      "value": "[parameters('containerName')]"
+    },
+    "configuredEncryptionScope": {
+      "type": "string",
+      "value": "[parameters('encryptionScopeName')]"
+    },
+    "providerContextBindingSource": {
+      "type": "string",
+      "value": "azure-subscription-resource-tenant-readback"
+    },
+    "cmkIdentityResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('cmkIdentityName'))]"
+    },
+    "writerIdentityResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('writerIdentityName'))]"
+    },
+    "writerDataRoleDefinitionId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerDataRoleId'))]"
+    },
+    "writerManagementReadRoleDefinitionId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('writerManagementReadRoleId'))]"
+    },
+    "deploymentScopeBinding": {
+      "type": "string",
+      "value": "[variables('validatedDeploymentScope')]"
+    },
+    "deploymentModeBinding": {
+      "type": "string",
+      "value": "[parameters('deploymentMode')]"
+    }
+  }
+}
