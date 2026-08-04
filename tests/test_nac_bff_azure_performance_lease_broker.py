@@ -516,7 +516,7 @@ class StateMachineTests(unittest.TestCase):
         self.assertNotIn("lease_id", receipt.as_dict())
 
     def test_lifecycle_is_idempotent_and_redacted(self) -> None:
-        broker, _, _, _ = make_broker()
+        broker, state, _, _ = make_broker()
         acquire_ticket = make_ticket()
         assert_ticket = make_ticket(operation="assert", nonce=_b64(b"a" * 32))
         release_ticket = make_ticket(operation="release", nonce=_b64(b"r" * 32))
@@ -531,6 +531,23 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(held.outcome, "HELD")
         self.assertEqual(released.outcome, "RELEASED")
         self.assertEqual(rereleased.outcome, "ALREADY_RELEASED")
+        run_fingerprints = {
+            state.acquire_commands[0].run_fingerprint,
+            state.assert_commands[0].run_fingerprint,
+            state.release_commands[0].run_fingerprint,
+        }
+        self.assertEqual(len(run_fingerprints), 1)
+        self.assertTrue(all(len(value) == 64 for value in run_fingerprints))
+        self.assertEqual(
+            len(
+                {
+                    state.acquire_commands[0].operation_id,
+                    state.assert_commands[0].operation_id,
+                    state.release_commands[0].operation_id,
+                }
+            ),
+            3,
+        )
         allowed = {
             "binding_fingerprint",
             "operation",

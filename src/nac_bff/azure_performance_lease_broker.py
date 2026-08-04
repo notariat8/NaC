@@ -317,6 +317,7 @@ class SignedActivationTicket:
 
 @dataclass(frozen=True, slots=True)
 class LeaseAcquireCommand:
+    run_fingerprint: str
     operation_id: str
     nonce_key: str
     binding_fingerprint: str
@@ -325,6 +326,7 @@ class LeaseAcquireCommand:
 
 @dataclass(frozen=True, slots=True)
 class LeaseCommand:
+    run_fingerprint: str
     operation_id: str
     nonce_key: str
     binding_fingerprint: str
@@ -451,6 +453,20 @@ class AzurePerformanceLeaseBroker:
                 }
             )
         )
+        self._run_fingerprint = _sha256(
+            _canonical_json(
+                {
+                    "blob_path": self._blob_path,
+                    "commit_sha": self._commit_sha,
+                    "function_package_sha256": self._function_package_sha256,
+                    "owner_binding_sha256": self._owner_binding_sha256,
+                    "plan_sha256": self._plan_sha256,
+                    "storage_binding_fingerprint": self._binding_fingerprint,
+                    "target_binding_sha256": self._target_binding_sha256,
+                    "tree_sha": self._tree_sha,
+                }
+            )
+        )
 
     def acquire(
         self,
@@ -460,6 +476,7 @@ class AzurePerformanceLeaseBroker:
     ) -> LeaseBrokerReceipt:
         verified = self._verify(ticket, claims, operation="acquire")
         command = LeaseAcquireCommand(
+            run_fingerprint=self._run_fingerprint,
             operation_id=verified.operation_id,
             nonce_key=verified.nonce_key,
             binding_fingerprint=self._binding_fingerprint,
@@ -604,6 +621,7 @@ class AzurePerformanceLeaseBroker:
 
     def _command(self, ticket: _VerifiedTicket) -> LeaseCommand:
         return LeaseCommand(
+            run_fingerprint=self._run_fingerprint,
             operation_id=ticket.operation_id,
             nonce_key=ticket.nonce_key,
             binding_fingerprint=self._binding_fingerprint,

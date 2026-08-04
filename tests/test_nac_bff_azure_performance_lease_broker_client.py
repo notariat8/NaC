@@ -39,13 +39,13 @@ class _Opener:
         return self.response
 
 
-def _receipt(operation: str, outcome: str) -> bytes:
+def _receipt(operation: str, outcome: str, *, retry: str = "NONE") -> bytes:
     return json.dumps(
         {
             "binding_fingerprint": BROKER_BINDING,
             "operation": "assert_held" if operation == "assert" else operation,
             "outcome": outcome,
-            "retry": "NONE",
+            "retry": retry,
             "schema_version": RECEIPT_VERSION,
             "ticket_fingerprint": "4" * 64,
         },
@@ -160,6 +160,33 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
         with self.adapter.execution_fence():
             context = nullcontext()
         self.assertIsNotNone(context)
+
+    def test_retry_reuses_exact_ticket_until_terminal_receipt(self) -> None:
+        self.opener.response = _Response(
+            _receipt("acquire", "RETRYABLE_FAILURE", retry="RETRY_SAME_TICKET")
+        )
+        with self.assertRaisesRegex(
+            BrokeredAzureBlobLeaseError,
+            "^BROKERED_LEASE_NOT_AVAILABLE$",
+        ):
+            self.adapter.acquire(LOCAL_ID)
+        first_body = self.opener.requests[-1][0].data
+
+        with self.assertRaisesRegex(
+            BrokeredAzureBlobLeaseError,
+            "^BROKERED_LEASE_NOT_AVAILABLE$",
+        ):
+            self.adapter.acquire(LOCAL_ID)
+        self.assertEqual(self.opener.requests[-1][0].data, first_body)
+        self.assertEqual(self.ticket_calls, ["acquire"])
+
+        self.opener.response = _Response(_receipt("acquire", "ACQUIRED"))
+        self.adapter.acquire(LOCAL_ID)
+        self.assertEqual(self.opener.requests[-1][0].data, first_body)
+        self.assertEqual(self.ticket_calls, ["acquire"])
+
+        self.adapter.acquire(LOCAL_ID)
+        self.assertEqual(self.ticket_calls, ["acquire", "acquire"])
 
     def test_configuration_is_https_fixed_root_and_digest_bound(self) -> None:
         for url in (

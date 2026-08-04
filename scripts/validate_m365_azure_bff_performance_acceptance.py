@@ -1903,6 +1903,7 @@ def main() -> int:
             "test_acquire_persists_exact_intent_before_one_lease_acquire",
             "test_acquire_crash_points_are_conservative_and_reconcilable",
             "test_release_crash_points_reconcile_without_unknown_lease_ids",
+            "test_signed_client_broker_blob_lifecycle_uses_one_run_identity",
             "test_token_scope_is_fixed_and_failures_are_redacted",
         ),
         LEASE_BROKER_AUTH_TESTS: (
@@ -1917,6 +1918,7 @@ def main() -> int:
             "test_request_surface_has_no_storage_controls",
             "test_execution_fence_rejects_concurrent_local_runs",
             "test_configuration_is_https_fixed_root_and_digest_bound",
+            "test_retry_reuses_exact_ticket_until_terminal_receipt",
         ),
         LEASE_BROKER_COMPOSITION_TESTS: (
             "test_settings_and_composition_bind_exact_server_side_boundary",

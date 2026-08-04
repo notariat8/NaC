@@ -131,6 +131,8 @@ class BrokeredAzureBlobLeaseAdapter:
         self._opener = selected_opener
         self._timeout_seconds = float(timeout_seconds)
         self._fence = threading.Lock()
+        self._ticket_lock = threading.Lock()
+        self._tickets: dict[str, dict[str, Any]] = {}
 
     @property
     def target_binding_sha256(self) -> str:
@@ -180,7 +182,7 @@ class BrokeredAzureBlobLeaseAdapter:
         if operation not in _OPERATIONS or type(local_fence_id) is not UUID:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_REQUEST_INVALID")
         try:
-            ticket = self._ticket_provider(operation)
+            ticket = self._ticket_for(operation)
             token = self._token_provider()
         except Exception:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_AUTH_UNAVAILABLE") from None
@@ -212,7 +214,10 @@ class BrokeredAzureBlobLeaseAdapter:
         if receipt["binding_fingerprint"] != self._expected_binding_fingerprint:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_BINDING_MISMATCH")
         if receipt["outcome"] not in _SUCCESS[operation]:
+            if receipt["retry"] not in {"RETRY_SAME_TICKET", "ASSERT_BEFORE_RETRY"}:
+                self._discard_ticket(operation)
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_NOT_AVAILABLE")
+        self._discard_ticket(operation)
         lifecycle = "RELEASED" if operation == "release" else "HELD"
         return BrokeredLeaseReceipt(
             lease_binding_sha256=self._lease_binding_sha256,
@@ -221,6 +226,22 @@ class BrokeredAzureBlobLeaseAdapter:
             lifecycle_state_sha256=_sha256(lifecycle.encode("ascii")),
             broker_receipt_sha256=_sha256(_canonical_json(receipt)),
         )
+
+    def _ticket_for(self, operation: str) -> dict[str, Any]:
+        with self._ticket_lock:
+            existing = self._tickets.get(operation)
+            if existing is not None:
+                return existing
+            generated = self._ticket_provider(operation)
+            if type(generated) is not dict:
+                raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_AUTH_INVALID")
+            ticket = dict(generated)
+            self._tickets[operation] = ticket
+            return ticket
+
+    def _discard_ticket(self, operation: str) -> None:
+        with self._ticket_lock:
+            self._tickets.pop(operation, None)
 
 
 def _validate_receipt(raw: bytes, *, operation: str) -> dict[str, str]:

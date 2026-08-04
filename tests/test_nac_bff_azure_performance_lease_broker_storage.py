@@ -1,25 +1,47 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import inspect
 import json
+from pathlib import Path
+import tempfile
 import threading
 import unittest
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 from urllib.request import Request
 from uuid import UUID
 
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
+
 from nac_bff.azure_performance_lease_broker import (
     AcquireOutcome,
     AssertOutcome,
+    AttestedStorageBinding,
     AtomicLeaseStateMachinePort,
+    AzurePerformanceLeaseBroker,
+    BrokerRoleScopeClaims,
     LeaseAcquireCommand,
     LeaseCommand,
     ReleaseOutcome,
+    RsaCertificateTicketSignatureVerifier,
+)
+from nac_bff.azure_performance_lease_broker_auth import (
+    BFF_API_AUDIENCE,
+    PERFORMANCE_LEASE_APP_ROLE,
+    PERFORMANCE_LEASE_TICKET_SCOPE,
+    RsaActivationTicketSigner,
+    broker_binding_fingerprint,
+)
+from nac_bff.azure_performance_lease_broker_client import (
+    BrokeredAzureBlobLeaseAdapter,
 )
 from nac_bff.azure_performance_lease_broker_storage import (
     AZURE_BLOB_API_VERSION,
@@ -37,6 +59,12 @@ NONCE = "2" * 64
 BINDING = "3" * 64
 OTHER_OPERATION = "4" * 64
 OTHER_NONCE = "5" * 64
+RUN = "6" * 64
+OTHER_RUN = "7" * 64
+ASSERT_OPERATION = "8" * 64
+ASSERT_NONCE = "9" * 64
+RELEASE_OPERATION = "a" * 64
+RELEASE_NONCE = "b" * 64
 PRIVATE_ID = base64.urlsafe_b64encode(bytes(range(32))).rstrip(b"=").decode("ascii")
 OTHER_PRIVATE_ID = base64.urlsafe_b64encode(bytes(range(32, 64))).rstrip(b"=").decode(
     "ascii"
@@ -50,8 +78,10 @@ def acquire_command(
     nonce_key: str = NONCE,
     binding_fingerprint: str = BINDING,
     private_lease_id: str = PRIVATE_ID,
+    run_fingerprint: str = RUN,
 ) -> LeaseAcquireCommand:
     return LeaseAcquireCommand(
+        run_fingerprint=run_fingerprint,
         operation_id=operation_id,
         nonce_key=nonce_key,
         binding_fingerprint=binding_fingerprint,
@@ -64,8 +94,10 @@ def command(
     operation_id: str = OPERATION,
     nonce_key: str = NONCE,
     binding_fingerprint: str = BINDING,
+    run_fingerprint: str = RUN,
 ) -> LeaseCommand:
     return LeaseCommand(
+        run_fingerprint=run_fingerprint,
         operation_id=operation_id,
         nonce_key=nonce_key,
         binding_fingerprint=binding_fingerprint,
@@ -433,9 +465,10 @@ class RequestSequenceTests(unittest.TestCase):
             },
             {
                 "x-ms-meta-schema_version": (
-                    "nac.azure-performance-lease-broker-blob-state/v1"
+                    "nac.azure-performance-lease-broker-blob-state/v2"
                 ),
                 "x-ms-meta-lifecycle_state": "ACQUIRE_INTENT",
+                "x-ms-meta-run_fingerprint": RUN,
                 "x-ms-meta-operation_id": OPERATION,
                 "x-ms-meta-nonce_key": NONCE,
                 "x-ms-meta-binding_fingerprint": BINDING,
@@ -517,7 +550,7 @@ class RequestSequenceTests(unittest.TestCase):
 
 class ReplayAndConcurrencyTests(unittest.TestCase):
     def test_exact_retries_and_completed_release_are_idempotent(self) -> None:
-        state_machine, _, _ = adapter()
+        state_machine, opener, _ = adapter()
         self.assertEqual(
             state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
         )
@@ -525,12 +558,22 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             state_machine.acquire(acquire_command(private_lease_id=OTHER_PRIVATE_ID)),
             AcquireOutcome.ALREADY_ACQUIRED,
         )
-        self.assertEqual(state_machine.assert_held(command()), AssertOutcome.HELD)
-        self.assertEqual(state_machine.release(command()), ReleaseOutcome.RELEASED)
-        self.assertEqual(
-            state_machine.release(command()), ReleaseOutcome.ALREADY_RELEASED
+        assert_command = command(
+            operation_id=ASSERT_OPERATION,
+            nonce_key=ASSERT_NONCE,
         )
-        self.assertEqual(state_machine.assert_held(command()), AssertOutcome.LOST)
+        release_command = command(
+            operation_id=RELEASE_OPERATION,
+            nonce_key=RELEASE_NONCE,
+        )
+        self.assertEqual(state_machine.assert_held(assert_command), AssertOutcome.HELD)
+        self.assertEqual(state_machine.release(release_command), ReleaseOutcome.RELEASED)
+        self.assertEqual(
+            state_machine.release(release_command), ReleaseOutcome.ALREADY_RELEASED
+        )
+        self.assertEqual(state_machine.assert_held(assert_command), AssertOutcome.LOST)
+        self.assertEqual(opener.metadata["x-ms-meta-operation_id"], RELEASE_OPERATION)
+        self.assertEqual(opener.metadata["x-ms-meta-nonce_key"], RELEASE_NONCE)
 
     def test_same_nonce_replays_and_other_nonce_is_busy(self) -> None:
         state_machine, opener, _ = adapter()
@@ -549,7 +592,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             acquire_command(nonce_key=OTHER_NONCE, private_lease_id=OTHER_PRIVATE_ID)
         )
         self.assertEqual(replay, AcquireOutcome.REPLAY_REJECTED)
-        self.assertEqual(other, AcquireOutcome.BUSY)
+        self.assertEqual(other, AcquireOutcome.REPLAY_REJECTED)
         self.assertEqual(
             state_machine.assert_held(command(operation_id=OTHER_OPERATION)),
             AssertOutcome.REPLAY_REJECTED,
@@ -565,6 +608,47 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             if request.headers.get("x-ms-lease-action") == "acquire"
         ]
         self.assertEqual(len(lease_acquires), 1)
+
+    def test_foreign_run_cannot_assert_release_or_replace_held_lease(self) -> None:
+        state_machine, opener, _ = adapter()
+        self.assertEqual(
+            state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
+        )
+        request_count = len(opener.requests)
+
+        self.assertEqual(
+            state_machine.acquire(
+                acquire_command(
+                    run_fingerprint=OTHER_RUN,
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                    private_lease_id=OTHER_PRIVATE_ID,
+                )
+            ),
+            AcquireOutcome.BUSY,
+        )
+        self.assertEqual(
+            state_machine.assert_held(
+                command(
+                    run_fingerprint=OTHER_RUN,
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                )
+            ),
+            AssertOutcome.NOT_ACQUIRED,
+        )
+        self.assertEqual(
+            state_machine.release(
+                command(
+                    run_fingerprint=OTHER_RUN,
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                )
+            ),
+            ReleaseOutcome.NOT_ACQUIRED,
+        )
+        self.assertGreater(len(opener.requests), request_count)
+        self.assertEqual(opener.metadata["x-ms-meta-run_fingerprint"], RUN)
 
     def test_concurrency_creates_exactly_one_remote_lease(self) -> None:
         opener = FakeBlobOpener()
@@ -600,6 +684,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
                 AcquireOutcome.ACQUIRED,
                 AcquireOutcome.BUSY,
                 AcquireOutcome.INDETERMINATE_AFTER_CRASH,
+                AcquireOutcome.REPLAY_REJECTED,
             }
         )
         self.assertEqual(
@@ -771,6 +856,218 @@ class BoundaryFailureTests(unittest.TestCase):
             state_machine.assert_held(command())
         self.assertNotIn("sensitive-corrupt-value", str(captured.exception))
         self.assertNotIn(PRIVATE_ID, str(captured.exception))
+
+
+class IntegratedLifecycleTests(unittest.TestCase):
+    def test_signed_client_broker_blob_lifecycle_uses_one_run_identity(self) -> None:
+        tenant_id = "11111111-1111-4111-8111-111111111111"
+        owner_id = "22222222-2222-4222-8222-222222222222"
+        owner_binding = "c" * 64
+        commit_sha = "d" * 40
+        tree_sha = "e" * 64
+        package_sha = "f" * 64
+        plan_sha = "1" * 64
+        target_sha = "2" * 64
+        binding_id = "coordination-v1"
+        attestation = b"a" * 64
+        clock_value = NOW.timestamp()
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            certificate_path = root / "owner.crt"
+            private_key_path = root / "owner.key"
+            private_key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=2048,
+            )
+            name = x509.Name(
+                [x509.NameAttribute(NameOID.COMMON_NAME, "NaC performance owner")]
+            )
+            real_now = datetime.now(timezone.utc)
+            certificate = (
+                x509.CertificateBuilder()
+                .subject_name(name)
+                .issuer_name(name)
+                .public_key(private_key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(real_now - timedelta(minutes=1))
+                .not_valid_after(real_now + timedelta(days=30))
+                .add_extension(
+                    x509.KeyUsage(
+                        digital_signature=True,
+                        content_commitment=False,
+                        key_encipherment=False,
+                        data_encipherment=False,
+                        key_agreement=False,
+                        key_cert_sign=False,
+                        crl_sign=False,
+                        encipher_only=None,
+                        decipher_only=None,
+                    ),
+                    critical=True,
+                )
+                .sign(private_key, hashes.SHA256())
+            )
+            certificate_bytes = certificate.public_bytes(serialization.Encoding.PEM)
+            certificate_path.write_bytes(certificate_bytes)
+            private_key_path.write_bytes(
+                private_key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.PKCS8,
+                    serialization.NoEncryption(),
+                )
+            )
+            certificate_path.chmod(0o644)
+            private_key_path.chmod(0o600)
+
+            nonces = iter(
+                base64.urlsafe_b64encode(bytes([value]) * 32)
+                .rstrip(b"=")
+                .decode("ascii")
+                for value in (10, 11, 12)
+            )
+            signer = RsaActivationTicketSigner(
+                key_id="performance-owner",
+                certificate_path=certificate_path,
+                private_key_path=private_key_path,
+                expected_certificate_sha256=hashlib.sha256(
+                    certificate_bytes
+                ).hexdigest(),
+                issuer="nac-owner-gate",
+                tenant_id=tenant_id,
+                actor_id=owner_id,
+                owner_binding_sha256=owner_binding,
+                commit_sha=commit_sha,
+                tree_sha=tree_sha,
+                function_package_sha256=package_sha,
+                plan_sha256=plan_sha,
+                target_binding_sha256=target_sha,
+                storage_binding=binding_id,
+                clock=lambda: clock_value,
+                nonce_factory=lambda: next(nonces),
+            )
+
+            class BindingProvider:
+                def load(self) -> AttestedStorageBinding:
+                    return AttestedStorageBinding(binding_id, attestation)
+
+            state_machine, blob_opener, _ = adapter()
+            broker = AzurePerformanceLeaseBroker(
+                signature_verifier=RsaCertificateTicketSignatureVerifier(
+                    key_id="performance-owner",
+                    certificate_bytes=certificate_bytes,
+                    certificate_sha256=hashlib.sha256(
+                        certificate_bytes
+                    ).hexdigest(),
+                ),
+                binding_provider=BindingProvider(),
+                state_machine=state_machine,
+                issuer="nac-owner-gate",
+                tenant_id=tenant_id,
+                audience=BFF_API_AUDIENCE,
+                actor_id=owner_id,
+                owner_subject=owner_id,
+                owner_binding_sha256=owner_binding,
+                commit_sha=commit_sha,
+                tree_sha=tree_sha,
+                function_package_sha256=package_sha,
+                plan_sha256=plan_sha,
+                target_binding_sha256=target_sha,
+                blob_path=f"locks/{target_sha}.lock",
+                required_role=PERFORMANCE_LEASE_APP_ROLE,
+                required_scope=PERFORMANCE_LEASE_TICKET_SCOPE,
+                clock=lambda: clock_value,
+            )
+            claims = BrokerRoleScopeClaims(
+                owner_subject=owner_id,
+                role=PERFORMANCE_LEASE_APP_ROLE,
+                scope=PERFORMANCE_LEASE_TICKET_SCOPE,
+            )
+
+            class BrokerOpener:
+                def __init__(self) -> None:
+                    self.tickets: list[dict[str, Any]] = []
+
+                def open(self, request: Request, timeout: float) -> Response:
+                    if timeout != 10:
+                        raise AssertionError(timeout)
+                    operation = request.full_url.rsplit("/", 1)[-1]
+                    envelope = json.loads(request.data or b"")
+                    ticket = envelope["ticket"]
+                    self.tickets.append(ticket)
+                    handler = {
+                        "acquire": broker.acquire,
+                        "assert": broker.assert_held,
+                        "release": broker.release,
+                    }[operation]
+                    receipt = handler(ticket=ticket, claims=claims)
+                    return Response(
+                        200,
+                        {},
+                        request.full_url,
+                        json.dumps(
+                            receipt.as_dict(),
+                            separators=(",", ":"),
+                            sort_keys=True,
+                        ).encode("ascii"),
+                    )
+
+            broker_opener = BrokerOpener()
+            client = BrokeredAzureBlobLeaseAdapter(
+                broker_base_url="https://bff.example.test",
+                token_provider=lambda: "t" * 64,
+                ticket_provider=signer,
+                target_binding_sha256=target_sha,
+                lease_binding_sha256="3" * 64,
+                infrastructure_safety_evidence_sha256="4" * 64,
+                lease_acquisition_safety_evidence_sha256="5" * 64,
+                expected_broker_binding_fingerprint=broker_binding_fingerprint(
+                    binding_id,
+                    attestation,
+                ),
+                opener=broker_opener,
+            )
+
+            local_fence = UUID("33333333-3333-4333-8333-333333333333")
+            acquired = client.acquire(local_fence)
+            run_fingerprints = [
+                blob_opener.metadata["x-ms-meta-run_fingerprint"]
+            ]
+            held = client.assert_held(local_fence)
+            run_fingerprints.append(
+                blob_opener.metadata["x-ms-meta-run_fingerprint"]
+            )
+            released = client.release(local_fence)
+            run_fingerprints.append(
+                blob_opener.metadata["x-ms-meta-run_fingerprint"]
+            )
+
+        self.assertEqual(acquired.lifecycle_state, "HELD")
+        self.assertEqual(held.lifecycle_state, "HELD")
+        self.assertEqual(released.lifecycle_state, "RELEASED")
+        self.assertEqual(len(broker_opener.tickets), 3)
+        self.assertEqual(
+            len(
+                {
+                    ticket["payload"]["nonce"]
+                    for ticket in broker_opener.tickets
+                }
+            ),
+            3,
+        )
+        self.assertEqual(len(set(run_fingerprints)), 1)
+        self.assertEqual(len(run_fingerprints[0]), 64)
+        lease_actions = [
+            request.headers.get("x-ms-lease-action")
+            for request in blob_opener.requests
+            if "x-ms-lease-action" in request.headers
+        ]
+        self.assertEqual(lease_actions, ["acquire", "release"])
+        self.assertEqual(
+            blob_opener.metadata["x-ms-meta-lifecycle_state"],
+            "RELEASED",
+        )
+        self.assertNotIn("lease_id", repr((acquired, held, released)))
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ from .azure_performance_lease_broker import (
 AZURE_BLOB_API_VERSION = "2023-11-03"
 AZURE_STORAGE_SCOPE = "https://storage.azure.com/.default"
 
-_STATE_SCHEMA = "nac.azure-performance-lease-broker-blob-state/v1"
+_STATE_SCHEMA = "nac.azure-performance-lease-broker-blob-state/v2"
 _TIMEOUT_SECONDS = 10
 _MAX_RESPONSE_BODY_BYTES = 16 * 1024
 _MAX_RESPONSE_HEADERS = 64
@@ -57,6 +57,7 @@ _LIFECYCLES = frozenset(
 _META_PREFIX = "x-ms-meta-"
 _META_SCHEMA = f"{_META_PREFIX}schema_version"
 _META_LIFECYCLE = f"{_META_PREFIX}lifecycle_state"
+_META_RUN = f"{_META_PREFIX}run_fingerprint"
 _META_OPERATION = f"{_META_PREFIX}operation_id"
 _META_NONCE = f"{_META_PREFIX}nonce_key"
 _META_BINDING = f"{_META_PREFIX}binding_fingerprint"
@@ -65,6 +66,7 @@ _METADATA_HEADERS = frozenset(
     {
         _META_SCHEMA,
         _META_LIFECYCLE,
+        _META_RUN,
         _META_OPERATION,
         _META_NONCE,
         _META_BINDING,
@@ -100,6 +102,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 @dataclass(frozen=True, slots=True)
 class _BlobState:
+    run_fingerprint: str
     operation_id: str
     nonce_key: str
     binding_fingerprint: str
@@ -115,6 +118,7 @@ class _BlobState:
         return {
             _META_SCHEMA: _STATE_SCHEMA,
             _META_LIFECYCLE: self.lifecycle,
+            _META_RUN: self.run_fingerprint,
             _META_OPERATION: self.operation_id,
             _META_NONCE: self.nonce_key,
             _META_BINDING: self.binding_fingerprint,
@@ -123,11 +127,22 @@ class _BlobState:
 
     def transition(self, lifecycle: str) -> _BlobState:
         return _BlobState(
+            run_fingerprint=self.run_fingerprint,
             operation_id=self.operation_id,
             nonce_key=self.nonce_key,
             binding_fingerprint=self.binding_fingerprint,
             private_lease_id=self.private_lease_id,
             lifecycle=lifecycle,
+        )
+
+    def for_command(self, command: LeaseCommand, lifecycle: str | None = None) -> _BlobState:
+        return _BlobState(
+            run_fingerprint=self.run_fingerprint,
+            operation_id=command.operation_id,
+            nonce_key=command.nonce_key,
+            binding_fingerprint=self.binding_fingerprint,
+            private_lease_id=self.private_lease_id,
+            lifecycle=self.lifecycle if lifecycle is None else lifecycle,
         )
 
 
@@ -210,6 +225,8 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AcquireOutcome.REPLAY_REJECTED
             if relationship == "OTHER":
                 return AcquireOutcome.BUSY
+            if relationship == "NEXT":
+                return AcquireOutcome.REPLAY_REJECTED
 
             if existing.lifecycle == _ACQUIRE_INTENT:
                 return self._start_acquire(existing, etag, resumed=True)
@@ -245,6 +262,8 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AssertOutcome.NOT_ACQUIRED
             if state.lifecycle == _RELEASED:
                 return AssertOutcome.LOST
+            if relationship == "NEXT" and state.lifecycle == _RELEASE_INTENT:
+                return AssertOutcome.REPLAY_REJECTED
 
             try:
                 classification, observed, observed_etag = self._probe_lease(
@@ -253,12 +272,17 @@ class AzureBlobAtomicLeaseStateMachine:
             except (_RequestUnavailable, _RetryableResponse):
                 return AssertOutcome.RETRYABLE_FAILURE
             if classification == "HELD":
+                updated = observed
+                if relationship == "NEXT":
+                    updated = observed.for_command(command)
                 if state.lifecycle == _ACQUIRE_IN_FLIGHT:
+                    updated = updated.transition(_HELD)
+                if updated != observed:
                     try:
                         self._set_metadata(
-                            observed.transition(_HELD),
+                            updated,
                             observed_etag,
-                            lease_id=observed.azure_lease_id,
+                            lease_id=updated.azure_lease_id,
                         )
                     except (_RequestUnavailable, _MetadataConflict):
                         return AssertOutcome.INDETERMINATE_AFTER_CRASH
@@ -284,7 +308,13 @@ class AzureBlobAtomicLeaseStateMachine:
             if state.lifecycle == _ACQUIRE_INTENT:
                 return ReleaseOutcome.NOT_ACQUIRED
             if state.lifecycle == _RELEASED:
-                return ReleaseOutcome.ALREADY_RELEASED
+                return (
+                    ReleaseOutcome.ALREADY_RELEASED
+                    if relationship == "SAME"
+                    else ReleaseOutcome.REPLAY_REJECTED
+                )
+            if relationship == "NEXT" and state.lifecycle == _RELEASE_INTENT:
+                return ReleaseOutcome.REPLAY_REJECTED
 
             try:
                 classification, observed, observed_etag = self._probe_lease(
@@ -310,13 +340,14 @@ class AzureBlobAtomicLeaseStateMachine:
             current = observed
             current_etag = observed_etag
             if current.lifecycle in {_ACQUIRE_IN_FLIGHT, _HELD}:
+                release_intent = current.for_command(command, _RELEASE_INTENT)
                 try:
                     current_etag = self._set_metadata(
-                        current.transition(_RELEASE_INTENT),
+                        release_intent,
                         current_etag,
-                        lease_id=current.azure_lease_id,
+                        lease_id=release_intent.azure_lease_id,
                     )
-                    current = current.transition(_RELEASE_INTENT)
+                    current = release_intent
                 except _TokenUnavailable:
                     return ReleaseOutcome.RETRYABLE_FAILURE
                 except (_RequestUnavailable, _MetadataConflict):
@@ -650,6 +681,7 @@ def _state_from_acquire_command(command: object) -> _BlobState:
             "AZURE_BLOB_BROKER_COMMAND_INVALID"
         ) from None
     return _BlobState(
+        run_fingerprint=command.run_fingerprint,
         operation_id=command.operation_id,
         nonce_key=command.nonce_key,
         binding_fingerprint=command.binding_fingerprint,
@@ -662,7 +694,12 @@ def _validate_command(command: object) -> None:
     if type(command) not in {LeaseCommand, LeaseAcquireCommand} or not all(
         type(getattr(command, name, None)) is str
         and _SHA256_RE.fullmatch(getattr(command, name)) is not None
-        for name in ("operation_id", "nonce_key", "binding_fingerprint")
+        for name in (
+            "run_fingerprint",
+            "operation_id",
+            "nonce_key",
+            "binding_fingerprint",
+        )
     ):
         raise AzureBlobLeaseStateMachineError(
             "AZURE_BLOB_BROKER_COMMAND_INVALID"
@@ -684,8 +721,10 @@ def _decode_private_id(value: object) -> bytes:
 
 
 def _relationship(existing: _BlobState, proposed: _BlobState) -> str:
-    if existing.nonce_key != proposed.nonce_key:
+    if existing.run_fingerprint != proposed.run_fingerprint:
         return "OTHER"
+    if existing.nonce_key != proposed.nonce_key:
+        return "NEXT"
     if (
         existing.operation_id != proposed.operation_id
         or existing.binding_fingerprint != proposed.binding_fingerprint
@@ -695,8 +734,10 @@ def _relationship(existing: _BlobState, proposed: _BlobState) -> str:
 
 
 def _relationship_to_command(existing: _BlobState, command: LeaseCommand) -> str:
-    if existing.nonce_key != command.nonce_key:
+    if existing.run_fingerprint != command.run_fingerprint:
         return "OTHER"
+    if existing.nonce_key != command.nonce_key:
+        return "NEXT"
     if (
         existing.operation_id != command.operation_id
         or existing.binding_fingerprint != command.binding_fingerprint
@@ -717,6 +758,7 @@ def _state_from_headers(headers: Mapping[str, str]) -> _BlobState:
     ):
         raise AzureBlobLeaseStateMachineError("AZURE_BLOB_BROKER_STATE_INVALID")
     lifecycle = metadata.get(_META_LIFECYCLE)
+    run_fingerprint = metadata.get(_META_RUN)
     operation_id = metadata.get(_META_OPERATION)
     nonce_key = metadata.get(_META_NONCE)
     binding = metadata.get(_META_BINDING)
@@ -725,7 +767,7 @@ def _state_from_headers(headers: Mapping[str, str]) -> _BlobState:
         lifecycle not in _LIFECYCLES
         or any(
             type(value) is not str or _SHA256_RE.fullmatch(value) is None
-            for value in (operation_id, nonce_key, binding)
+            for value in (run_fingerprint, operation_id, nonce_key, binding)
         )
     ):
         raise AzureBlobLeaseStateMachineError("AZURE_BLOB_BROKER_STATE_INVALID")
@@ -736,6 +778,7 @@ def _state_from_headers(headers: Mapping[str, str]) -> _BlobState:
             "AZURE_BLOB_BROKER_STATE_INVALID"
         ) from None
     return _BlobState(
+        run_fingerprint=run_fingerprint,
         operation_id=operation_id,
         nonce_key=nonce_key,
         binding_fingerprint=binding,
