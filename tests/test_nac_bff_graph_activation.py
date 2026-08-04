@@ -16,6 +16,8 @@ from nac_bff.azure_activation import (
 from nac_bff.graph_activation import (
     GRAPH_APP_ID,
     MATTER_READ_SCOPE_ID,
+    PERFORMANCE_LEASE_APP_ROLE,
+    PERFORMANCE_LEASE_APP_ROLE_ID,
     PROVISIONER_CLIENT_ID,
     PROVISIONER_GRAPH_APPLICATION_ROLES,
     TARGET_SITE_ID,
@@ -23,10 +25,12 @@ from nac_bff.graph_activation import (
     ReadbackPolicy,
     activate_nac_bff_graph,
     ensure_entra_api_application,
+    ensure_provisioner_performance_lease,
     ensure_site_read_permission,
     ensure_uami_sites_selected,
     inspect_entra_api_application,
     inspect_provisioner_application_roles,
+    inspect_provisioner_performance_lease,
     inspect_site_permission_administration,
     inspect_site_read_permission,
     inspect_uami_sites_selected,
@@ -42,6 +46,7 @@ GRAPH_PRINCIPAL_ID = "66666666-6666-4666-8666-666666666666"
 SITES_SELECTED_ROLE_ID = "77777777-7777-4777-8777-777777777777"
 BROADER_ROLE_ID = "88888888-8888-4888-8888-888888888888"
 OTHER_APP_ID = "99999999-9999-4999-8999-999999999999"
+OTHER_BFF_ROLE_ID = "99999999-aaaa-4999-8999-999999999999"
 PROVISIONER_PRINCIPAL_ID = "aaaaaaaa-1111-4111-8111-111111111111"
 PROVISIONER_ROLE_IDS = {
     name: f"bbbbbbbb-2222-4222-8222-{index:012d}"
@@ -98,6 +103,7 @@ class FakeGraphActivationClient:
             },
         ]
         self.assignments: list[dict[str, Any]] = []
+        self.bff_assignments: list[dict[str, Any]] = []
         self.provisioner_assignments: list[dict[str, Any]] = [
             {
                 "id": f"assignment-{index}",
@@ -119,14 +125,17 @@ class FakeGraphActivationClient:
         self.api_service_principal_readback_delay = 0
         self.uami_lookup_delay = 0
         self.assignment_readback_delay = 0
+        self.bff_assignment_readback_delay = 0
         self.permission_readback_delay = 0
         self._application_hidden_reads = 0
         self._api_service_principal_hidden_reads = 0
         self._assignment_hidden_reads = 0
+        self._bff_assignment_hidden_reads = 0
         self._permission_hidden_reads = 0
         self.drop_application_create = False
         self.drop_service_principal_create = False
         self.drop_assignment_create = False
+        self.drop_bff_assignment_create = False
         self.drop_permission_create = False
         self.request_error: Exception | None = None
 
@@ -175,6 +184,14 @@ class FakeGraphActivationClient:
                 self._assignment_hidden_reads -= 1
                 values = []
             return {"value": copy.deepcopy(values)}
+        if path.startswith(
+            f"/servicePrincipals/{APP_SERVICE_PRINCIPAL_ID}/appRoleAssignedTo"
+        ):
+            values = self.bff_assignments
+            if self._bff_assignment_hidden_reads:
+                self._bff_assignment_hidden_reads -= 1
+                values = []
+            return {"value": copy.deepcopy(values)}
         if path.startswith("/sites/") and path.endswith("/permissions"):
             values = self.permissions
             if self._permission_hidden_reads:
@@ -201,12 +218,25 @@ class FakeGraphActivationClient:
                 "appId": payload["appId"],
                 "displayName": API_APP_DISPLAY_NAME,
                 "servicePrincipalType": "Application",
-                "appRoles": [],
+                "appRoles": [self.performance_lease_app_role()],
             }
             if not self.drop_service_principal_create:
                 self.service_principals.append(created)
                 self._api_service_principal_hidden_reads = (
                     self.api_service_principal_readback_delay
+                )
+            return copy.deepcopy(created)
+        if path == (
+            f"/servicePrincipals/{PROVISIONER_PRINCIPAL_ID}/appRoleAssignments"
+        ):
+            created = {
+                **copy.deepcopy(payload),
+                "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            }
+            if not self.drop_bff_assignment_create:
+                self.bff_assignments.append(created)
+                self._bff_assignment_hidden_reads = (
+                    self.bff_assignment_readback_delay
                 )
             return copy.deepcopy(created)
         if path.endswith("/appRoleAssignments"):
@@ -231,7 +261,36 @@ class FakeGraphActivationClient:
 
     def patch(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.patches.append((path, copy.deepcopy(payload)))
-        return {}
+        if path == f"/applications/{APP_OBJECT_ID}":
+            for application in self.applications:
+                if application.get("id") == APP_OBJECT_ID:
+                    application.update(copy.deepcopy(payload))
+            for principal in self.service_principals:
+                if principal.get("appId") == APP_CLIENT_ID:
+                    principal["appRoles"] = copy.deepcopy(payload["appRoles"])
+            return {}
+        raise AssertionError(f"unexpected PATCH path: {path}")
+
+    @staticmethod
+    def performance_lease_app_role() -> dict[str, Any]:
+        return {
+            "allowedMemberTypes": ["Application"],
+            "description": "Acquire the bounded NaC performance lease.",
+            "displayName": "Acquire NaC performance lease",
+            "id": PERFORMANCE_LEASE_APP_ROLE_ID,
+            "isEnabled": True,
+            "value": PERFORMANCE_LEASE_APP_ROLE,
+        }
+
+    def legacy_application(self) -> dict[str, Any]:
+        application = self.exact_application()
+        application["appRoles"] = []
+        return application
+
+    def legacy_api_service_principal(self) -> dict[str, Any]:
+        principal = self.exact_api_service_principal()
+        principal["appRoles"] = []
+        return principal
 
     def exact_application(self) -> dict[str, Any]:
         return {
@@ -257,7 +316,7 @@ class FakeGraphActivationClient:
                     }
                 ],
             },
-            "appRoles": [],
+            "appRoles": [self.performance_lease_app_role()],
             "requiredResourceAccess": [],
         }
 
@@ -267,7 +326,15 @@ class FakeGraphActivationClient:
             "appId": APP_CLIENT_ID,
             "displayName": API_APP_DISPLAY_NAME,
             "servicePrincipalType": "Application",
-            "appRoles": [],
+            "appRoles": [self.performance_lease_app_role()],
+        }
+
+    def exact_bff_assignment(self) -> dict[str, Any]:
+        return {
+            "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "principalId": PROVISIONER_PRINCIPAL_ID,
+            "resourceId": APP_SERVICE_PRINCIPAL_ID,
+            "appRoleId": PERFORMANCE_LEASE_APP_ROLE_ID,
         }
 
     def exact_assignment(self) -> dict[str, Any]:
@@ -345,6 +412,19 @@ class NacBffGraphActivationTests(unittest.TestCase):
         self.assertEqual(application_payload["signInAudience"], "AzureADMyOrg")
         self.assertEqual(application_payload["requiredResourceAccess"], [])
         self.assertEqual(application_payload["api"]["requestedAccessTokenVersion"], 2)
+        self.assertEqual(
+            PERFORMANCE_LEASE_APP_ROLE_ID,
+            str(
+                uuid.uuid5(
+                    uuid.NAMESPACE_URL,
+                    f"{API_APP_URI}#{PERFORMANCE_LEASE_APP_ROLE}",
+                )
+            ),
+        )
+        self.assertEqual(
+            application_payload["appRoles"],
+            [client.performance_lease_app_role()],
+        )
         self.assertEqual(scope["id"], MATTER_READ_SCOPE_ID)
         self.assertEqual(scope["value"], "Matter.Read")
         self.assertEqual(
@@ -366,6 +446,70 @@ class NacBffGraphActivationTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "reused")
         self.assertEqual(result["service_principal"]["status"], "reused")
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_exact_legacy_application_transitions_once_then_replays(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.legacy_application()]
+        client.service_principals.append(
+            client.legacy_api_service_principal()
+        )
+
+        first = ensure_entra_api_application(client)
+        second = ensure_entra_api_application(client)
+
+        self.assertEqual(first["status"], "migrated")
+        self.assertEqual(first["service_principal"]["status"], "reused")
+        self.assertEqual(second["status"], "reused")
+        self.assertEqual(
+            client.patches,
+            [
+                (
+                    f"/applications/{APP_OBJECT_ID}",
+                    {"appRoles": [client.performance_lease_app_role()]},
+                )
+            ],
+        )
+        self.assertEqual(client.posts, [])
+
+    def test_legacy_transition_rejects_any_other_contract_drift(self) -> None:
+        client = FakeGraphActivationClient()
+        application = client.legacy_application()
+        application["requiredResourceAccess"] = [
+            {"resourceAppId": GRAPH_APP_ID}
+        ]
+        client.applications = [application]
+
+        self._assert_error(
+            "API_APPLICATION_MISMATCH", ensure_entra_api_application, client
+        )
+
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_legacy_transition_rejects_broader_service_principal_prewrite(
+        self,
+    ) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.legacy_application()]
+        principal = client.legacy_api_service_principal()
+        principal["appRoles"] = [
+            {
+                "id": OTHER_BFF_ROLE_ID,
+                "value": "Matter.Read.All",
+                "isEnabled": True,
+                "allowedMemberTypes": ["Application"],
+            }
+        ]
+        client.service_principals.append(principal)
+
+        self._assert_error(
+            "API_SERVICE_PRINCIPAL_MISMATCH",
+            ensure_entra_api_application,
+            client,
+        )
+
         self.assertEqual(client.posts, [])
         self.assertEqual(client.patches, [])
 
@@ -573,6 +717,141 @@ class NacBffGraphActivationTests(unittest.TestCase):
             broader,
         )
         self.assertEqual(broader.posts, [])
+
+    def test_performance_lease_assignment_create_replay_and_inspect(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.exact_application()]
+        client.service_principals.append(client.exact_api_service_principal())
+
+        first = ensure_provisioner_performance_lease(client)
+        post_count = len(client.posts)
+        second = ensure_provisioner_performance_lease(client)
+        inspected = inspect_provisioner_performance_lease(client)
+
+        self.assertEqual(first["status"], "created")
+        self.assertEqual(second["status"], "reused")
+        self.assertEqual(inspected["status"], "present")
+        self.assertEqual(inspected["assignment_count"], 1)
+        self.assertEqual(len(client.posts), post_count)
+        self.assertEqual(
+            client.posts,
+            [
+                (
+                    f"/servicePrincipals/{PROVISIONER_PRINCIPAL_ID}"
+                    "/appRoleAssignments",
+                    {
+                        "principalId": PROVISIONER_PRINCIPAL_ID,
+                        "resourceId": APP_SERVICE_PRINCIPAL_ID,
+                        "appRoleId": PERFORMANCE_LEASE_APP_ROLE_ID,
+                    },
+                )
+            ],
+        )
+        serialized = json.dumps([first, second, inspected], sort_keys=True)
+        for raw_value in (
+            APP_CLIENT_ID,
+            APP_SERVICE_PRINCIPAL_ID,
+            PROVISIONER_CLIENT_ID,
+            PROVISIONER_PRINCIPAL_ID,
+            PERFORMANCE_LEASE_APP_ROLE_ID,
+        ):
+            self.assertNotIn(raw_value, serialized)
+
+    def test_performance_lease_assignment_readback_is_bounded(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.exact_application()]
+        client.service_principals.append(client.exact_api_service_principal())
+        client.bff_assignment_readback_delay = 2
+        sleeps: list[float] = []
+
+        result = ensure_provisioner_performance_lease(
+            client,
+            readback_policy=ReadbackPolicy(3, 0.25, sleeps.append),
+        )
+
+        self.assertEqual(result["status"], "created")
+        self.assertEqual(sleeps, [0.25, 0.25])
+        self.assertEqual(len(client.posts), 1)
+
+    def test_performance_lease_assignment_timeout_does_not_repost(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.exact_application()]
+        client.service_principals.append(client.exact_api_service_principal())
+        client.drop_bff_assignment_create = True
+        sleeps: list[float] = []
+
+        self._assert_error(
+            "API_ROLE_ASSIGNMENT_READBACK_TIMEOUT",
+            ensure_provisioner_performance_lease,
+            client,
+            readback_policy=ReadbackPolicy(3, 0.25, sleeps.append),
+        )
+
+        self.assertEqual(sleeps, [0.25, 0.25])
+        self.assertEqual(len(client.posts), 1)
+
+    def test_performance_lease_assignment_rejects_broader_or_other_principal(
+        self,
+    ) -> None:
+        for mutation, code in (
+            (
+                lambda item: item.update(appRoleId=OTHER_BFF_ROLE_ID),
+                "API_ROLE_ASSIGNMENT_BROADER",
+            ),
+            (
+                lambda item: item.update(principalId=OTHER_APP_ID),
+                "API_ROLE_ASSIGNMENT_MISMATCH",
+            ),
+        ):
+            with self.subTest(code=code):
+                client = FakeGraphActivationClient()
+                client.applications = [client.exact_application()]
+                client.service_principals.append(
+                    client.exact_api_service_principal()
+                )
+                assignment = client.exact_bff_assignment()
+                mutation(assignment)
+                client.bff_assignments = [assignment]
+
+                self._assert_error(
+                    code, ensure_provisioner_performance_lease, client
+                )
+                self.assertEqual(client.posts, [])
+
+    def test_legacy_assignment_mismatch_blocks_before_migration_patch(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.legacy_application()]
+        client.service_principals.append(
+            client.legacy_api_service_principal()
+        )
+        assignment = client.exact_bff_assignment()
+        assignment["appRoleId"] = OTHER_BFF_ROLE_ID
+        client.bff_assignments = [assignment]
+
+        self._assert_error(
+            "API_ROLE_ASSIGNMENT_BROADER",
+            ensure_provisioner_performance_lease,
+            client,
+        )
+
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+
+    def test_performance_lease_assignment_rejects_duplicates(self) -> None:
+        client = FakeGraphActivationClient()
+        client.applications = [client.exact_application()]
+        client.service_principals.append(client.exact_api_service_principal())
+        client.bff_assignments = [
+            client.exact_bff_assignment(),
+            client.exact_bff_assignment(),
+        ]
+
+        self._assert_error(
+            "API_ROLE_ASSIGNMENT_DUPLICATE",
+            inspect_provisioner_performance_lease,
+            client,
+        )
+        self.assertEqual(client.posts, [])
 
     def test_uami_resolution_polls_delayed_visibility_without_write(self) -> None:
         client = FakeGraphActivationClient()
