@@ -76,7 +76,10 @@ from .azure_performance_runtime import (
     LeaseBoundPerformanceAcceptance,
     PerformanceFinalEvidenceStore,
 )
-from .graph_activation import ensure_provisioner_performance_lease
+from .graph_activation import (
+    ensure_provisioner_performance_lease,
+    inspect_provisioner_performance_lease,
+)
 from nac_m365_graph.graph_client import GraphRestClient
 from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
 from nac_m365_graph.provisioner_env_bootstrap import load_provisioner_env_state
@@ -501,17 +504,6 @@ def run_azure_performance_acceptance_live(
         ),
     )
     bff_token_provider.validate_local_credentials()
-    performance_lease_assignment = _ensure_performance_lease_app_role(
-        identity=broker_caller_identity,
-        certificate_path=provisioner_certificate_path,
-        private_key_path=provisioner_private_key_path,
-        expected_certificate_sha256=str(
-            infrastructure_parameters[
-                "brokerTicketVerificationCertificateSha256"
-            ]
-        ),
-    )
-
     toolchain_sha256 = calculate_toolchain_attestations_sha256(
         toolchain_attestations
     )
@@ -545,7 +537,7 @@ def run_azure_performance_acceptance_live(
             infrastructure_parameters=infrastructure_parameters,
         ),
     )
-    coordination, name_readback, deployment_readback = (
+    coordination, name_readback, deployment_readback, complete_restart = (
         _prepare_performance_infrastructure(
             readback=readback,
             receipt_store=restart_store,
@@ -554,6 +546,17 @@ def run_azure_performance_acceptance_live(
             deployment_id=deployment_id,
             infrastructure_parameters=infrastructure_parameters,
         )
+    )
+    performance_lease_assignment = _performance_lease_app_role_state(
+        identity=broker_caller_identity,
+        certificate_path=provisioner_certificate_path,
+        private_key_path=provisioner_private_key_path,
+        expected_certificate_sha256=str(
+            infrastructure_parameters[
+                "brokerTicketVerificationCertificateSha256"
+            ]
+        ),
+        read_only=complete_restart,
     )
 
     verification_arguments = _infrastructure_verification_arguments(
@@ -650,9 +653,12 @@ def run_azure_performance_acceptance_live(
             ]
         ),
     )
-    broker_function_activation = BrokerFunctionSettingsPort(
-        azure_cli
-    ).configure_and_verify(broker_settings)
+    settings_port = BrokerFunctionSettingsPort(azure_cli)
+    broker_function_activation = (
+        settings_port.verify_current(broker_settings)
+        if complete_restart
+        else settings_port.configure_and_verify(broker_settings)
+    )
     acquisition_safety_sha256 = _sha256_json(
         {
             "broker_binding_fingerprint": lease_binding_sha256,
@@ -803,7 +809,7 @@ def _prepare_performance_infrastructure(
     executor: AzureCliPerformanceInfrastructureCommandExecutor,
     deployment_id: str,
     infrastructure_parameters: dict[str, Any],
-) -> tuple[Any, Any, Any]:
+) -> tuple[Any, Any, Any, bool]:
     """Choose the fresh or strictly read-only restart path before mutation."""
 
     state = receipt_store.load()
@@ -821,6 +827,7 @@ def _prepare_performance_infrastructure(
             _CoordinationResources(**resources),
             state["original_name_receipt"],
             deployment,
+            True,
         )
     if status not in {"EMPTY", "NAME_ONLY"}:
         raise ValueError("PERFORMANCE_INFRASTRUCTURE_RESTART_RECEIPT_INVALID")
@@ -855,7 +862,7 @@ def _prepare_performance_infrastructure(
         ),
         deployment_outputs_sha256=coordination.outputs_sha256,
     )
-    return coordination, name_readback, deployment
+    return coordination, name_readback, deployment, False
 
 
 def _coordination_resource_bindings(coordination: Any) -> dict[str, str]:
@@ -1110,6 +1117,23 @@ def _ensure_performance_lease_app_role(
     private_key_path: Path,
     expected_certificate_sha256: str,
 ) -> dict[str, Any]:
+    return _performance_lease_app_role_state(
+        identity=identity,
+        certificate_path=certificate_path,
+        private_key_path=private_key_path,
+        expected_certificate_sha256=expected_certificate_sha256,
+        read_only=False,
+    )
+
+
+def _performance_lease_app_role_state(
+    *,
+    identity: dict[str, str],
+    certificate_path: Path,
+    private_key_path: Path,
+    expected_certificate_sha256: str,
+    read_only: bool,
+) -> dict[str, Any]:
     graph = GraphRestClient(
         _bound_provisioner_token_provider(
             {
@@ -1123,7 +1147,11 @@ def _ensure_performance_lease_app_role(
             expected_certificate_sha256=expected_certificate_sha256,
         )
     )
-    result = ensure_provisioner_performance_lease(graph)
+    result = (
+        inspect_provisioner_performance_lease(graph)
+        if read_only
+        else ensure_provisioner_performance_lease(graph)
+    )
     if (
         result.get("status") != "present"
         or result.get("assignment_count") != 1

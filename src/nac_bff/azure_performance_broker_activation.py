@@ -127,15 +127,7 @@ class BrokerFunctionSettingsPort:
     def configure_and_verify(
         self, settings: BrokerFunctionSettings
     ) -> dict[str, Any]:
-        if type(settings) is not BrokerFunctionSettings:
-            raise BrokerFunctionActivationError(
-                "BROKER_FUNCTION_SETTINGS_INVALID"
-            )
-        _validate_settings(settings.values)
-        if _sha256_json(settings.values) != settings.settings_sha256:
-            raise BrokerFunctionActivationError(
-                "BROKER_FUNCTION_SETTINGS_INVALID"
-            )
+        self._validate_expected(settings)
         argv = [
             "functionapp",
             "config",
@@ -151,6 +143,12 @@ class BrokerFunctionSettingsPort:
             SUBSCRIPTION_ID,
         ]
         _require_cli_success(self._azure_cli.run(argv))
+        return self.verify_current(settings)
+
+    def verify_current(self, settings: BrokerFunctionSettings) -> dict[str, Any]:
+        """Verify the exact broker namespace without changing app settings."""
+
+        self._validate_expected(settings)
         readback = _require_cli_success(
             self._azure_cli.run(
                 [
@@ -179,6 +177,18 @@ class BrokerFunctionSettingsPort:
             "settings_sha256": settings.settings_sha256,
             "values_emitted": False,
         }
+
+    @staticmethod
+    def _validate_expected(settings: BrokerFunctionSettings) -> None:
+        if type(settings) is not BrokerFunctionSettings:
+            raise BrokerFunctionActivationError(
+                "BROKER_FUNCTION_SETTINGS_INVALID"
+            )
+        _validate_settings(settings.values)
+        if _sha256_json(settings.values) != settings.settings_sha256:
+            raise BrokerFunctionActivationError(
+                "BROKER_FUNCTION_SETTINGS_INVALID"
+            )
 
 
 def _extract_settings(payload: object) -> dict[str, str]:

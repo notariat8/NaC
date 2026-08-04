@@ -225,13 +225,19 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AcquireOutcome.REPLAY_REJECTED
             if relationship == "OTHER":
                 return AcquireOutcome.BUSY
-            if relationship == "NEXT":
+            if existing.lifecycle in {_RELEASE_INTENT, _RELEASED}:
                 return AcquireOutcome.REPLAY_REJECTED
 
             if existing.lifecycle == _ACQUIRE_INTENT:
+                if relationship == "NEXT":
+                    existing = existing.for_command(command)
                 return self._start_acquire(existing, etag, resumed=True)
             if existing.lifecycle == _ACQUIRE_IN_FLIGHT:
-                return self._reconcile_acquire(existing, etag)
+                return self._reconcile_acquire(
+                    existing,
+                    etag,
+                    next_command=command if relationship == "NEXT" else None,
+                )
             if existing.lifecycle == _HELD:
                 try:
                     classification, _, _ = self._probe_lease(existing, etag)
@@ -308,13 +314,7 @@ class AzureBlobAtomicLeaseStateMachine:
             if state.lifecycle == _ACQUIRE_INTENT:
                 return ReleaseOutcome.NOT_ACQUIRED
             if state.lifecycle == _RELEASED:
-                return (
-                    ReleaseOutcome.ALREADY_RELEASED
-                    if relationship == "SAME"
-                    else ReleaseOutcome.REPLAY_REJECTED
-                )
-            if relationship == "NEXT" and state.lifecycle == _RELEASE_INTENT:
-                return ReleaseOutcome.REPLAY_REJECTED
+                return ReleaseOutcome.ALREADY_RELEASED
 
             try:
                 classification, observed, observed_etag = self._probe_lease(
@@ -386,6 +386,11 @@ class AzureBlobAtomicLeaseStateMachine:
             return AcquireOutcome.RETRYABLE_FAILURE
         except (_RequestUnavailable, _MetadataConflict):
             return AcquireOutcome.INDETERMINATE_AFTER_CRASH
+        return self._dispatch_acquire(in_flight, etag, resumed=resumed)
+
+    def _dispatch_acquire(
+        self, in_flight: _BlobState, etag: str, *, resumed: bool
+    ) -> AcquireOutcome:
         try:
             result = self._lease_action("acquire", in_flight)
         except _RequestUnavailable:
@@ -416,24 +421,40 @@ class AzureBlobAtomicLeaseStateMachine:
         )
 
     def _reconcile_acquire(
-        self, state: _BlobState, etag: str
+        self,
+        state: _BlobState,
+        etag: str,
+        *,
+        next_command: LeaseAcquireCommand | None = None,
     ) -> AcquireOutcome:
         try:
             classification, observed, observed_etag = self._probe_lease(state, etag)
         except (_RequestUnavailable, _RetryableResponse):
             return AcquireOutcome.RETRYABLE_FAILURE
         if classification == "HELD":
+            updated = observed
+            if next_command is not None:
+                updated = observed.for_command(next_command)
             try:
                 self._set_metadata(
-                    observed.transition(_HELD),
+                    updated.transition(_HELD),
                     observed_etag,
-                    lease_id=observed.azure_lease_id,
+                    lease_id=updated.azure_lease_id,
                 )
             except (_RequestUnavailable, _MetadataConflict):
                 return AcquireOutcome.INDETERMINATE_AFTER_CRASH
             return AcquireOutcome.ALREADY_ACQUIRED
         if classification == "FOREIGN":
             return AcquireOutcome.BUSY
+        if classification == "NOT_PRESENT":
+            dispatch_state = (
+                state.for_command(next_command)
+                if next_command is not None
+                else state
+            )
+            return self._dispatch_acquire(
+                dispatch_state, observed_etag, resumed=True
+            )
         return AcquireOutcome.INDETERMINATE_AFTER_CRASH
 
     def _create(self, state: _BlobState) -> _HttpResult:
@@ -728,6 +749,7 @@ def _relationship(existing: _BlobState, proposed: _BlobState) -> str:
     if (
         existing.operation_id != proposed.operation_id
         or existing.binding_fingerprint != proposed.binding_fingerprint
+        or existing.private_lease_id != proposed.private_lease_id
     ):
         return "REPLAY"
     return "SAME"

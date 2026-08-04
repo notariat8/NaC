@@ -170,7 +170,7 @@ def _trace_infrastructure_path(
             return_value=SimpleNamespace(deploy=coordination_deploy),
         ),
     ):
-        prepared, name, deployment = composition._prepare_performance_infrastructure(
+        prepared, name, deployment, _complete_restart = composition._prepare_performance_infrastructure(
             readback=readback,
             receipt_store=store,
             deployment_authority=object(),
@@ -286,6 +286,18 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         self.assertIn("provider:get:coordination-storage-account-configuration", trace)
         self.assertIn("provider:get:effective-rbac:broker", trace)
         self.assertIn("provider:get:effective-rbac:caller", trace)
+
+    def test_complete_restart_precedes_and_selects_read_only_runtime_activation(self) -> None:
+        source = inspect.getsource(
+            composition.run_azure_performance_acceptance_live.__wrapped__
+        )
+        self.assertLess(
+            source.index("_prepare_performance_infrastructure("),
+            source.index("_performance_lease_app_role_state("),
+        )
+        self.assertIn("read_only=complete_restart", source)
+        self.assertIn("settings_port.verify_current(broker_settings)", source)
+        self.assertIn("if complete_restart", source)
 
     def test_name_only_restart_requires_new_available_probe_before_create(self) -> None:
         trace = _trace_infrastructure_path("NAME_ONLY")
@@ -564,6 +576,45 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         self.assertNotIn("M365_GRAPH_ACCESS_TOKEN", environment)
         graph = ensure.call_args.args[0]
         self.assertIs(graph.token_provider, token_provider)
+
+    def test_complete_restart_inspects_role_without_graph_mutation(self) -> None:
+        identity = {
+            "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+            "client_id": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+            "service_principal_id": "11111111-2222-4333-8444-555555555555",
+        }
+        expected = {
+            "status": "present",
+            "assignment_count": 1,
+            "application_role": "Performance.Lease",
+        }
+        with (
+            patch.object(
+                composition,
+                "_bound_provisioner_token_provider",
+                return_value=object(),
+            ),
+            patch.object(
+                composition,
+                "inspect_provisioner_performance_lease",
+                return_value=expected,
+            ) as inspect_role,
+            patch.object(
+                composition,
+                "ensure_provisioner_performance_lease",
+                side_effect=AssertionError("mutating ensure must not run"),
+            ),
+        ):
+            result = composition._performance_lease_app_role_state(
+                identity=identity,
+                certificate_path=Path("/tmp/provisioner.cert.pem"),
+                private_key_path=Path("/tmp/provisioner.key.pem"),
+                expected_certificate_sha256="a" * 64,
+                read_only=True,
+            )
+
+        self.assertEqual(result, expected)
+        inspect_role.assert_called_once()
 
     def test_performance_lease_role_requires_exact_positive_readback(self) -> None:
         identity = {

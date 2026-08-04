@@ -524,6 +524,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
             for path in (REPO_ROOT / "src/nac_bff").glob(
                 "azure_performance_*.py"
             )
+            if path.name != "azure_performance_lease.py"
         }
         expected = performance_sources | {
             Path("src/nac_bff/azure_live_commands.py"),
@@ -547,6 +548,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
             for path in (REPO_ROOT / "src/nac_bff").glob(
                 "azure_performance_*.py"
             )
+            if path.name != "azure_performance_lease.py"
         } | {
             Path("src/nac_bff/azure_live_commands.py"),
             Path("src/nac_cli/cli.py"),

@@ -11,10 +11,21 @@ import urllib.request
 from urllib.parse import urlsplit
 from uuid import UUID
 
+from .azure_performance_authorization import (
+    BLOB_LEASE_ACQUIRE,
+    BLOB_LEASE_ASSERT_HELD,
+    BLOB_LEASE_RELEASE,
+    _authorize_live_action,
+)
 from .azure_performance_lease_broker import RECEIPT_VERSION
 
 
 _OPERATIONS = frozenset({"acquire", "assert", "release"})
+_OPERATION_ACTIONS = {
+    "acquire": BLOB_LEASE_ACQUIRE,
+    "assert": BLOB_LEASE_ASSERT_HELD,
+    "release": BLOB_LEASE_RELEASE,
+}
 _SUCCESS = {
     "acquire": frozenset({"ACQUIRED", "ALREADY_ACQUIRED"}),
     "assert": frozenset({"HELD"}),
@@ -178,9 +189,23 @@ class BrokeredAzureBlobLeaseAdapter:
     def _execute(
         self, operation: str, local_fence_id: UUID, capability: object
     ) -> BrokeredLeaseReceipt:
-        del capability
         if operation not in _OPERATIONS or type(local_fence_id) is not UUID:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_REQUEST_INVALID")
+        action = _OPERATION_ACTIONS[operation]
+        _authorize_live_action(
+            capability,
+            action=action,
+            target_binding_sha256=self._target_binding_sha256,
+            binding_sha256=self._lease_binding_sha256,
+            consume=False,
+        )
+        _authorize_live_action(
+            capability,
+            action=action,
+            target_binding_sha256=self._target_binding_sha256,
+            binding_sha256=self._lease_binding_sha256,
+            consume=True,
+        )
         try:
             ticket = self._ticket_for(operation)
             token = self._token_provider()

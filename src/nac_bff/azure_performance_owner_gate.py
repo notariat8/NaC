@@ -57,7 +57,6 @@ INFRASTRUCTURE_SOURCE_PATHS = (
     ),
     Path("src/nac_bff/azure_performance_runtime.py"),
     Path("src/nac_bff/azure_performance_composition.py"),
-    Path("src/nac_bff/azure_performance_lease.py"),
     Path("src/nac_bff/azure_performance_lease_broker.py"),
     Path("src/nac_bff/azure_performance_lease_broker_auth.py"),
     Path("src/nac_bff/azure_performance_lease_broker_client.py"),

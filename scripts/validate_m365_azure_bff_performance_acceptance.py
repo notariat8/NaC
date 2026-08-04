@@ -1444,6 +1444,14 @@ def _validate_verification(
             "verification contract must compile, byte-compare and validate both IaC artifacts"
         )
     required_context = verification.get("required_context")
+    if isinstance(required_context, list) and (
+        "src/nac_bff/azure_performance_lease.py" in required_context
+        or "tests/legacy_nac_bff_azure_performance_direct_lease.py"
+        in required_context
+    ):
+        errors.append(
+            "verification required_context must not reference the retired direct Blob lease adapter"
+        )
     for required_path in (
         AUTHORIZATION,
         AUTHORIZATION_TESTS,
@@ -1872,6 +1880,10 @@ def main() -> int:
         _require_fragments(path, texts.get(path, ""), fragments, errors)
 
     focused = _mapping(verification.get("focused_test_names"))
+    if "lease" in focused:
+        errors.append(
+            "verification focused_test_names must not retain the retired direct lease group"
+        )
     for key, path in (
         ("authorization", AUTHORIZATION_TESTS),
         ("acceptance", TESTS),

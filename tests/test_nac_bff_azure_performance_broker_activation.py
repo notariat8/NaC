@@ -82,6 +82,20 @@ class BrokerFunctionActivationTests(unittest.TestCase):
             )
             self.assertEqual(code, "AZURE_CLI_OK")
 
+    def test_complete_restart_verifies_current_settings_without_set(self) -> None:
+        azure = _Azure()
+        settings = _settings()
+        azure.values.update(settings.values)
+
+        result = BrokerFunctionSettingsPort(azure).verify_current(settings)
+
+        self.assertEqual(result["status"], "VERIFIED")
+        self.assertEqual(len(azure.commands), 1)
+        self.assertEqual(
+            azure.commands[0][:4],
+            ["functionapp", "config", "appsettings", "list"],
+        )
+
     def test_command_boundary_rejects_incomplete_or_unknown_settings(self) -> None:
         azure = _Azure()
         BrokerFunctionSettingsPort(azure).configure_and_verify(_settings())

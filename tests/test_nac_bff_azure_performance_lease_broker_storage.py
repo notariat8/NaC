@@ -42,6 +42,13 @@ from nac_bff.azure_performance_lease_broker_auth import (
 )
 from nac_bff.azure_performance_lease_broker_client import (
     BrokeredAzureBlobLeaseAdapter,
+    BrokeredAzureBlobLeaseError,
+)
+from nac_bff.azure_performance_authorization import (
+    BLOB_LEASE_ACQUIRE,
+    BLOB_LEASE_ASSERT_HELD,
+    BLOB_LEASE_RELEASE,
+    _mint_verified_performance_authority,
 )
 from nac_bff.azure_performance_lease_broker_storage import (
     AZURE_BLOB_API_VERSION,
@@ -555,7 +562,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
         )
         self.assertEqual(
-            state_machine.acquire(acquire_command(private_lease_id=OTHER_PRIVATE_ID)),
+            state_machine.acquire(acquire_command()),
             AcquireOutcome.ALREADY_ACQUIRED,
         )
         assert_command = command(
@@ -575,7 +582,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
         self.assertEqual(opener.metadata["x-ms-meta-operation_id"], RELEASE_OPERATION)
         self.assertEqual(opener.metadata["x-ms-meta-nonce_key"], RELEASE_NONCE)
 
-    def test_same_nonce_replays_and_other_nonce_is_busy(self) -> None:
+    def test_same_nonce_replays_and_fresh_same_run_ticket_is_idempotent(self) -> None:
         state_machine, opener, _ = adapter()
         self.assertEqual(
             state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
@@ -592,7 +599,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             acquire_command(nonce_key=OTHER_NONCE, private_lease_id=OTHER_PRIVATE_ID)
         )
         self.assertEqual(replay, AcquireOutcome.REPLAY_REJECTED)
-        self.assertEqual(other, AcquireOutcome.REPLAY_REJECTED)
+        self.assertEqual(other, AcquireOutcome.ALREADY_ACQUIRED)
         self.assertEqual(
             state_machine.assert_held(command(operation_id=OTHER_OPERATION)),
             AssertOutcome.REPLAY_REJECTED,
@@ -682,6 +689,7 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             outcomes
             <= {
                 AcquireOutcome.ACQUIRED,
+                AcquireOutcome.ALREADY_ACQUIRED,
                 AcquireOutcome.BUSY,
                 AcquireOutcome.INDETERMINATE_AFTER_CRASH,
                 AcquireOutcome.REPLAY_REJECTED,
@@ -700,7 +708,7 @@ class CrashClassificationTests(unittest.TestCase):
     def test_acquire_crash_points_are_conservative_and_reconcilable(self) -> None:
         expected_retry = {
             1: AcquireOutcome.ALREADY_ACQUIRED,
-            2: AcquireOutcome.INDETERMINATE_AFTER_CRASH,
+            2: AcquireOutcome.ALREADY_ACQUIRED,
             3: AcquireOutcome.ALREADY_ACQUIRED,
             4: AcquireOutcome.ALREADY_ACQUIRED,
         }
@@ -713,7 +721,11 @@ class CrashClassificationTests(unittest.TestCase):
                 self.assertEqual(first, AcquireOutcome.INDETERMINATE_AFTER_CRASH)
                 opener.after_failures.clear()
                 retry = state_machine.acquire(
-                    acquire_command(private_lease_id=OTHER_PRIVATE_ID)
+                    acquire_command(
+                        operation_id=OTHER_OPERATION,
+                        nonce_key=OTHER_NONCE,
+                        private_lease_id=OTHER_PRIVATE_ID,
+                    )
                 )
                 self.assertEqual(retry, retry_outcome)
                 self.assertLessEqual(
@@ -762,7 +774,15 @@ class CrashClassificationTests(unittest.TestCase):
                     ReleaseOutcome.INDETERMINATE_AFTER_CRASH,
                 )
                 opener.after_failures.clear()
-                self.assertEqual(state_machine.release(command()), expected)
+                self.assertEqual(
+                    state_machine.release(
+                        command(
+                            operation_id=RELEASE_OPERATION,
+                            nonce_key=RELEASE_NONCE,
+                        )
+                    ),
+                    expected,
+                )
                 release_ids = [
                     request.headers.get("x-ms-lease-id")
                     for request in opener.requests
@@ -924,7 +944,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
                 base64.urlsafe_b64encode(bytes([value]) * 32)
                 .rstrip(b"=")
                 .decode("ascii")
-                for value in (10, 11, 12)
+                for value in (10, 11, 12, 13, 14)
             )
             signer = RsaActivationTicketSigner(
                 key_id="performance-owner",
@@ -1013,31 +1033,55 @@ class IntegratedLifecycleTests(unittest.TestCase):
                     )
 
             broker_opener = BrokerOpener()
-            client = BrokeredAzureBlobLeaseAdapter(
-                broker_base_url="https://bff.example.test",
-                token_provider=lambda: "t" * 64,
-                ticket_provider=signer,
+            capability = _mint_verified_performance_authority(
+                bindings={},
                 target_binding_sha256=target_sha,
-                lease_binding_sha256="3" * 64,
-                infrastructure_safety_evidence_sha256="4" * 64,
-                lease_acquisition_safety_evidence_sha256="5" * 64,
-                expected_broker_binding_fingerprint=broker_binding_fingerprint(
-                    binding_id,
-                    attestation,
-                ),
-                opener=broker_opener,
-            )
+                action_bindings={
+                    BLOB_LEASE_ACQUIRE: ("3" * 64, 2),
+                    BLOB_LEASE_ASSERT_HELD: ("3" * 64, 2),
+                    BLOB_LEASE_RELEASE: ("3" * 64, 2),
+                },
+                usage_ledger=None,
+            ).capability
 
+            def new_client() -> BrokeredAzureBlobLeaseAdapter:
+                return BrokeredAzureBlobLeaseAdapter(
+                    broker_base_url="https://bff.example.test",
+                    token_provider=lambda: "t" * 64,
+                    ticket_provider=signer,
+                    target_binding_sha256=target_sha,
+                    lease_binding_sha256="3" * 64,
+                    infrastructure_safety_evidence_sha256="4" * 64,
+                    lease_acquisition_safety_evidence_sha256="5" * 64,
+                    expected_broker_binding_fingerprint=(
+                        broker_binding_fingerprint(binding_id, attestation)
+                    ),
+                    opener=broker_opener,
+                )
+
+            client = new_client()
+            blob_opener.after_failures.add(2)
             local_fence = UUID("33333333-3333-4333-8333-333333333333")
-            acquired = client.acquire(local_fence)
+            with self.assertRaises(BrokeredAzureBlobLeaseError):
+                client.acquire(local_fence, capability)
+            blob_opener.after_failures.clear()
+
+            client = new_client()
+            acquired = client.acquire(local_fence, capability)
             run_fingerprints = [
                 blob_opener.metadata["x-ms-meta-run_fingerprint"]
             ]
-            held = client.assert_held(local_fence)
+            held = client.assert_held(local_fence, capability)
             run_fingerprints.append(
                 blob_opener.metadata["x-ms-meta-run_fingerprint"]
             )
-            released = client.release(local_fence)
+            blob_opener.after_failures.add(len(blob_opener.requests) + 3)
+            with self.assertRaises(BrokeredAzureBlobLeaseError):
+                client.release(local_fence, capability)
+            blob_opener.after_failures.clear()
+
+            client = new_client()
+            released = client.release(local_fence, capability)
             run_fingerprints.append(
                 blob_opener.metadata["x-ms-meta-run_fingerprint"]
             )
@@ -1045,7 +1089,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
         self.assertEqual(acquired.lifecycle_state, "HELD")
         self.assertEqual(held.lifecycle_state, "HELD")
         self.assertEqual(released.lifecycle_state, "RELEASED")
-        self.assertEqual(len(broker_opener.tickets), 3)
+        self.assertEqual(len(broker_opener.tickets), 5)
         self.assertEqual(
             len(
                 {
@@ -1053,7 +1097,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
                     for ticket in broker_opener.tickets
                 }
             ),
-            3,
+            5,
         )
         self.assertEqual(len(set(run_fingerprints)), 1)
         self.assertEqual(len(run_fingerprints[0]), 64)

@@ -7,6 +7,13 @@ import threading
 import unittest
 from uuid import UUID
 
+from nac_bff.azure_performance_authorization import (
+    BLOB_LEASE_ACQUIRE,
+    BLOB_LEASE_ASSERT_HELD,
+    BLOB_LEASE_RELEASE,
+    PerformanceLiveAuthorizationError,
+    _mint_verified_performance_authority,
+)
 from nac_bff.azure_performance_lease_broker import RECEIPT_VERSION
 from nac_bff.azure_performance_lease_broker_client import (
     BrokeredAzureBlobLeaseAdapter,
@@ -18,6 +25,19 @@ TARGET = "1" * 64
 LEASE_BINDING = "2" * 64
 BROKER_BINDING = "3" * 64
 LOCAL_ID = UUID("11111111-1111-4111-8111-111111111111")
+
+
+def _capability(*, target: str = TARGET, lease_binding: str = LEASE_BINDING):
+    return _mint_verified_performance_authority(
+        bindings={},
+        target_binding_sha256=target,
+        action_bindings={
+            BLOB_LEASE_ACQUIRE: (lease_binding, 16),
+            BLOB_LEASE_ASSERT_HELD: (lease_binding, 16),
+            BLOB_LEASE_RELEASE: (lease_binding, 16),
+        },
+        usage_ledger=None,
+    ).capability
 
 
 class _Response:
@@ -59,6 +79,7 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
         self.opener = _Opener()
         self.ticket_calls: list[str] = []
         self.token_calls = 0
+        self.capability = _capability()
 
         def ticket(operation: str):
             self.ticket_calls.append(operation)
@@ -88,7 +109,7 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
         ):
             with self.subTest(operation=operation):
                 self.opener.response = _Response(_receipt(operation, outcome))
-                receipt = method(LOCAL_ID)
+                receipt = method(LOCAL_ID, self.capability)
                 request, timeout = self.opener.requests[-1]
                 self.assertEqual(
                     request.full_url,
@@ -132,7 +153,7 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
             with self.subTest(status=response.status, size=len(response._body)):
                 self.opener.response = response
                 with self.assertRaises(BrokeredAzureBlobLeaseError) as error:
-                    self.adapter.acquire(LOCAL_ID)
+                    self.adapter.acquire(LOCAL_ID, self.capability)
                 self.assertNotIn("provider", str(error.exception))
                 self.assertNotIn("secret", str(error.exception))
 
@@ -169,24 +190,33 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
             BrokeredAzureBlobLeaseError,
             "^BROKERED_LEASE_NOT_AVAILABLE$",
         ):
-            self.adapter.acquire(LOCAL_ID)
+            self.adapter.acquire(LOCAL_ID, self.capability)
         first_body = self.opener.requests[-1][0].data
 
         with self.assertRaisesRegex(
             BrokeredAzureBlobLeaseError,
             "^BROKERED_LEASE_NOT_AVAILABLE$",
         ):
-            self.adapter.acquire(LOCAL_ID)
+            self.adapter.acquire(LOCAL_ID, self.capability)
         self.assertEqual(self.opener.requests[-1][0].data, first_body)
         self.assertEqual(self.ticket_calls, ["acquire"])
 
         self.opener.response = _Response(_receipt("acquire", "ACQUIRED"))
-        self.adapter.acquire(LOCAL_ID)
+        self.adapter.acquire(LOCAL_ID, self.capability)
         self.assertEqual(self.opener.requests[-1][0].data, first_body)
         self.assertEqual(self.ticket_calls, ["acquire"])
 
-        self.adapter.acquire(LOCAL_ID)
+        self.adapter.acquire(LOCAL_ID, self.capability)
         self.assertEqual(self.ticket_calls, ["acquire", "acquire"])
+
+    def test_capability_is_required_and_bound_before_ticket_token_or_network(self) -> None:
+        for capability in (None, _capability(target="7" * 64)):
+            with self.subTest(capability=capability is not None):
+                with self.assertRaises(PerformanceLiveAuthorizationError):
+                    self.adapter.acquire(LOCAL_ID, capability)
+                self.assertEqual(self.ticket_calls, [])
+                self.assertEqual(self.token_calls, 0)
+                self.assertEqual(self.opener.requests, [])
 
     def test_configuration_is_https_fixed_root_and_digest_bound(self) -> None:
         for url in (
