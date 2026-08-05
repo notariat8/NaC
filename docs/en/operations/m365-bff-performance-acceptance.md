@@ -163,6 +163,10 @@ as `lease_release_lifecycle_state` and separately binds
 `target_binding_sha256` and `lease_binding_sha256` must match the measurement.
 A lifecycle-state hash without the exact state and matching target binding is
 not release proof.
+The lease binding and `SHA256(lifecycle_state)` must also match the receipt
+exactly. If the release response is lost and the lease is subsequently absent,
+the state is conservatively persisted as terminal `LOST`; `RELEASED` is never
+inferred from absence alone.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage

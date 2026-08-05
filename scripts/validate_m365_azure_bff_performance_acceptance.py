@@ -700,6 +700,18 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or lease.get(
+            "release_receipt_lease_binding_sha256_must_match_measurement"
+        )
+        is not True
+        or lease.get(
+            "release_receipt_lifecycle_state_sha256_must_equal_state_digest"
+        )
+        is not True
+        or lease.get(
+            "release_intent_without_confirmed_release_becomes_terminal_lost"
+        )
+        is not True
+        or lease.get(
             "release_lifecycle_state_hash_without_exact_released_state_is_sufficient"
         )
         is not False
@@ -1325,6 +1337,8 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "release_recovery_clears_only_after_exact_released_receipt"
         )
         is not True
+        or resumable.get("release_response_loss_may_be_inferred_as_released")
+        is not False
         or resumable.get("post_release_crash_recovery_reuses_pending_finalization")
         is not True
         or resumable.get("post_release_crash_recovery_may_reacquire_or_reread_monitor")
@@ -1771,6 +1785,8 @@ def main() -> int:
             "nac.m365-bff-performance-pending-finalization/v1",
             "nac.m365-bff-performance-release-recovery/v1",
             "nac.m365-bff-performance-terminal-measurement/v1",
+            "expected_lease_binding_sha256",
+            "_sha256_text(receipt.lifecycle_state)",
             "load_terminal_measurement",
             "load_release_recovery",
             "write_release_recovery",
@@ -1948,6 +1964,8 @@ def main() -> int:
             "test_adapter_implements_port_and_exposes_only_broker_commands",
             "test_acquire_persists_exact_intent_before_one_lease_acquire",
             "test_acquire_crash_points_are_conservative_and_reconcilable",
+            "test_release_persists_terminal_lost_before_reacquire_can_retry",
+            "test_release_intent_foreign_then_absent_stays_terminal_lost",
             "test_release_crash_points_reconcile_without_unknown_lease_ids",
             "test_signed_client_broker_blob_lifecycle_uses_one_run_identity",
             "test_token_scope_is_fixed_and_failures_are_redacted",

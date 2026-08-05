@@ -164,7 +164,7 @@ def _receipt(
         read_identity_binding_sha256="3" * 64,
         write_identity_binding_sha256="4" * 64,
         lifecycle_state=lifecycle_state,
-        lifecycle_state_sha256="5" * 64,
+        lifecycle_state_sha256=performance._sha256_text(lifecycle_state),
     )
 
 
@@ -997,6 +997,63 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                 second_lease.calls,
                 [f"release:{LEASE_ID}"],
             )
+
+    def test_release_recovery_rejects_unbound_or_invalid_release_receipt(self):
+        cases = (
+            (
+                "wrong lease binding",
+                _receipt("RELEASED", lease_binding_sha256="d" * 64),
+            ),
+            (
+                "wrong lifecycle digest",
+                AzureBlobLeaseReceipt(
+                    lease_binding_sha256=EXECUTION_BINDINGS[
+                        "lease_binding_sha256"
+                    ],
+                    target_binding_sha256=TARGET_BINDING_SHA256,
+                    lease_id_sha256="2" * 64,
+                    read_identity_binding_sha256="3" * 64,
+                    write_identity_binding_sha256="4" * 64,
+                    lifecycle_state="RELEASED",
+                    lifecycle_state_sha256="0" * 64,
+                ),
+            ),
+        )
+        for label, receipt in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as directory:
+                store = PerformanceFinalEvidenceStore(
+                    Path(directory) / "final.redacted.json"
+                )
+                store.write_release_recovery(
+                    performance_runtime._build_release_recovery(
+                        failure_code="PERFORMANCE_EVIDENCE_INVALID",
+                        execution_bindings=EXECUTION_BINDINGS,
+                    )
+                )
+
+                class _MalformedReleaseLease(_Lease):
+                    def release(self, lease_id, live_action_capability=None):
+                        self.capabilities.append(live_action_capability)
+                        self.calls.append(f"release:{lease_id}")
+                        return receipt
+
+                lease = _MalformedReleaseLease()
+                adapter, _, _ = self.adapter(lease=lease)
+                runner = _Runner()
+                with self.assertRaisesRegex(
+                    ValueError, "PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID"
+                ):
+                    LeaseBoundPerformanceAcceptance(
+                        runtime=adapter,
+                        runner=runner,
+                        execution_bindings=EXECUTION_BINDINGS,
+                        authorization_verifier=_test_authorization_verifier(),
+                        final_evidence_store=store,
+                    ).run(binding="a" * 64)
+
+                self.assertIsNotNone(store.load_release_recovery())
+                self.assertEqual(runner.calls, 0)
+                self.assertEqual(lease.calls, [f"release:{LEASE_ID}"])
 
     def test_orchestrator_releases_after_runner_failure_without_retry_is_forbidden(
         self,

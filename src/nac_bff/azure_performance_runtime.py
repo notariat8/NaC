@@ -568,6 +568,9 @@ class LeaseBoundPerformanceAcceptance:
         try:
             _validate_lease_receipt(
                 acquired_receipt,
+                expected_lease_binding_sha256=self._execution_bindings[
+                    "lease_binding_sha256"
+                ],
                 expected_target_binding_sha256=self._execution_bindings[
                     "target_binding_sha256"
                 ],
@@ -784,6 +787,9 @@ class LeaseBoundPerformanceAcceptance:
         release_receipt = self._runtime.release(capability)
         _validate_lease_receipt(
             release_receipt,
+            expected_lease_binding_sha256=self._execution_bindings[
+                "lease_binding_sha256"
+            ],
             expected_target_binding_sha256=self._execution_bindings[
                 "target_binding_sha256"
             ],
@@ -808,6 +814,9 @@ class LeaseBoundPerformanceAcceptance:
         release_receipt = self._runtime.release(capability)
         _validate_lease_receipt(
             release_receipt,
+            expected_lease_binding_sha256=initial_bindings[
+                "lease_binding_sha256"
+            ],
             expected_target_binding_sha256=initial_bindings[
                 "target_binding_sha256"
             ],
@@ -2214,13 +2223,17 @@ def _validate_digest_bindings(
 def _validate_lease_receipt(
     receipt: PerformanceLeaseReceiptPort,
     *,
+    expected_lease_binding_sha256: str,
     expected_target_binding_sha256: str,
     expected_lifecycle_state: str,
 ) -> None:
     if (
         not _is_performance_lease_receipt(receipt)
+        or receipt.lease_binding_sha256 != expected_lease_binding_sha256
         or receipt.target_binding_sha256 != expected_target_binding_sha256
         or receipt.lifecycle_state != expected_lifecycle_state
+        or receipt.lifecycle_state_sha256
+        != _sha256_text(receipt.lifecycle_state)
     ):
         raise ValueError("PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID")
 

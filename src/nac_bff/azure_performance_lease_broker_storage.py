@@ -331,21 +331,13 @@ class AzureBlobAtomicLeaseStateMachine:
             if classification in {"MISSING", "CHANGED"}:
                 return ReleaseOutcome.LOST
             if classification == "NOT_PRESENT":
-                if state.lifecycle != _RELEASE_INTENT:
-                    try:
-                        self._set_metadata(
-                            observed.transition(_LOST), observed_etag
-                        )
-                    except (_RequestUnavailable, _MetadataConflict):
-                        return ReleaseOutcome.INDETERMINATE_AFTER_CRASH
-                    return ReleaseOutcome.LOST
                 try:
                     self._set_metadata(
-                        observed.transition(_RELEASED), observed_etag
+                        observed.transition(_LOST), observed_etag
                     )
                 except (_RequestUnavailable, _MetadataConflict):
                     return ReleaseOutcome.INDETERMINATE_AFTER_CRASH
-                return ReleaseOutcome.ALREADY_RELEASED
+                return ReleaseOutcome.LOST
 
             current = observed
             current_etag = observed_etag

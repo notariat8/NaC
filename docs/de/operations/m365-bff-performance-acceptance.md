@@ -172,6 +172,10 @@ zusätzlich `lease_release_state_evidence_sha256`.
 `target_binding_sha256` und `lease_binding_sha256` müssen zur Messung passen.
 Ein Lifecycle-State-Hash ohne exakten Zustand und passende target binding ist
 kein Release-Nachweis.
+Zusätzlich müssen Lease-Bindung und `SHA256(lifecycle_state)` exakt zum Receipt
+passen. Geht die Release-Antwort verloren und ist die Lease anschließend nicht
+mehr vorhanden, wird der Zustand konservativ terminal als `LOST` persistiert;
+`RELEASED` wird niemals aus dem bloßen Nichtvorhandensein abgeleitet.
 
 Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
 vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren

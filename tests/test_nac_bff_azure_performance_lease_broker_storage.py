@@ -786,11 +786,47 @@ class CrashClassificationTests(unittest.TestCase):
             0,
         )
 
+    def test_release_intent_foreign_then_absent_stays_terminal_lost(self) -> None:
+        state_machine, opener, _ = adapter()
+        self.assertEqual(
+            state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
+        )
+        opener.after_failures.add(len(opener.requests) + 3)
+        self.assertEqual(
+            state_machine.release(command()),
+            ReleaseOutcome.INDETERMINATE_AFTER_CRASH,
+        )
+        opener.after_failures.clear()
+        self.assertEqual(
+            opener.metadata["x-ms-meta-lifecycle_state"], "RELEASE_INTENT"
+        )
+
+        opener.lease_id = str(UUID(bytes=bytes(range(16, 32))))
+        self.assertEqual(state_machine.release(command()), ReleaseOutcome.LOST)
+        self.assertEqual(
+            opener.metadata["x-ms-meta-lifecycle_state"], "RELEASE_INTENT"
+        )
+
+        opener.lease_id = None
+        self.assertEqual(state_machine.release(command()), ReleaseOutcome.LOST)
+        self.assertEqual(opener.metadata["x-ms-meta-lifecycle_state"], "LOST")
+        self.assertEqual(state_machine.release(command()), ReleaseOutcome.LOST)
+        self.assertEqual(
+            state_machine.acquire(
+                acquire_command(
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                    private_lease_id=OTHER_PRIVATE_ID,
+                )
+            ),
+            AcquireOutcome.REPLAY_REJECTED,
+        )
+
     def test_release_crash_points_reconcile_without_unknown_lease_ids(self) -> None:
         # Release starts five requests after the four-request acquire sequence.
         cases = (
             (3, ReleaseOutcome.RELEASED),
-            (4, ReleaseOutcome.ALREADY_RELEASED),
+            (4, ReleaseOutcome.LOST),
             (5, ReleaseOutcome.ALREADY_RELEASED),
         )
         for release_offset, expected in cases:
