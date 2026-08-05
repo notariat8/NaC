@@ -286,6 +286,8 @@
     "ticket_binds_owner_role_scope_tenant_audience_actor_commit_tree_package_plan_target_blob_actions_and_nonce": true,
     "ticket_or_trusted_claim_drift_behavior": "BLOCKED_before_broker_state_or_storage",
     "assert_held_required_before_every_target_dispatch": true,
+    "assert_held_receipt_requires_exact_held_lease_target_and_state_digest": true,
+    "assert_authoritative_absence_persists_terminal_lost": true,
     "foreign_lost_or_binding_drift_behavior": "BLOCKED_without_dispatch",
     "automatic_reacquire_allowed": false,
     "break_exposed_by_broker_or_local_api": false,

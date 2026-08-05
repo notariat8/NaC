@@ -817,6 +817,29 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
         self.assertEqual(summary["measurement_attestation_sha256"], "a" * 64)
         self.assertEqual(summary["lease_binding_sha256"], "e" * 64)
 
+    def test_assert_receipt_is_validated_before_clock_or_monitor(self):
+        class _MalformedAssertLease(_Lease):
+            def assert_held(self, lease_id, live_action_capability=None):
+                self.capabilities.append(live_action_capability)
+                self.calls.append(f"assert:{lease_id}")
+                return _receipt(
+                    "RELEASED",
+                    lease_binding_sha256="d" * 64,
+                )
+
+        def forbidden_clock():
+            raise AssertionError("clock must not run")
+
+        lease = _MalformedAssertLease()
+        adapter, monitor, _ = self.adapter(lease=lease, clock=forbidden_clock)
+        with self.assertRaisesRegex(
+            ValueError, "PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID"
+        ):
+            adapter.observe(0, "a" * 64, _test_capability())
+
+        self.assertEqual(lease.calls, [f"assert:{LEASE_ID}"])
+        self.assertEqual(monitor.calls, [])
+
     def test_acquire_and_release_are_explicit_not_implicit(self):
         adapter, _, lease = self.adapter()
         capability = _test_capability()

@@ -155,6 +155,10 @@ Die persistente State Machine lautet exakt `ACQUIRE_INTENT`,
 Target-Dispatch muss dieselbe Lease-ID auf demselben gebundenen Blob als
 gehalten bestätigt werden. Resume setzt dieselbe Lease-ID, dieselbe
 Zielbindung und dieselbe Lease-Bindung voraus.
+Jedes `assert_held`-Receipt wird vor Uhr-, Monitor- oder Target-Arbeit auf
+exakt `HELD`, Lease-Bindung, Zielbindung und Zustands-Hash geprüft. Ist eine
+zuvor gehaltene Lease autoritativ nicht mehr vorhanden, persistiert der Broker
+zuerst terminal `LOST`.
 
 Eine verlorene oder fremde Lease sowie Binding-Drift blockieren ohne Dispatch.
 Automatisches Reacquire, Lease-Break und Blob-Delete sind in Broker und lokalem

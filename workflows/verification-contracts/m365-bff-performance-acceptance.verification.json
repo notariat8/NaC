@@ -116,6 +116,7 @@
     "runtime": [
       "test_attestation_composes_lease_and_monitor_without_capacity_claim",
       "test_runtime_observation_is_bound_to_attestation_and_held_lease",
+      "test_assert_receipt_is_validated_before_clock_or_monitor",
       "test_orchestrator_returns_passed_only_after_release",
       "test_orchestrator_rejects_arbitrary_preflight_callable",
       "test_process_restart_recovers_early_cleanup_release_before_acquire",
@@ -237,6 +238,7 @@
     "The lease state machine is ACQUIRE_INTENT, ACQUIRE_IN_FLIGHT, HELD, RELEASE_INTENT, RELEASED and terminal LOST; PASSED is possible only after RELEASED is durable.",
     "The final release receipt proves the exact RELEASED state and matching target and lease bindings; a lifecycle-state hash alone is insufficient.",
     "Every accepted lease receipt binds the exact lease and target and carries SHA-256 of its exact lifecycle state; an absent lease after an unconfirmed release response becomes terminal LOST, never inferred RELEASED.",
+    "Every assert-held receipt is validated as exact HELD before clock, Monitor, or target work; an authoritatively absent previously-held lease is persisted as terminal LOST before returning.",
     "Crash or resume requires the same run, target and lease binding; an exact same-ticket retry or a fresh owner-signed same-run ticket may reconcile an existing intent while retaining its persisted broker-private lease ID, and a lost or foreign lease blocks without dispatch.",
     "Lease break, delete and reacquire after a confirmed held, lost or released state are forbidden; only bounded intent reconciliation may repeat an acquire after an authoritative NOT_PRESENT probe, and the broker may conditionally create the exact absent state blob once.",
     "The broker conditionally creates the exact zero-byte state blob with If-None-Match:* and performs a strong ETag readback; overwrite and delete are forbidden.",

@@ -756,6 +756,27 @@ class CrashClassificationTests(unittest.TestCase):
             state_machine.assert_held(command()), AssertOutcome.RETRYABLE_FAILURE
         )
 
+    def test_assert_absent_held_lease_persists_terminal_lost(self) -> None:
+        state_machine, opener, _ = adapter()
+        self.assertEqual(
+            state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
+        )
+        opener.lease_id = None
+
+        self.assertEqual(state_machine.assert_held(command()), AssertOutcome.LOST)
+        self.assertEqual(opener.metadata["x-ms-meta-lifecycle_state"], "LOST")
+        self.assertEqual(state_machine.assert_held(command()), AssertOutcome.LOST)
+        self.assertEqual(
+            state_machine.acquire(
+                acquire_command(
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                    private_lease_id=OTHER_PRIVATE_ID,
+                )
+            ),
+            AcquireOutcome.REPLAY_REJECTED,
+        )
+
     def test_release_persists_terminal_lost_before_reacquire_can_retry(self) -> None:
         opener = FakeBlobOpener()
         opener.after_failures.add(2)

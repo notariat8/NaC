@@ -297,6 +297,13 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AssertOutcome.HELD
             if state.lifecycle == _ACQUIRE_IN_FLIGHT:
                 return AssertOutcome.INDETERMINATE_AFTER_CRASH
+            if classification == "NOT_PRESENT":
+                try:
+                    self._set_metadata(
+                        observed.transition(_LOST), observed_etag
+                    )
+                except (_RequestUnavailable, _MetadataConflict):
+                    return AssertOutcome.INDETERMINATE_AFTER_CRASH
             return AssertOutcome.LOST
 
     def release(self, command: LeaseCommand, /) -> ReleaseOutcome:

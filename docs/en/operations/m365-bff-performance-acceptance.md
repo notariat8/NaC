@@ -147,6 +147,10 @@ The persistent state machine is exactly `ACQUIRE_INTENT`,
 `ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`, `LOST`. Before each target
 dispatch, the same lease ID must be confirmed as held on the same bound blob.
 Resume requires the same lease ID, target binding, and lease binding.
+Every `assert_held` receipt is checked before clock, Monitor, or target work for
+exact `HELD`, lease binding, target binding, and state digest. If a previously
+held lease is authoritatively absent, the broker first persists terminal
+`LOST`.
 
 A lost or foreign lease and any binding drift block without dispatch.
 Automatic reacquire, lease break, and blob delete are forbidden in the broker

@@ -687,6 +687,12 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or lease.get("ticket_operation_must_equal_requested_broker_route")
         is not True
         or lease.get("ticket_future_skew_seconds_maximum") != 5
+        or lease.get(
+            "assert_held_receipt_requires_exact_held_lease_target_and_state_digest"
+        )
+        is not True
+        or lease.get("assert_authoritative_absence_persists_terminal_lost")
+        is not True
         or lease.get("successful_final_measurement_requires_state_exact")
         != "RELEASED"
         or lease.get("release_receipt_state_exact") != "RELEASED"
@@ -1964,6 +1970,7 @@ def main() -> int:
             "test_adapter_implements_port_and_exposes_only_broker_commands",
             "test_acquire_persists_exact_intent_before_one_lease_acquire",
             "test_acquire_crash_points_are_conservative_and_reconcilable",
+            "test_assert_absent_held_lease_persists_terminal_lost",
             "test_release_persists_terminal_lost_before_reacquire_can_retry",
             "test_release_intent_foreign_then_absent_stays_terminal_lost",
             "test_release_crash_points_reconcile_without_unknown_lease_ids",

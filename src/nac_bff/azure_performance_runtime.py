@@ -422,6 +422,12 @@ class AzurePerformanceRuntimeAdapter:
             self._lease_id,
             live_action_capability=live_action_capability,
         )
+        _validate_lease_receipt(
+            receipt,
+            expected_lease_binding_sha256=self.lease_binding_sha256,
+            expected_target_binding_sha256=self.target_binding_sha256,
+            expected_lifecycle_state="HELD",
+        )
         current = self._validated_now()
         end = (
             current.astimezone(UTC) - timedelta(seconds=INGESTION_LAG_SECONDS)
