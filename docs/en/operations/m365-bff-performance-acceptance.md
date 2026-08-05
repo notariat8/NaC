@@ -144,7 +144,7 @@ only:
 3. `release`
 
 The persistent state machine is exactly `ACQUIRE_INTENT`,
-`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`. Before each target
+`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`, `LOST`. Before each target
 dispatch, the same lease ID must be confirmed as held on the same bound blob.
 Resume requires the same lease ID, target binding, and lease binding.
 
@@ -337,7 +337,10 @@ read, never the owner preflight, acquisition, runner, or target traffic. After
 the settled-window coverage, monitor attestation, target and hash bindings, and
 zero-remaining execution budget are validated, a durable
 `nac.m365-bff-performance-pending-finalization/v1` record is written before
-release. A crash-safe resume may reconcile release only with the same lease ID
+release. An early cleanup release is likewise bound first by an atomic
+`nac.m365-bff-performance-release-recovery/v1` checkpoint. After process
+restart this checkpoint is reconciled before any new acquire and is cleared
+only after an exact `RELEASED` receipt. A crash-safe resume may reconcile release only with the same lease ID
 and exact target binding; it may not acquire, reread Monitor, or dispatch the
 target.
 Authoritative checkpoints are opened with `O_NOFOLLOW` and validated with

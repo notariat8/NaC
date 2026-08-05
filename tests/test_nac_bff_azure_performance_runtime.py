@@ -701,6 +701,13 @@ class _Lease(AzureBlobLeaseAdapter):
         )
 
 
+class _ReleaseResponseLostLease(_Lease):
+    def release(self, lease_id, live_action_capability=None):
+        self.capabilities.append(live_action_capability)
+        self.calls.append(f"release:{lease_id}")
+        raise RuntimeError("release response lost")
+
+
 class _Monitor(AzurePerformanceMonitorAdapter):
     def __init__(self, *, on_demand_execution_count: int = 500) -> None:
         self.calls: list[tuple[datetime, datetime]] = []
@@ -946,6 +953,50 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                 ),
             )
         self.assertEqual(lease.calls, [])
+
+    def test_process_restart_recovers_early_cleanup_release_before_acquire(self):
+        first_lease = _ReleaseResponseLostLease()
+        first_adapter, _, _ = self.adapter(lease=first_lease)
+
+        class _InvalidRunner(_Runner):
+            def run(self, **_kwargs):
+                self.calls += 1
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = PerformanceFinalEvidenceStore(
+                Path(directory) / "final.redacted.json"
+            )
+            with self.assertRaisesRegex(RuntimeError, "release response lost"):
+                LeaseBoundPerformanceAcceptance(
+                    runtime=first_adapter,
+                    runner=_InvalidRunner(),
+                    execution_bindings=EXECUTION_BINDINGS,
+                    authorization_verifier=_test_authorization_verifier(),
+                    final_evidence_store=store,
+                ).run(binding="a" * 64)
+            self.assertIsNotNone(store.load_release_recovery())
+
+            second_lease = _Lease()
+            second_adapter, _, _ = self.adapter(lease=second_lease)
+            second_runner = _Runner()
+            with self.assertRaisesRegex(
+                ValueError, "PERFORMANCE_EVIDENCE_INVALID"
+            ):
+                LeaseBoundPerformanceAcceptance(
+                    runtime=second_adapter,
+                    runner=second_runner,
+                    execution_bindings=EXECUTION_BINDINGS,
+                    authorization_verifier=_test_authorization_verifier(),
+                    final_evidence_store=store,
+                ).run(binding="a" * 64)
+
+            self.assertIsNone(store.load_release_recovery())
+            self.assertEqual(second_runner.calls, 0)
+            self.assertEqual(
+                second_lease.calls,
+                [f"release:{LEASE_ID}"],
+            )
 
     def test_orchestrator_releases_after_runner_failure_without_retry_is_forbidden(
         self,
@@ -2198,6 +2249,35 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(stat.S_IMODE(manifest_path.stat().st_mode), 0o600)
             self.assertEqual(list(path.parent.glob(".*.tmp")), [])
+
+    def test_release_recovery_checkpoint_is_private_and_tamper_evident(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "evidence" / "final.redacted.json"
+            store = PerformanceFinalEvidenceStore(path)
+            recovery = performance_runtime._build_release_recovery(
+                failure_code="PERFORMANCE_EVIDENCE_INVALID",
+                execution_bindings=EXECUTION_BINDINGS,
+            )
+
+            store.write_release_recovery(recovery)
+
+            self.assertEqual(store.load_release_recovery(), recovery)
+            self.assertEqual(
+                stat.S_IMODE(store.release_recovery_path.stat().st_mode),
+                0o600,
+            )
+            tampered = dict(recovery)
+            tampered["failure_code"] = "PERFORMANCE_LEASE_RECEIPT_INVALID"
+            store.release_recovery_path.write_text(
+                json.dumps(tampered), encoding="ascii"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "PERFORMANCE_RELEASE_RECOVERY_INVALID"
+            ):
+                store.load_release_recovery()
+
+            store.clear_release_recovery()
+            self.assertIsNone(store.load_release_recovery())
 
     def test_final_evidence_requires_every_not_claimed_position(self):
         fields = (

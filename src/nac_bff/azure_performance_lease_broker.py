@@ -45,6 +45,7 @@ def lease_broker_policy() -> dict[str, Any]:
             "HELD",
             "RELEASE_INTENT",
             "RELEASED",
+            "LOST",
         ],
         "local_runner_storage_access": False,
         "private_lease_id_owner": "broker_only",

@@ -255,6 +255,7 @@ LEASE_STATES = [
     "HELD",
     "RELEASE_INTENT",
     "RELEASED",
+    "LOST",
 ]
 
 
@@ -1310,6 +1311,20 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         is not True
         or resumable.get("pending_finalization_schema_exact")
         != "nac.m365-bff-performance-pending-finalization/v1"
+        or resumable.get("release_recovery_schema_exact")
+        != "nac.m365-bff-performance-release-recovery/v1"
+        or resumable.get(
+            "every_early_cleanup_release_requires_durable_recovery_checkpoint"
+        )
+        is not True
+        or resumable.get(
+            "release_recovery_runs_before_any_new_acquire_after_restart"
+        )
+        is not True
+        or resumable.get(
+            "release_recovery_clears_only_after_exact_released_receipt"
+        )
+        is not True
         or resumable.get("post_release_crash_recovery_reuses_pending_finalization")
         is not True
         or resumable.get("post_release_crash_recovery_may_reacquire_or_reread_monitor")
@@ -1754,8 +1769,11 @@ def main() -> int:
             "monitor_evidence_sha256",
             "monitor_window_anchor_sha256",
             "nac.m365-bff-performance-pending-finalization/v1",
+            "nac.m365-bff-performance-release-recovery/v1",
             "nac.m365-bff-performance-terminal-measurement/v1",
             "load_terminal_measurement",
+            "load_release_recovery",
+            "write_release_recovery",
             "load_final_evidence",
             "get_validated_final_attestation",
             '"measurement_finished_at_utc"',

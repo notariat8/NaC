@@ -756,6 +756,36 @@ class CrashClassificationTests(unittest.TestCase):
             state_machine.assert_held(command()), AssertOutcome.RETRYABLE_FAILURE
         )
 
+    def test_release_persists_terminal_lost_before_reacquire_can_retry(self) -> None:
+        opener = FakeBlobOpener()
+        opener.after_failures.add(2)
+        state_machine, _, _ = adapter(opener)
+        self.assertEqual(
+            state_machine.acquire(acquire_command()),
+            AcquireOutcome.INDETERMINATE_AFTER_CRASH,
+        )
+        opener.after_failures.clear()
+
+        self.assertEqual(state_machine.release(command()), ReleaseOutcome.LOST)
+        self.assertEqual(opener.metadata["x-ms-meta-lifecycle_state"], "LOST")
+        self.assertEqual(
+            state_machine.acquire(
+                acquire_command(
+                    operation_id=OTHER_OPERATION,
+                    nonce_key=OTHER_NONCE,
+                    private_lease_id=OTHER_PRIVATE_ID,
+                )
+            ),
+            AcquireOutcome.REPLAY_REJECTED,
+        )
+        self.assertEqual(
+            sum(
+                request.headers.get("x-ms-lease-action") == "acquire"
+                for request in opener.requests
+            ),
+            0,
+        )
+
     def test_release_crash_points_reconcile_without_unknown_lease_ids(self) -> None:
         # Release starts five requests after the four-request acquire sequence.
         cases = (

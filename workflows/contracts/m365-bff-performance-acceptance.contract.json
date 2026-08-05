@@ -258,7 +258,8 @@
       "ACQUIRE_IN_FLIGHT",
       "HELD",
       "RELEASE_INTENT",
-      "RELEASED"
+      "RELEASED",
+      "LOST"
     ],
     "private_lease_id_is_generated_and_persisted_only_inside_broker": true,
     "local_runner_lease_id_is_fence_only_and_never_sent": true,
@@ -718,6 +719,10 @@
     "final_monitor_failure_retains_terminal_measurement_and_held_lease": true,
     "terminal_measurement_resume_may_repeat_only_final_monitor_read": true,
     "pending_finalization_schema_exact": "nac.m365-bff-performance-pending-finalization/v1",
+    "release_recovery_schema_exact": "nac.m365-bff-performance-release-recovery/v1",
+    "every_early_cleanup_release_requires_durable_recovery_checkpoint": true,
+    "release_recovery_runs_before_any_new_acquire_after_restart": true,
+    "release_recovery_clears_only_after_exact_released_receipt": true,
     "every_redacted_terminal_measurement_evidence_must_persist_pending_finalization_before_release": true,
     "pending_finalization_must_bind_target_final_window_projected_remaining_and_release_requirements": true,
     "same_run_release_intent_reconciliation_after_crash_allowed": true,

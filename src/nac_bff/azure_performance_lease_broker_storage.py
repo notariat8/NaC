@@ -44,6 +44,7 @@ _ACQUIRE_IN_FLIGHT = "ACQUIRE_IN_FLIGHT"
 _HELD = "HELD"
 _RELEASE_INTENT = "RELEASE_INTENT"
 _RELEASED = "RELEASED"
+_LOST = "LOST"
 _LIFECYCLES = frozenset(
     {
         _ACQUIRE_INTENT,
@@ -51,6 +52,7 @@ _LIFECYCLES = frozenset(
         _HELD,
         _RELEASE_INTENT,
         _RELEASED,
+        _LOST,
     }
 )
 
@@ -225,7 +227,7 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AcquireOutcome.REPLAY_REJECTED
             if relationship == "OTHER":
                 return AcquireOutcome.BUSY
-            if existing.lifecycle in {_RELEASE_INTENT, _RELEASED}:
+            if existing.lifecycle in {_RELEASE_INTENT, _RELEASED, _LOST}:
                 return AcquireOutcome.REPLAY_REJECTED
 
             if existing.lifecycle == _ACQUIRE_INTENT:
@@ -266,7 +268,7 @@ class AzureBlobAtomicLeaseStateMachine:
                 return AssertOutcome.NOT_ACQUIRED
             if state.lifecycle == _ACQUIRE_INTENT:
                 return AssertOutcome.NOT_ACQUIRED
-            if state.lifecycle == _RELEASED:
+            if state.lifecycle in {_RELEASED, _LOST}:
                 return AssertOutcome.LOST
             if relationship == "NEXT" and state.lifecycle == _RELEASE_INTENT:
                 return AssertOutcome.REPLAY_REJECTED
@@ -315,6 +317,8 @@ class AzureBlobAtomicLeaseStateMachine:
                 return ReleaseOutcome.NOT_ACQUIRED
             if state.lifecycle == _RELEASED:
                 return ReleaseOutcome.ALREADY_RELEASED
+            if state.lifecycle == _LOST:
+                return ReleaseOutcome.LOST
 
             try:
                 classification, observed, observed_etag = self._probe_lease(
@@ -328,6 +332,12 @@ class AzureBlobAtomicLeaseStateMachine:
                 return ReleaseOutcome.LOST
             if classification == "NOT_PRESENT":
                 if state.lifecycle != _RELEASE_INTENT:
+                    try:
+                        self._set_metadata(
+                            observed.transition(_LOST), observed_etag
+                        )
+                    except (_RequestUnavailable, _MetadataConflict):
+                        return ReleaseOutcome.INDETERMINATE_AFTER_CRASH
                     return ReleaseOutcome.LOST
                 try:
                     self._set_metadata(

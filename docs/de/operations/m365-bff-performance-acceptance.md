@@ -151,7 +151,7 @@ nur diese Operationen anbieten:
 3. `release`
 
 Die persistente State Machine lautet exakt `ACQUIRE_INTENT`,
-`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`. Vor jedem
+`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`, `LOST`. Vor jedem
 Target-Dispatch muss dieselbe Lease-ID auf demselben gebundenen Blob als
 gehalten bestätigt werden. Resume setzt dieselbe Lease-ID, dieselbe
 Zielbindung und dieselbe Lease-Bindung voraus.
@@ -358,6 +358,10 @@ Validierung von Settled-Window-Abdeckung, Monitor-Attestation, Ziel- und
 Hashbindungen sowie dem auf null projizierten Restbudget wird vor dem Release
 ein dauerhafter
 `nac.m365-bff-performance-pending-finalization/v1`-Datensatz geschrieben. Ein
+früher Cleanup-Release wird analog zuerst durch einen atomaren
+`nac.m365-bff-performance-release-recovery/v1`-Checkpoint gebunden. Nach einem
+Prozessneustart wird dieser Checkpoint vor jedem neuen Acquire reconciliiert
+und erst nach einem exakten `RELEASED`-Receipt gelöscht. Ein
 autoritativer Checkpoint wird mit `O_NOFOLLOW` geöffnet und anhand desselben
 Dateideskriptors per `fstat` geprüft; atomare Ersetzungen verwenden einen zuvor
 auf Eigentümer und Modus geprüften Verzeichnisdeskriptor. Symlinks oder unsichere
