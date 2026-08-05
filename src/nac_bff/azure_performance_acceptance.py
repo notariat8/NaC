@@ -43,12 +43,9 @@ from .azure_performance_authorization import (
     _transition_verified_bootstrap_authority,
     _open_root_anchored_private_parent,
 )
-from .azure_performance_lease import (
-    AzureBlobLeaseBinding,
-    _binding_sha256,
-    build_lease_acquisition_safety_evidence,
-    lease_policy,
-    lease_policy_sha256,
+from .azure_performance_lease_broker import (
+    lease_broker_policy,
+    lease_broker_policy_sha256,
 )
 from .azure_performance_monitor import monitor_policy, monitor_policy_sha256
 from .entra_access_token import EntraAccessTokenValidator
@@ -690,7 +687,8 @@ def build_performance_acceptance_plan(
         "phase_plan_sha256": _sha256_json(phase_plan),
         "measurement_policy_sha256": measurement_policy_sha256(),
         "monitor_policy_sha256": monitor_policy_sha256(),
-        "lease_policy_sha256": lease_policy_sha256(),
+        "lease_policy_sha256": lease_broker_policy_sha256(),
+        "lease_broker_policy_sha256": lease_broker_policy_sha256(),
         "target": {
             "workspace_id_sha256": _sha256_text(WORKSPACE_ID),
             "matter_id_sha256": _sha256_text(ALLOWED_MATTER_ID),
@@ -739,12 +737,12 @@ def build_performance_acceptance_plan(
                 "policy_sha256": monitor_policy_sha256(),
                 "measurement_is_app_wide_not_endpoint_attribution": True,
             },
-            "azure_blob_lease": {
+            "azure_blob_lease_broker": {
                 "status": "IMPLEMENTED_OFFLINE",
-                "policy": lease_policy(),
-                "policy_sha256": lease_policy_sha256(),
+                "policy": lease_broker_policy(),
+                "policy_sha256": lease_broker_policy_sha256(),
                 "dedicated_storage_required": True,
-                "precreated_blob_and_etag_required": True,
+                "conditional_state_blob_create_required": True,
             },
         },
         "live_preconditions": {
@@ -809,6 +807,9 @@ def build_owner_comment(
                 ],
                 "monitor_policy_sha256": plan["monitor_policy_sha256"],
                 "lease_policy_sha256": plan["lease_policy_sha256"],
+                "lease_broker_policy_sha256": plan[
+                    "lease_broker_policy_sha256"
+                ],
                 "correlation_id": correlation_id,
                 "monitor_window_anchor_utc": monitor_anchor,
                 "monitor_window_anchor_sha256": _sha256_text(monitor_anchor),
@@ -1260,6 +1261,9 @@ class BoundPerformanceAuthorizationVerifier:
             "measurement_policy_sha256": plan["measurement_policy_sha256"],
             "monitor_policy_sha256": plan["monitor_policy_sha256"],
             "lease_policy_sha256": plan["lease_policy_sha256"],
+            "lease_broker_policy_sha256": plan[
+                "lease_broker_policy_sha256"
+            ],
             "monitor_window_anchor_sha256": (
                 authorization.monitor_window_anchor_sha256
             ),
@@ -1325,62 +1329,6 @@ class BoundPerformanceAuthorizationVerifier:
         self._durable_lease_binding_sha256 = None
         self._durable_lease_safety_sha256 = None
         return authority
-
-    def record_durable_bootstrap_handoff(
-        self,
-        binding: AzureBlobLeaseBinding,
-    ) -> dict[str, str]:
-        """Bind runtime promotion to the persisted post-bootstrap ETag."""
-
-        with self._bootstrap_transition_lock:
-            if (
-                type(binding) is not AzureBlobLeaseBinding
-                or self._bootstrap_authority is None
-                or self._bootstrap_safety_evidence is None
-                or self._bootstrap_binding_sha256 is None
-                or self._durable_lease_binding_sha256 is not None
-            ):
-                raise ValueError("PERFORMANCE_BOOTSTRAP_HANDOFF_INVALID")
-            parameters = self._infrastructure_parameters
-            expected_resource = (
-                f"/subscriptions/{parameters.get('subscriptionId')}"
-                f"/resourceGroups/{parameters.get('resourceGroupName')}"
-                "/providers/Microsoft.Storage/storageAccounts/"
-                f"{parameters.get('storageAccountName')}"
-            )
-            if (
-                binding.owner_approval_body_sha256
-                != self._bootstrap_authority.execution_bindings.get(
-                    "owner_approval_body_sha256"
-                )
-                or binding.target_binding_sha256
-                != self._bootstrap_authority.execution_bindings.get(
-                    "target_binding_sha256"
-                )
-                or binding.coordination_storage_account_resource_id.casefold()
-                != expected_resource.casefold()
-                or binding.token_subject.casefold()
-                != str(parameters.get("runtimePrincipalId", "")).casefold()
-                or binding.token_tenant_id.casefold()
-                != str(parameters.get("tenantId", "")).casefold()
-            ):
-                raise ValueError("PERFORMANCE_BOOTSTRAP_HANDOFF_INVALID")
-            acquisition = build_lease_acquisition_safety_evidence(
-                binding=binding,
-                infrastructure_safety_evidence=(
-                    self._bootstrap_safety_evidence
-                ),
-            )
-            self._durable_lease_binding_sha256 = _binding_sha256(binding)
-            self._durable_lease_safety_sha256 = acquisition[
-                "lease_acquisition_safety_evidence_sha256"
-            ]
-            return {
-                "lease_binding_sha256": self._durable_lease_binding_sha256,
-                "lease_acquisition_safety_evidence_sha256": (
-                    self._durable_lease_safety_sha256
-                ),
-            }
 
     def record_broker_lease_handoff(
         self,

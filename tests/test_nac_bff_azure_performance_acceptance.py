@@ -533,8 +533,19 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "IMPLEMENTED_OFFLINE",
         )
         self.assertEqual(
-            first["offline_adapters"]["azure_blob_lease"]["status"],
+            first["offline_adapters"]["azure_blob_lease_broker"]["status"],
             "IMPLEMENTED_OFFLINE",
+        )
+        lease_policy = first["offline_adapters"]["azure_blob_lease_broker"][
+            "policy"
+        ]
+        self.assertTrue(
+            lease_policy["same_ticket_retry_reuses_persisted_private_lease_id"]
+        )
+        self.assertTrue(
+            lease_policy[
+                "fresh_same_run_ticket_may_reconcile_persisted_intent"
+            ]
         )
         self.assertTrue(first["live_preconditions"]["exclusive_remote_lease_required"])
         self.assertNotIn("notary_team_01", json.dumps(first))
@@ -2034,6 +2045,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 "measurement_policy_sha256",
                 "monitor_policy_sha256",
                 "lease_policy_sha256",
+                "lease_broker_policy_sha256",
                 "monitor_window_anchor_sha256",
                 "owner_approval_body_sha256",
                 "target_binding_sha256",
@@ -2047,6 +2059,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "measurement_policy_sha256",
             "monitor_policy_sha256",
             "lease_policy_sha256",
+            "lease_broker_policy_sha256",
             "target_binding_sha256",
         ):
             self.assertEqual(bindings[key], plan[key])

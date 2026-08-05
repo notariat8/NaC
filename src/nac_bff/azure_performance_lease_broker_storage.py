@@ -749,7 +749,6 @@ def _relationship(existing: _BlobState, proposed: _BlobState) -> str:
     if (
         existing.operation_id != proposed.operation_id
         or existing.binding_fingerprint != proposed.binding_fingerprint
-        or existing.private_lease_id != proposed.private_lease_id
     ):
         return "REPLAY"
     return "SAME"

@@ -562,7 +562,9 @@ class ReplayAndConcurrencyTests(unittest.TestCase):
             state_machine.acquire(acquire_command()), AcquireOutcome.ACQUIRED
         )
         self.assertEqual(
-            state_machine.acquire(acquire_command()),
+            state_machine.acquire(
+                acquire_command(private_lease_id=OTHER_PRIVATE_ID)
+            ),
             AcquireOutcome.ALREADY_ACQUIRED,
         )
         assert_command = command(
@@ -1007,6 +1009,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
             class BrokerOpener:
                 def __init__(self) -> None:
                     self.tickets: list[dict[str, Any]] = []
+                    self.after_failures: set[int] = set()
 
                 def open(self, request: Request, timeout: float) -> Response:
                     if timeout != 10:
@@ -1021,6 +1024,8 @@ class IntegratedLifecycleTests(unittest.TestCase):
                         "release": broker.release,
                     }[operation]
                     receipt = handler(ticket=ticket, claims=claims)
+                    if len(self.tickets) in self.after_failures:
+                        raise OSError("broker response lost")
                     return Response(
                         200,
                         {},
@@ -1060,13 +1065,12 @@ class IntegratedLifecycleTests(unittest.TestCase):
                 )
 
             client = new_client()
-            blob_opener.after_failures.add(2)
+            broker_opener.after_failures.add(1)
             local_fence = UUID("33333333-3333-4333-8333-333333333333")
             with self.assertRaises(BrokeredAzureBlobLeaseError):
                 client.acquire(local_fence, capability)
-            blob_opener.after_failures.clear()
+            broker_opener.after_failures.clear()
 
-            client = new_client()
             acquired = client.acquire(local_fence, capability)
             run_fingerprints = [
                 blob_opener.metadata["x-ms-meta-run_fingerprint"]
@@ -1097,7 +1101,7 @@ class IntegratedLifecycleTests(unittest.TestCase):
                     for ticket in broker_opener.tickets
                 }
             ),
-            5,
+            4,
         )
         self.assertEqual(len(set(run_fingerprints)), 1)
         self.assertEqual(len(run_fingerprints[0]), 64)

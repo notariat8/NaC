@@ -22,8 +22,8 @@ from .azure_performance_acceptance import (
     build_owner_comment,
     build_performance_acceptance_plan,
 )
-from .azure_performance_lease import (
-    lease_bootstrap_policy_sha256,
+from .azure_performance_lease_broker import (
+    lease_broker_state_bootstrap_policy_sha256,
 )
 from .azure_performance_composition import (
     validate_azure_performance_composition_readiness,
@@ -269,6 +269,9 @@ def build_performance_infrastructure_owner_gate(
                     "monitor_policy_sha256"
                 ],
                 "lease_policy_sha256": approval_payload["lease_policy_sha256"],
+                "lease_broker_policy_sha256": approval_payload[
+                    "lease_broker_policy_sha256"
+                ],
                 "monitor_window_anchor_sha256": _sha256_text(
                     monitor_window_anchor_utc
                 ),
@@ -396,7 +399,7 @@ def measure_performance_infrastructure_approval(
             "worm_baseline_source_sha256": worm_source_sha256,
         }
     )
-    bootstrap_sha256 = lease_bootstrap_policy_sha256()
+    bootstrap_sha256 = lease_broker_state_bootstrap_policy_sha256()
     safety_sha256 = infrastructure_safety_policy_sha256()
     infrastructure_binding_sha256 = _sha256_json(
         {
@@ -414,7 +417,7 @@ def measure_performance_infrastructure_approval(
                 "verify_worm_baseline_readback",
                 "deploy_performance_coordination",
                 "verify_coordination_and_effective_rbac",
-                "bootstrap_exact_zero_byte_lease_blob",
+                "broker_conditionally_create_or_read_exact_state_blob",
                 "execute_endpoint_scoped_conservative_measurement",
                 "release_lease_and_finalize_redacted_evidence",
             ],

@@ -176,6 +176,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
             "measurement_policy_sha256",
             "monitor_policy_sha256",
             "lease_policy_sha256",
+            "lease_broker_policy_sha256",
         ):
             self.assertEqual(
                 result["owner_execution_bindings"][key],

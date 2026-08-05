@@ -75,6 +75,9 @@ EXECUTION_BINDINGS = {
     "measurement_policy_sha256": APPROVED_PLAN["measurement_policy_sha256"],
     "monitor_policy_sha256": APPROVED_PLAN["monitor_policy_sha256"],
     "lease_policy_sha256": APPROVED_PLAN["lease_policy_sha256"],
+    "lease_broker_policy_sha256": APPROVED_PLAN[
+        "lease_broker_policy_sha256"
+    ],
     "infrastructure_binding_sha256": INFRASTRUCTURE_BINDING_SHA256,
     "infrastructure_parameters_sha256": INFRASTRUCTURE_PARAMETERS_SHA256,
     "infrastructure_source_sha256": INFRASTRUCTURE_SOURCE_SHA256,

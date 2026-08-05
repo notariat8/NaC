@@ -25,6 +25,58 @@ RECEIPT_VERSION = "nac.azure-performance-lease-broker-receipt/v1"
 MAX_TICKET_LIFETIME_SECONDS = 60
 MAX_FUTURE_SKEW_SECONDS = 5
 
+
+def lease_broker_policy() -> dict[str, Any]:
+    """Return the fixed server-side lease and state-machine boundary."""
+
+    return {
+        "api_version": "2023-11-03",
+        "allowed_operations": ["acquire", "assert_held", "release"],
+        "broker_routes": [
+            "POST /v1/internal/performance-lease/acquire",
+            "POST /v1/internal/performance-lease/assert",
+            "POST /v1/internal/performance-lease/release",
+        ],
+        "client_retries": 0,
+        "forbidden_lease_actions": ["break", "change", "renew"],
+        "lifecycle_states": [
+            "ACQUIRE_INTENT",
+            "ACQUIRE_IN_FLIGHT",
+            "HELD",
+            "RELEASE_INTENT",
+            "RELEASED",
+        ],
+        "local_runner_storage_access": False,
+        "private_lease_id_owner": "broker_only",
+        "redirects_followed": 0,
+        "fresh_same_run_ticket_may_reconcile_persisted_intent": True,
+        "same_ticket_retry_reuses_persisted_private_lease_id": True,
+        "storage_token_holder": "broker_uami_only",
+    }
+
+
+def lease_broker_policy_sha256() -> str:
+    return _sha256(_canonical_json(lease_broker_policy()))
+
+
+def lease_broker_state_bootstrap_policy() -> dict[str, Any]:
+    """Return the exact conditional-create policy for broker state metadata."""
+
+    return {
+        "allowed_operations": ["put_blob_if_absent", "head_blob"],
+        "blob_type": "BlockBlob",
+        "content_length": 0,
+        "forbidden_operations": ["delete", "overwrite"],
+        "owner_and_target_binding_required": True,
+        "put_precondition": "If-None-Match:*",
+        "runtime_creator": "broker_uami_only",
+        "strong_etag_readback_required": True,
+    }
+
+
+def lease_broker_state_bootstrap_policy_sha256() -> str:
+    return _sha256(_canonical_json(lease_broker_state_bootstrap_policy()))
+
 _TICKET_FIELDS = frozenset({"key_id", "payload", "signature"})
 _PAYLOAD_FIELDS = frozenset(
     {

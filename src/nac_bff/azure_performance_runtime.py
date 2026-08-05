@@ -1800,6 +1800,7 @@ def _owner_execution_binding_keys() -> set[str]:
         "measurement_policy_sha256",
         "monitor_policy_sha256",
         "lease_policy_sha256",
+        "lease_broker_policy_sha256",
         "infrastructure_binding_sha256",
         "infrastructure_parameters_sha256",
         "infrastructure_source_sha256",
@@ -2014,6 +2015,7 @@ def _validate_approved_plan_bindings(
                 "measurement_policy_sha256",
                 "monitor_policy_sha256",
                 "lease_policy_sha256",
+                "lease_broker_policy_sha256",
             )
         )
     ):

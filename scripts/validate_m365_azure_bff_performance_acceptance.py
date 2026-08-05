@@ -807,6 +807,18 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or broker_boundary.get("delete_or_break_operation_exposed") is not False
         or broker_boundary.get("lease_broker_policy_sha256_required") is not True
         or broker_boundary.get(
+            "same_ticket_retry_reuses_persisted_private_lease_id"
+        )
+        is not True
+        or broker_boundary.get(
+            "fresh_same_run_ticket_may_reconcile_persisted_intent"
+        )
+        is not True
+        or broker_boundary.get(
+            "same_run_target_and_lease_binding_required_on_resume"
+        )
+        is not True
+        or broker_boundary.get(
             "server_side_state_machine_is_atomic_durable_idempotent_and_restart_reconcilable"
         )
         is not True
@@ -1265,7 +1277,11 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or resumable.get("concurrent_same_state_path_behavior")
         != "BLOCKED_before_owner_or_network"
         or resumable.get(
-            "same_broker_operation_nonce_ticket_target_and_lease_binding_required_on_resume"
+            "same_run_target_and_lease_binding_required_on_resume"
+        )
+        is not True
+        or resumable.get(
+            "same_ticket_retry_and_fresh_same_run_intent_reconciliation_required"
         )
         is not True
         or resumable.get(
@@ -1317,7 +1333,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or resumable.get(
-            "same_broker_operation_id_release_reconciliation_after_crash_allowed"
+            "same_run_release_intent_reconciliation_after_crash_allowed"
         )
         is not True
         or resumable.get(
