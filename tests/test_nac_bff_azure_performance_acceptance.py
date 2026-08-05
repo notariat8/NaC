@@ -56,7 +56,7 @@ from nac_cli.cli import main as cli_main
 SHA256 = "a" * 64
 CONTRACT_SHA256 = "f" * 64
 APPROVAL_REFERENCE = (
-    "https://github.com/notariat8/NaC/issues/733#issuecomment-1"
+    "https://github.com/notariat8/NaC/issues/735#issuecomment-1"
 )
 CORRELATION_ID = "nac-bff-performance-20260802"
 MONITOR_WINDOW_ANCHOR = "2026-08-02T00:00:00Z"
@@ -72,6 +72,11 @@ INFRASTRUCTURE_APPROVAL = {
     "infrastructure_source_sha256": "6" * 64,
     "lease_bootstrap_policy_sha256": "7" * 64,
     "infrastructure_safety_policy_sha256": "8" * 64,
+    "worm_baseline_binding_sha256": "9" * 64,
+    "worm_baseline_compiled_arm_sha256": "a" * 64,
+    "worm_baseline_parameters_sha256": "b" * 64,
+    "worm_baseline_source_sha256": "c" * 64,
+    "deployment_sequence_sha256": "d" * 64,
 }
 INFRASTRUCTURE_PARAMETERS = {
     "location": "germanywestcentral",
@@ -83,11 +88,21 @@ INFRASTRUCTURE_PARAMETERS = {
     ),
     "wormStorageAccountResourceId": (
         "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
-        "resourceGroups/rg-nac-worm/providers/Microsoft.Storage/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormtest001"
     ),
-    "provisionerPrincipalId": "11111111-2222-4333-8444-555555555555",
-    "allowedClientIpAddress": "8.8.8.8",
+    "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
+    "brokerCallerServicePrincipalId": (
+        "66666666-7777-4888-8999-aaaaaaaaaaaa"
+    ),
+    "brokerFunctionAppResourceId": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/"
+        "func-nac-bff-test"
+    ),
+    "brokerFunctionPackageSha256": "e" * 64,
+    "brokerTicketVerificationCertificateSha256": "f" * 64,
+    "brokerOutboundIpAddresses": ["8.8.8.8"],
     "targetBindingSha256": "0" * 64,
     "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
     "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
@@ -97,6 +112,17 @@ INFRASTRUCTURE_PARAMETERS = {
         "owner": "notariat8",
         "purpose": "endpoint-scoped-conservative-measurement",
     },
+}
+WORM_BASELINE_PARAMETERS = {
+    "location": "germanywestcentral",
+    "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+    "resourceGroupName": "rg-nac-bff-test",
+    "deploymentMode": "Incremental",
+    "storageAccountName": "stnacwormtest001",
+    "containerName": "nac-worm-tenant",
+    "encryptionScopeName": "nac-worm-tenant",
+    "tags": {"owner": "notariat8", "purpose": "unlocked-worm-baseline"},
 }
 
 
@@ -159,10 +185,22 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
         "worm_storage_account_resource_id": parameters[
             "wormStorageAccountResourceId"
         ],
-        "provisioner_principal_id": parameters["provisionerPrincipalId"],
+        "broker_principal_id": parameters["brokerPrincipalId"],
+        "broker_caller_service_principal_id": parameters[
+            "brokerCallerServicePrincipalId"
+        ],
+        "broker_function_app_resource_id": parameters[
+            "brokerFunctionAppResourceId"
+        ],
+        "broker_function_package_sha256": parameters[
+            "brokerFunctionPackageSha256"
+        ],
+        "broker_ticket_verification_certificate_sha256": parameters[
+            "brokerTicketVerificationCertificateSha256"
+        ],
         "tags_sha256": performance._sha256_json(parameters["tags"]),
-        "allowed_client_ip_address_sha256": performance._sha256_text(
-            parameters["allowedClientIpAddress"]
+        "broker_outbound_ip_addresses_sha256": performance._sha256_json(
+            parameters["brokerOutboundIpAddresses"]
         ),
         "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
             "toolchain_attestations_sha256"
@@ -366,9 +404,7 @@ def _authorization(
         "owner_login": "ofunk",
         "owner_approval_reference_sha256": "7" * 64,
         "owner_approval_body_sha256": "9" * 64,
-        "action": (
-            "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
-        ),
+        "action": performance.OWNER_ACTION,
         "correlation_id": "nac-bff-performance-20260802",
         "contract_sha256": CONTRACT_SHA256,
         "activation_hash": activation_hash,
@@ -463,6 +499,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                 toolchain_attestations={},
                 infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+                worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 infrastructure_safety_source=lambda: _bound_safety_evidence(
                     "0" * 64
@@ -496,8 +533,19 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "IMPLEMENTED_OFFLINE",
         )
         self.assertEqual(
-            first["offline_adapters"]["azure_blob_lease"]["status"],
+            first["offline_adapters"]["azure_blob_lease_broker"]["status"],
             "IMPLEMENTED_OFFLINE",
+        )
+        lease_policy = first["offline_adapters"]["azure_blob_lease_broker"][
+            "policy"
+        ]
+        self.assertTrue(
+            lease_policy["same_ticket_retry_reuses_persisted_private_lease_id"]
+        )
+        self.assertTrue(
+            lease_policy[
+                "fresh_same_run_ticket_may_reconcile_persisted_intent"
+            ]
         )
         self.assertTrue(first["live_preconditions"]["exclusive_remote_lease_required"])
         self.assertNotIn("notary_team_01", json.dumps(first))
@@ -512,7 +560,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT",
+            performance.OWNER_ACTION,
             result["body"],
         )
         self.assertIn('"total_request_limit":500', result["body"])
@@ -1817,7 +1865,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 repo_root=Path("."),
                 approval_verifier=approval_verifier,
                 approval_reference=(
-                    "https://github.com/notariat8/NaC/issues/733#issuecomment-1"
+                    "https://github.com/notariat8/NaC/issues/735#issuecomment-1"
                 ),
                 contract_sha256=CONTRACT_SHA256,
                 activation_hash="b" * 64,
@@ -1826,6 +1874,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                 toolchain_attestations={},
                 infrastructure_parameters={},
+                worm_baseline_parameters={},
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
             with self.assertRaisesRegex(
@@ -1842,6 +1891,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                     infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                     toolchain_attestations={},
                     infrastructure_parameters={},
+                    worm_baseline_parameters={},
                     monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 )
         self.assertEqual(authorization.status, "VERIFIED")
@@ -1869,7 +1919,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                         repo_root=Path("."),
                         approval_verifier=approval_verifier,
                     approval_reference=(
-                        "https://github.com/notariat8/NaC/issues/733#issuecomment-1"
+                        "https://github.com/notariat8/NaC/issues/735#issuecomment-1"
                     ),
                     contract_sha256=CONTRACT_SHA256,
                     activation_hash="b" * 64,
@@ -1878,6 +1928,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                     infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                     toolchain_attestations={},
                     infrastructure_parameters={},
+                    worm_baseline_parameters={},
                     monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 )
 
@@ -1890,6 +1941,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
             infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+            worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
             monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
         )
@@ -1921,14 +1973,28 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "worm_storage_account_resource_id": INFRASTRUCTURE_PARAMETERS[
                 "wormStorageAccountResourceId"
             ],
-            "provisioner_principal_id": INFRASTRUCTURE_PARAMETERS[
-                "provisionerPrincipalId"
+            "broker_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerPrincipalId"
             ],
+            "broker_caller_service_principal_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerCallerServicePrincipalId"
+            ],
+            "broker_function_app_resource_id": INFRASTRUCTURE_PARAMETERS[
+                "brokerFunctionAppResourceId"
+            ],
+            "broker_function_package_sha256": INFRASTRUCTURE_PARAMETERS[
+                "brokerFunctionPackageSha256"
+            ],
+            "broker_ticket_verification_certificate_sha256": (
+                INFRASTRUCTURE_PARAMETERS[
+                    "brokerTicketVerificationCertificateSha256"
+                ]
+            ),
             "tags_sha256": performance._sha256_json(
                 INFRASTRUCTURE_PARAMETERS["tags"]
             ),
-            "allowed_client_ip_address_sha256": performance._sha256_text(
-                INFRASTRUCTURE_PARAMETERS["allowedClientIpAddress"]
+            "broker_outbound_ip_addresses_sha256": performance._sha256_json(
+                INFRASTRUCTURE_PARAMETERS["brokerOutboundIpAddresses"]
             ),
             "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
                 "toolchain_attestations_sha256"
@@ -1979,6 +2045,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 "measurement_policy_sha256",
                 "monitor_policy_sha256",
                 "lease_policy_sha256",
+                "lease_broker_policy_sha256",
                 "monitor_window_anchor_sha256",
                 "owner_approval_body_sha256",
                 "target_binding_sha256",
@@ -1992,6 +2059,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "measurement_policy_sha256",
             "monitor_policy_sha256",
             "lease_policy_sha256",
+            "lease_broker_policy_sha256",
             "target_binding_sha256",
         ):
             self.assertEqual(bindings[key], plan[key])
@@ -2009,6 +2077,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                 toolchain_attestations={},
                 infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+                worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
             )
@@ -2083,6 +2152,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
             infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+            worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
             monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
         )
@@ -2120,6 +2190,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
             infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+            worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
             monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
         )
@@ -2153,6 +2224,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
             infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+            worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
             monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
         )
@@ -2186,6 +2258,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
             infrastructure_parameters=INFRASTRUCTURE_PARAMETERS,
+            worm_baseline_parameters=WORM_BASELINE_PARAMETERS,
             monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             infrastructure_safety_readback=lambda: {"sealed": "readback-input"},
         )
@@ -2281,6 +2354,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                     infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                     toolchain_attestations={},
                     infrastructure_parameters={},
+                    worm_baseline_parameters={},
                     monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 )
         self.assertEqual(approval_calls, 1)
@@ -2340,6 +2414,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                     infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                     toolchain_attestations={},
                     infrastructure_parameters={},
+                    worm_baseline_parameters={},
                     monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
                 )
 
@@ -2358,6 +2433,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 infrastructure_approval=INFRASTRUCTURE_APPROVAL,
                 toolchain_attestations={},
                 infrastructure_parameters={},
+                worm_baseline_parameters={},
                 monitor_window_anchor_utc=MONITOR_WINDOW_ANCHOR,
             )
 
@@ -2445,7 +2521,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 verify_activation_success(Path(directory), activation_hash)
 
     def test_github_verifier_accepts_only_immutable_issue_733_comment(self) -> None:
-        reference = "https://github.com/notariat8/NaC/issues/733#issuecomment-1"
+        reference = "https://github.com/notariat8/NaC/issues/735#issuecomment-1"
         expected = build_owner_comment(
             CONTRACT_SHA256,
             "b" * 64,

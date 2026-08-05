@@ -29,6 +29,13 @@ TARGET_SITE_ID = SITE_ID
 MATTER_READ_SCOPE_ID = str(
     uuid.uuid5(uuid.NAMESPACE_URL, f"{API_APP_URI}#{DELEGATED_SCOPE}")
 )
+PERFORMANCE_LEASE_APP_ROLE = "Performance.Lease"
+PERFORMANCE_LEASE_APP_ROLE_ID = str(
+    uuid.uuid5(
+        uuid.NAMESPACE_URL,
+        f"{API_APP_URI}#{PERFORMANCE_LEASE_APP_ROLE}",
+    )
+)
 DEFAULT_READBACK_MAX_ATTEMPTS = 6
 DEFAULT_READBACK_BACKOFF_SECONDS = 2.0
 
@@ -106,6 +113,19 @@ _ERROR_MESSAGES = {
         "The API service principal was not visible before the bounded readback deadline."
     ),
     "API_SERVICE_PRINCIPAL_MISMATCH": "The API service principal does not match the required contract.",
+    "API_ROLE_ASSIGNMENT_DUPLICATE": (
+        "The BFF API has duplicate performance lease role assignments."
+    ),
+    "API_ROLE_ASSIGNMENT_BROADER": (
+        "The BFF API has a non-allowlisted application role assignment."
+    ),
+    "API_ROLE_ASSIGNMENT_MISMATCH": (
+        "The BFF API role assignment does not match the provisioner."
+    ),
+    "API_ROLE_ASSIGNMENT_READBACK_TIMEOUT": (
+        "The performance lease role assignment was not visible before the bounded "
+        "readback deadline."
+    ),
     "UAMI_SERVICE_PRINCIPAL_MISSING": "The managed identity service principal is missing.",
     "UAMI_SERVICE_PRINCIPAL_READBACK_TIMEOUT": (
         "The managed identity service principal was not visible before the bounded "
@@ -204,6 +224,7 @@ def activate_nac_bff_graph(
         "boundaries": {
             "identifier_uri_lookup": "exact",
             "application_role_allowlist": [GRAPH_ROLE],
+            "api_application_role_allowlist": [PERFORMANCE_LEASE_APP_ROLE],
             "site_role_allowlist": [SITE_ROLE],
             "raw_responses_emitted": False,
             "raw_ids_emitted": False,
@@ -257,6 +278,55 @@ def inspect_entra_api_application(client: GraphActivationClient) -> dict[str, An
         app_id=app_id,
         service_principal_status="present",
         service_principal_id=service_principal_id,
+    )
+
+
+def ensure_provisioner_performance_lease(
+    client: GraphActivationClient,
+    *,
+    readback_policy: ReadbackPolicy = DEFAULT_READBACK_POLICY,
+) -> dict[str, Any]:
+    """Ensure the sole BFF app-role assignment belongs to the provisioner."""
+
+    provisioner_id = _resolve_provisioner(client)
+    _preflight_existing_performance_lease_boundary(client, provisioner_id)
+    api_state = _ensure_api_application(client, readback_policy)
+    return _ensure_performance_lease_assignment(
+        client,
+        api_state.service_principal_id,
+        provisioner_id,
+        readback_policy,
+    )
+
+
+def inspect_provisioner_performance_lease(
+    client: GraphActivationClient,
+) -> dict[str, Any]:
+    """Inspect the exact provisioner performance lease assignment read-only."""
+
+    applications = _lookup_api_applications(client)
+    if len(applications) > 1:
+        raise GraphActivationError("API_APPLICATION_DUPLICATE")
+    if not applications:
+        return _performance_lease_assignment_result("absent", 0)
+    _object_id, app_id = _validate_api_application(applications[0])
+    service_principals = _lookup_service_principals(client, app_id)
+    if len(service_principals) > 1:
+        raise GraphActivationError("API_SERVICE_PRINCIPAL_DUPLICATE")
+    if not service_principals:
+        return _performance_lease_assignment_result("absent", 0)
+    service_principal_id = _validate_api_service_principal(
+        service_principals[0], app_id
+    )
+    provisioner_id = _resolve_provisioner(client)
+    assignments = _paged(
+        client, _performance_lease_assignments_path(service_principal_id)
+    )
+    exact_count = _inspect_performance_lease_assignments(
+        assignments, service_principal_id, provisioner_id
+    )
+    return _performance_lease_assignment_result(
+        "present" if exact_count else "absent", exact_count
     )
 
 
@@ -341,24 +411,7 @@ def inspect_provisioner_application_roles(
 ) -> dict[str, Any]:
     """Prove the effective provisioner Microsoft Graph roles read-only."""
 
-    provisioners = _lookup_service_principals(client, PROVISIONER_CLIENT_ID)
-    if not provisioners:
-        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISSING")
-    if len(provisioners) > 1:
-        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_DUPLICATE")
-    provisioner = provisioners[0]
-    try:
-        provisioner_id = _canonical_uuid(provisioner.get("id"))
-        provisioner_valid = (
-            _canonical_uuid(provisioner.get("appId")) == PROVISIONER_CLIENT_ID
-            and provisioner.get("displayName") == "NaC M365 Provisioning"
-            and provisioner.get("servicePrincipalType") == "Application"
-        )
-    except (TypeError, ValueError):
-        provisioner_valid = False
-        provisioner_id = ""
-    if not provisioner_valid:
-        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISMATCH")
+    provisioner_id = _resolve_provisioner(client)
 
     graph_principals = _lookup_service_principals(client, GRAPH_APP_ID)
     if len(graph_principals) != 1:
@@ -449,6 +502,28 @@ def inspect_provisioner_application_roles(
     }
 
 
+def _resolve_provisioner(client: GraphActivationClient) -> str:
+    provisioners = _lookup_service_principals(client, PROVISIONER_CLIENT_ID)
+    if not provisioners:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISSING")
+    if len(provisioners) > 1:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_DUPLICATE")
+    provisioner = provisioners[0]
+    try:
+        provisioner_id = _canonical_uuid(provisioner.get("id"))
+        provisioner_valid = (
+            _canonical_uuid(provisioner.get("appId")) == PROVISIONER_CLIENT_ID
+            and provisioner.get("displayName") == "NaC M365 Provisioning"
+            and provisioner.get("servicePrincipalType") == "Application"
+        )
+    except (TypeError, ValueError):
+        provisioner_valid = False
+        provisioner_id = ""
+    if not provisioner_valid:
+        raise GraphActivationError("PROVISIONER_SERVICE_PRINCIPAL_MISMATCH")
+    return provisioner_id
+
+
 def inspect_site_permission_administration(
     client: GraphActivationClient,
     *,
@@ -504,6 +579,38 @@ def _ensure_api_application(
         )
         if len(applications) > 1:
             raise GraphActivationError("API_APPLICATION_DUPLICATE")
+    else:
+        try:
+            _validate_api_application(applications[0])
+        except GraphActivationError as exc:
+            if exc.code != "API_APPLICATION_MISMATCH":
+                raise
+            object_id, _app_id = _validate_api_application(
+                applications[0], expected_app_roles=[]
+            )
+            legacy_service_principals = _lookup_service_principals(
+                client, _app_id
+            )
+            if len(legacy_service_principals) > 1:
+                raise GraphActivationError("API_SERVICE_PRINCIPAL_DUPLICATE")
+            if legacy_service_principals:
+                _validate_api_service_principal_transition_state(
+                    legacy_service_principals[0], _app_id
+                )
+            _patch(
+                client,
+                f"/applications/{object_id}",
+                {"appRoles": [_performance_lease_app_role()]},
+            )
+            application_status = "migrated"
+            applications = _poll_readback(
+                lambda: _lookup_api_applications(client),
+                _api_application_role_visible,
+                policy=readback_policy,
+                timeout_code="API_APPLICATION_READBACK_TIMEOUT",
+            )
+            if len(applications) > 1:
+                raise GraphActivationError("API_APPLICATION_DUPLICATE")
 
     application = applications[0]
     object_id, app_id = _validate_api_application(application)
@@ -515,14 +622,14 @@ def _ensure_api_application(
     if not service_principals:
         _post(client, "/servicePrincipals", {"appId": app_id})
         service_principal_status = "created"
-        service_principals = _poll_readback(
-            lambda: _lookup_service_principals(client, app_id),
-            bool,
-            policy=readback_policy,
-            timeout_code="API_SERVICE_PRINCIPAL_READBACK_TIMEOUT",
-        )
-        if len(service_principals) > 1:
-            raise GraphActivationError("API_SERVICE_PRINCIPAL_DUPLICATE")
+    service_principals = _poll_readback(
+        lambda: _lookup_service_principals(client, app_id),
+        lambda values: _api_service_principal_role_visible(values, app_id),
+        policy=readback_policy,
+        timeout_code="API_SERVICE_PRINCIPAL_READBACK_TIMEOUT",
+    )
+    if len(service_principals) > 1:
+        raise GraphActivationError("API_SERVICE_PRINCIPAL_DUPLICATE")
 
     service_principal_id = _validate_api_service_principal(
         service_principals[0], app_id
@@ -574,12 +681,29 @@ def _application_payload() -> dict[str, Any]:
                 }
             ],
         },
-        "appRoles": [],
+        "appRoles": [_performance_lease_app_role()],
         "requiredResourceAccess": [],
     }
 
 
-def _validate_api_application(application: dict[str, Any]) -> tuple[str, str]:
+def _performance_lease_app_role() -> dict[str, Any]:
+    return {
+        "allowedMemberTypes": ["Application"],
+        "description": "Acquire the bounded NaC performance lease.",
+        "displayName": "Acquire NaC performance lease",
+        "id": PERFORMANCE_LEASE_APP_ROLE_ID,
+        "isEnabled": True,
+        "value": PERFORMANCE_LEASE_APP_ROLE,
+    }
+
+
+def _validate_api_application(
+    application: dict[str, Any],
+    *,
+    expected_app_roles: list[dict[str, Any]] | None = None,
+) -> tuple[str, str]:
+    if expected_app_roles is None:
+        expected_app_roles = [_performance_lease_app_role()]
     try:
         object_id = _canonical_uuid(application.get("id"))
         app_id = _canonical_uuid(application.get("appId"))
@@ -590,7 +714,7 @@ def _validate_api_application(application: dict[str, Any]) -> tuple[str, str]:
             application.get("displayName") == API_APP_DISPLAY_NAME
             and application.get("identifierUris") == [API_APP_URI]
             and application.get("signInAudience") == "AzureADMyOrg"
-            and application.get("appRoles") == []
+            and application.get("appRoles") == expected_app_roles
             and application.get("requiredResourceAccess") == []
             and isinstance(api, dict)
             and api.get("requestedAccessTokenVersion")
@@ -617,6 +741,21 @@ def _validate_api_application(application: dict[str, Any]) -> tuple[str, str]:
     return object_id, app_id
 
 
+def _api_application_role_visible(
+    applications: list[dict[str, Any]],
+) -> bool:
+    if not applications:
+        return False
+    if len(applications) > 1:
+        return True
+    try:
+        _validate_api_application(applications[0])
+        return True
+    except GraphActivationError:
+        _validate_api_application(applications[0], expected_app_roles=[])
+        return False
+
+
 def _lookup_service_principals(
     client: GraphActivationClient, app_id: str
 ) -> list[dict[str, Any]]:
@@ -631,15 +770,20 @@ def _lookup_service_principals(
 
 
 def _validate_api_service_principal(
-    service_principal: dict[str, Any], app_id: str
+    service_principal: dict[str, Any],
+    app_id: str,
+    *,
+    expected_app_roles: list[dict[str, Any]] | None = None,
 ) -> str:
+    if expected_app_roles is None:
+        expected_app_roles = [_performance_lease_app_role()]
     try:
         principal_id = _canonical_uuid(service_principal.get("id"))
         valid = (
             _canonical_uuid(service_principal.get("appId")) == app_id
             and service_principal.get("displayName") == API_APP_DISPLAY_NAME
             and service_principal.get("servicePrincipalType") == "Application"
-            and service_principal.get("appRoles") == []
+            and service_principal.get("appRoles") == expected_app_roles
         )
     except (TypeError, ValueError):
         valid = False
@@ -647,6 +791,159 @@ def _validate_api_service_principal(
     if not valid:
         raise GraphActivationError("API_SERVICE_PRINCIPAL_MISMATCH")
     return principal_id
+
+
+def _api_service_principal_role_visible(
+    service_principals: list[dict[str, Any]], app_id: str
+) -> bool:
+    if not service_principals:
+        return False
+    if len(service_principals) > 1:
+        return True
+    try:
+        _validate_api_service_principal(service_principals[0], app_id)
+        return True
+    except GraphActivationError:
+        _validate_api_service_principal(
+            service_principals[0], app_id, expected_app_roles=[]
+        )
+        return False
+
+
+def _validate_api_service_principal_transition_state(
+    service_principal: dict[str, Any], app_id: str
+) -> str:
+    try:
+        return _validate_api_service_principal(service_principal, app_id)
+    except GraphActivationError:
+        return _validate_api_service_principal(
+            service_principal, app_id, expected_app_roles=[]
+        )
+
+
+def _preflight_existing_performance_lease_boundary(
+    client: GraphActivationClient, provisioner_id: str
+) -> None:
+    applications = _lookup_api_applications(client)
+    if len(applications) > 1:
+        raise GraphActivationError("API_APPLICATION_DUPLICATE")
+    if not applications:
+        return
+    try:
+        _object_id, app_id = _validate_api_application(applications[0])
+    except GraphActivationError:
+        _object_id, app_id = _validate_api_application(
+            applications[0], expected_app_roles=[]
+        )
+    service_principals = _lookup_service_principals(client, app_id)
+    if len(service_principals) > 1:
+        raise GraphActivationError("API_SERVICE_PRINCIPAL_DUPLICATE")
+    if not service_principals:
+        return
+    api_service_principal_id = (
+        _validate_api_service_principal_transition_state(
+            service_principals[0], app_id
+        )
+    )
+    assignments = _paged(
+        client,
+        _performance_lease_assignments_path(api_service_principal_id),
+    )
+    _inspect_performance_lease_assignments(
+        assignments, api_service_principal_id, provisioner_id
+    )
+
+
+def _ensure_performance_lease_assignment(
+    client: GraphActivationClient,
+    api_service_principal_id: str,
+    provisioner_id: str,
+    readback_policy: ReadbackPolicy,
+) -> dict[str, Any]:
+    assignments_path = _performance_lease_assignments_path(
+        api_service_principal_id
+    )
+    assignments = _paged(client, assignments_path)
+    exact_count = _inspect_performance_lease_assignments(
+        assignments, api_service_principal_id, provisioner_id
+    )
+    status = "reused"
+    if exact_count == 0:
+        _post(
+            client,
+            f"/servicePrincipals/{provisioner_id}/appRoleAssignments",
+            {
+                "principalId": provisioner_id,
+                "resourceId": api_service_principal_id,
+                "appRoleId": PERFORMANCE_LEASE_APP_ROLE_ID,
+            },
+        )
+        status = "created"
+        assignments = _poll_readback(
+            lambda: _paged(client, assignments_path),
+            lambda values: bool(
+                _inspect_performance_lease_assignments(
+                    values, api_service_principal_id, provisioner_id
+                )
+            ),
+            policy=readback_policy,
+            timeout_code="API_ROLE_ASSIGNMENT_READBACK_TIMEOUT",
+        )
+        exact_count = _inspect_performance_lease_assignments(
+            assignments, api_service_principal_id, provisioner_id
+        )
+    return _performance_lease_assignment_result(status, exact_count)
+
+
+def _performance_lease_assignments_path(
+    api_service_principal_id: str,
+) -> str:
+    return (
+        f"/servicePrincipals/{api_service_principal_id}/appRoleAssignedTo?"
+        + urllib.parse.urlencode(
+            {"$select": "id,appRoleId,principalId,resourceId"}
+        )
+    )
+
+
+def _inspect_performance_lease_assignments(
+    assignments: list[dict[str, Any]],
+    api_service_principal_id: str,
+    provisioner_id: str,
+) -> int:
+    exact_count = 0
+    for assignment in assignments:
+        try:
+            resource_id = _canonical_uuid(assignment.get("resourceId"))
+            principal_id = _canonical_uuid(assignment.get("principalId"))
+            role_id = _canonical_uuid(assignment.get("appRoleId"))
+        except (TypeError, ValueError):
+            raise GraphActivationError("API_ROLE_ASSIGNMENT_MISMATCH") from None
+        if (
+            resource_id != api_service_principal_id
+            or principal_id != provisioner_id
+        ):
+            raise GraphActivationError("API_ROLE_ASSIGNMENT_MISMATCH")
+        if role_id != PERFORMANCE_LEASE_APP_ROLE_ID:
+            raise GraphActivationError("API_ROLE_ASSIGNMENT_BROADER")
+        exact_count += 1
+    if exact_count > 1:
+        raise GraphActivationError("API_ROLE_ASSIGNMENT_DUPLICATE")
+    return exact_count
+
+
+def _performance_lease_assignment_result(
+    status: str, assignment_count: int
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "resource": API_APP_DISPLAY_NAME,
+        "principal": "NaC M365 Provisioning",
+        "application_role": PERFORMANCE_LEASE_APP_ROLE,
+        "role_ref": _hashed_ref(PERFORMANCE_LEASE_APP_ROLE_ID),
+        "assignment_count": assignment_count,
+        "raw_ids_emitted": False,
+    }
 
 
 def _resolve_uami(
@@ -968,6 +1265,12 @@ def _api_application_contract_result(
             "type": "User",
             "enabled": True,
         },
+        "application_role": {
+            "value": PERFORMANCE_LEASE_APP_ROLE,
+            "role_ref": _hashed_ref(PERFORMANCE_LEASE_APP_ROLE_ID),
+            "allowed_member_types": ["Application"],
+            "enabled": True,
+        },
         "service_principal": {
             "status": service_principal_status,
         },
@@ -1053,6 +1356,21 @@ def _post(
     return response
 
 
+def _patch(
+    client: GraphActivationClient, path: str, payload: dict[str, Any]
+) -> dict[str, Any]:
+    _require_graph_path(path)
+    try:
+        response = client.patch(path, payload)
+    except GraphActivationError:
+        raise
+    except Exception as exc:
+        raise GraphActivationError("GRAPH_REQUEST_FAILED") from exc
+    if not isinstance(response, dict):
+        raise GraphActivationError("GRAPH_RESPONSE_INVALID")
+    return response
+
+
 def _require_graph_path(path: str) -> None:
     if (
         not path.startswith("/")
@@ -1101,6 +1419,8 @@ __all__ = [
     "GRAPH_APP_ID",
     "GRAPH_ROLE",
     "MATTER_READ_SCOPE_ID",
+    "PERFORMANCE_LEASE_APP_ROLE",
+    "PERFORMANCE_LEASE_APP_ROLE_ID",
     "SCHEMA_VERSION",
     "SITE_ROLE",
     "TARGET_SITE_ID",
@@ -1110,11 +1430,13 @@ __all__ = [
     "activate_nac_bff_graph",
     "ensure_entra_api_application",
     "ensure_entra_api_application_binding",
+    "ensure_provisioner_performance_lease",
     "ensure_nac_bff_graph_activation",
     "ensure_site_read_permission",
     "ensure_uami_sites_selected",
     "inspect_entra_api_application",
     "inspect_provisioner_application_roles",
+    "inspect_provisioner_performance_lease",
     "inspect_site_permission_administration",
     "inspect_site_read_permission",
     "inspect_uami_sites_selected",

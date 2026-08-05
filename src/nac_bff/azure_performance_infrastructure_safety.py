@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from functools import wraps
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -28,13 +29,19 @@ from .azure_live_commands import _prepare_bound_runtime
 
 
 CONTAINER_NAME = "nac-bff-performance-leases"
-ALLOWED_DATA_ACTIONS = frozenset(
+_BLOB_READ_DATA_ACTION = (
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
+)
+_BLOB_WRITE_DATA_ACTION = (
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
+)
+BROKER_ALLOWED_DATA_ACTIONS = frozenset(
     {
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action",
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
+        _BLOB_READ_DATA_ACTION,
+        _BLOB_WRITE_DATA_ACTION,
     }
 )
+ALLOWED_DATA_ACTIONS = BROKER_ALLOWED_DATA_ACTIONS
 
 PROVENANCE_READBACK_SCHEMA = "nac.azure-provenance-readback/v1"
 EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v1"
@@ -42,9 +49,16 @@ STORAGE_API_VERSION = "2023-05-01"
 AUTHORIZATION_API_VERSION = "2022-04-01"
 MICROSOFT_GRAPH_API_VERSION = "v1.0"
 DEPLOYMENT_API_VERSION = "2022-09-01"
+WEB_API_VERSION = "2023-12-01"
 MANAGEMENT_GROUP_API_VERSION = "2021-04-01"
 INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA = (
-    "nac.azure-bff-performance-infrastructure-safety-evidence/v3"
+    "nac.azure-bff-performance-infrastructure-safety-evidence/v5"
+)
+ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA = (
+    "nac.azure-bff-performance-original-name-availability-receipt/v1"
+)
+SUCCESSFUL_DEPLOYMENT_RECEIPT_SCHEMA = (
+    "nac.azure-bff-performance-successful-deployment-receipt/v1"
 )
 READBACK_SESSION_SCHEMA = "nac.azure-bff-performance-readback-session/v1"
 SEALED_AZURE_READ_SCHEMA = "nac.azure-sealed-readback-command/v3"
@@ -68,7 +82,7 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "location",
         "tags_sha256",
         "effective_tags_sha256",
-        "allowed_client_ip_address_sha256",
+        "broker_outbound_ip_addresses_sha256",
         "toolchain_attestations_sha256",
         "readback_session_sha256",
         "readback_nonce_sha256",
@@ -81,15 +95,19 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "worm_storage_account_resource_id",
         "lease_container_resource_id",
         "lease_blob_path",
-        "provisioner_principal_id",
-        "role_definition_id",
-        "role_assignment_id",
-        "condition",
+        "broker_principal_id",
+        "broker_caller_service_principal_id",
+        "broker_function_app_resource_id",
+        "broker_function_package_sha256",
+        "broker_ticket_verification_certificate_sha256",
+        "broker_role_definition_id",
+        "broker_role_assignment_id",
+        "broker_condition",
         "condition_version",
-        "data_actions",
-        "effective_assignment_count",
-        "effective_principal_count",
-        "attested_ancestor_scope_count",
+        "broker_data_actions",
+        "broker_effective_assignment_count",
+        "broker_effective_principal_count",
+        "broker_attested_ancestor_scope_count",
         "tenant_root_management_group_scope",
         "deployment_receipt_sha256",
         "storage_configuration_sha256",
@@ -123,6 +141,42 @@ _DEPLOYMENT_ID_RE = re.compile(
     r"(?P<resource_group>[^/]+)/providers/Microsoft\.Resources/deployments/[^/]+$",
     re.IGNORECASE,
 )
+_FUNCTION_APP_ID_RE = re.compile(
+    r"^/subscriptions/(?P<subscription>[^/]+)/resourceGroups/(?P<resource_group>[^/]+)"
+    r"/providers/Microsoft\.Web/sites/(?P<name>[^/]+)$",
+    re.IGNORECASE,
+)
+_RESTART_RECEIPT_BINDING_KEYS = frozenset(
+    {
+        "broker_principal_id",
+        "broker_caller_service_principal_id",
+        "broker_function_app_resource_id",
+        "broker_function_package_sha256",
+        "broker_ticket_verification_certificate_sha256",
+        "broker_outbound_ip_addresses_sha256",
+        "deployment_id",
+        "effective_tags_sha256",
+        "infrastructure_binding_sha256",
+        "infrastructure_parameters_sha256",
+        "infrastructure_source_sha256",
+        "owner_binding_sha256",
+        "resource_group_name",
+        "storage_account_name",
+        "storage_configuration_sha256",
+        "subscription_id",
+        "target_binding_sha256",
+        "tenant_id",
+        "toolchain_attestations_sha256",
+    }
+)
+_COORDINATION_RESOURCE_BINDING_KEYS = frozenset(
+    {
+        "broker_lease_data_role_definition_id",
+        "broker_lease_role_assignment_id",
+        "coordination_storage_account_resource_id",
+        "lease_container_resource_id",
+    }
+)
 
 _SEALED_OPERATION_KEYS = frozenset(
     {
@@ -143,15 +197,17 @@ _READBACK_TRANSCRIPT_KEYS = frozenset(
     {
         "bff_storage",
         "worm_storage",
+        "broker_function_app",
         "coordination_name",
         "deployment_receipt",
         "coordination_storage",
         "blob_service",
         "lease_container",
-        "role_definition",
-        "role_assignment",
+        "broker_role_definition",
+        "broker_role_assignment",
         "subscription_ancestry",
-        "effective_rbac",
+        "broker_effective_rbac",
+        "broker_caller_effective_rbac",
     }
 )
 _SEALED_READ_SPECS = {
@@ -162,6 +218,10 @@ _SEALED_READ_SPECS = {
     "worm-storage-account-resource-id": (
         STORAGE_API_VERSION,
         "azure-resource-manager/storage-accounts-get",
+    ),
+    "coordination-broker-function-app": (
+        WEB_API_VERSION,
+        "azure-resource-manager/function-apps-get",
     ),
     "coordination-storage-account-configuration": (
         STORAGE_API_VERSION,
@@ -175,11 +235,11 @@ _SEALED_READ_SPECS = {
         STORAGE_API_VERSION,
         "azure-resource-manager/blob-containers-get",
     ),
-    "coordination-role-definition": (
+    "coordination-broker-role-definition": (
         AUTHORIZATION_API_VERSION,
         "azure-resource-manager/role-definitions-get",
     ),
-    "coordination-role-assignment": (
+    "coordination-broker-role-assignment": (
         AUTHORIZATION_API_VERSION,
         "azure-resource-manager/role-assignments-get",
     ),
@@ -498,6 +558,46 @@ class _ProcessReadbackAuthority:
             and hmac.compare_digest(supplied, expected)
         )
 
+    def _issue_original_name_receipt(
+        self,
+        issuer: object,
+        value: Mapping[str, Any],
+    ) -> AzurePerformanceInfrastructureOriginalNameReceipt:
+        if issuer is not self.__issuer:
+            raise TypeError("original-name receipt issuer")
+        instance = object.__new__(AzurePerformanceInfrastructureOriginalNameReceipt)
+        canonical = _canonical_json_bytes(value)
+        object.__setattr__(instance, "_canonical_receipt", canonical)
+        object.__setattr__(
+            instance,
+            "_authenticator",
+            self._mac(
+                b"nac/original-name-receipt/v1",
+                self._object_identity_bytes(instance),
+                canonical,
+            ),
+        )
+        return instance
+
+    def valid_original_name_receipt(self, value: Any) -> bool:
+        if type(value) is not AzurePerformanceInfrastructureOriginalNameReceipt:
+            return False
+        try:
+            canonical = value._canonical_receipt
+            supplied = value._authenticator
+            expected = self._mac(
+                b"nac/original-name-receipt/v1",
+                self._object_identity_bytes(value),
+                canonical,
+            )
+        except (AttributeError, TypeError, ValueError):
+            return False
+        return (
+            isinstance(canonical, bytes)
+            and isinstance(supplied, bytes)
+            and hmac.compare_digest(supplied, expected)
+        )
+
     def _issue_verification(
         self,
         issuer: object,
@@ -588,6 +688,12 @@ def _create_process_authority():
     def authenticate_result(value, capability):
         return authority.valid_result(value, capability)
 
+    def issue_original_name_receipt(value):
+        return authority._issue_original_name_receipt(issuer, value)
+
+    def authenticate_original_name_receipt(value):
+        return authority.valid_original_name_receipt(value)
+
     def authenticate_verification(value):
         return authority.valid_verification(value)
 
@@ -596,6 +702,8 @@ def _create_process_authority():
         seal_verifier,
         authenticate_capability,
         authenticate_result,
+        issue_original_name_receipt,
+        authenticate_original_name_receipt,
         authenticate_verification,
     )
 
@@ -605,6 +713,8 @@ def _create_process_authority():
     _seal_safety_verifier,
     _authenticate_readback_capability,
     _authenticate_readback_result,
+    _issue_original_name_receipt,
+    _authenticate_original_name_receipt,
     _authenticate_safety_verification,
 ) = _create_process_authority()
 del _create_process_authority
@@ -618,6 +728,211 @@ _READBACK_REPLAY_LEDGER_DIRECTORY = (
 
 class AzurePerformanceInfrastructureSafetyError(ValueError):
     """Fail-closed error raised for unsafe coordination infrastructure."""
+
+
+class AzurePerformanceInfrastructureOriginalNameReceipt(Mapping[str, Any]):
+    """Store-issued immutable capability for one durable original-name receipt."""
+
+    __slots__ = ("_canonical_receipt", "_authenticator")
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        raise TypeError("original-name receipts are issued by the durable store")
+
+    def _as_dict(self) -> dict[str, Any]:
+        if not _authenticate_original_name_receipt(self):
+            _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_CAPABILITY_INVALID")
+        value = json.loads(self._canonical_receipt)
+        if not isinstance(value, dict):
+            _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_CAPABILITY_INVALID")
+        return value
+
+    def __getitem__(self, key: str) -> Any:
+        return self._as_dict()[key]
+
+    def __iter__(self):
+        return iter(self._as_dict())
+
+    def __len__(self) -> int:
+        return len(self._as_dict())
+
+    def __copy__(self) -> dict[str, Any]:
+        return self._as_dict()
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> dict[str, Any]:
+        del memo
+        return self._as_dict()
+
+    def __reduce__(self) -> None:
+        raise TypeError("original-name receipt capabilities cannot be serialized")
+
+
+class AzurePerformanceInfrastructureRestartReceiptStore:
+    """Create-once local receipts for safe infrastructure restart decisions."""
+
+    _NAME_FILE = "original-name-availability.redacted.json"
+    _DEPLOYMENT_FILE = "successful-deployment.redacted.json"
+
+    def __init__(self, directory: Path, *, binding: Mapping[str, str]) -> None:
+        self._directory = Path(os.path.abspath(directory.expanduser()))
+        self._binding = _validate_restart_receipt_binding(binding)
+
+    @property
+    def directory(self) -> Path:
+        return self._directory
+
+    def load(self) -> dict[str, Any]:
+        name = _read_restart_receipt(self._directory, self._NAME_FILE)
+        deployment = _read_restart_receipt(
+            self._directory, self._DEPLOYMENT_FILE
+        )
+        if name is None and deployment is None:
+            return {"status": "EMPTY"}
+        if name is None:
+            _fail("INFRASTRUCTURE_RESTART_RECEIPTS_INCOMPLETE")
+        original_value = _validate_original_name_receipt(
+            name, expected_binding=self._binding
+        )
+        original = _issue_original_name_receipt(original_value)
+        if deployment is None:
+            return {
+                "status": "NAME_ONLY",
+                "original_name_receipt": original,
+            }
+        successful = _validate_successful_deployment_receipt(
+            deployment,
+            expected_binding=self._binding,
+            original_name_receipt=original,
+        )
+        return {
+            "status": "COMPLETE",
+            "original_name_receipt": original,
+            "successful_deployment_receipt": successful,
+        }
+
+    def persist_original_name_available(
+        self,
+        observation: AzurePerformanceInfrastructureReadbackResult,
+    ) -> dict[str, Any]:
+        state = self.load()
+        if state["status"] != "EMPTY":
+            _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_ALREADY_EXISTS")
+        measured = _validate_current_name_availability_observation(
+            observation,
+            expected_binding=self._binding,
+        )
+        receipt = {
+            "schema_version": ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA,
+            "receipt_kind": "immutable-original-name-available",
+            "binding": dict(self._binding),
+            "name_available": True,
+            "observed_at_utc": measured["observed_at_utc"],
+            "observation_source": measured["observation_source"],
+            "provider_observation_sha256": measured["observation_sha256"],
+        }
+        receipt["observation_sha256"] = _sha256_json(receipt)
+        _create_restart_receipt(
+            self._directory,
+            self._NAME_FILE,
+            receipt,
+        )
+        return _issue_original_name_receipt(
+            _validate_original_name_receipt(
+                receipt, expected_binding=self._binding
+            )
+        )
+
+    def require_current_name_available(
+        self,
+        observation: AzurePerformanceInfrastructureReadbackResult,
+    ) -> dict[str, Any]:
+        state = self.load()
+        if state["status"] != "NAME_ONLY":
+            _fail("INFRASTRUCTURE_RESTART_STATE_INVALID")
+        return _validate_current_name_availability_observation(
+            observation,
+            expected_binding=self._binding,
+        )
+
+    def persist_successful_deployment(
+        self,
+        observation: AzurePerformanceInfrastructureReadbackResult,
+        *,
+        coordination_resources: Mapping[str, str],
+        create_deployment_receipt_sha256: str,
+        deployment_outputs_sha256: str,
+    ) -> dict[str, Any]:
+        state = self.load()
+        if state["status"] != "NAME_ONLY":
+            _fail("INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_ALREADY_EXISTS")
+        original = state["original_name_receipt"]
+        measured = _validate_reconciliation_deployment_observation(
+            observation,
+            expected_binding=self._binding,
+            original_name_receipt=original,
+        )
+        resources = _validate_coordination_resource_bindings(
+            coordination_resources,
+            expected_binding=self._binding,
+        )
+        _require_named_sha256(
+            create_deployment_receipt_sha256,
+            "INFRASTRUCTURE_DEPLOYMENT_CREATE_RECEIPT_INVALID",
+        )
+        _require_named_sha256(
+            deployment_outputs_sha256,
+            "INFRASTRUCTURE_DEPLOYMENT_OUTPUTS_RECEIPT_INVALID",
+        )
+        receipt = {
+            "schema_version": SUCCESSFUL_DEPLOYMENT_RECEIPT_SCHEMA,
+            "receipt_kind": "immutable-exact-successful-deployment",
+            "binding": dict(self._binding),
+            "original_name_receipt_sha256": original["observation_sha256"],
+            "provisioning_state": "Succeeded",
+            "started_at_utc": measured["started_at_utc"],
+            "completed_at_utc": measured["completed_at_utc"],
+            "first_success_observed_at_utc": measured["observed_at_utc"],
+            "observation_source": measured["observation_source"],
+            "deployment_payload_sha256": measured["payload_sha256"],
+            "provider_observation_sha256": measured["observation_sha256"],
+            "create_deployment_receipt_sha256": (
+                create_deployment_receipt_sha256
+            ),
+            "deployment_outputs_sha256": deployment_outputs_sha256,
+            "coordination_resources": resources,
+        }
+        receipt["receipt_sha256"] = _sha256_json(receipt)
+        _create_restart_receipt(
+            self._directory,
+            self._DEPLOYMENT_FILE,
+            receipt,
+        )
+        return _validate_successful_deployment_receipt(
+            receipt,
+            expected_binding=self._binding,
+            original_name_receipt=original,
+        )
+
+    def reconcile_successful_deployment(
+        self,
+        observation: AzurePerformanceInfrastructureReadbackResult,
+    ) -> dict[str, Any]:
+        state = self.load()
+        if state["status"] != "COMPLETE":
+            _fail("INFRASTRUCTURE_RESTART_STATE_INVALID")
+        measured = _validate_reconciliation_deployment_observation(
+            observation,
+            expected_binding=self._binding,
+            original_name_receipt=state["original_name_receipt"],
+        )
+        successful = state["successful_deployment_receipt"]
+        if (
+            measured["payload_sha256"]
+            != successful["deployment_payload_sha256"]
+            or measured["started_at_utc"] != successful["started_at_utc"]
+            or measured["completed_at_utc"] != successful["completed_at_utc"]
+        ):
+            _fail("INFRASTRUCTURE_DEPLOYMENT_REPLACED")
+        return successful
 
 
 @_seal_readback_adapter
@@ -733,9 +1048,11 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             "worm-storage-account-resource-id",
         }:
             payload = {"resource_id": response.get("id")}
+        elif observation_kind == "coordination-broker-function-app":
+            payload = _broker_function_app_payload(response)
         elif observation_kind in {
-            "coordination-role-definition",
-            "coordination-role-assignment",
+            "coordination-broker-role-definition",
+            "coordination-broker-role-assignment",
         }:
             payload = {"resource": response}
         elif observation_kind == "coordination-storage-account-configuration":
@@ -1203,6 +1520,92 @@ def canonical_observation_sha256(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def build_infrastructure_restart_receipt_binding(
+    *,
+    owner_binding_sha256: str,
+    deployment_id: str,
+    infrastructure_approval: Mapping[str, str],
+    infrastructure_parameters: Mapping[str, Any],
+) -> dict[str, str]:
+    """Build the exact owner/source/parameter binding used by restart receipts."""
+
+    try:
+        parameters_sha256 = _sha256_json(infrastructure_parameters)
+        if (
+            parameters_sha256
+            != infrastructure_approval["infrastructure_parameters_sha256"]
+        ):
+            _fail("INFRASTRUCTURE_RESTART_BINDING_INVALID")
+        subscription_id = str(infrastructure_parameters["subscriptionId"])
+        resource_group_name = str(infrastructure_parameters["resourceGroupName"])
+        storage_account_name = str(infrastructure_parameters["storageAccountName"])
+        coordination_id = (
+            f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/"
+            "providers/Microsoft.Storage/storageAccounts/"
+            f"{storage_account_name}"
+        )
+        target_binding_sha256 = str(
+            infrastructure_parameters["targetBindingSha256"]
+        )
+        effective_tags = effective_coordination_tags(
+            infrastructure_parameters["tags"], target_binding_sha256
+        )
+        storage_configuration = _expected_storage_configuration(
+            coordination=_storage_account_id(coordination_id),
+            location=str(infrastructure_parameters["location"]),
+            effective_tags=effective_tags,
+            broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
+                infrastructure_parameters["brokerOutboundIpAddresses"]
+            ),
+        )
+        binding = {
+            "owner_binding_sha256": owner_binding_sha256,
+            "target_binding_sha256": target_binding_sha256,
+            "tenant_id": str(infrastructure_parameters["tenantId"]),
+            "subscription_id": subscription_id,
+            "resource_group_name": resource_group_name,
+            "storage_account_name": storage_account_name,
+            "broker_principal_id": str(
+                infrastructure_parameters["brokerPrincipalId"]
+            ),
+            "broker_caller_service_principal_id": (
+                str(infrastructure_parameters["brokerCallerServicePrincipalId"])
+            ),
+            "broker_function_app_resource_id": str(
+                infrastructure_parameters["brokerFunctionAppResourceId"]
+            ),
+            "broker_function_package_sha256": str(
+                infrastructure_parameters["brokerFunctionPackageSha256"]
+            ),
+            "broker_ticket_verification_certificate_sha256": str(
+                infrastructure_parameters[
+                    "brokerTicketVerificationCertificateSha256"
+                ]
+            ),
+            "broker_outbound_ip_addresses_sha256": _sha256_json(
+                _canonical_public_ipv4_addresses(
+                    infrastructure_parameters["brokerOutboundIpAddresses"]
+                )
+            ),
+            "deployment_id": deployment_id,
+            "infrastructure_binding_sha256": infrastructure_approval[
+                "infrastructure_binding_sha256"
+            ],
+            "infrastructure_parameters_sha256": parameters_sha256,
+            "infrastructure_source_sha256": infrastructure_approval[
+                "infrastructure_source_sha256"
+            ],
+            "toolchain_attestations_sha256": infrastructure_approval[
+                "toolchain_attestations_sha256"
+            ],
+            "effective_tags_sha256": _sha256_json(effective_tags),
+            "storage_configuration_sha256": _sha256_json(storage_configuration),
+        }
+    except (KeyError, TypeError, ValueError):
+        _fail("INFRASTRUCTURE_RESTART_BINDING_INVALID")
+    return _validate_restart_receipt_binding(binding)
+
+
 def _seal_executed_observation(
     value: Mapping[str, Any],
     *,
@@ -1347,6 +1750,37 @@ def _decode_azure_json_response(value: bytes) -> dict[str, Any]:
     return dict(decoded)
 
 
+def _broker_function_app_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    identity = response.get("identity")
+    identities = (
+        identity.get("userAssignedIdentities")
+        if isinstance(identity, Mapping)
+        else None
+    )
+    if not isinstance(properties, Mapping) or not isinstance(identities, Mapping):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    principal_ids: list[str] = []
+    for value in identities.values():
+        if not isinstance(value, Mapping):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        principal_ids.append(
+            _canonical_uuid(
+                value.get("principalId"), "SEALED_AZURE_READ_RESPONSE_INVALID"
+            )
+        )
+    outbound = properties.get("outboundIpAddresses")
+    addresses = outbound.split(",") if isinstance(outbound, str) else None
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "state": properties.get("state"),
+        "https_only": properties.get("httpsOnly"),
+        "outbound_ip_addresses": _canonical_public_ipv4_addresses(addresses),
+        "user_assigned_principal_ids": sorted(principal_ids),
+    }
+
+
 def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     properties = response.get("properties")
     sku = response.get("sku")
@@ -1468,7 +1902,9 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         coordination=_storage_account_id(coordination_id),
         location=str(parameter("location")),
         effective_tags=tags,
-        allowed_client_ip_address=str(parameter("allowedClientIpAddress")),
+        broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
+            parameter("brokerOutboundIpAddresses")
+        ),
     )
     return {
         "deployment_id": response.get("id"),
@@ -1478,7 +1914,22 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "tenant_id": parameter("tenantId"),
         "coordination_storage_account_resource_id": coordination_id,
         "target_binding_sha256": parameter("targetBindingSha256"),
-        "provisioner_principal_id": parameter("provisionerPrincipalId"),
+        "broker_principal_id": parameter("brokerPrincipalId"),
+        "broker_caller_service_principal_id": parameter(
+            "brokerCallerServicePrincipalId"
+        ),
+        "broker_function_app_resource_id": parameter(
+            "brokerFunctionAppResourceId"
+        ),
+        "broker_function_package_sha256": parameter(
+            "brokerFunctionPackageSha256"
+        ),
+        "broker_ticket_verification_certificate_sha256": parameter(
+            "brokerTicketVerificationCertificateSha256"
+        ),
+        "broker_outbound_ip_addresses_sha256": _sha256_json(
+            _canonical_public_ipv4_addresses(parameter("brokerOutboundIpAddresses"))
+        ),
         "effective_tags_sha256": _sha256_json(tags),
         "storage_configuration_sha256": _sha256_json(storage),
     }
@@ -1565,10 +2016,16 @@ def infrastructure_safety_policy_sha256() -> str:
     """Bind the exact readback-provenance and effective-RBAC safety policy."""
 
     policy = {
-        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v8",
+        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v11",
         "container_name": CONTAINER_NAME,
-        "data_actions": sorted(ALLOWED_DATA_ACTIONS),
-        "predeployment_coordination_name_available_required": True,
+        "broker_data_actions": sorted(BROKER_ALLOWED_DATA_ACTIONS),
+        "credential_boundary": "single-owner-bound-bff-broker-uami",
+        "local_runner_storage_data_actions": [],
+        "broker_caller_storage_data_actions": [],
+        "broker_caller_complete_effective_rbac_required": True,
+        "coordination_name_policy": (
+            "immutable-original-available-or-read-only-exact-success-reconciliation"
+        ),
         "postdeployment_coordination_resource_readback_required": True,
         "exact_full_storage_and_network_readback_required": True,
         "exact_blob_service_resource_readback_required": True,
@@ -1634,7 +2091,18 @@ def infrastructure_safety_policy_sha256() -> str:
         "management_group_parent_child_chain_required": True,
         "subscription_attachment_required": True,
         "deployment_receipt_and_timestamp_continuity_required": True,
+        "restart_receipt_pair_create_once_required": True,
+        "restart_complete_path_name_probe_count": 0,
+        "restart_complete_path_deployment_create_count": 0,
+        "restart_complete_path_fresh_exact_deployment_get_required": True,
+        "restart_temporal_relation": (
+            "original_observed_lt_started_lte_completed_lt_reconciliation_observed"
+        ),
+        "name_only_restart_requires_fresh_available_probe": True,
+        "running_failed_missing_replaced_or_mismatch_blocks": True,
         "expected_effective_assignment_count": 1,
+        "complete_effective_rbac_required": True,
+        "broker_condition_binds_exact_resource_path": True,
         "condition_version": "2.0",
     }
     encoded = json.dumps(
@@ -1647,24 +2115,32 @@ def infrastructure_safety_policy_sha256() -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def exact_lease_blob_condition(target_binding_sha256: str) -> str:
-    """Return the one accepted Azure ABAC condition for the lease blob."""
+def _exact_lease_blob_condition(
+    target_binding_sha256: str, data_actions: tuple[str, str]
+) -> str:
+    """Return the exact Azure ABAC condition for one identity boundary."""
 
     _require_sha256(target_binding_sha256)
-    read = "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
-    add = (
-        "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/"
-        "add/action"
-    )
-    write = "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write"
     path = f"locks/{target_binding_sha256}.lock"
     return (
-        f"((!(ActionMatches{{'{read}'}}) AND !(ActionMatches{{'{add}'}}) AND "
-        f"!(ActionMatches{{'{write}'}})) OR (@Resource[Microsoft.Storage/"
+        f"((!(ActionMatches{{'{data_actions[0]}'}}) AND "
+        f"!(ActionMatches{{'{data_actions[1]}'}})) OR (@Resource[Microsoft.Storage/"
         "storageAccounts/blobServices/containers:name] StringEquals "
         f"'{CONTAINER_NAME}' AND @Resource[Microsoft.Storage/storageAccounts/"
         f"blobServices/containers/blobs:path] StringEquals '{path}'))"
     )
+
+
+def exact_broker_lease_blob_condition(target_binding_sha256: str) -> str:
+    """Return the broker read/write ABAC condition for the exact lease blob."""
+
+    return _exact_lease_blob_condition(
+        target_binding_sha256,
+        (_BLOB_READ_DATA_ACTION, _BLOB_WRITE_DATA_ACTION),
+    )
+
+
+exact_lease_blob_condition = exact_broker_lease_blob_condition
 
 
 @_seal_safety_verifier
@@ -1685,18 +2161,24 @@ def verify_azure_performance_infrastructure_safety(
     worm_storage_account_resource_id: str,
     bff_storage_readback_envelope: Mapping[str, Any],
     worm_storage_readback_envelope: Mapping[str, Any],
-    provisioner_principal_id: str,
+    broker_principal_id: str,
+    broker_caller_service_principal_id: str,
+    broker_function_app_resource_id: str,
+    broker_function_app_readback_envelope: Mapping[str, Any],
+    broker_function_package_sha256: str,
+    broker_ticket_verification_certificate_sha256: str,
     target_binding_sha256: str,
-    role_definition: Mapping[str, Any],
-    role_assignment: Mapping[str, Any],
+    broker_role_definition: Mapping[str, Any],
+    broker_role_assignment: Mapping[str, Any],
     subscription_ancestry_readback_envelope: Mapping[str, Any],
-    effective_rbac_readback_envelope: Mapping[str, Any],
+    broker_effective_rbac_readback_envelope: Mapping[str, Any],
+    broker_caller_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    allowed_client_ip_address: str,
+    broker_outbound_ip_addresses: list[str],
 ) -> tuple[
     Mapping[str, Any], AzurePerformanceInfrastructureReadbackCapability
 ]:
@@ -1705,18 +2187,29 @@ def verify_azure_performance_infrastructure_safety(
     capability = _require_readback_capability(readback_session)
     _require_adapter_results(
         capability,
-        coordination_name_readback_envelope,
         deployment_receipt_envelope,
         coordination_storage_readback_envelope,
         coordination_blob_service_readback_envelope,
         lease_container_readback_envelope,
         bff_storage_readback_envelope,
         worm_storage_readback_envelope,
-        role_definition,
-        role_assignment,
+        broker_function_app_readback_envelope,
+        broker_role_definition,
+        broker_role_assignment,
         subscription_ancestry_readback_envelope,
-        effective_rbac_readback_envelope,
+        broker_effective_rbac_readback_envelope,
+        broker_caller_effective_rbac_readback_envelope,
     )
+    if type(coordination_name_readback_envelope) is AzurePerformanceInfrastructureReadbackResult:
+        _require_adapter_results(capability, coordination_name_readback_envelope)
+    elif (
+        type(coordination_name_readback_envelope)
+        is not AzurePerformanceInfrastructureOriginalNameReceipt
+        or not _authenticate_original_name_receipt(
+            coordination_name_readback_envelope
+        )
+    ):
+        _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_CAPABILITY_REQUIRED")
     session = capability.session
     verified_at = _claim_readback_session(session)
     evidence = _verify_azure_performance_infrastructure_safety(
@@ -1736,20 +2229,34 @@ def verify_azure_performance_infrastructure_safety(
         worm_storage_account_resource_id=worm_storage_account_resource_id,
         bff_storage_readback_envelope=bff_storage_readback_envelope,
         worm_storage_readback_envelope=worm_storage_readback_envelope,
-        provisioner_principal_id=provisioner_principal_id,
+        broker_principal_id=broker_principal_id,
+        broker_caller_service_principal_id=broker_caller_service_principal_id,
+        broker_function_app_resource_id=broker_function_app_resource_id,
+        broker_function_app_readback_envelope=(
+            broker_function_app_readback_envelope
+        ),
+        broker_function_package_sha256=broker_function_package_sha256,
+        broker_ticket_verification_certificate_sha256=(
+            broker_ticket_verification_certificate_sha256
+        ),
         target_binding_sha256=target_binding_sha256,
-        role_definition=role_definition,
-        role_assignment=role_assignment,
+        broker_role_definition=broker_role_definition,
+        broker_role_assignment=broker_role_assignment,
         subscription_ancestry_readback_envelope=(
             subscription_ancestry_readback_envelope
         ),
-        effective_rbac_readback_envelope=effective_rbac_readback_envelope,
+        broker_effective_rbac_readback_envelope=(
+            broker_effective_rbac_readback_envelope
+        ),
+        broker_caller_effective_rbac_readback_envelope=(
+            broker_caller_effective_rbac_readback_envelope
+        ),
         tenant_id=tenant_id,
         subscription_id=subscription_id,
         resource_group_name=resource_group_name,
         location=location,
         tags=tags,
-        allowed_client_ip_address=allowed_client_ip_address,
+        broker_outbound_ip_addresses=broker_outbound_ip_addresses,
         verified_at=verified_at,
     )
     return evidence, capability
@@ -1772,18 +2279,24 @@ def _verify_azure_performance_infrastructure_safety(
     worm_storage_account_resource_id: str,
     bff_storage_readback_envelope: Mapping[str, Any],
     worm_storage_readback_envelope: Mapping[str, Any],
-    provisioner_principal_id: str,
+    broker_principal_id: str,
+    broker_caller_service_principal_id: str,
+    broker_function_app_resource_id: str,
+    broker_function_app_readback_envelope: Mapping[str, Any],
+    broker_function_package_sha256: str,
+    broker_ticket_verification_certificate_sha256: str,
     target_binding_sha256: str,
-    role_definition: Mapping[str, Any],
-    role_assignment: Mapping[str, Any],
+    broker_role_definition: Mapping[str, Any],
+    broker_role_assignment: Mapping[str, Any],
     subscription_ancestry_readback_envelope: Mapping[str, Any],
-    effective_rbac_readback_envelope: Mapping[str, Any],
+    broker_effective_rbac_readback_envelope: Mapping[str, Any],
+    broker_caller_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    allowed_client_ip_address: str,
+    broker_outbound_ip_addresses: list[str],
     verified_at: datetime,
 ) -> dict[str, Any]:
     verified_at_utc = _format_utc(verified_at)
@@ -1804,10 +2317,28 @@ def _verify_azure_performance_infrastructure_safety(
         _fail("LOCATION_INVALID")
     canonical_tags = _canonical_tags(tags)
     effective_tags = effective_coordination_tags(tags, target_binding_sha256)
-    if not isinstance(allowed_client_ip_address, str) or not allowed_client_ip_address:
-        _fail("ALLOWED_CLIENT_IP_INVALID")
-    principal_id = _canonical_uuid(
-        provisioner_principal_id, "PROVISIONER_PRINCIPAL_INVALID"
+    outbound_addresses = _canonical_public_ipv4_addresses(
+        broker_outbound_ip_addresses
+    )
+    broker_principal = _canonical_uuid(
+        broker_principal_id, "BROKER_PRINCIPAL_INVALID"
+    )
+    broker_caller_principal = _canonical_uuid(
+        broker_caller_service_principal_id,
+        "BROKER_CALLER_SERVICE_PRINCIPAL_INVALID",
+    )
+    if broker_caller_principal == broker_principal:
+        _fail("BROKER_CALLER_SERVICE_PRINCIPAL_INVALID")
+    broker_function_app = _function_app_id(
+        broker_function_app_resource_id,
+        subscription_id=subscription,
+    )
+    _require_named_sha256(
+        broker_function_package_sha256, "BROKER_FUNCTION_PACKAGE_SHA256_INVALID"
+    )
+    _require_named_sha256(
+        broker_ticket_verification_certificate_sha256,
+        "BROKER_TICKET_CERTIFICATE_SHA256_INVALID",
     )
 
     coordination = _storage_account_id(coordination_storage_account_resource_id)
@@ -1827,9 +2358,22 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
-    name_observed_at = _verify_name_readback(
+    function_app_observed_at = _verify_broker_function_app_readback(
+        broker_function_app_readback_envelope,
+        expected_resource_id=broker_function_app,
+        expected_broker_principal_id=broker_principal,
+        expected_outbound_ip_addresses=outbound_addresses,
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    name_observed_at, name_available = _verify_name_readback(
         coordination_name_readback_envelope,
         expected_name=coordination_storage_account_name,
+        expected_owner_binding_sha256=readback_session.owner_binding_sha256,
+        expected_target_binding_sha256=target_binding_sha256,
+        expected_tenant_id=tenant,
+        expected_subscription_id=subscription,
+        expected_resource_group_name=resource_group_name,
         verified_at=verified_at,
         session=readback_session,
     )
@@ -1837,17 +2381,25 @@ def _verify_azure_performance_infrastructure_safety(
         coordination=coordination,
         location=location,
         effective_tags=effective_tags,
-        allowed_client_ip_address=allowed_client_ip_address,
+        broker_outbound_ip_addresses=outbound_addresses,
     )
     deployment = _verify_deployment_receipt(
         deployment_receipt_envelope,
         coordination=coordination,
         tenant_id=tenant,
         target_binding_sha256=target_binding_sha256,
-        principal_id=principal_id,
+        broker_principal_id=broker_principal,
+        broker_caller_service_principal_id=broker_caller_principal,
+        broker_function_app_resource_id=broker_function_app,
+        broker_function_package_sha256=broker_function_package_sha256,
+        broker_ticket_verification_certificate_sha256=(
+            broker_ticket_verification_certificate_sha256
+        ),
+        broker_outbound_ip_addresses=outbound_addresses,
         storage_configuration_sha256=_sha256_json(storage_configuration),
         effective_tags_sha256=_sha256_json(effective_tags),
         name_observed_at=name_observed_at,
+        name_available=name_available,
         verified_at=verified_at,
         session=readback_session,
     )
@@ -1871,7 +2423,10 @@ def _verify_azure_performance_infrastructure_safety(
         )
     )
     lease_container_configuration = _expected_lease_container_configuration(
-        coordination, target_binding_sha256
+        coordination,
+        target_binding_sha256,
+        broker_function_package_sha256,
+        broker_ticket_verification_certificate_sha256,
     )
     lease_container_resource, lease_container_observed_at = (
         _coordination_child_resource_readback(
@@ -1921,30 +2476,36 @@ def _verify_azure_performance_infrastructure_safety(
         f"/subscriptions/{coordination['subscription']}/resourceGroups/"
         f"{coordination['resource_group']}"
     )
-    condition = exact_lease_blob_condition(target_binding_sha256)
-    role_definition_value, role_definition_observed_at = _arm_object_readback(
-        role_definition,
-        observation_kind="coordination-role-definition",
-        observation_source="azure-resource-manager/role-definitions-get",
-        verified_at=verified_at,
-        session=readback_session,
+    broker_condition = exact_broker_lease_blob_condition(target_binding_sha256)
+    broker_role_definition_value, broker_role_definition_observed_at = (
+        _arm_object_readback(
+            broker_role_definition,
+            observation_kind="coordination-broker-role-definition",
+            observation_source="azure-resource-manager/role-definitions-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
     )
-    role_definition_id = _verify_role_definition(
-        role_definition_value, resource_group_scope
+    broker_role_definition_id = _verify_role_definition(
+        broker_role_definition_value,
+        resource_group_scope,
+        expected_data_actions=BROKER_ALLOWED_DATA_ACTIONS,
     )
-    role_assignment_value, role_assignment_observed_at = _arm_object_readback(
-        role_assignment,
-        observation_kind="coordination-role-assignment",
-        observation_source="azure-resource-manager/role-assignments-get",
-        verified_at=verified_at,
-        session=readback_session,
+    broker_role_assignment_value, broker_role_assignment_observed_at = (
+        _arm_object_readback(
+            broker_role_assignment,
+            observation_kind="coordination-broker-role-assignment",
+            observation_source="azure-resource-manager/role-assignments-get",
+            verified_at=verified_at,
+            session=readback_session,
+        )
     )
-    role_assignment_id = _verify_role_assignment(
-        role_assignment_value,
-        principal_id=principal_id,
+    broker_role_assignment_id = _verify_role_assignment(
+        broker_role_assignment_value,
+        principal_id=broker_principal,
         scope=container_scope,
-        role_definition_id=role_definition_id,
-        condition=condition,
+        role_definition_id=broker_role_definition_id,
+        condition=broker_condition,
     )
     ancestry, ancestry_observed_at = _verify_subscription_ancestry_readback(
         subscription_ancestry_readback_envelope,
@@ -1953,14 +2514,28 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
-    rbac = _verify_effective_rbac_readback(
-        effective_rbac_readback_envelope,
+    broker_rbac = _verify_effective_rbac_readback(
+        broker_effective_rbac_readback_envelope,
         coordination=coordination,
-        principal_id=principal_id,
-        expected_assignment_id=role_assignment_id,
+        principal_id=broker_principal,
+        expected_assignment_id=broker_role_assignment_id,
         expected_scope=container_scope,
-        expected_role_definition_id=role_definition_id,
-        expected_condition=condition,
+        expected_role_definition_id=broker_role_definition_id,
+        expected_condition=broker_condition,
+        expected_data_actions=BROKER_ALLOWED_DATA_ACTIONS,
+        authoritative_management_group_scopes=ancestry["management_group_scopes"],
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    broker_caller_rbac = _verify_effective_rbac_readback(
+        broker_caller_effective_rbac_readback_envelope,
+        coordination=coordination,
+        principal_id=broker_caller_principal,
+        expected_assignment_id=None,
+        expected_scope=container_scope,
+        expected_role_definition_id=None,
+        expected_condition=None,
+        expected_data_actions=None,
         authoritative_management_group_scopes=ancestry["management_group_scopes"],
         verified_at=verified_at,
         session=readback_session,
@@ -1968,13 +2543,15 @@ def _verify_azure_performance_infrastructure_safety(
     postdeployment_observed_at = {
         "bff_storage": _envelope_observed_at(bff_storage_readback_envelope),
         "worm_storage": _envelope_observed_at(worm_storage_readback_envelope),
+        "broker_function_app": function_app_observed_at,
         "coordination_storage": coordination_observed_at,
         "blob_service": blob_service_observed_at,
         "lease_container": lease_container_observed_at,
-        "role_definition": role_definition_observed_at,
-        "role_assignment": role_assignment_observed_at,
+        "broker_role_definition": broker_role_definition_observed_at,
+        "broker_role_assignment": broker_role_assignment_observed_at,
         "subscription_ancestry": ancestry_observed_at,
-        "effective_rbac": rbac["observed_at"],
+        "broker_effective_rbac": broker_rbac["observed_at"],
+        "broker_caller_effective_rbac": broker_caller_rbac["observed_at"],
     }
     if any(
         observed_at <= deployment["receipt_observed_at"]
@@ -1985,15 +2562,19 @@ def _verify_azure_performance_infrastructure_safety(
     readback_transcript = {
         "bff_storage": dict(bff_storage_readback_envelope),
         "worm_storage": dict(worm_storage_readback_envelope),
+        "broker_function_app": dict(broker_function_app_readback_envelope),
         "coordination_name": dict(coordination_name_readback_envelope),
         "deployment_receipt": dict(deployment_receipt_envelope),
         "coordination_storage": dict(coordination_storage_readback_envelope),
         "blob_service": dict(coordination_blob_service_readback_envelope),
         "lease_container": dict(lease_container_readback_envelope),
-        "role_definition": dict(role_definition),
-        "role_assignment": dict(role_assignment),
+        "broker_role_definition": dict(broker_role_definition),
+        "broker_role_assignment": dict(broker_role_assignment),
         "subscription_ancestry": dict(subscription_ancestry_readback_envelope),
-        "effective_rbac": dict(effective_rbac_readback_envelope),
+        "broker_effective_rbac": dict(broker_effective_rbac_readback_envelope),
+        "broker_caller_effective_rbac": dict(
+            broker_caller_effective_rbac_readback_envelope
+        ),
     }
     evidence = {
         "schema_version": INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA,
@@ -2008,9 +2589,7 @@ def _verify_azure_performance_infrastructure_safety(
         "location": location,
         "tags_sha256": _sha256_json(canonical_tags),
         "effective_tags_sha256": _sha256_json(effective_tags),
-        "allowed_client_ip_address_sha256": hashlib.sha256(
-            allowed_client_ip_address.encode("utf-8")
-        ).hexdigest(),
+        "broker_outbound_ip_addresses_sha256": _sha256_json(outbound_addresses),
         "toolchain_attestations_sha256": toolchain_attestations_sha256,
         "readback_session_sha256": readback_session_sha256,
         "readback_nonce_sha256": readback_session.nonce_sha256,
@@ -2025,15 +2604,21 @@ def _verify_azure_performance_infrastructure_safety(
         "worm_storage_account_resource_id": worm["id"],
         "lease_container_resource_id": container_scope,
         "lease_blob_path": f"locks/{target_binding_sha256}.lock",
-        "provisioner_principal_id": principal_id,
-        "role_definition_id": role_definition_id,
-        "role_assignment_id": role_assignment_id,
-        "condition": condition,
+        "broker_principal_id": broker_principal,
+        "broker_caller_service_principal_id": broker_caller_principal,
+        "broker_function_app_resource_id": broker_function_app,
+        "broker_function_package_sha256": broker_function_package_sha256,
+        "broker_ticket_verification_certificate_sha256": (
+            broker_ticket_verification_certificate_sha256
+        ),
+        "broker_role_definition_id": broker_role_definition_id,
+        "broker_role_assignment_id": broker_role_assignment_id,
+        "broker_condition": broker_condition,
         "condition_version": "2.0",
-        "data_actions": sorted(ALLOWED_DATA_ACTIONS),
-        "effective_assignment_count": 1,
-        "effective_principal_count": rbac["principal_count"],
-        "attested_ancestor_scope_count": rbac["ancestor_scope_count"],
+        "broker_data_actions": sorted(BROKER_ALLOWED_DATA_ACTIONS),
+        "broker_effective_assignment_count": 1,
+        "broker_effective_principal_count": broker_rbac["principal_count"],
+        "broker_attested_ancestor_scope_count": broker_rbac["ancestor_scope_count"],
         "tenant_root_management_group_scope": ancestry[
             "tenant_root_management_group_scope"
         ],
@@ -2081,7 +2666,7 @@ def validate_infrastructure_safety_evidence(
         or not isinstance(result.get("owner_binding_sha256"), str)
         or _SHA256_RE.fullmatch(result["owner_binding_sha256"]) is None
         or not _fresh_evidence_timestamp(result.get("verified_at_utc"))
-        or result.get("effective_assignment_count") != 1
+        or result.get("broker_effective_assignment_count") != 1
         or not isinstance(observation_digests, Mapping)
         or set(observation_digests) != _READBACK_TRANSCRIPT_KEYS
         or any(
@@ -2129,23 +2714,41 @@ def validate_infrastructure_safety_evidence(
             ],
             bff_storage_readback_envelope=transcript["bff_storage"],
             worm_storage_readback_envelope=transcript["worm_storage"],
-            provisioner_principal_id=deployment_inputs[
-                "provisionerPrincipalId"
+            broker_principal_id=deployment_inputs["brokerPrincipalId"],
+            broker_caller_service_principal_id=result[
+                "broker_caller_service_principal_id"
+            ],
+            broker_function_app_resource_id=deployment_inputs[
+                "brokerFunctionAppResourceId"
+            ],
+            broker_function_app_readback_envelope=transcript[
+                "broker_function_app"
+            ],
+            broker_function_package_sha256=deployment_inputs[
+                "brokerFunctionPackageSha256"
+            ],
+            broker_ticket_verification_certificate_sha256=deployment_inputs[
+                "brokerTicketVerificationCertificateSha256"
             ],
             target_binding_sha256=deployment_inputs["targetBindingSha256"],
-            role_definition=transcript["role_definition"],
-            role_assignment=transcript["role_assignment"],
+            broker_role_definition=transcript["broker_role_definition"],
+            broker_role_assignment=transcript["broker_role_assignment"],
             subscription_ancestry_readback_envelope=transcript[
                 "subscription_ancestry"
             ],
-            effective_rbac_readback_envelope=transcript["effective_rbac"],
+            broker_effective_rbac_readback_envelope=transcript[
+                "broker_effective_rbac"
+            ],
+            broker_caller_effective_rbac_readback_envelope=transcript[
+                "broker_caller_effective_rbac"
+            ],
             tenant_id=deployment_inputs["tenantId"],
             subscription_id=deployment_inputs["subscriptionId"],
             resource_group_name=deployment_inputs["resourceGroupName"],
             location=deployment_inputs["location"],
             tags=deployment_inputs["tags"],
-            allowed_client_ip_address=deployment_inputs[
-                "allowedClientIpAddress"
+            broker_outbound_ip_addresses=deployment_inputs[
+                "brokerOutboundIpAddresses"
             ],
             verified_at=_parse_observed_at(
                 result["verified_at_utc"],
@@ -2227,8 +2830,11 @@ def _deployment_inputs_from_transcript(
         "subscriptionId",
         "resourceGroupName",
         "storageAccountName",
-        "provisionerPrincipalId",
-        "allowedClientIpAddress",
+        "brokerPrincipalId",
+        "brokerFunctionAppResourceId",
+        "brokerFunctionPackageSha256",
+        "brokerTicketVerificationCertificateSha256",
+        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "location",
         "tags",
@@ -2292,6 +2898,48 @@ def _resource_readback_id(
     ):
         _fail(f"{error_prefix}_INVALID")
     return _storage_account_id(payload.get("resource_id"))["id"]
+
+
+def _verify_broker_function_app_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_broker_principal_id: str,
+    expected_outbound_ip_addresses: list[str],
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "BROKER_FUNCTION_APP_READBACK"
+    _verify_envelope_shape_and_digest(
+        value,
+        expected_keys=_provenance_envelope_keys(),
+        error_prefix=prefix,
+    )
+    payload = value.get("payload")
+    expected_payload = {
+        "resource_id": expected_resource_id,
+        "resource_type": "Microsoft.Web/sites",
+        "state": "Running",
+        "https_only": True,
+        "outbound_ip_addresses": expected_outbound_ip_addresses,
+        "user_assigned_principal_ids": [expected_broker_principal_id],
+    }
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != "coordination-broker-function-app"
+        or value.get("api_version") != WEB_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/function-apps-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or payload != expected_payload
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
 
 
 def _coordination_resource_readback(
@@ -2396,14 +3044,444 @@ def _coordination_child_resource_readback(
     return dict(payload), _envelope_observed_at(value)
 
 
+def _validate_restart_receipt_binding(
+    value: Mapping[str, str],
+) -> dict[str, str]:
+    if not isinstance(value, Mapping) or set(value) != _RESTART_RECEIPT_BINDING_KEYS:
+        _fail("INFRASTRUCTURE_RESTART_BINDING_INVALID")
+    result = {key: value[key] for key in _RESTART_RECEIPT_BINDING_KEYS}
+    for key in (
+        "broker_function_package_sha256",
+        "broker_ticket_verification_certificate_sha256",
+        "broker_outbound_ip_addresses_sha256",
+        "effective_tags_sha256",
+        "infrastructure_binding_sha256",
+        "infrastructure_parameters_sha256",
+        "infrastructure_source_sha256",
+        "owner_binding_sha256",
+        "storage_configuration_sha256",
+        "target_binding_sha256",
+        "toolchain_attestations_sha256",
+    ):
+        _require_named_sha256(result.get(key), "INFRASTRUCTURE_RESTART_BINDING_INVALID")
+    tenant = _canonical_uuid(
+        result.get("tenant_id"), "INFRASTRUCTURE_RESTART_BINDING_INVALID"
+    )
+    subscription = _canonical_uuid(
+        result.get("subscription_id"), "INFRASTRUCTURE_RESTART_BINDING_INVALID"
+    )
+    broker = _canonical_uuid(
+        result.get("broker_principal_id"),
+        "INFRASTRUCTURE_RESTART_BINDING_INVALID",
+    )
+    broker_caller = _canonical_uuid(
+        result.get("broker_caller_service_principal_id"),
+        "INFRASTRUCTURE_RESTART_BINDING_INVALID",
+    )
+    resource_group = result.get("resource_group_name")
+    storage_name = result.get("storage_account_name")
+    deployment_id = result.get("deployment_id")
+    if (
+        broker == broker_caller
+        or not isinstance(resource_group, str)
+        or not resource_group
+        or not isinstance(storage_name, str)
+        or _STORAGE_ACCOUNT_NAME_RE.fullmatch(storage_name) is None
+        or not isinstance(deployment_id, str)
+    ):
+        _fail("INFRASTRUCTURE_RESTART_BINDING_INVALID")
+    match = _DEPLOYMENT_ID_RE.fullmatch(deployment_id)
+    function_app_id = result.get("broker_function_app_resource_id")
+    function_app_match = (
+        _FUNCTION_APP_ID_RE.fullmatch(function_app_id)
+        if isinstance(function_app_id, str)
+        else None
+    )
+    if (
+        match is None
+        or _canonical_uuid(
+            match.group("subscription"), "INFRASTRUCTURE_RESTART_BINDING_INVALID"
+        )
+        != subscription
+        or match.group("resource_group").casefold() != resource_group.casefold()
+        or function_app_match is None
+        or _canonical_uuid(
+            function_app_match.group("subscription"),
+            "INFRASTRUCTURE_RESTART_BINDING_INVALID",
+        )
+        != subscription
+    ):
+        _fail("INFRASTRUCTURE_RESTART_BINDING_INVALID")
+    result.update(
+        {
+            "tenant_id": tenant,
+            "subscription_id": subscription,
+            "broker_principal_id": broker,
+            "broker_caller_service_principal_id": broker_caller,
+            "broker_function_app_resource_id": function_app_id,
+        }
+    )
+    return result
+
+
+def _authenticated_readback_result(
+    value: AzurePerformanceInfrastructureReadbackResult,
+) -> tuple[dict[str, Any], AzurePerformanceInfrastructureReadbackSession]:
+    capability = getattr(value, "_capability", None)
+    if not _authenticate_readback_result(value, capability):
+        _fail("INFRASTRUCTURE_RESTART_READBACK_INVALID")
+    result = value._as_dict()
+    return result, capability.session
+
+
+def _validate_current_name_availability_observation(
+    value: AzurePerformanceInfrastructureReadbackResult,
+    *,
+    expected_binding: Mapping[str, str],
+) -> dict[str, Any]:
+    envelope, session = _authenticated_readback_result(value)
+    _verify_envelope_shape_and_digest(
+        envelope,
+        expected_keys=_provenance_envelope_keys(),
+        error_prefix="INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT",
+    )
+    payload = envelope.get("payload")
+    if (
+        session.owner_binding_sha256 != expected_binding["owner_binding_sha256"]
+        or envelope.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or envelope.get("observation_kind")
+        != "coordination-storage-name-availability"
+        or envelope.get("api_version") != STORAGE_API_VERSION
+        or envelope.get("observation_source")
+        != "azure-resource-manager/storage-accounts-check-name-availability"
+        or not isinstance(payload, Mapping)
+        or set(payload) != {"name", "name_available"}
+        or payload.get("name") != expected_binding["storage_account_name"]
+        or payload.get("name_available") is not True
+    ):
+        _fail("COORDINATION_STORAGE_NAME_UNAVAILABLE")
+    return {
+        "observed_at_utc": envelope["observed_at_utc"],
+        "observation_source": envelope["observation_source"],
+        "observation_sha256": envelope["observation_sha256"],
+    }
+
+
+def _validate_original_name_receipt(
+    value: Mapping[str, Any],
+    *,
+    expected_binding: Mapping[str, str],
+) -> dict[str, Any]:
+    expected_keys = {
+        "schema_version",
+        "receipt_kind",
+        "binding",
+        "name_available",
+        "observed_at_utc",
+        "observation_source",
+        "provider_observation_sha256",
+        "observation_sha256",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected_keys:
+        _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID")
+    unsigned = dict(value)
+    digest = unsigned.pop("observation_sha256", None)
+    binding = value.get("binding")
+    if (
+        value.get("schema_version") != ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA
+        or value.get("receipt_kind") != "immutable-original-name-available"
+        or value.get("name_available") is not True
+        or value.get("observation_source")
+        != "azure-resource-manager/storage-accounts-check-name-availability"
+        or not isinstance(binding, Mapping)
+        or _validate_restart_receipt_binding(binding) != dict(expected_binding)
+        or not isinstance(digest, str)
+        or digest != _sha256_json(unsigned)
+    ):
+        _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID")
+    _require_named_sha256(
+        value.get("provider_observation_sha256"),
+        "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+    )
+    _parse_observed_at(
+        value.get("observed_at_utc"),
+        "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+    )
+    return json.loads(_canonical_json_bytes(dict(value)))
+
+
+def _validate_reconciliation_deployment_observation(
+    value: AzurePerformanceInfrastructureReadbackResult,
+    *,
+    expected_binding: Mapping[str, str],
+    original_name_receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    envelope, session = _authenticated_readback_result(value)
+    _verify_envelope_shape_and_digest(
+        envelope,
+        expected_keys=_provenance_envelope_keys(),
+        error_prefix="INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT",
+    )
+    payload = envelope.get("payload")
+    expected_payload_keys = {
+        "deployment_id",
+        "provisioning_state",
+        "started_at_utc",
+        "completed_at_utc",
+        "tenant_id",
+        "coordination_storage_account_resource_id",
+        "target_binding_sha256",
+        "broker_principal_id",
+        "broker_caller_service_principal_id",
+        "broker_function_app_resource_id",
+        "broker_function_package_sha256",
+        "broker_ticket_verification_certificate_sha256",
+        "broker_outbound_ip_addresses_sha256",
+        "effective_tags_sha256",
+        "storage_configuration_sha256",
+    }
+    expected_coordination_id = (
+        f"/subscriptions/{expected_binding['subscription_id']}/resourceGroups/"
+        f"{expected_binding['resource_group_name']}/providers/Microsoft.Storage/"
+        f"storageAccounts/{expected_binding['storage_account_name']}"
+    )
+    if (
+        session.owner_binding_sha256 != expected_binding["owner_binding_sha256"]
+        or envelope.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or envelope.get("observation_kind") != "coordination-deployment-receipt"
+        or envelope.get("api_version") != DEPLOYMENT_API_VERSION
+        or envelope.get("observation_source")
+        != "azure-resource-manager/deployments-get"
+        or not isinstance(payload, Mapping)
+        or set(payload) != expected_payload_keys
+        or str(payload.get("deployment_id", "")).casefold()
+        != expected_binding["deployment_id"].casefold()
+        or payload.get("provisioning_state") != "Succeeded"
+        or _canonical_uuid(
+            payload.get("tenant_id"),
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        )
+        != expected_binding["tenant_id"]
+        or str(payload.get("coordination_storage_account_resource_id", "")).casefold()
+        != expected_coordination_id.casefold()
+        or payload.get("target_binding_sha256")
+        != expected_binding["target_binding_sha256"]
+        or _canonical_uuid(
+            payload.get("broker_principal_id"),
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        )
+        != expected_binding["broker_principal_id"]
+        or _canonical_uuid(
+            payload.get("broker_caller_service_principal_id"),
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        )
+        != expected_binding["broker_caller_service_principal_id"]
+        or str(payload.get("broker_function_app_resource_id", "")).casefold()
+        != expected_binding["broker_function_app_resource_id"].casefold()
+        or payload.get("broker_function_package_sha256")
+        != expected_binding["broker_function_package_sha256"]
+        or payload.get("broker_ticket_verification_certificate_sha256")
+        != expected_binding[
+            "broker_ticket_verification_certificate_sha256"
+        ]
+        or payload.get("broker_outbound_ip_addresses_sha256")
+        != expected_binding["broker_outbound_ip_addresses_sha256"]
+        or payload.get("effective_tags_sha256")
+        != expected_binding["effective_tags_sha256"]
+        or payload.get("storage_configuration_sha256")
+        != expected_binding["storage_configuration_sha256"]
+    ):
+        _fail("INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID")
+    original_at = _parse_observed_at(
+        original_name_receipt.get("observed_at_utc"),
+        "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+    )
+    started_at = _parse_observed_at(
+        payload.get("started_at_utc"),
+        "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+    )
+    completed_at = _parse_observed_at(
+        payload.get("completed_at_utc"),
+        "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+    )
+    observed_at = _envelope_observed_at(envelope)
+    if not original_at < started_at <= completed_at < observed_at:
+        _fail("READBACK_TIMESTAMP_CONTINUITY_INVALID")
+    return {
+        "started_at_utc": payload["started_at_utc"],
+        "completed_at_utc": payload["completed_at_utc"],
+        "observed_at_utc": envelope["observed_at_utc"],
+        "observation_source": envelope["observation_source"],
+        "observation_sha256": envelope["observation_sha256"],
+        "payload_sha256": _sha256_json(payload),
+    }
+
+
+def _validate_coordination_resource_bindings(
+    value: Mapping[str, str],
+    *,
+    expected_binding: Mapping[str, str],
+) -> dict[str, str]:
+    if not isinstance(value, Mapping) or set(value) not in {
+        _COORDINATION_RESOURCE_BINDING_KEYS,
+        _COORDINATION_RESOURCE_BINDING_KEYS | {"lease_blob_path"},
+    }:
+        _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
+    result = {key: value[key] for key in _COORDINATION_RESOURCE_BINDING_KEYS}
+    coordination_id = (
+        f"/subscriptions/{expected_binding['subscription_id']}/resourceGroups/"
+        f"{expected_binding['resource_group_name']}/providers/Microsoft.Storage/"
+        f"storageAccounts/{expected_binding['storage_account_name']}"
+    )
+    container_id = f"{coordination_id}/blobServices/default/containers/{CONTAINER_NAME}"
+    lease_blob_path = f"locks/{expected_binding['target_binding_sha256']}.lock"
+    if value.get("lease_blob_path", lease_blob_path) != lease_blob_path:
+        _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
+    resource_group_scope = (
+        f"/subscriptions/{expected_binding['subscription_id']}/resourceGroups/"
+        f"{expected_binding['resource_group_name']}"
+    )
+    if (
+        str(result.get("coordination_storage_account_resource_id", "")).casefold()
+        != coordination_id.casefold()
+        or str(result.get("lease_container_resource_id", "")).casefold()
+        != container_id.casefold()
+    ):
+        _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
+    role_definition = _require_arm_id(
+        result.get("broker_lease_data_role_definition_id"),
+        "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+    )
+    role_assignment = _require_arm_id(
+        result.get("broker_lease_role_assignment_id"),
+        "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+    )
+    if not role_definition.casefold().startswith(
+        f"{resource_group_scope}/providers/microsoft.authorization/roledefinitions/".casefold()
+    ) or not role_assignment.casefold().startswith(
+        f"{container_id}/providers/microsoft.authorization/roleassignments/".casefold()
+    ):
+        _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
+    result["lease_blob_path"] = lease_blob_path
+    return result
+
+
+def _validate_successful_deployment_receipt(
+    value: Mapping[str, Any],
+    *,
+    expected_binding: Mapping[str, str],
+    original_name_receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    expected_keys = {
+        "schema_version",
+        "receipt_kind",
+        "binding",
+        "original_name_receipt_sha256",
+        "provisioning_state",
+        "started_at_utc",
+        "completed_at_utc",
+        "first_success_observed_at_utc",
+        "observation_source",
+        "deployment_payload_sha256",
+        "provider_observation_sha256",
+        "create_deployment_receipt_sha256",
+        "deployment_outputs_sha256",
+        "coordination_resources",
+        "receipt_sha256",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected_keys:
+        _fail("INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID")
+    unsigned = dict(value)
+    digest = unsigned.pop("receipt_sha256", None)
+    binding = value.get("binding")
+    resources = value.get("coordination_resources")
+    if (
+        value.get("schema_version") != SUCCESSFUL_DEPLOYMENT_RECEIPT_SCHEMA
+        or value.get("receipt_kind") != "immutable-exact-successful-deployment"
+        or value.get("provisioning_state") != "Succeeded"
+        or value.get("observation_source") != "azure-resource-manager/deployments-get"
+        or value.get("original_name_receipt_sha256")
+        != original_name_receipt.get("observation_sha256")
+        or not isinstance(binding, Mapping)
+        or _validate_restart_receipt_binding(binding) != dict(expected_binding)
+        or not isinstance(resources, Mapping)
+        or not isinstance(digest, str)
+        or digest != _sha256_json(unsigned)
+    ):
+        _fail("INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID")
+    for key in (
+        "create_deployment_receipt_sha256",
+        "deployment_outputs_sha256",
+        "deployment_payload_sha256",
+        "provider_observation_sha256",
+    ):
+        _require_named_sha256(
+            value.get(key), "INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID"
+        )
+    original_at = _parse_observed_at(
+        original_name_receipt.get("observed_at_utc"),
+        "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+    )
+    started_at = _parse_observed_at(
+        value.get("started_at_utc"),
+        "INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID",
+    )
+    completed_at = _parse_observed_at(
+        value.get("completed_at_utc"),
+        "INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID",
+    )
+    first_observed_at = _parse_observed_at(
+        value.get("first_success_observed_at_utc"),
+        "INFRASTRUCTURE_SUCCESSFUL_DEPLOYMENT_RECEIPT_INVALID",
+    )
+    if not original_at < started_at <= completed_at < first_observed_at:
+        _fail("READBACK_TIMESTAMP_CONTINUITY_INVALID")
+    result = json.loads(_canonical_json_bytes(value))
+    result["coordination_resources"] = _validate_coordination_resource_bindings(
+        resources, expected_binding=expected_binding
+    )
+    return result
+
+
 def _verify_name_readback(
     value: Mapping[str, Any],
     *,
     expected_name: str,
+    expected_owner_binding_sha256: str,
+    expected_target_binding_sha256: str,
+    expected_tenant_id: str,
+    expected_subscription_id: str,
+    expected_resource_group_name: str,
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
-) -> datetime:
+) -> tuple[datetime, bool]:
     prefix = "COORDINATION_NAME_READBACK"
+    if value.get("schema_version") == ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA:
+        binding_value = value.get("binding")
+        if not isinstance(binding_value, Mapping):
+            _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID")
+        binding = _validate_restart_receipt_binding(binding_value)
+        original = _validate_original_name_receipt(
+            value, expected_binding=binding
+        )
+        if (
+            binding["owner_binding_sha256"] != expected_owner_binding_sha256
+            or binding["target_binding_sha256"]
+            != expected_target_binding_sha256
+            or binding["tenant_id"] != expected_tenant_id
+            or binding["subscription_id"] != expected_subscription_id
+            or binding["resource_group_name"].casefold()
+            != expected_resource_group_name.casefold()
+            or binding["storage_account_name"] != expected_name
+        ):
+            _fail("INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID")
+        return (
+            _parse_observed_at(
+                original["observed_at_utc"],
+                "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_INVALID",
+            ),
+            True,
+        )
     _verify_envelope_shape_and_digest(
         value,
         expected_keys={
@@ -2442,14 +3520,12 @@ def _verify_name_readback(
         or set(payload) != {"name", "name_available"}
         or not isinstance(payload.get("name"), str)
         or _STORAGE_ACCOUNT_NAME_RE.fullmatch(payload["name"]) is None
-        or not isinstance(payload.get("name_available"), bool)
+        or payload.get("name_available") is not True
     ):
         _fail(f"{prefix}_INVALID")
     if payload["name"] != expected_name:
         _fail("COORDINATION_STORAGE_NAME_MISMATCH")
-    if payload["name_available"] is not True:
-        _fail("COORDINATION_STORAGE_NAME_UNAVAILABLE")
-    return _envelope_observed_at(value)
+    return _envelope_observed_at(value), True
 
 
 def _expected_storage_configuration(
@@ -2457,7 +3533,7 @@ def _expected_storage_configuration(
     coordination: Mapping[str, str],
     location: str,
     effective_tags: Mapping[str, str],
-    allowed_client_ip_address: str,
+    broker_outbound_ip_addresses: list[str],
 ) -> dict[str, Any]:
     return {
         "id": coordination["id"],
@@ -2479,7 +3555,8 @@ def _expected_storage_configuration(
                 "bypass": "None",
                 "defaultAction": "Deny",
                 "ipRules": [
-                    {"action": "Allow", "value": allowed_client_ip_address}
+                    {"action": "Allow", "value": address}
+                    for address in broker_outbound_ip_addresses
                 ],
                 "resourceAccessRules": [],
                 "virtualNetworkRules": [],
@@ -2507,7 +3584,10 @@ def _expected_blob_service_configuration(
 
 
 def _expected_lease_container_configuration(
-    coordination: Mapping[str, str], target_binding_sha256: str
+    coordination: Mapping[str, str],
+    target_binding_sha256: str,
+    broker_function_package_sha256: str,
+    broker_ticket_verification_certificate_sha256: str,
 ) -> dict[str, Any]:
     resource_id = (
         f"{coordination['id']}/blobServices/default/containers/{CONTAINER_NAME}"
@@ -2527,16 +3607,21 @@ def _expected_lease_container_configuration(
                 "lease_blob_type": "BlockBlob",
                 "lease_blob_content_length": "0",
                 "lease_blob_bootstrap": (
-                    "owner-gated-put-if-absent-before-runtime"
+                    "broker-internal-put-if-absent-before-acquire"
+                ),
+                "broker_authorization": (
+                    "non-exportable-managed-identity-read-write-no-delete"
                 ),
                 "azure_blob_write_authorization": (
-                    "includes-create-overwrite-lease-and-break"
+                    "broker-uami-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
-                    "sealed-app-api-defense-in-depth-not-azure-enforced"
+                    "owner-ticketed-fixed-function-route"
                 ),
-                "principal_separation": (
-                    "single-owner-bound-bootstrap-and-runtime-principal"
+                "local_runner_storage_authorization": "none",
+                "brokerFunctionPackageSha256": broker_function_package_sha256,
+                "brokerTicketVerificationCertificateSha256": (
+                    broker_ticket_verification_certificate_sha256
                 ),
             },
         },
@@ -2549,10 +3634,16 @@ def _verify_deployment_receipt(
     coordination: Mapping[str, str],
     tenant_id: str,
     target_binding_sha256: str,
-    principal_id: str,
+    broker_principal_id: str,
+    broker_caller_service_principal_id: str,
+    broker_function_app_resource_id: str,
+    broker_function_package_sha256: str,
+    broker_ticket_verification_certificate_sha256: str,
+    broker_outbound_ip_addresses: list[str],
     storage_configuration_sha256: str,
     effective_tags_sha256: str,
     name_observed_at: datetime,
+    name_available: bool,
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
 ) -> dict[str, datetime]:
@@ -2571,7 +3662,12 @@ def _verify_deployment_receipt(
         "tenant_id",
         "coordination_storage_account_resource_id",
         "target_binding_sha256",
-        "provisioner_principal_id",
+        "broker_principal_id",
+        "broker_caller_service_principal_id",
+        "broker_function_app_resource_id",
+        "broker_function_package_sha256",
+        "broker_ticket_verification_certificate_sha256",
+        "broker_outbound_ip_addresses_sha256",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -2609,10 +3705,22 @@ def _verify_deployment_receipt(
         or str(payload.get("coordination_storage_account_resource_id", "")).casefold()
         != coordination["id"].casefold()
         or payload.get("target_binding_sha256") != target_binding_sha256
+        or _canonical_uuid(payload.get("broker_principal_id"), f"{prefix}_INVALID")
+        != broker_principal_id
         or _canonical_uuid(
-            payload.get("provisioner_principal_id"), f"{prefix}_INVALID"
+            payload.get("broker_caller_service_principal_id"), f"{prefix}_INVALID"
         )
-        != principal_id
+        != broker_caller_service_principal_id
+        or str(payload.get("broker_function_app_resource_id", "")).casefold()
+        != broker_function_app_resource_id.casefold()
+        or payload.get("broker_function_package_sha256")
+        != broker_function_package_sha256
+        or payload.get("broker_ticket_verification_certificate_sha256")
+        != broker_ticket_verification_certificate_sha256
+        or payload.get("broker_outbound_ip_addresses_sha256")
+        != _sha256_json(
+            _canonical_public_ipv4_addresses(broker_outbound_ip_addresses)
+        )
         or payload.get("effective_tags_sha256") != effective_tags_sha256
         or payload.get("storage_configuration_sha256")
         != storage_configuration_sha256
@@ -2626,7 +3734,8 @@ def _verify_deployment_receipt(
     )
     receipt_observed_at = _envelope_observed_at(value)
     if not (
-        name_observed_at < started_at <= completed_at <= receipt_observed_at
+        name_available is True
+        and name_observed_at < started_at <= completed_at < receipt_observed_at
     ):
         _fail("READBACK_TIMESTAMP_CONTINUITY_INVALID")
     return {
@@ -2772,10 +3881,11 @@ def _verify_effective_rbac_readback(
     *,
     coordination: Mapping[str, str],
     principal_id: str,
-    expected_assignment_id: str,
+    expected_assignment_id: str | None,
     expected_scope: str,
-    expected_role_definition_id: str,
-    expected_condition: str,
+    expected_role_definition_id: str | None,
+    expected_condition: str | None,
+    expected_data_actions: frozenset[str] | None,
     authoritative_management_group_scopes: list[str],
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
@@ -2868,19 +3978,36 @@ def _verify_effective_rbac_readback(
         ),
     )
     assignments = payload.get("effective_role_assignments")
-    exact_count = _verify_effective_assignments(
-        assignments,
-        principal_id=principal_id,
-        group_principal_ids=frozenset(groups),
-        expected_assignment_id=expected_assignment_id,
-        expected_scope=expected_scope,
-        expected_role_definition_id=expected_role_definition_id,
-        expected_condition=expected_condition,
-        ancestor_scopes=ancestor_scopes,
-    )
-    if exact_count != 1:
-        _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE")
+    if expected_assignment_id is None:
+        _verify_no_effective_storage_data_actions(
+            assignments,
+            principal_id=principal_id,
+            group_principal_ids=frozenset(groups),
+            ancestor_scopes=ancestor_scopes,
+        )
+        exact_count = 0
+    else:
+        if (
+            expected_role_definition_id is None
+            or expected_condition is None
+            or expected_data_actions is None
+        ):
+            _fail("EFFECTIVE_RBAC_READBACK_INVALID")
+        exact_count = _verify_effective_assignments(
+            assignments,
+            principal_id=principal_id,
+            group_principal_ids=frozenset(groups),
+            expected_assignment_id=expected_assignment_id,
+            expected_scope=expected_scope,
+            expected_role_definition_id=expected_role_definition_id,
+            expected_condition=expected_condition,
+            expected_data_actions=expected_data_actions,
+            ancestor_scopes=ancestor_scopes,
+        )
+        if exact_count != 1:
+            _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE")
     return {
+        "effective_assignment_count": exact_count,
         "principal_count": 1 + len(groups),
         "ancestor_scope_count": len(ancestor_scopes),
         "observed_at": _envelope_observed_at(value),
@@ -2922,7 +4049,10 @@ def _verify_ancestor_scopes(
 
 
 def _verify_role_definition(
-    value: Mapping[str, Any], expected_assignable_scope: str
+    value: Mapping[str, Any],
+    expected_assignable_scope: str,
+    *,
+    expected_data_actions: frozenset[str],
 ) -> str:
     properties = _properties(value, "ROLE_DEFINITION_INVALID")
     permissions = properties.get("permissions")
@@ -2935,7 +4065,7 @@ def _verify_role_definition(
         or permissions[0].get("notActions") != []
         or permissions[0].get("notDataActions") != []
         or _exact_data_actions(permissions[0].get("dataActions"))
-        != ALLOWED_DATA_ACTIONS
+        != expected_data_actions
     ):
         _fail("ROLE_DEFINITION_DATA_ACTIONS_INVALID")
     scopes = properties.get("assignableScopes")
@@ -2988,6 +4118,44 @@ def _verify_role_assignment(
     return assignment_id
 
 
+def _verify_no_effective_storage_data_actions(
+    values: Any,
+    *,
+    principal_id: str,
+    group_principal_ids: frozenset[str],
+    ancestor_scopes: set[str],
+) -> None:
+    if not isinstance(values, list):
+        _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+    relevant_principals = {principal_id, *group_principal_ids}
+    for value in values:
+        properties = _properties(value, "EFFECTIVE_ASSIGNMENTS_INVALID")
+        candidate_principal = _canonical_uuid(
+            properties.get("principalId"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        if candidate_principal not in relevant_principals:
+            continue
+        expected_principal_type = (
+            "ServicePrincipal" if candidate_principal == principal_id else "Group"
+        )
+        scope = _field(value, properties, "scope")
+        data_actions = _expanded_permission_actions(
+            value, properties, field_name="dataActions"
+        )
+        if (
+            properties.get("principalType") != expected_principal_type
+            or not isinstance(scope, str)
+            or scope.casefold() not in ancestor_scopes
+            or data_actions is None
+        ):
+            _fail("EFFECTIVE_RBAC_READBACK_INVALID")
+        if any(
+            action.casefold().startswith("microsoft.storage/")
+            for action in data_actions
+        ):
+            _fail("BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT")
+
+
 def _verify_effective_assignments(
     values: Any,
     *,
@@ -2997,6 +4165,7 @@ def _verify_effective_assignments(
     expected_scope: str,
     expected_role_definition_id: str,
     expected_condition: str,
+    expected_data_actions: frozenset[str],
     ancestor_scopes: set[str],
 ) -> int:
     if not isinstance(values, list):
@@ -3043,7 +4212,7 @@ def _verify_effective_assignments(
                 != expected_role_definition_id.casefold()
                 or properties.get("condition") != expected_condition
                 or properties.get("conditionVersion") != "2.0"
-                or data_actions != ALLOWED_DATA_ACTIONS
+                or data_actions != expected_data_actions
             ):
                 _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_INVALID")
             exact_count += 1
@@ -3306,6 +4475,150 @@ def _record_readback_session_claim(
         os.close(directory)
 
 
+def _read_restart_receipt(directory: Path, name: str) -> dict[str, Any] | None:
+    directory_descriptor = _open_private_restart_receipt_directory(
+        directory, create=False
+    )
+    if directory_descriptor is None:
+        return None
+    descriptor = -1
+    try:
+        try:
+            descriptor = os.open(
+                name,
+                os.O_RDONLY
+                | getattr(os, "O_NOFOLLOW", 0)
+                | getattr(os, "O_CLOEXEC", 0),
+                dir_fd=directory_descriptor,
+            )
+        except FileNotFoundError:
+            return None
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) != 0o400
+            or metadata.st_nlink != 1
+            or metadata.st_size <= 0
+            or metadata.st_size > 64 * 1024
+        ):
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            raw = stream.read(64 * 1024 + 1)
+        if len(raw) > 64 * 1024 or not raw.endswith(b"\n"):
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        value = json.loads(raw)
+        if not isinstance(value, dict):
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        return value
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        os.close(directory_descriptor)
+
+
+def _create_restart_receipt(
+    directory: Path,
+    name: str,
+    value: Mapping[str, Any],
+) -> None:
+    directory_descriptor = _open_private_restart_receipt_directory(
+        directory, create=True
+    )
+    if directory_descriptor is None:
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+    descriptor = -1
+    raw = _canonical_json_bytes(value) + b"\n"
+    try:
+        descriptor = os.open(
+            name,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0),
+            0o400,
+            dir_fd=directory_descriptor,
+        )
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) != 0o400
+            or metadata.st_nlink != 1
+        ):
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.fsync(directory_descriptor)
+    except FileExistsError:
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_ALREADY_EXISTS")
+    except OSError:
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        os.close(directory_descriptor)
+
+
+def _open_private_restart_receipt_directory(
+    path: Path, *, create: bool
+) -> int | None:
+    if not isinstance(path, Path) or not path.is_absolute() or ".." in path.parts:
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+    descriptor = -1
+    try:
+        descriptor = os.open("/", flags)
+        parts = path.parts[1:]
+        for index, part in enumerate(parts):
+            try:
+                child = os.open(part, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                if not create:
+                    os.close(descriptor)
+                    return None
+                parent = os.fstat(descriptor)
+                if (
+                    parent.st_uid != os.geteuid()
+                    or stat.S_IMODE(parent.st_mode) & 0o022
+                ):
+                    raise OSError
+                os.mkdir(part, 0o700, dir_fd=descriptor)
+                child = os.open(part, flags, dir_fd=descriptor)
+            metadata = os.fstat(child)
+            mode = stat.S_IMODE(metadata.st_mode)
+            is_final = index == len(parts) - 1
+            if (
+                not stat.S_ISDIR(metadata.st_mode)
+                or (mode & 0o022 and not mode & stat.S_ISVTX)
+                or (
+                    is_final
+                    and (metadata.st_uid != os.geteuid() or mode != 0o700)
+                )
+            ):
+                os.close(child)
+                raise OSError
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except OSError:
+        if descriptor >= 0:
+            os.close(descriptor)
+        _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+
+
 def _open_private_replay_ledger_directory() -> int:
     path = _READBACK_REPLAY_LEDGER_DIRECTORY
     if not isinstance(path, Path) or not path.is_absolute() or ".." in path.parts:
@@ -3536,7 +4849,12 @@ def _expected_operation_for_envelope(
         return None
     if kind in {"bff-storage-account-resource-id", "worm-storage-account-resource-id"}:
         return {"resource_id": response.get("id")}
-    if kind in {"coordination-role-definition", "coordination-role-assignment"}:
+    if kind == "coordination-broker-function-app":
+        return _broker_function_app_payload(response)
+    if kind in {
+        "coordination-broker-role-definition",
+        "coordination-broker-role-assignment",
+    }:
         return {"resource": response}
     if kind == "coordination-storage-account-configuration":
         return _storage_configuration_payload(response)
@@ -3855,6 +5173,46 @@ def _storage_account_id(value: Any) -> dict[str, str]:
     }
 
 
+def _function_app_id(value: Any, *, subscription_id: str) -> str:
+    if not isinstance(value, str):
+        _fail("BROKER_FUNCTION_APP_RESOURCE_ID_INVALID")
+    match = _FUNCTION_APP_ID_RE.fullmatch(value)
+    if (
+        match is None
+        or _canonical_uuid(
+            match.group("subscription"),
+            "BROKER_FUNCTION_APP_RESOURCE_ID_INVALID",
+        )
+        != subscription_id
+    ):
+        _fail("BROKER_FUNCTION_APP_RESOURCE_ID_INVALID")
+    return value
+
+
+def _canonical_public_ipv4_addresses(value: Any) -> list[str]:
+    if not isinstance(value, list) or not 1 <= len(value) <= 32:
+        _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
+    result: list[str] = []
+    for item in value:
+        try:
+            address = ipaddress.ip_address(item)
+        except ValueError:
+            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
+        if (
+            not isinstance(address, ipaddress.IPv4Address)
+            or address.is_private
+            or address.is_loopback
+            or address.is_link_local
+            or address.is_multicast
+            or address.is_reserved
+            or address.is_unspecified
+            or str(address) in result
+        ):
+            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
+        result.append(str(address))
+    return result
+
+
 def _require_arm_id(value: Any, error_code: str) -> str:
     if not isinstance(value, str) or not value.startswith("/") or value.endswith("/"):
         _fail(error_code)
@@ -3902,18 +5260,23 @@ verify_performance_coordination_infrastructure_safety = (
 
 __all__ = [
     "ALLOWED_DATA_ACTIONS",
+    "BROKER_ALLOWED_DATA_ACTIONS",
     "AzurePerformanceInfrastructureReadbackAdapter",
     "AzurePerformanceInfrastructureReadbackCapability",
     "AzurePerformanceInfrastructureReadbackResult",
     "AzurePerformanceInfrastructureReadbackSession",
+    "AzurePerformanceInfrastructureOriginalNameReceipt",
+    "AzurePerformanceInfrastructureRestartReceiptStore",
     "AzurePerformanceInfrastructureSafetyVerification",
     "AzurePerformanceInfrastructureSafetyError",
     "CONTAINER_NAME",
     "MANDATORY_COORDINATION_TAGS",
     "begin_azure_performance_infrastructure_readback_session",
+    "build_infrastructure_restart_receipt_binding",
     "canonical_observation_command_sha256",
     "canonical_observation_sha256",
     "effective_coordination_tags",
+    "exact_broker_lease_blob_condition",
     "exact_lease_blob_condition",
     "infrastructure_safety_policy_sha256",
     "readback_session_attestation",

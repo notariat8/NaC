@@ -484,7 +484,7 @@ SMART_DETECTION_PREWRITE_AST_SHA256 = (
     "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
-    "516a7d1ac0fafa2a4d469606424b4a14209b5f53a8a24c925cd1948f179703cd"
+    "8d2f765f943902aed1e7e016c72412a2265f22f125c213db55827cbe334c2aa9"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
@@ -1438,11 +1438,29 @@ def main() -> int:
 
 
 def _run_behavioral_tests(repo_root: Path) -> list[str]:
-    temporary = tempfile.TemporaryDirectory(prefix="nac-bff-validator-")
+    try:
+        common_dir = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+        common_path = Path(common_dir)
+        if not common_path.is_absolute():
+            common_path = repo_root / common_path
+        trusted_test_parent = common_path.resolve().parent
+    except (OSError, subprocess.SubprocessError):
+        trusted_test_parent = repo_root
+    temporary = tempfile.TemporaryDirectory(
+        prefix=".nac-bff-validator-",
+        dir=trusted_test_parent,
+    )
     test_home = Path(temporary.name)
     env = dict(os.environ)
     env["HOME"] = str(test_home)
     env["AZURE_CONFIG_DIR"] = str(test_home / ".azure")
+    env["TMPDIR"] = str(test_home)
     src = str((repo_root / "src").resolve())
     current = env.get("PYTHONPATH")
     env["PYTHONPATH"] = src if not current else os.pathsep.join((src, current))

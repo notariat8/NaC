@@ -40,9 +40,13 @@ from .azure_performance_authorization import (
     _authorize_live_action,
     _issue_verified_bootstrap_authority,
     _issue_verified_performance_authority,
+    _transition_verified_bootstrap_authority,
     _open_root_anchored_private_parent,
 )
-from .azure_performance_lease import lease_policy, lease_policy_sha256
+from .azure_performance_lease_broker import (
+    lease_broker_policy,
+    lease_broker_policy_sha256,
+)
 from .azure_performance_monitor import monitor_policy, monitor_policy_sha256
 from .entra_access_token import EntraAccessTokenValidator
 from .test_environment import ALLOWED_MATTER_ID, ALLOWED_PURPOSE
@@ -58,7 +62,10 @@ EVIDENCE_SCHEMA_VERSION = "nac.m365-azure-bff-performance-acceptance-evidence/v2
 CONTRACT_ID = "m365.bff_performance_acceptance"
 PLAN_COMMAND = "nac m365 teams-sharepoint bff-performance-acceptance-plan"
 LIVE_COMMAND = "nac m365 teams-sharepoint bff-performance-acceptance"
-OWNER_ACTION = "PROVISION_AND_EXECUTE_M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+OWNER_ACTION = (
+    "CREATE_UNLOCKED_WORM_BASELINE_PROVISION_AND_EXECUTE_"
+    "M365_BFF_ENDPOINT_SCOPED_CONSERVATIVE_MEASUREMENT"
+)
 REQUIRED_OWNER_LOGIN = "ofunk"
 OUTPUT_ROOT = Path("out/m365/teams-sharepoint/bff-performance-acceptance")
 CONTRACT_RELATIVE_PATH = Path(
@@ -96,7 +103,7 @@ _CORRELATION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _JWT_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 _ERROR_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,79}$")
 _OWNER_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/733#issuecomment-[1-9][0-9]*$"
+    r"^https://github\.com/notariat8/NaC/issues/735#issuecomment-[1-9][0-9]*$"
 )
 _SAFE_HEADERS = {
     "cache-control": "no-store",
@@ -112,6 +119,11 @@ _INFRASTRUCTURE_APPROVAL_KEYS = frozenset(
         "infrastructure_source_sha256",
         "lease_bootstrap_policy_sha256",
         "infrastructure_safety_policy_sha256",
+        "worm_baseline_binding_sha256",
+        "worm_baseline_compiled_arm_sha256",
+        "worm_baseline_parameters_sha256",
+        "worm_baseline_source_sha256",
+        "deployment_sequence_sha256",
     }
 )
 
@@ -675,7 +687,8 @@ def build_performance_acceptance_plan(
         "phase_plan_sha256": _sha256_json(phase_plan),
         "measurement_policy_sha256": measurement_policy_sha256(),
         "monitor_policy_sha256": monitor_policy_sha256(),
-        "lease_policy_sha256": lease_policy_sha256(),
+        "lease_policy_sha256": lease_broker_policy_sha256(),
+        "lease_broker_policy_sha256": lease_broker_policy_sha256(),
         "target": {
             "workspace_id_sha256": _sha256_text(WORKSPACE_ID),
             "matter_id_sha256": _sha256_text(ALLOWED_MATTER_ID),
@@ -724,12 +737,12 @@ def build_performance_acceptance_plan(
                 "policy_sha256": monitor_policy_sha256(),
                 "measurement_is_app_wide_not_endpoint_attribution": True,
             },
-            "azure_blob_lease": {
+            "azure_blob_lease_broker": {
                 "status": "IMPLEMENTED_OFFLINE",
-                "policy": lease_policy(),
-                "policy_sha256": lease_policy_sha256(),
+                "policy": lease_broker_policy(),
+                "policy_sha256": lease_broker_policy_sha256(),
                 "dedicated_storage_required": True,
-                "precreated_blob_and_etag_required": True,
+                "conditional_state_blob_create_required": True,
             },
         },
         "live_preconditions": {
@@ -794,6 +807,9 @@ def build_owner_comment(
                 ],
                 "monitor_policy_sha256": plan["monitor_policy_sha256"],
                 "lease_policy_sha256": plan["lease_policy_sha256"],
+                "lease_broker_policy_sha256": plan[
+                    "lease_broker_policy_sha256"
+                ],
                 "correlation_id": correlation_id,
                 "monitor_window_anchor_utc": monitor_anchor,
                 "monitor_window_anchor_sha256": _sha256_text(monitor_anchor),
@@ -816,6 +832,8 @@ def build_owner_comment(
                 "exclusive_remote_lease_required": True,
                 "abort_on_throttle_signal": True,
                 "allowed_infrastructure_actions": [
+                    "deploy_exact_unlocked_worm_baseline_without_policy_lock",
+                    "read_back_exact_unlocked_worm_baseline",
                     "deploy_dedicated_storage_account_container_custom_role_and_assignment",
                     "create_one_exact_zero_byte_coordination_blob_if_absent",
                     "read_back_and_bind_strong_etag",
@@ -828,6 +846,7 @@ def build_owner_comment(
                     "other_workspace_access",
                     "production_data_access",
                     "tenant_wide_sharepoint_capacity_claim",
+                    "irreversible_worm_policy_lock",
                 ],
             }
         )
@@ -1023,6 +1042,7 @@ class BoundPerformanceAuthorizationVerifier:
         infrastructure_approval: Mapping[str, str],
         toolchain_attestations: Mapping[str, str],
         infrastructure_parameters: Mapping[str, Any],
+        worm_baseline_parameters: Mapping[str, Any],
         monitor_window_anchor_utc: str,
         infrastructure_safety_source: VerifiedInfrastructureSafetySource,
     ) -> None:
@@ -1033,12 +1053,21 @@ class BoundPerformanceAuthorizationVerifier:
         )
         self._toolchain_attestations = dict(toolchain_attestations)
         self._infrastructure_parameters = dict(infrastructure_parameters)
+        self._worm_baseline_parameters = dict(worm_baseline_parameters)
         self._monitor_window_anchor_utc = _validate_monitor_window_anchor(
             monitor_window_anchor_utc
         )
         if type(infrastructure_safety_source) is not VerifiedInfrastructureSafetySource:
             raise TypeError("infrastructure_safety_source")
         self._infrastructure_safety_source = infrastructure_safety_source
+        self._bootstrap_transition_lock = threading.Lock()
+        self._bootstrap_authority: VerifiedPerformanceAuthority | None = None
+        self._bootstrap_safety_evidence: (
+            AzurePerformanceInfrastructureSafetyVerification | None
+        ) = None
+        self._bootstrap_binding_sha256: str | None = None
+        self._durable_lease_binding_sha256: str | None = None
+        self._durable_lease_safety_sha256: str | None = None
 
     def verify(
         self,
@@ -1060,6 +1089,7 @@ class BoundPerformanceAuthorizationVerifier:
             infrastructure_approval=self._infrastructure_approval,
             toolchain_attestations=self._toolchain_attestations,
             infrastructure_parameters=self._infrastructure_parameters,
+            worm_baseline_parameters=self._worm_baseline_parameters,
             monitor_window_anchor_utc=self._monitor_window_anchor_utc,
         )
 
@@ -1072,20 +1102,20 @@ class BoundPerformanceAuthorizationVerifier:
         correlation_id: str,
         lease_binding_sha256: str,
         lease_acquisition_safety_evidence_sha256: str,
-        bootstrap_binding_sha256: str | None = None,
     ) -> VerifiedPerformanceAuthority:
-        return self._verify_owner_and_infrastructure_authority(
-            approval_reference=approval_reference,
-            contract_sha256=contract_sha256,
-            activation_hash=activation_hash,
-            correlation_id=correlation_id,
-            lease_binding_sha256=lease_binding_sha256,
-            lease_acquisition_safety_evidence_sha256=(
-                lease_acquisition_safety_evidence_sha256
-            ),
-            bootstrap_binding_sha256=bootstrap_binding_sha256,
-            bootstrap_only=False,
-        )
+        with self._bootstrap_transition_lock:
+            return self._verify_owner_and_infrastructure_authority(
+                approval_reference=approval_reference,
+                contract_sha256=contract_sha256,
+                activation_hash=activation_hash,
+                correlation_id=correlation_id,
+                lease_binding_sha256=lease_binding_sha256,
+                lease_acquisition_safety_evidence_sha256=(
+                    lease_acquisition_safety_evidence_sha256
+                ),
+                bootstrap_binding_sha256=None,
+                bootstrap_only=False,
+            )
 
     def _verify_owner_and_infrastructure_authority(
         self,
@@ -1115,18 +1145,37 @@ class BoundPerformanceAuthorizationVerifier:
             measurement_preflight_sha256="0" * 64,
             correlation_id=correlation_id,
         )
-        try:
-            safety_evidence = self._infrastructure_safety_source._verify(
-                owner_binding_sha256=(authorization.owner_approval_body_sha256),
-                target_binding_sha256=authorization.target_binding_sha256,
-                infrastructure_safety_policy_sha256=(
-                    self._infrastructure_approval[
-                        "infrastructure_safety_policy_sha256"
-                    ]
-                ),
-            )
-        except (PerformanceLiveAuthorizationError, TypeError, ValueError):
-            raise ValueError("PERFORMANCE_INFRASTRUCTURE_PREFLIGHT_INVALID") from None
+        transition_authority = None
+        if not bootstrap_only and self._bootstrap_authority is not None:
+            if bootstrap_binding_sha256 is not None:
+                raise ValueError("PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID")
+            transition_authority = self._bootstrap_authority
+            safety_evidence = self._bootstrap_safety_evidence
+            if safety_evidence is None or self._bootstrap_binding_sha256 is None:
+                raise ValueError("PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID")
+            if (
+                self._durable_lease_binding_sha256 != lease_binding_sha256
+                or self._durable_lease_safety_sha256
+                != lease_acquisition_safety_evidence_sha256
+            ):
+                raise ValueError("PERFORMANCE_BOOTSTRAP_HANDOFF_REQUIRED")
+        else:
+            try:
+                safety_evidence = self._infrastructure_safety_source._verify(
+                    owner_binding_sha256=(
+                        authorization.owner_approval_body_sha256
+                    ),
+                    target_binding_sha256=authorization.target_binding_sha256,
+                    infrastructure_safety_policy_sha256=(
+                        self._infrastructure_approval[
+                            "infrastructure_safety_policy_sha256"
+                        ]
+                    ),
+                )
+            except (PerformanceLiveAuthorizationError, TypeError, ValueError):
+                raise ValueError(
+                    "PERFORMANCE_INFRASTRUCTURE_PREFLIGHT_INVALID"
+                ) from None
         if (
             safety_evidence["target_binding_sha256"]
             != authorization.target_binding_sha256
@@ -1158,12 +1207,22 @@ class BoundPerformanceAuthorizationVerifier:
             "worm_storage_account_resource_id": parameters.get(
                 "wormStorageAccountResourceId"
             ),
-            "provisioner_principal_id": parameters.get(
-                "provisionerPrincipalId"
+            "broker_principal_id": parameters.get("brokerPrincipalId"),
+            "broker_caller_service_principal_id": parameters.get(
+                "brokerCallerServicePrincipalId"
+            ),
+            "broker_function_app_resource_id": parameters.get(
+                "brokerFunctionAppResourceId"
+            ),
+            "broker_function_package_sha256": parameters.get(
+                "brokerFunctionPackageSha256"
+            ),
+            "broker_ticket_verification_certificate_sha256": parameters.get(
+                "brokerTicketVerificationCertificateSha256"
             ),
             "tags_sha256": _sha256_json(parameters.get("tags", {})),
-            "allowed_client_ip_address_sha256": _sha256_text(
-                str(parameters.get("allowedClientIpAddress", ""))
+            "broker_outbound_ip_addresses_sha256": _sha256_json(
+                parameters.get("brokerOutboundIpAddresses", [])
             ),
             "toolchain_attestations_sha256": self._infrastructure_approval[
                 "toolchain_attestations_sha256"
@@ -1183,6 +1242,7 @@ class BoundPerformanceAuthorizationVerifier:
             expected_activation_hash=activation_hash,
             toolchain_attestations=self._toolchain_attestations,
             infrastructure_parameters=self._infrastructure_parameters,
+            worm_baseline_parameters=self._worm_baseline_parameters,
         )
         if (
             remeasurement.get("contract_sha256") != contract_sha256
@@ -1201,6 +1261,9 @@ class BoundPerformanceAuthorizationVerifier:
             "measurement_policy_sha256": plan["measurement_policy_sha256"],
             "monitor_policy_sha256": plan["monitor_policy_sha256"],
             "lease_policy_sha256": plan["lease_policy_sha256"],
+            "lease_broker_policy_sha256": plan[
+                "lease_broker_policy_sha256"
+            ],
             "monitor_window_anchor_sha256": (
                 authorization.monitor_window_anchor_sha256
             ),
@@ -1219,12 +1282,18 @@ class BoundPerformanceAuthorizationVerifier:
         if bootstrap_only:
             if bootstrap_binding_sha256 is None:
                 raise ValueError("PERFORMANCE_LIVE_AUTHORIZATION_INVALID")
-            return _issue_verified_bootstrap_authority(
+            if self._bootstrap_authority is not None:
+                raise ValueError("PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID")
+            authority = _issue_verified_bootstrap_authority(
                 owner_authorization=authorization,
                 infrastructure_safety_verification=safety_evidence,
                 execution_bindings=execution_bindings,
                 bootstrap_binding_sha256=bootstrap_binding_sha256,
             )
+            self._bootstrap_authority = authority
+            self._bootstrap_safety_evidence = safety_evidence
+            self._bootstrap_binding_sha256 = bootstrap_binding_sha256
+            return authority
         action_bindings = {
             TARGET_GET: (authorization.target_binding_sha256, TOTAL_REQUEST_LIMIT),
             BLOB_LEASE_ACQUIRE: (lease_binding_sha256, 2),
@@ -1236,17 +1305,78 @@ class BoundPerformanceAuthorizationVerifier:
         artifact_store = PerformanceArtifactStore(
             self._repo_root, plan["plan_sha256"]
         )
-        return _issue_verified_performance_authority(
-            owner_authorization=authorization,
-            infrastructure_safety_verification=safety_evidence,
-            execution_bindings=execution_bindings,
-            action_bindings=action_bindings,
-            repo_root=self._repo_root,
-            run_binding_sha256=plan["plan_sha256"],
-            checkpoint_commit_path=artifact_store.state_commit_path,
-            checkpoint_slot_paths=artifact_store._state_slots,
-            final_evidence_path=artifact_store.evidence_path,
+        issue_arguments = {
+            "owner_authorization": authorization,
+            "infrastructure_safety_verification": safety_evidence,
+            "execution_bindings": execution_bindings,
+            "action_bindings": action_bindings,
+            "repo_root": self._repo_root,
+            "run_binding_sha256": plan["plan_sha256"],
+            "checkpoint_commit_path": artifact_store.state_commit_path,
+            "checkpoint_slot_paths": artifact_store._state_slots,
+            "final_evidence_path": artifact_store.evidence_path,
+        }
+        if transition_authority is None:
+            return _issue_verified_performance_authority(**issue_arguments)
+        authority = _transition_verified_bootstrap_authority(
+            bootstrap_authority=transition_authority,
+            bootstrap_binding_sha256=self._bootstrap_binding_sha256,
+            **issue_arguments,
         )
+        self._bootstrap_authority = None
+        self._bootstrap_safety_evidence = None
+        self._bootstrap_binding_sha256 = None
+        self._durable_lease_binding_sha256 = None
+        self._durable_lease_safety_sha256 = None
+        return authority
+
+    def record_broker_lease_handoff(
+        self,
+        *,
+        lease_binding_sha256: str,
+        lease_acquisition_safety_evidence_sha256: str,
+    ) -> dict[str, str]:
+        """Promote the server-side broker binding without local Storage access."""
+
+        _require_sha256(lease_binding_sha256, "lease_binding_sha256")
+        _require_sha256(
+            lease_acquisition_safety_evidence_sha256,
+            "lease_acquisition_safety_evidence_sha256",
+        )
+        with self._bootstrap_transition_lock:
+            if (
+                self._bootstrap_authority is None
+                or self._bootstrap_safety_evidence is None
+                or self._bootstrap_binding_sha256 is None
+                or self._durable_lease_binding_sha256 is not None
+                or self._bootstrap_binding_sha256 != lease_binding_sha256
+            ):
+                raise ValueError("PERFORMANCE_BROKER_HANDOFF_INVALID")
+            self._durable_lease_binding_sha256 = lease_binding_sha256
+            self._durable_lease_safety_sha256 = (
+                lease_acquisition_safety_evidence_sha256
+            )
+            return {
+                "lease_binding_sha256": lease_binding_sha256,
+                "lease_acquisition_safety_evidence_sha256": (
+                    lease_acquisition_safety_evidence_sha256
+                ),
+            }
+
+    def bootstrap_safety_verification(
+        self,
+        authority: VerifiedPerformanceAuthority,
+    ) -> AzurePerformanceInfrastructureSafetyVerification:
+        """Return the sealed safety result only for the pending bootstrap lane."""
+
+        with self._bootstrap_transition_lock:
+            if (
+                type(authority) is not VerifiedPerformanceAuthority
+                or authority is not self._bootstrap_authority
+                or self._bootstrap_safety_evidence is None
+            ):
+                raise ValueError("PERFORMANCE_BOOTSTRAP_TRANSITION_INVALID")
+            return self._bootstrap_safety_evidence
 
     def verify_owner_and_infrastructure_before_bootstrap(
         self,
@@ -1259,16 +1389,19 @@ class BoundPerformanceAuthorizationVerifier:
     ) -> VerifiedPerformanceAuthority:
         """Issue a capability restricted to one bootstrap PUT and HEAD."""
 
-        return self._verify_owner_and_infrastructure_authority(
-            approval_reference=approval_reference,
-            contract_sha256=contract_sha256,
-            activation_hash=activation_hash,
-            correlation_id=correlation_id,
-            lease_binding_sha256=bootstrap_binding_sha256,
-            lease_acquisition_safety_evidence_sha256=bootstrap_binding_sha256,
-            bootstrap_binding_sha256=bootstrap_binding_sha256,
-            bootstrap_only=True,
-        )
+        with self._bootstrap_transition_lock:
+            return self._verify_owner_and_infrastructure_authority(
+                approval_reference=approval_reference,
+                contract_sha256=contract_sha256,
+                activation_hash=activation_hash,
+                correlation_id=correlation_id,
+                lease_binding_sha256=bootstrap_binding_sha256,
+                lease_acquisition_safety_evidence_sha256=(
+                    bootstrap_binding_sha256
+                ),
+                bootstrap_binding_sha256=bootstrap_binding_sha256,
+                bootstrap_only=True,
+            )
 
 
 def verify_performance_execution_authorization(
@@ -1283,6 +1416,7 @@ def verify_performance_execution_authorization(
     infrastructure_approval: Mapping[str, str],
     toolchain_attestations: Mapping[str, str],
     infrastructure_parameters: Mapping[str, Any],
+    worm_baseline_parameters: Mapping[str, Any],
     monitor_window_anchor_utc: str,
 ) -> PerformanceExecutionAuthorization:
     """Verify the immutable owner comment and committed activation receipt."""
@@ -1304,6 +1438,7 @@ def verify_performance_execution_authorization(
         expected_activation_hash=activation_hash,
         toolchain_attestations=toolchain_attestations,
         infrastructure_parameters=infrastructure_parameters,
+        worm_baseline_parameters=worm_baseline_parameters,
     )
     measured_approval = _validate_infrastructure_approval(
         measurement["infrastructure_approval"]
@@ -1346,6 +1481,7 @@ def verify_performance_execution_authorization(
         expected_activation_hash=activation_hash,
         toolchain_attestations=toolchain_attestations,
         infrastructure_parameters=infrastructure_parameters,
+        worm_baseline_parameters=worm_baseline_parameters,
     )
     remeasured_approval = _validate_infrastructure_approval(
         remeasurement["infrastructure_approval"]
@@ -1428,13 +1564,23 @@ class PerformanceAcceptanceRunner:
         activation_hash: str,
         approval_reference: str,
         correlation_id: str,
-        expected_measurement_preflight_sha256: str,
+        expected_measurement_preflight_sha256: str | None = None,
         _live_action_capability: VerifiedLiveActionCapability | None = None,
     ) -> dict[str, Any]:
         self._live_action_capability = _live_action_capability
         _require_sha256(plan_sha256, "plan_sha256")
         _require_sha256(contract_sha256, "contract_sha256")
         _require_sha256(activation_hash, "activation_hash")
+        measurement_attestation = None
+        if expected_measurement_preflight_sha256 is None:
+            measurement_attestation = self._get_measurement_attestation()
+            if not isinstance(measurement_attestation, MeasurementAttestation):
+                raise ValueError("PERFORMANCE_MEASUREMENT_PREFLIGHT_BLOCKED")
+            expected_measurement_preflight_sha256 = (
+                measurement_attestation.validate(now=self._clock.now())[
+                    "attestation_sha256"
+                ]
+            )
         _require_sha256(
             expected_measurement_preflight_sha256,
             "expected_measurement_preflight_sha256",
@@ -1476,7 +1622,9 @@ class PerformanceAcceptanceRunner:
         self._transport_verifier.verify(
             self._transport, expected_plan["target_binding_sha256"]
         )
-        measurement_attestation = self._get_measurement_attestation()
+        measurement_attestation = (
+            measurement_attestation or self._get_measurement_attestation()
+        )
         if not isinstance(measurement_attestation, MeasurementAttestation):
             raise ValueError("PERFORMANCE_MEASUREMENT_PREFLIGHT_BLOCKED")
         capacity_summary = measurement_attestation.validate(now=self._clock.now())

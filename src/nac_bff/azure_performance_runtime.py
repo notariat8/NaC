@@ -30,7 +30,6 @@ from .azure_performance_authorization import (
     VerifiedPerformanceAuthority,
     _open_root_anchored_private_parent,
 )
-from .azure_performance_lease import AzureBlobLeaseAdapter, AzureBlobLeaseReceipt
 from .azure_performance_monitor import (
     INGESTION_LAG_SECONDS,
     AzurePerformanceMonitorAdapter,
@@ -73,6 +72,32 @@ class FinalEvidencePort(Protocol):
 
     def clear_pending_finalization(self) -> None: ...
 
+    def load_release_recovery(self) -> Mapping[str, Any] | None: ...
+
+    def write_release_recovery(self, recovery: Mapping[str, Any]) -> None: ...
+
+    def clear_release_recovery(self) -> None: ...
+
+
+class PerformanceLeaseReceiptPort(Protocol):
+    lease_binding_sha256: str
+    target_binding_sha256: str
+    lifecycle_state: str
+    lifecycle_state_sha256: str
+
+
+class PerformanceLeasePort(Protocol):
+    target_binding_sha256: str
+    lease_binding_sha256: str
+
+    def acquire(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def assert_held(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def release(self, lease_id: UUID, live_action_capability: object = None) -> PerformanceLeaseReceiptPort: ...
+
+    def execution_fence(self, live_action_capability: object = None) -> AbstractContextManager[None]: ...
+
 
 class AzurePerformanceRuntimeAdapter:
     """Compose the fixed Monitor read and dedicated Blob lease boundaries."""
@@ -81,7 +106,7 @@ class AzurePerformanceRuntimeAdapter:
         self,
         *,
         monitor: AzurePerformanceMonitorAdapter,
-        lease: AzureBlobLeaseAdapter,
+        lease: PerformanceLeasePort,
         lease_id: UUID,
         monitor_window_anchor_utc: datetime,
         clock: Callable[[], datetime] | None = None,
@@ -89,7 +114,7 @@ class AzurePerformanceRuntimeAdapter:
     ) -> None:
         if not isinstance(monitor, AzurePerformanceMonitorAdapter):
             raise TypeError("monitor")
-        if not isinstance(lease, AzureBlobLeaseAdapter):
+        if not _is_performance_lease_port(lease):
             raise TypeError("lease")
         if type(lease_id) is not UUID:
             raise TypeError("lease_id")
@@ -117,14 +142,14 @@ class AzurePerformanceRuntimeAdapter:
 
     def acquire(
         self, capability: VerifiedLiveActionCapability
-    ) -> AzureBlobLeaseReceipt:
+    ) -> PerformanceLeaseReceiptPort:
         return self._lease.acquire(
             self._lease_id, live_action_capability=capability
         )
 
     def release(
         self, capability: VerifiedLiveActionCapability
-    ) -> AzureBlobLeaseReceipt:
+    ) -> PerformanceLeaseReceiptPort:
         return self._lease.release(
             self._lease_id, live_action_capability=capability
         )
@@ -158,10 +183,10 @@ class AzurePerformanceRuntimeAdapter:
 
     def completion_bindings(
         self,
-        release_receipt: AzureBlobLeaseReceipt,
+        release_receipt: PerformanceLeaseReceiptPort,
         final_measurement_attestation: Mapping[str, Any],
     ) -> dict[str, Any]:
-        if not isinstance(release_receipt, AzureBlobLeaseReceipt):
+        if not _is_performance_lease_receipt(release_receipt):
             raise ValueError("PERFORMANCE_LEASE_RELEASE_EVIDENCE_INVALID")
         attestation = _validate_final_measurement_attestation(
             final_measurement_attestation,
@@ -316,7 +341,7 @@ class AzurePerformanceRuntimeAdapter:
 
     def _measurement_attestation(
         self,
-        receipt: AzureBlobLeaseReceipt,
+        receipt: PerformanceLeaseReceiptPort,
         observation: AzurePerformanceObservation,
         observed_at: datetime,
     ) -> MeasurementAttestation:
@@ -387,7 +412,7 @@ class AzurePerformanceRuntimeAdapter:
         minimum_window_end_utc: datetime | None = None,
         live_action_capability: VerifiedLiveActionCapability | None = None,
     ) -> tuple[
-        AzureBlobLeaseReceipt,
+        PerformanceLeaseReceiptPort,
         AzurePerformanceObservation,
         datetime,
         datetime,
@@ -396,6 +421,12 @@ class AzurePerformanceRuntimeAdapter:
         receipt = self._lease.assert_held(
             self._lease_id,
             live_action_capability=live_action_capability,
+        )
+        _validate_lease_receipt(
+            receipt,
+            expected_lease_binding_sha256=self.lease_binding_sha256,
+            expected_target_binding_sha256=self.target_binding_sha256,
+            expected_lifecycle_state="HELD",
         )
         current = self._validated_now()
         end = (
@@ -457,6 +488,9 @@ class LeaseBoundPerformanceAcceptance:
             "write_pending_finalization",
             "write_final_evidence",
             "clear_pending_finalization",
+            "load_release_recovery",
+            "write_release_recovery",
+            "clear_release_recovery",
         )
         if any(
             not callable(getattr(final_evidence_store, method, None))
@@ -504,6 +538,16 @@ class LeaseBoundPerformanceAcceptance:
             self._clear_matching_committed_pending_finalization(completed)
             return completed
         self._final_evidence_store.assert_incomplete_final_evidence_recoverable()
+        release_recovery = self._final_evidence_store.load_release_recovery()
+        if release_recovery is not None:
+            recovered = self._recover_checkpoint_preflight(
+                release_recovery,
+                digest_field="release_recovery_sha256",
+                validator=_validate_release_recovery,
+                current=current_bindings,
+            )
+            self._final_evidence_store.write_release_recovery(recovered)
+            self._finalize_release_recovery(recovered, capability)
         pending = self._final_evidence_store.load_pending_finalization()
         if pending is not None:
             recovered = self._recover_checkpoint_preflight(
@@ -530,14 +574,18 @@ class LeaseBoundPerformanceAcceptance:
         try:
             _validate_lease_receipt(
                 acquired_receipt,
+                expected_lease_binding_sha256=self._execution_bindings[
+                    "lease_binding_sha256"
+                ],
                 expected_target_binding_sha256=self._execution_bindings[
                     "target_binding_sha256"
                 ],
                 expected_lifecycle_state="HELD",
             )
         except ValueError:
-            self._runtime.release(capability)
-            raise
+            self._release_after_failure(
+                capability, "PERFORMANCE_LEASE_RECEIPT_INVALID"
+            )
         try:
             evidence = self._runner.run(
                 **kwargs,
@@ -554,18 +602,31 @@ class LeaseBoundPerformanceAcceptance:
             if evidence is None:
                 raise
         if not isinstance(evidence, Mapping):
-            self._runtime.release(capability)
-            raise ValueError("PERFORMANCE_EVIDENCE_INVALID")
+            self._release_after_failure(
+                capability, "PERFORMANCE_EVIDENCE_INVALID"
+            )
         try:
             _validate_redacted_evidence(evidence)
+        except ValueError as exc:
+            self._release_after_failure(
+                capability,
+                (
+                    str(exc)
+                    if str(exc) in _EARLY_RELEASE_FAILURE_CODES
+                    else "PERFORMANCE_EVIDENCE_INVALID"
+                ),
+            )
         except Exception:
-            self._runtime.release(capability)
-            raise
+            self._release_after_failure(
+                capability, "PERFORMANCE_EVIDENCE_INVALID"
+            )
         if evidence.get("owner_approval_body_sha256") != self._execution_bindings[
             "owner_approval_body_sha256"
         ]:
-            self._runtime.release(capability)
-            raise ValueError("PERFORMANCE_OWNER_EVIDENCE_BINDING_MISMATCH")
+            self._release_after_failure(
+                capability,
+                "PERFORMANCE_OWNER_EVIDENCE_BINDING_MISMATCH",
+            )
         terminal = _build_terminal_measurement(
             evidence=evidence,
             execution_bindings=self._execution_bindings,
@@ -707,6 +768,44 @@ class LeaseBoundPerformanceAcceptance:
         self._final_evidence_store.clear_terminal_measurement()
         return self._finalize_pending(pending, capability)
 
+    def _release_after_failure(
+        self,
+        capability: VerifiedLiveActionCapability,
+        failure_code: str,
+    ) -> None:
+        recovery = _build_release_recovery(
+            failure_code=failure_code,
+            execution_bindings=self._execution_bindings,
+        )
+        self._final_evidence_store.write_release_recovery(recovery)
+        self._finalize_release_recovery(recovery, capability)
+
+    def _finalize_release_recovery(
+        self,
+        recovery: Mapping[str, Any],
+        capability: VerifiedLiveActionCapability,
+    ) -> None:
+        validated = _validate_release_recovery(recovery)
+        if not _stable_execution_bindings_match(
+            validated["execution_bindings"], self._execution_bindings
+        ):
+            raise ValueError("PERFORMANCE_RELEASE_RECOVERY_BINDING_MISMATCH")
+        release_receipt = self._runtime.release(capability)
+        _validate_lease_receipt(
+            release_receipt,
+            expected_lease_binding_sha256=self._execution_bindings[
+                "lease_binding_sha256"
+            ],
+            expected_target_binding_sha256=self._execution_bindings[
+                "target_binding_sha256"
+            ],
+            expected_lifecycle_state="RELEASED",
+        )
+        self._final_evidence_store.clear_release_recovery()
+        if self._final_evidence_store.load_release_recovery() is not None:
+            raise ValueError("PERFORMANCE_RELEASE_RECOVERY_CLEANUP_UNPROVEN")
+        raise ValueError(validated["failure_code"])
+
     def _finalize_pending(
         self,
         pending: Mapping[str, Any],
@@ -721,6 +820,9 @@ class LeaseBoundPerformanceAcceptance:
         release_receipt = self._runtime.release(capability)
         _validate_lease_receipt(
             release_receipt,
+            expected_lease_binding_sha256=initial_bindings[
+                "lease_binding_sha256"
+            ],
             expected_target_binding_sha256=initial_bindings[
                 "target_binding_sha256"
             ],
@@ -770,6 +872,14 @@ class PerformanceFinalEvidenceStore:
             else f"{self._path.name}.pending-finalization.redacted.json"
         )
         self._pending_path = self._path.with_name(pending_name)
+        release_recovery_name = (
+            f"{self._path.name[:-len(suffix)]}.release-recovery{suffix}"
+            if self._path.name.endswith(suffix)
+            else f"{self._path.name}.release-recovery.redacted.json"
+        )
+        self._release_recovery_path = self._path.with_name(
+            release_recovery_name
+        )
         terminal_name = (
             f"{self._path.name[:-len(suffix)]}.terminal-measurement{suffix}"
             if self._path.name.endswith(suffix)
@@ -796,6 +906,10 @@ class PerformanceFinalEvidenceStore:
     @property
     def terminal_path(self) -> Path:
         return self._terminal_path
+
+    @property
+    def release_recovery_path(self) -> Path:
+        return self._release_recovery_path
 
     @property
     def markdown_path(self) -> Path:
@@ -946,6 +1060,93 @@ class PerformanceFinalEvidenceStore:
 
     def clear_pending_finalization(self) -> None:
         _remove_private_file(self._pending_path)
+
+    def load_release_recovery(self) -> Mapping[str, Any] | None:
+        recovery = _read_private_json(
+            self._release_recovery_path,
+            error_code="PERFORMANCE_RELEASE_RECOVERY_INVALID",
+        )
+        if recovery is None:
+            return None
+        return _validate_release_recovery(recovery)
+
+    def write_release_recovery(self, recovery: Mapping[str, Any]) -> None:
+        validated = _validate_release_recovery(recovery)
+        _atomic_private_json_write(self._release_recovery_path, validated)
+
+    def clear_release_recovery(self) -> None:
+        _remove_private_file(self._release_recovery_path)
+
+
+_EARLY_RELEASE_FAILURE_CODES = frozenset(
+    {
+        "PERFORMANCE_EVIDENCE_INVALID",
+        "PERFORMANCE_EVIDENCE_REDACTION_INVALID",
+        "PERFORMANCE_LEASE_RECEIPT_INVALID",
+        "PERFORMANCE_OWNER_EVIDENCE_BINDING_MISMATCH",
+    }
+)
+
+
+def _build_release_recovery(
+    *,
+    failure_code: str,
+    execution_bindings: Mapping[str, str],
+    preflight_evidence_chain: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    if failure_code not in _EARLY_RELEASE_FAILURE_CODES:
+        raise ValueError("PERFORMANCE_RELEASE_RECOVERY_INVALID")
+    chain = (
+        _initial_preflight_evidence_chain(execution_bindings)
+        if preflight_evidence_chain is None
+        else _validate_preflight_evidence_chain(
+            preflight_evidence_chain, execution_bindings
+        )
+    )
+    payload = {
+        "schema_version": "nac.m365-bff-performance-release-recovery/v1",
+        "failure_code": failure_code,
+        "execution_bindings": dict(execution_bindings),
+        "preflight_evidence_chain": chain,
+    }
+    payload["release_recovery_sha256"] = _sha256_json(payload)
+    return _validate_release_recovery(payload)
+
+
+def _validate_release_recovery(value: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError("PERFORMANCE_RELEASE_RECOVERY_INVALID")
+    result = dict(value)
+    digest = result.pop("release_recovery_sha256", None)
+    required = {
+        "schema_version",
+        "failure_code",
+        "execution_bindings",
+        "preflight_evidence_chain",
+    }
+    try:
+        execution_bindings = _validate_execution_bindings(
+            result.get("execution_bindings")
+        )
+        chain = _validate_preflight_evidence_chain(
+            result.get("preflight_evidence_chain"), execution_bindings
+        )
+    except (TypeError, ValueError):
+        raise ValueError("PERFORMANCE_RELEASE_RECOVERY_INVALID") from None
+    if (
+        set(result) != required
+        or result.get("schema_version")
+        != "nac.m365-bff-performance-release-recovery/v1"
+        or result.get("failure_code") not in _EARLY_RELEASE_FAILURE_CODES
+        or digest != _sha256_json(result)
+    ):
+        raise ValueError("PERFORMANCE_RELEASE_RECOVERY_INVALID")
+    return {
+        **result,
+        "execution_bindings": execution_bindings,
+        "preflight_evidence_chain": chain,
+        "release_recovery_sha256": digest,
+    }
 
 
 def _build_pending_finalization(
@@ -1781,11 +1982,17 @@ def _owner_execution_binding_keys() -> set[str]:
         "measurement_policy_sha256",
         "monitor_policy_sha256",
         "lease_policy_sha256",
+        "lease_broker_policy_sha256",
         "infrastructure_binding_sha256",
         "infrastructure_parameters_sha256",
         "infrastructure_source_sha256",
         "lease_bootstrap_policy_sha256",
         "infrastructure_safety_policy_sha256",
+        "worm_baseline_binding_sha256",
+        "worm_baseline_compiled_arm_sha256",
+        "worm_baseline_parameters_sha256",
+        "worm_baseline_source_sha256",
+        "deployment_sequence_sha256",
         "owner_approval_body_sha256",
         "monitor_window_anchor_sha256",
         "target_binding_sha256",
@@ -1990,6 +2197,7 @@ def _validate_approved_plan_bindings(
                 "measurement_policy_sha256",
                 "monitor_policy_sha256",
                 "lease_policy_sha256",
+                "lease_broker_policy_sha256",
             )
         )
     ):
@@ -2019,17 +2227,47 @@ def _validate_digest_bindings(
 
 
 def _validate_lease_receipt(
-    receipt: AzureBlobLeaseReceipt,
+    receipt: PerformanceLeaseReceiptPort,
     *,
+    expected_lease_binding_sha256: str,
     expected_target_binding_sha256: str,
     expected_lifecycle_state: str,
 ) -> None:
     if (
-        not isinstance(receipt, AzureBlobLeaseReceipt)
+        not _is_performance_lease_receipt(receipt)
+        or receipt.lease_binding_sha256 != expected_lease_binding_sha256
         or receipt.target_binding_sha256 != expected_target_binding_sha256
         or receipt.lifecycle_state != expected_lifecycle_state
+        or receipt.lifecycle_state_sha256
+        != _sha256_text(receipt.lifecycle_state)
     ):
         raise ValueError("PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID")
+
+
+def _is_performance_lease_port(value: object) -> bool:
+    return (
+        all(
+            callable(getattr(value, method, None))
+            for method in ("acquire", "assert_held", "release", "execution_fence")
+        )
+        and _is_sha256(getattr(value, "target_binding_sha256", None))
+        and _is_sha256(getattr(value, "lease_binding_sha256", None))
+        and _is_sha256(
+            getattr(value, "infrastructure_safety_evidence_sha256", None)
+        )
+        and _is_sha256(
+            getattr(value, "lease_acquisition_safety_evidence_sha256", None)
+        )
+    )
+
+
+def _is_performance_lease_receipt(value: object) -> bool:
+    return (
+        _is_sha256(getattr(value, "lease_binding_sha256", None))
+        and _is_sha256(getattr(value, "target_binding_sha256", None))
+        and getattr(value, "lifecycle_state", None) in {"HELD", "RELEASED"}
+        and _is_sha256(getattr(value, "lifecycle_state_sha256", None))
+    )
 
 
 def _is_sha256(value: object) -> bool:

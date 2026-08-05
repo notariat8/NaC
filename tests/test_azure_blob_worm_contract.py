@@ -22,6 +22,12 @@ VERIFICATION = (
     / "workflows/verification-contracts/business-case-type-azure-blob-worm-s6b.verification.json"
 )
 VALIDATOR = ROOT / "scripts/validate_business_case_type_azure_blob_worm.py"
+COMPILED_TEMPLATE = (
+    ROOT / "deploy/runtime/azure/immutable-evidence/compiled/main.json"
+)
+COMPILED_PARAMETERS = (
+    ROOT / "deploy/runtime/azure/immutable-evidence/compiled/main.parameters.json"
+)
 EXPECTED_ACCEPTANCE = [f"AC-S6B-{index:02d}" for index in range(1, 8)]
 
 
@@ -215,11 +221,11 @@ class AzureBlobWormContractTests(unittest.TestCase):
             "Microsoft.Storage/storageAccounts/encryptionScopes/read",
             "subscription().tenantId",
             "subscription().id",
-            "var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, storageAccountName)",
+            "var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)",
             "var keyVaultName = 'kv-nacw-${targetIsolationSuffix}'",
             "var cmkIdentityName = 'id-nac-worm-cmk-${targetIsolationSuffix}'",
             "var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'",
-            "guid(subscription().id, resourceGroup().id, storageAccountName",
+            "guid(subscription().id, resourceGroup().id, validatedStorageAccountName",
             "roleName: 'NaC WORM Blob Add Read ${targetIsolationSuffix}'",
             "roleName: 'NaC WORM Storage Policy Read ${targetIsolationSuffix}'",
             "azure-subscription-resource-tenant-readback",
@@ -244,6 +250,145 @@ class AzureBlobWormContractTests(unittest.TestCase):
         self.assertNotIn("/blobs/write'", text)
         self.assertNotIn("ba92f5b4-2d11-453d-a403-e96b0029c9fe", text)
         self.assertNotIn("b7e6dc6d-f1e8-4753-8033-0f276bb0955b", text)
+
+    def test_bicep_baseline_binds_owner_approved_scope_and_incremental_mode(
+        self,
+    ) -> None:
+        template = (
+            ROOT / "deploy/runtime/azure/immutable-evidence/main.bicep"
+        ).read_text(encoding="utf-8")
+        parameters = (
+            ROOT / "deploy/runtime/azure/immutable-evidence/main.bicepparam"
+        ).read_text(encoding="utf-8")
+
+        for marker in (
+            "param tenantId string",
+            "param subscriptionId string",
+            "param resourceGroupName string",
+            "param deploymentMode string",
+            "tenant().tenantId == tenantId",
+            "subscription().subscriptionId == subscriptionId",
+            "resourceGroup().name == resourceGroupName",
+            "deploymentMode == 'Incremental'",
+            "var validatedStorageAccountName = !empty(validatedDeploymentScope)",
+            "name: validatedStorageAccountName",
+            "output deploymentScopeBinding string = validatedDeploymentScope",
+            "output deploymentModeBinding string = deploymentMode",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, template)
+        self.assertRegex(
+            template,
+            r"@allowed\(\[\s*'Incremental'\s*\]\)\s*param deploymentMode string",
+        )
+        for marker in (
+            "param tenantId = '870c862b-56f7-4c9b-b0d9-f1f7d32c835c'",
+            "param subscriptionId = '37cd9645-6cb9-4278-88ee-e80377cd951c'",
+            "param resourceGroupName = 'rg-nac-bff-test'",
+            "param deploymentMode = 'Incremental'",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, parameters)
+
+    def test_canonical_compiled_baseline_is_bound_and_remains_unlocked(self) -> None:
+        template = json.loads(COMPILED_TEMPLATE.read_text(encoding="utf-8"))
+        parameters_artifact = json.loads(
+            COMPILED_PARAMETERS.read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            template["metadata"]["_generator"],
+            {
+                "name": "bicep",
+                "version": "0.45.15.27210",
+                "templateHash": "17775936280179076332",
+            },
+        )
+        self.assertEqual(
+            template["parameters"]["deploymentMode"]["allowedValues"],
+            ["Incremental"],
+        )
+        scope_guard = template["variables"]["validatedDeploymentScope"]
+        for marker in (
+            "parameters('tenantId')",
+            "parameters('subscriptionId')",
+            "parameters('resourceGroupName')",
+            "parameters('deploymentMode')",
+            "Incremental",
+            "fail(",
+        ):
+            self.assertIn(marker, scope_guard)
+        self.assertEqual(
+            template["outputs"]["deploymentScopeBinding"]["value"],
+            "[variables('validatedDeploymentScope')]",
+        )
+        self.assertEqual(
+            template["outputs"]["deploymentModeBinding"]["value"],
+            "[parameters('deploymentMode')]",
+        )
+        self.assertIn(
+            "variables('validatedDeploymentScope')",
+            template["variables"]["validatedStorageAccountName"],
+        )
+        storage = next(
+            resource
+            for resource in template["resources"]
+            if resource["type"] == "Microsoft.Storage/storageAccounts"
+        )
+        self.assertEqual(
+            storage["name"], "[variables('validatedStorageAccountName')]"
+        )
+
+        policy = next(
+            resource
+            for resource in template["resources"]
+            if resource["type"].endswith("/immutabilityPolicies")
+        )
+        self.assertNotIn("state", policy["properties"])
+        self.assertNotIn("Microsoft.Resources/deploymentScripts", {
+            resource["type"] for resource in template["resources"]
+        })
+
+        self.assertEqual(
+            parameters_artifact["$schema"],
+            "https://schema.management.azure.com/schemas/2019-04-01/"
+            "deploymentParameters.json#",
+        )
+        self.assertEqual(parameters_artifact["contentVersion"], "1.0.0.0")
+        parameters = parameters_artifact["parameters"]
+        self.assertEqual(
+            set(parameters),
+            {
+                "tenantId",
+                "subscriptionId",
+                "resourceGroupName",
+                "deploymentMode",
+                "storageAccountName",
+                "tags",
+            },
+        )
+        self.assertEqual(parameters["deploymentMode"]["value"], "Incremental")
+        self.assertEqual(
+            parameters["tenantId"]["value"],
+            "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+        )
+        self.assertEqual(
+            parameters["subscriptionId"]["value"],
+            "37cd9645-6cb9-4278-88ee-e80377cd951c",
+        )
+        self.assertEqual(
+            parameters["resourceGroupName"]["value"], "rg-nac-bff-test"
+        )
+        self.assertEqual(
+            parameters["storageAccountName"]["value"], "stnacwormoffline001"
+        )
+        self.assertEqual(
+            parameters["tags"]["value"],
+            {
+                "owner": "replace-before-s7",
+                "purpose": "offline-contract-baseline",
+            },
+        )
 
     def test_central_cli_reports_provider_free_s6b_readiness(self) -> None:
         completed = subprocess.run(

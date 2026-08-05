@@ -64,6 +64,8 @@ ALLOWED_COMMAND_PREFIXES = (
     ("deployment", "operation", "group", "list"),
     ("identity", "show"),
     ("functionapp", "identity", "show"),
+    ("functionapp", "config", "appsettings", "set"),
+    ("functionapp", "config", "appsettings", "list"),
     ("resource", "list"),
     ("resource", "show"),
     ("rest",),
@@ -170,6 +172,30 @@ _MAX_CLOUD_SELECTION_BYTES = 4096
 _MAX_INTERPRETER_LINKS = 8
 _FILE_CHUNK_SIZE = 1024 * 1024
 _MONITOR_EXECUTION_AUTHORITY = object()
+_PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY = object()
+
+_PERFORMANCE_BROKER_SETTING_NAMES = frozenset(
+    {
+        "NAC_BFF_PERFORMANCE_LEASE_ENABLED",
+        "NAC_BFF_PERFORMANCE_LEASE_TENANT_ID",
+        "NAC_BFF_PERFORMANCE_LEASE_ACTOR_ID",
+        "NAC_BFF_PERFORMANCE_LEASE_OWNER_SUBJECT",
+        "NAC_BFF_PERFORMANCE_LEASE_OWNER_BINDING_SHA256",
+        "NAC_BFF_PERFORMANCE_LEASE_COMMIT_SHA",
+        "NAC_BFF_PERFORMANCE_LEASE_TREE_SHA",
+        "NAC_BFF_PERFORMANCE_LEASE_FUNCTION_PACKAGE_SHA256",
+        "NAC_BFF_PERFORMANCE_LEASE_PLAN_SHA256",
+        "NAC_BFF_PERFORMANCE_LEASE_TARGET_BINDING_SHA256",
+        "NAC_BFF_PERFORMANCE_LEASE_BLOB_PATH",
+        "NAC_BFF_PERFORMANCE_LEASE_BLOB_URL",
+        "NAC_BFF_PERFORMANCE_LEASE_STORAGE_BINDING_ID",
+        "NAC_BFF_PERFORMANCE_LEASE_STORAGE_ATTESTATION_B64",
+        "NAC_BFF_PERFORMANCE_LEASE_TICKET_ISSUER",
+        "NAC_BFF_PERFORMANCE_LEASE_TICKET_KEY_ID",
+        "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_B64",
+        "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_SHA256",
+    }
+)
 
 
 class AzureCliAdapter:
@@ -226,6 +252,47 @@ class AzureCliAdapter:
             environ=self._environ,
             timeout_seconds=self._timeout_seconds,
             _monitor_execution_authority=_MONITOR_EXECUTION_AUTHORITY,
+        )
+
+    def execute_exact_rest(self, command: object) -> dict[str, object]:
+        """Execute one sealed, read-only performance-infrastructure ARM GET."""
+
+        from .azure_performance_infrastructure_ports import BoundAzureCliCommand
+
+        if type(command) is not BoundAzureCliCommand:
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        try:
+            command._assert_issued()
+        except Exception:
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        if (
+            not command.read_only
+            or command.artifacts
+            or command.argv[:1] != ("rest",)
+        ):
+            return _command_result(
+                ok=False,
+                code="AZURE_CLI_COMMAND_BLOCKED",
+                command=None,
+            )
+        return _run_azure_cli(
+            command.argv,
+            binary=self._binary,
+            expected_binary_sha256=self._expected_binary_sha256,
+            environ=self._environ,
+            timeout_seconds=command.timeout_seconds,
+            _performance_infrastructure_command=command,
+            _performance_infrastructure_rest_authority=(
+                _PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY
+            ),
         )
 
     def run_with_timeout(
@@ -1077,10 +1144,38 @@ def _run_azure_cli(
     timeout_seconds: float = 120,
     bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
     _monitor_execution_authority: object | None = None,
+    _performance_infrastructure_command: object | None = None,
+    _performance_infrastructure_rest_authority: object | None = None,
 ) -> dict[str, object]:
     """Internal executor; Monitor authority is not exposed by the public API."""
 
-    command, family, validation_code = _validated_command(argv)
+    if (
+        _performance_infrastructure_rest_authority
+        is _PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY
+    ):
+        from .azure_performance_infrastructure_ports import BoundAzureCliCommand
+
+        candidate = _performance_infrastructure_command
+        try:
+            if type(candidate) is not BoundAzureCliCommand:
+                raise ValueError
+            candidate._assert_issued()
+            if (
+                not candidate.read_only
+                or candidate.artifacts
+                or candidate.argv != tuple(argv)
+                or candidate.argv[:1] != ("rest",)
+            ):
+                raise ValueError
+            command = tuple(candidate.argv)
+            family = ("rest",)
+            validation_code = "AZURE_CLI_OK"
+        except Exception:
+            command = None
+            family = None
+            validation_code = "AZURE_CLI_COMMAND_BLOCKED"
+    else:
+        command, family, validation_code = _validated_command(argv)
     if command is None or family is None:
         return _command_result(
             ok=False,
@@ -1489,6 +1584,59 @@ def _resource_group_tags(values: tuple[str, ...]) -> bool:
     } and len(values) == 3
 
 
+def _performance_broker_settings(values: tuple[str, ...]) -> bool:
+    if len(values) != len(_PERFORMANCE_BROKER_SETTING_NAMES):
+        return False
+    parsed: dict[str, str] = {}
+    for item in values:
+        name, separator, value = item.partition("=")
+        if (
+            separator != "="
+            or name not in _PERFORMANCE_BROKER_SETTING_NAMES
+            or name in parsed
+            or not value
+            or len(value) > 8192
+            or any(character in value for character in "\r\n\x00")
+        ):
+            return False
+        parsed[name] = value
+    return (
+        set(parsed) == set(_PERFORMANCE_BROKER_SETTING_NAMES)
+        and parsed["NAC_BFF_PERFORMANCE_LEASE_ENABLED"] == "true"
+        and _UUID_RE.fullmatch(parsed["NAC_BFF_PERFORMANCE_LEASE_TENANT_ID"])
+        is not None
+        and _UUID_RE.fullmatch(parsed["NAC_BFF_PERFORMANCE_LEASE_ACTOR_ID"])
+        is not None
+        and all(
+            re.fullmatch(r"[0-9a-f]{64}", parsed[name]) is not None
+            for name in (
+                "NAC_BFF_PERFORMANCE_LEASE_OWNER_BINDING_SHA256",
+                "NAC_BFF_PERFORMANCE_LEASE_TREE_SHA",
+                "NAC_BFF_PERFORMANCE_LEASE_FUNCTION_PACKAGE_SHA256",
+                "NAC_BFF_PERFORMANCE_LEASE_PLAN_SHA256",
+                "NAC_BFF_PERFORMANCE_LEASE_TARGET_BINDING_SHA256",
+                "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_SHA256",
+            )
+        )
+        and re.fullmatch(
+            r"[0-9a-f]{40}",
+            parsed["NAC_BFF_PERFORMANCE_LEASE_COMMIT_SHA"],
+        )
+        is not None
+        and re.fullmatch(
+            r"locks/[0-9a-f]{64}\.lock",
+            parsed["NAC_BFF_PERFORMANCE_LEASE_BLOB_PATH"],
+        )
+        is not None
+        and parsed["NAC_BFF_PERFORMANCE_LEASE_BLOB_URL"].startswith(
+            "https://"
+        )
+        and parsed["NAC_BFF_PERFORMANCE_LEASE_BLOB_URL"].endswith(
+            "/" + parsed["NAC_BFF_PERFORMANCE_LEASE_BLOB_PATH"]
+        )
+    )
+
+
 def _resource_detail_type_from_id(value: str) -> str | None:
     lowered = value.lower()
     prefix = (
@@ -1744,6 +1892,28 @@ _COMMAND_SCHEMAS = {
     ),
     ("functionapp", "identity", "show"): _CommandSchema(
         ("functionapp", "identity", "show"),
+        required=frozenset({"--name", "--resource-group"}),
+        optional=_COMMON_OPTIONAL,
+        validators={
+            "--name": _single_exact(FUNCTION_APP),
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("functionapp", "config", "appsettings", "set"): _CommandSchema(
+        ("functionapp", "config", "appsettings", "set"),
+        required=frozenset({"--name", "--resource-group", "--settings"}),
+        optional=_COMMON_OPTIONAL,
+        multi=frozenset({"--settings"}),
+        validators={
+            "--name": _single_exact(FUNCTION_APP),
+            "--resource-group": _single_exact(RESOURCE_GROUP),
+            "--settings": _performance_broker_settings,
+            **_COMMON_VALIDATORS,
+        },
+    ),
+    ("functionapp", "config", "appsettings", "list"): _CommandSchema(
+        ("functionapp", "config", "appsettings", "list"),
         required=frozenset({"--name", "--resource-group"}),
         optional=_COMMON_OPTIONAL,
         validators={

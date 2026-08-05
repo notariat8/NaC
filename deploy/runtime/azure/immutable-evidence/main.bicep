@@ -8,6 +8,21 @@ targetScope = 'resourceGroup'
 ])
 param location string = 'germanywestcentral'
 
+@description('Exact Entra tenant bound by the owner approval.')
+param tenantId string
+
+@description('Exact Azure subscription bound by the owner approval.')
+param subscriptionId string
+
+@description('Exact Azure resource group bound by the owner approval.')
+param resourceGroupName string
+
+@description('Owner-bound deployment mode. The caller must also invoke ARM in Incremental mode; templates cannot inspect the outer deployment mode.')
+@allowed([
+  'Incremental'
+])
+param deploymentMode string
+
 @minLength(3)
 @maxLength(24)
 param storageAccountName string
@@ -23,13 +38,19 @@ param encryptionScopeName string = 'nac-worm-tenant'
 param tags object = {}
 
 var immutableRetentionDays = 3653
-var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, storageAccountName)
+var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName && deploymentMode == 'Incremental'
+  ? '${tenantId}/${subscriptionId}/${resourceGroupName}/${deploymentMode}'
+  : fail('Immutable evidence baseline deployment scope or mode does not match the owner-bound tenant, subscription, resource group, and Incremental mode.')
+var validatedStorageAccountName = !empty(validatedDeploymentScope)
+  ? storageAccountName
+  : fail('Immutable evidence baseline deployment binding is empty.')
+var targetIsolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
 var keyVaultName = 'kv-nacw-${targetIsolationSuffix}'
 var cmkIdentityName = 'id-nac-worm-cmk-${targetIsolationSuffix}'
 var writerIdentityName = 'id-nac-worm-writer-${targetIsolationSuffix}'
 var keyVaultCryptoServiceEncryptionUserRoleId = 'e147488a-f6f5-4113-8e2d-b22465e65bf6'
-var writerDataRoleId = guid(subscription().id, resourceGroup().id, storageAccountName, 'nac-worm-blob-add-read-v2')
-var writerManagementReadRoleId = guid(subscription().id, resourceGroup().id, storageAccountName, 'nac-worm-management-read-v1')
+var writerDataRoleId = guid(subscription().id, resourceGroup().id, validatedStorageAccountName, 'nac-worm-blob-add-read-v2')
+var writerManagementReadRoleId = guid(subscription().id, resourceGroup().id, validatedStorageAccountName, 'nac-worm-management-read-v1')
 var baselineTags = union(tags, {
   workload: 'nac-immutable-evidence'
   status: 'S6B_AZURE_WORM_ADAPTER_READY_OFFLINE'
@@ -147,7 +168,7 @@ resource writerManagementReadRole 'Microsoft.Authorization/roleDefinitions@2022-
 }
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
+  name: validatedStorageAccountName
   location: location
   tags: baselineTags
   kind: 'StorageV2'
@@ -296,3 +317,5 @@ output cmkIdentityResourceId string = cmkIdentity.id
 output writerIdentityResourceId string = writerIdentity.id
 output writerDataRoleDefinitionId string = writerDataRole.id
 output writerManagementReadRoleDefinitionId string = writerManagementReadRole.id
+output deploymentScopeBinding string = validatedDeploymentScope
+output deploymentModeBinding string = deploymentMode

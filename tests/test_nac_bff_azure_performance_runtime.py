@@ -75,6 +75,9 @@ EXECUTION_BINDINGS = {
     "measurement_policy_sha256": APPROVED_PLAN["measurement_policy_sha256"],
     "monitor_policy_sha256": APPROVED_PLAN["monitor_policy_sha256"],
     "lease_policy_sha256": APPROVED_PLAN["lease_policy_sha256"],
+    "lease_broker_policy_sha256": APPROVED_PLAN[
+        "lease_broker_policy_sha256"
+    ],
     "infrastructure_binding_sha256": INFRASTRUCTURE_BINDING_SHA256,
     "infrastructure_parameters_sha256": INFRASTRUCTURE_PARAMETERS_SHA256,
     "infrastructure_source_sha256": INFRASTRUCTURE_SOURCE_SHA256,
@@ -82,6 +85,11 @@ EXECUTION_BINDINGS = {
     "infrastructure_safety_policy_sha256": (
         INFRASTRUCTURE_SAFETY_POLICY_SHA256
     ),
+    "worm_baseline_binding_sha256": "4" * 64,
+    "worm_baseline_compiled_arm_sha256": "5" * 64,
+    "worm_baseline_parameters_sha256": "6" * 64,
+    "worm_baseline_source_sha256": "7" * 64,
+    "deployment_sequence_sha256": "9" * 64,
     "infrastructure_safety_evidence_sha256": "a" * 64,
     "lease_acquisition_safety_evidence_sha256": "b" * 64,
     "lease_binding_sha256": "e" * 64,
@@ -156,7 +164,7 @@ def _receipt(
         read_identity_binding_sha256="3" * 64,
         write_identity_binding_sha256="4" * 64,
         lifecycle_state=lifecycle_state,
-        lifecycle_state_sha256="5" * 64,
+        lifecycle_state_sha256=performance._sha256_text(lifecycle_state),
     )
 
 
@@ -386,58 +394,46 @@ def _measurement_evidence_for_lease(lease_binding_sha256: str) -> dict:
     return evidence
 
 
-def _public_verifier_execution_bindings() -> tuple[dict, dict, dict[str, str]]:
-    from nac_bff.azure_performance_infrastructure_safety import (
-        validate_infrastructure_safety_evidence,
-    )
-    from nac_bff import azure_performance_infrastructure_safety as safety_module
-    from nac_bff.azure_performance_lease import (
-        AzureBlobLeaseBinding,
-        build_lease_acquisition_safety_evidence,
-    )
-    from tests import test_nac_bff_azure_performance_infrastructure_safety as fixture
-
-    fixture.TARGET_BINDING = TARGET_BINDING_SHA256
-    with tempfile.TemporaryDirectory() as ledger_directory, patch.object(
-        safety_module,
-        "_READBACK_REPLAY_LEDGER_DIRECTORY",
-        Path(ledger_directory) / "ledger",
-    ), patch.object(
-        safety_module,
-        "_trusted_now",
-        return_value=fixture.VERIFY_AT,
-    ):
-        infrastructure = validate_infrastructure_safety_evidence(
-            fixture._issue_evidence()
-        )
-    binding = AzureBlobLeaseBinding(
-        account_name=infrastructure["coordination_storage_account_name"],
-        bff_account_name=infrastructure["bff_storage_account_resource_id"].rsplit(
-            "/", 1
-        )[-1],
-        worm_account_name=infrastructure[
-            "worm_storage_account_resource_id"
-        ].rsplit("/", 1)[-1],
-        coordination_storage_account_resource_id=infrastructure[
-            "coordination_storage_account_resource_id"
-        ],
-        owner_approval_body_sha256=EXECUTION_BINDINGS[
+def _restart_evidence_bindings() -> tuple[dict, dict, dict[str, str]]:
+    infrastructure_payload = {
+        "owner_binding_sha256": EXECUTION_BINDINGS[
             "owner_approval_body_sha256"
         ],
-        token_subject=infrastructure["provisioner_principal_id"],
-        token_tenant_id=infrastructure["tenant_id"],
-        target_binding_sha256=TARGET_BINDING_SHA256,
-        expected_etag='"nac-restart-test-etag"',
-        read_identity_binding_sha256="3" * 64,
-        write_identity_binding_sha256="4" * 64,
-    )
-    with patch.object(
-        safety_module, "_trusted_now", return_value=fixture.VERIFY_AT
-    ):
-        acquisition = build_lease_acquisition_safety_evidence(
-            binding=binding,
-            infrastructure_safety_evidence=infrastructure,
-        )
+        "target_binding_sha256": TARGET_BINDING_SHA256,
+        "broker_principal_id": "abcdef01-2222-4333-8444-555555555555",
+        "broker_caller_service_principal_id": (
+            "abcdef03-2222-4333-8444-555555555555"
+        ),
+        "broker_function_package_sha256": "5" * 64,
+        "broker_ticket_verification_certificate_sha256": "6" * 64,
+        "readback_nonce_sha256": os.urandom(32).hex(),
+    }
+    infrastructure = {
+        **infrastructure_payload,
+        "toolchain_attestations_sha256": "3" * 64,
+        "infrastructure_safety_policy_sha256": (
+            INFRASTRUCTURE_SAFETY_POLICY_SHA256
+        ),
+        "infrastructure_safety_evidence_sha256": performance._sha256_json(
+            infrastructure_payload
+        ),
+    }
+    acquisition_payload = {
+        "owner_binding_sha256": EXECUTION_BINDINGS[
+            "owner_approval_body_sha256"
+        ],
+        "target_binding_sha256": TARGET_BINDING_SHA256,
+        "infrastructure_safety_evidence_sha256": infrastructure[
+            "infrastructure_safety_evidence_sha256"
+        ],
+        "lease_binding_sha256": "e" * 64,
+    }
+    acquisition = {
+        **acquisition_payload,
+        "lease_acquisition_safety_evidence_sha256": performance._sha256_json(
+            acquisition_payload
+        ),
+    }
     bindings = {
         **EXECUTION_BINDINGS,
         "toolchain_attestations_sha256": infrastructure[
@@ -474,7 +470,7 @@ def _public_verifier_execution_bindings() -> tuple[dict, dict, dict[str, str]]:
 
 
 def _run_public_verifier_restart_stage(stage: str, evidence_path: str) -> dict:
-    infrastructure, acquisition, bindings = _public_verifier_execution_bindings()
+    infrastructure, acquisition, bindings = _restart_evidence_bindings()
     lease = _Lease(
         infrastructure_safety_evidence_sha256=bindings[
             "infrastructure_safety_evidence_sha256"
@@ -705,6 +701,13 @@ class _Lease(AzureBlobLeaseAdapter):
         )
 
 
+class _ReleaseResponseLostLease(_Lease):
+    def release(self, lease_id, live_action_capability=None):
+        self.capabilities.append(live_action_capability)
+        self.calls.append(f"release:{lease_id}")
+        raise RuntimeError("release response lost")
+
+
 class _Monitor(AzurePerformanceMonitorAdapter):
     def __init__(self, *, on_demand_execution_count: int = 500) -> None:
         self.calls: list[tuple[datetime, datetime]] = []
@@ -813,6 +816,29 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
         self.assertEqual(monitor.target_bindings, [TARGET_BINDING_SHA256])
         self.assertEqual(summary["measurement_attestation_sha256"], "a" * 64)
         self.assertEqual(summary["lease_binding_sha256"], "e" * 64)
+
+    def test_assert_receipt_is_validated_before_clock_or_monitor(self):
+        class _MalformedAssertLease(_Lease):
+            def assert_held(self, lease_id, live_action_capability=None):
+                self.capabilities.append(live_action_capability)
+                self.calls.append(f"assert:{lease_id}")
+                return _receipt(
+                    "RELEASED",
+                    lease_binding_sha256="d" * 64,
+                )
+
+        def forbidden_clock():
+            raise AssertionError("clock must not run")
+
+        lease = _MalformedAssertLease()
+        adapter, monitor, _ = self.adapter(lease=lease, clock=forbidden_clock)
+        with self.assertRaisesRegex(
+            ValueError, "PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID"
+        ):
+            adapter.observe(0, "a" * 64, _test_capability())
+
+        self.assertEqual(lease.calls, [f"assert:{LEASE_ID}"])
+        self.assertEqual(monitor.calls, [])
 
     def test_acquire_and_release_are_explicit_not_implicit(self):
         adapter, _, lease = self.adapter()
@@ -950,6 +976,107 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                 ),
             )
         self.assertEqual(lease.calls, [])
+
+    def test_process_restart_recovers_early_cleanup_release_before_acquire(self):
+        first_lease = _ReleaseResponseLostLease()
+        first_adapter, _, _ = self.adapter(lease=first_lease)
+
+        class _InvalidRunner(_Runner):
+            def run(self, **_kwargs):
+                self.calls += 1
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = PerformanceFinalEvidenceStore(
+                Path(directory) / "final.redacted.json"
+            )
+            with self.assertRaisesRegex(RuntimeError, "release response lost"):
+                LeaseBoundPerformanceAcceptance(
+                    runtime=first_adapter,
+                    runner=_InvalidRunner(),
+                    execution_bindings=EXECUTION_BINDINGS,
+                    authorization_verifier=_test_authorization_verifier(),
+                    final_evidence_store=store,
+                ).run(binding="a" * 64)
+            self.assertIsNotNone(store.load_release_recovery())
+
+            second_lease = _Lease()
+            second_adapter, _, _ = self.adapter(lease=second_lease)
+            second_runner = _Runner()
+            with self.assertRaisesRegex(
+                ValueError, "PERFORMANCE_EVIDENCE_INVALID"
+            ):
+                LeaseBoundPerformanceAcceptance(
+                    runtime=second_adapter,
+                    runner=second_runner,
+                    execution_bindings=EXECUTION_BINDINGS,
+                    authorization_verifier=_test_authorization_verifier(),
+                    final_evidence_store=store,
+                ).run(binding="a" * 64)
+
+            self.assertIsNone(store.load_release_recovery())
+            self.assertEqual(second_runner.calls, 0)
+            self.assertEqual(
+                second_lease.calls,
+                [f"release:{LEASE_ID}"],
+            )
+
+    def test_release_recovery_rejects_unbound_or_invalid_release_receipt(self):
+        cases = (
+            (
+                "wrong lease binding",
+                _receipt("RELEASED", lease_binding_sha256="d" * 64),
+            ),
+            (
+                "wrong lifecycle digest",
+                AzureBlobLeaseReceipt(
+                    lease_binding_sha256=EXECUTION_BINDINGS[
+                        "lease_binding_sha256"
+                    ],
+                    target_binding_sha256=TARGET_BINDING_SHA256,
+                    lease_id_sha256="2" * 64,
+                    read_identity_binding_sha256="3" * 64,
+                    write_identity_binding_sha256="4" * 64,
+                    lifecycle_state="RELEASED",
+                    lifecycle_state_sha256="0" * 64,
+                ),
+            ),
+        )
+        for label, receipt in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as directory:
+                store = PerformanceFinalEvidenceStore(
+                    Path(directory) / "final.redacted.json"
+                )
+                store.write_release_recovery(
+                    performance_runtime._build_release_recovery(
+                        failure_code="PERFORMANCE_EVIDENCE_INVALID",
+                        execution_bindings=EXECUTION_BINDINGS,
+                    )
+                )
+
+                class _MalformedReleaseLease(_Lease):
+                    def release(self, lease_id, live_action_capability=None):
+                        self.capabilities.append(live_action_capability)
+                        self.calls.append(f"release:{lease_id}")
+                        return receipt
+
+                lease = _MalformedReleaseLease()
+                adapter, _, _ = self.adapter(lease=lease)
+                runner = _Runner()
+                with self.assertRaisesRegex(
+                    ValueError, "PERFORMANCE_LEASE_RECEIPT_BINDING_INVALID"
+                ):
+                    LeaseBoundPerformanceAcceptance(
+                        runtime=adapter,
+                        runner=runner,
+                        execution_bindings=EXECUTION_BINDINGS,
+                        authorization_verifier=_test_authorization_verifier(),
+                        final_evidence_store=store,
+                    ).run(binding="a" * 64)
+
+                self.assertIsNotNone(store.load_release_recovery())
+                self.assertEqual(runner.calls, 0)
+                self.assertEqual(lease.calls, [f"release:{LEASE_ID}"])
 
     def test_orchestrator_releases_after_runner_failure_without_retry_is_forbidden(
         self,
@@ -1309,7 +1436,7 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
         self.assertEqual(lease.calls, [])
         self.assertEqual(monitor.calls, [])
 
-    def test_two_process_restart_reattests_public_verifier_evidence(self):
+    def test_two_process_restart_reattests_bound_broker_evidence(self):
         code = (
             "import json,sys; "
             "from tests.test_nac_bff_azure_performance_runtime import "
@@ -2202,6 +2329,35 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(stat.S_IMODE(manifest_path.stat().st_mode), 0o600)
             self.assertEqual(list(path.parent.glob(".*.tmp")), [])
+
+    def test_release_recovery_checkpoint_is_private_and_tamper_evident(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "evidence" / "final.redacted.json"
+            store = PerformanceFinalEvidenceStore(path)
+            recovery = performance_runtime._build_release_recovery(
+                failure_code="PERFORMANCE_EVIDENCE_INVALID",
+                execution_bindings=EXECUTION_BINDINGS,
+            )
+
+            store.write_release_recovery(recovery)
+
+            self.assertEqual(store.load_release_recovery(), recovery)
+            self.assertEqual(
+                stat.S_IMODE(store.release_recovery_path.stat().st_mode),
+                0o600,
+            )
+            tampered = dict(recovery)
+            tampered["failure_code"] = "PERFORMANCE_LEASE_RECEIPT_INVALID"
+            store.release_recovery_path.write_text(
+                json.dumps(tampered), encoding="ascii"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "PERFORMANCE_RELEASE_RECOVERY_INVALID"
+            ):
+                store.load_release_recovery()
+
+            store.clear_release_recovery()
+            self.assertIsNone(store.load_release_recovery())
 
     def test_final_evidence_requires_every_not_claimed_position(self):
         fields = (

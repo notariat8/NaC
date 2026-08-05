@@ -1,3 +1,10 @@
+"""Archived tests for the superseded direct local Azure Storage lease path.
+
+The active performance lane uses the BFF broker/UAMI boundary and its focused
+test modules.  This file remains as migration history and is intentionally not
+part of unittest discovery.
+"""
+
 from __future__ import annotations
 
 import base64
@@ -37,18 +44,21 @@ from nac_bff.azure_performance_lease import (
     AzureBlobLeaseError,
     _issue_attested_azure_storage_access_token,
     build_lease_acquisition_safety_evidence,
+    calculate_azure_blob_lease_bootstrap_binding_sha256,
     lease_bootstrap_policy,
     lease_bootstrap_policy_sha256,
     lease_policy,
     lease_policy_sha256,
 )
 from nac_bff.azure_performance_infrastructure_safety import (
-    ALLOWED_DATA_ACTIONS,
+    BOOTSTRAP_ALLOWED_DATA_ACTIONS,
+    RUNTIME_ALLOWED_DATA_ACTIONS,
     AzurePerformanceInfrastructureReadbackAdapter,
     AzurePerformanceInfrastructureSafetyVerification,
     begin_azure_performance_infrastructure_readback_session,
     effective_coordination_tags,
-    exact_lease_blob_condition,
+    exact_bootstrap_lease_blob_condition,
+    exact_runtime_lease_blob_condition,
     verify_azure_performance_infrastructure_safety,
 )
 from nac_bff.azure_performance_monitor import monitor_policy_sha256
@@ -57,9 +67,12 @@ from nac_bff.azure_performance_monitor import monitor_policy_sha256
 TARGET_SHA256 = "1" * 64
 READ_IDENTITY_SHA256 = "2" * 64
 WRITE_IDENTITY_SHA256 = "3" * 64
+BOOTSTRAP_READ_IDENTITY_SHA256 = "4" * 64
+BOOTSTRAP_WRITE_IDENTITY_SHA256 = "5" * 64
 OWNER_APPROVAL_BODY_SHA256 = "9" * 64
 EXPECTED_ETAG = '"0x8DBABCDEF012345"'
 TOKEN_SUBJECT = "11111111-2222-4333-8444-555555555555"
+BOOTSTRAP_TOKEN_SUBJECT = "66666666-2222-4333-8444-555555555555"
 TENANT_ID = "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
 COORDINATION_RESOURCE_ID = (
     "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
@@ -330,14 +343,25 @@ class _Opener:
 
 
 class _TokenProvider:
-    def __init__(self, token: str = STORAGE_TOKEN) -> None:
+    def __init__(self, token: str | None = None) -> None:
         self.token = token
         self.calls: list[dict[str, str]] = []
 
     def __call__(self, **kwargs: str):
         self.calls.append(kwargs)
+        token = self.token
+        if token is None:
+            token = (
+                _jwt(oid=BOOTSTRAP_TOKEN_SUBJECT)
+                if kwargs["identity_binding_sha256"]
+                in {
+                    BOOTSTRAP_READ_IDENTITY_SHA256,
+                    BOOTSTRAP_WRITE_IDENTITY_SHA256,
+                }
+                else STORAGE_TOKEN
+            )
         return _attested_storage_token(
-            self.token,
+            token,
             identity_binding_sha256=kwargs["identity_binding_sha256"],
         )
 
@@ -367,11 +391,14 @@ def _bootstrap_binding(**updates: str) -> AzureBlobLeaseBootstrapBinding:
         "worm_account_name": "nacwormevidence001",
         "coordination_storage_account_resource_id": COORDINATION_RESOURCE_ID,
         "owner_approval_body_sha256": OWNER_APPROVAL_BODY_SHA256,
-        "token_subject": TOKEN_SUBJECT,
+        "token_subject": BOOTSTRAP_TOKEN_SUBJECT,
         "token_tenant_id": TENANT_ID,
         "target_binding_sha256": TARGET_SHA256,
-        "read_identity_binding_sha256": READ_IDENTITY_SHA256,
-        "write_identity_binding_sha256": WRITE_IDENTITY_SHA256,
+        "read_identity_binding_sha256": BOOTSTRAP_READ_IDENTITY_SHA256,
+        "write_identity_binding_sha256": BOOTSTRAP_WRITE_IDENTITY_SHA256,
+        "runtime_token_subject": TOKEN_SUBJECT,
+        "runtime_read_identity_binding_sha256": READ_IDENTITY_SHA256,
+        "runtime_write_identity_binding_sha256": WRITE_IDENTITY_SHA256,
     }
     values.update(updates)
     return AzureBlobLeaseBootstrapBinding(**values)
@@ -382,6 +409,7 @@ _SAFETY_TAGS = {"environment": "test", "system": "nac"}
 _SAFETY_ALLOWED_IP = "8.8.8.8"
 _SAFETY_TOOLCHAIN_SHA256 = "7" * 64
 _SAFETY_GROUP_ID = "abcdef02-2222-4333-8444-555555555555"
+_SAFETY_RUNTIME_GROUP_ID = "abcdef04-2222-4333-8444-555555555555"
 _SAFETY_CACHE: dict[tuple[str, ...], object] = {}
 _ADAPTER_TOOLCHAIN = {
     name: ("a" if name == "azure_cli_toolchain_sha256" else "b") * 64
@@ -484,14 +512,20 @@ def _fixture_lease_container(
                 "lease_blob_bootstrap": (
                     "owner-gated-put-if-absent-before-runtime"
                 ),
+                "bootstrap_authorization": (
+                    "blob-read-plus-add-only-no-write-no-delete"
+                ),
+                "runtime_authorization": (
+                    "blob-read-plus-write-only-no-add-no-delete"
+                ),
                 "azure_blob_write_authorization": (
-                    "includes-create-overwrite-lease-and-break"
+                    "runtime-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "sealed-app-api-defense-in-depth-not-azure-enforced"
                 ),
                 "principal_separation": (
-                    "single-owner-bound-bootstrap-and-runtime-principal"
+                    "distinct-owner-bound-bootstrap-and-runtime-principals"
                 ),
             },
         },
@@ -499,7 +533,7 @@ def _fixture_lease_container(
 
 
 def _fixture_role_definition(
-    resource_group_scope: str, role_definition_id: str
+    resource_group_scope: str, role_definition_id: str, *, runtime: bool = False
 ) -> dict[str, object]:
     return {
         "id": role_definition_id,
@@ -510,7 +544,11 @@ def _fixture_role_definition(
                 {
                     "actions": [],
                     "notActions": [],
-                    "dataActions": sorted(ALLOWED_DATA_ACTIONS),
+                    "dataActions": sorted(
+                        RUNTIME_ALLOWED_DATA_ACTIONS
+                        if runtime
+                        else BOOTSTRAP_ALLOWED_DATA_ACTIONS
+                    ),
                     "notDataActions": [],
                 }
             ],
@@ -525,6 +563,7 @@ def _fixture_role_assignment(
     role_definition_id: str,
     role_assignment_id: str,
     target_binding_sha256: str,
+    runtime: bool = False,
 ) -> dict[str, object]:
     return {
         "id": role_assignment_id,
@@ -534,7 +573,13 @@ def _fixture_role_assignment(
             "principalType": "ServicePrincipal",
             "roleDefinitionId": role_definition_id,
             "conditionVersion": "2.0",
-            "condition": exact_lease_blob_condition(target_binding_sha256),
+            "condition": (
+                exact_runtime_lease_blob_condition(target_binding_sha256)
+                if runtime
+                else exact_bootstrap_lease_blob_condition(
+                    target_binding_sha256
+                )
+            ),
         },
     }
 
@@ -542,7 +587,8 @@ def _fixture_role_assignment(
 def _fixture_responses(
     *,
     tenant_id: str,
-    principal_id: str,
+    bootstrap_principal_id: str,
+    runtime_principal_id: str,
     target_binding_sha256: str,
     coordination_id: str,
     bff_id: str,
@@ -570,6 +616,14 @@ def _fixture_responses(
         f"{container_scope}/providers/Microsoft.Authorization/"
         "roleAssignments/33333333-2222-4333-8444-555555555555"
     )
+    runtime_role_definition_id = (
+        f"{resource_group_scope}/providers/Microsoft.Authorization/"
+        "roleDefinitions/22222223-2222-4333-8444-555555555555"
+    )
+    runtime_role_assignment_id = (
+        f"{container_scope}/providers/Microsoft.Authorization/"
+        "roleAssignments/33333334-2222-4333-8444-555555555555"
+    )
     deployment_id = (
         f"{resource_group_scope}/providers/Microsoft.Resources/deployments/"
         "nac-bff-performance-coordination"
@@ -585,17 +639,29 @@ def _fixture_responses(
     )
     role_assignment = _fixture_role_assignment(
         container_scope=container_scope,
-        principal_id=principal_id,
+        principal_id=bootstrap_principal_id,
         role_definition_id=role_definition_id,
         role_assignment_id=role_assignment_id,
         target_binding_sha256=target_binding_sha256,
+    )
+    runtime_role_definition = _fixture_role_definition(
+        resource_group_scope, runtime_role_definition_id, runtime=True
+    )
+    runtime_role_assignment = _fixture_role_assignment(
+        container_scope=container_scope,
+        principal_id=runtime_principal_id,
+        role_definition_id=runtime_role_definition_id,
+        role_assignment_id=runtime_role_assignment_id,
+        target_binding_sha256=target_binding_sha256,
+        runtime=True,
     )
     deployment_parameters = {
         "tenantId": tenant_id,
         "subscriptionId": subscription_id,
         "resourceGroupName": resource_group_name,
         "storageAccountName": coordination_name,
-        "provisionerPrincipalId": principal_id,
+        "bootstrapPrincipalId": bootstrap_principal_id,
+        "runtimePrincipalId": runtime_principal_id,
         "allowedClientIpAddress": _SAFETY_ALLOWED_IP,
         "targetBindingSha256": target_binding_sha256,
         "location": _SAFETY_LOCATION,
@@ -665,6 +731,12 @@ def _fixture_responses(
         f"https://management.azure.com{role_assignment_id}?api-version=2022-04-01": (
             role_assignment
         ),
+        f"https://management.azure.com{runtime_role_definition_id}?api-version=2022-04-01": (
+            runtime_role_definition
+        ),
+        f"https://management.azure.com{runtime_role_assignment_id}?api-version=2022-04-01": (
+            runtime_role_assignment
+        ),
         (
             f"https://management.azure.com{root_management_group}"
             "?api-version=2021-04-01&$expand=children&$recurse=true"
@@ -684,9 +756,15 @@ def _fixture_responses(
             },
         },
         (
-            f"https://graph.microsoft.com/v1.0/servicePrincipals/{principal_id}/"
+            f"https://graph.microsoft.com/v1.0/servicePrincipals/"
+            f"{bootstrap_principal_id}/"
             "transitiveMemberOf/microsoft.graph.group?$select=id"
         ): {"value": [{"id": _SAFETY_GROUP_ID}]},
+        (
+            f"https://graph.microsoft.com/v1.0/servicePrincipals/"
+            f"{runtime_principal_id}/"
+            "transitiveMemberOf/microsoft.graph.group?$select=id"
+        ): {"value": [{"id": _SAFETY_RUNTIME_GROUP_ID}]},
     }
     name_resource = (
         f"/subscriptions/{subscription_id}/providers/Microsoft.Storage/"
@@ -703,14 +781,19 @@ def _fixture_responses(
             "&$filter=atScope()"
         )
         responses[url] = {
-            "value": [role_assignment] if scope == container_scope else []
+            "value": (
+                [role_assignment, runtime_role_assignment]
+                if scope == container_scope
+                else []
+            )
         }
     arguments = {
         "coordination_storage_account_name": coordination_name,
         "coordination_storage_account_resource_id": coordination_id,
         "bff_storage_account_resource_id": bff_id,
         "worm_storage_account_resource_id": worm_id,
-        "provisioner_principal_id": principal_id,
+        "bootstrap_principal_id": bootstrap_principal_id,
+        "runtime_principal_id": runtime_principal_id,
         "target_binding_sha256": target_binding_sha256,
         "tenant_id": tenant_id,
         "subscription_id": subscription_id,
@@ -721,6 +804,8 @@ def _fixture_responses(
         "deployment_id": deployment_id,
         "role_definition_id": role_definition_id,
         "role_assignment_id": role_assignment_id,
+        "runtime_role_definition_id": runtime_role_definition_id,
+        "runtime_role_assignment_id": runtime_role_assignment_id,
         "root_management_group": root_management_group,
         "container_scope": container_scope,
         "ancestors": ancestors,
@@ -761,7 +846,8 @@ def _issue_complete_infrastructure_safety_evidence(
     *,
     owner_binding_sha256: str,
     tenant_id: str,
-    principal_id: str,
+    bootstrap_principal_id: str,
+    runtime_principal_id: str,
     target_binding_sha256: str,
     coordination_id: str,
     bff_id: str,
@@ -771,7 +857,8 @@ def _issue_complete_infrastructure_safety_evidence(
     cache_key = (
         owner_binding_sha256,
         tenant_id,
-        principal_id,
+        bootstrap_principal_id,
+        runtime_principal_id,
         target_binding_sha256,
         coordination_id,
         bff_id,
@@ -792,7 +879,8 @@ def _issue_complete_infrastructure_safety_evidence(
     postdeployment_at = session_at + timedelta(minutes=1, seconds=1)
     responses, values = _fixture_responses(
         tenant_id=tenant_id,
-        principal_id=principal_id,
+        bootstrap_principal_id=bootstrap_principal_id,
+        runtime_principal_id=runtime_principal_id,
         target_binding_sha256=target_binding_sha256,
         coordination_id=coordination_id,
         bff_id=bff_id,
@@ -886,26 +974,43 @@ def _issue_complete_infrastructure_safety_evidence(
                     observation_kind="worm-storage-account-resource-id",
                     resource_id=worm_id,
                 ),
-                "provisioner_principal_id": principal_id,
+                "bootstrap_principal_id": bootstrap_principal_id,
+                "runtime_principal_id": runtime_principal_id,
                 "target_binding_sha256": target_binding_sha256,
-                "role_definition": post(
+                "bootstrap_role_definition": post(
                     adapter.execute_read,
                     observation_kind="coordination-role-definition",
                     resource_id=values["role_definition_id"],
                 ),
-                "role_assignment": post(
+                "runtime_role_definition": post(
+                    adapter.execute_read,
+                    observation_kind="coordination-role-definition",
+                    resource_id=values["runtime_role_definition_id"],
+                ),
+                "bootstrap_role_assignment": post(
                     adapter.execute_read,
                     observation_kind="coordination-role-assignment",
                     resource_id=values["role_assignment_id"],
+                ),
+                "runtime_role_assignment": post(
+                    adapter.execute_read,
+                    observation_kind="coordination-role-assignment",
+                    resource_id=values["runtime_role_assignment_id"],
                 ),
                 "subscription_ancestry_readback_envelope": post(
                     adapter.read_management_group_ancestry,
                     tenant_id=tenant_id,
                     subscription_id=values["subscription_id"],
                 ),
-                "effective_rbac_readback_envelope": post(
+                "bootstrap_effective_rbac_readback_envelope": post(
                     adapter.read_effective_rbac,
-                    principal_id=principal_id,
+                    principal_id=bootstrap_principal_id,
+                    target_resource_id=values["container_scope"],
+                    ancestor_scopes=values["ancestors"],
+                ),
+                "runtime_effective_rbac_readback_envelope": post(
+                    adapter.read_effective_rbac,
+                    principal_id=runtime_principal_id,
                     target_resource_id=values["container_scope"],
                     ancestor_scopes=values["ancestors"],
                 ),
@@ -937,8 +1042,11 @@ def _infrastructure_safety_evidence(**updates: object):
             updates.pop("owner_binding_sha256", OWNER_APPROVAL_BODY_SHA256)
         ),
         tenant_id=str(updates.pop("tenant_id", TENANT_ID)),
-        principal_id=str(
-            updates.pop("provisioner_principal_id", TOKEN_SUBJECT)
+        bootstrap_principal_id=str(
+            updates.pop("bootstrap_principal_id", BOOTSTRAP_TOKEN_SUBJECT)
+        ),
+        runtime_principal_id=str(
+            updates.pop("runtime_principal_id", TOKEN_SUBJECT)
         ),
         target_binding_sha256=str(
             updates.pop("target_binding_sha256", TARGET_SHA256)
@@ -998,7 +1106,7 @@ def _acquisition_safety(
                 "nac-bff-performance-leases"
             ),
             lease_blob_path=f"locks/{selected.target_binding_sha256}.lock",
-            provisioner_principal_id=selected.token_subject,
+            runtime_principal_id=selected.token_subject,
         ),
     )
 
@@ -1098,8 +1206,53 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
             ]
         )
         self.assertTrue(policy["token_subject_and_tenant_validation_required"])
+        self.assertTrue(
+            policy["distinct_bootstrap_runtime_identity_bindings_required"]
+        )
+        self.assertTrue(policy["runtime_binding_handoff_required"])
         self.assertFalse(policy["azure_rbac_write_operation_filtering"])
         self.assertEqual(len(lease_bootstrap_policy_sha256()), 64)
+
+    def test_bootstrap_binding_requires_distinct_bootstrap_and_runtime_identities(
+        self,
+    ) -> None:
+        for field, value in (
+            ("runtime_token_subject", BOOTSTRAP_TOKEN_SUBJECT),
+            ("runtime_token_subject", "not-a-uuid"),
+            ("runtime_read_identity_binding_sha256", "not-a-hash"),
+            ("runtime_write_identity_binding_sha256", "not-a-hash"),
+            (
+                "runtime_read_identity_binding_sha256",
+                BOOTSTRAP_READ_IDENTITY_SHA256,
+            ),
+            (
+                "runtime_write_identity_binding_sha256",
+                BOOTSTRAP_WRITE_IDENTITY_SHA256,
+            ),
+        ):
+            with self.subTest(field=field, value=value):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    r"^AZURE_BLOB_LEASE_BOOTSTRAP_BINDING_INVALID$",
+                ):
+                    _bootstrap_binding(**{field: value})
+
+    def test_bootstrap_canonical_hash_binds_runtime_identity_handoff(self) -> None:
+        binding = _bootstrap_binding()
+        digest = calculate_azure_blob_lease_bootstrap_binding_sha256(binding)
+        for field, value in (
+            ("runtime_token_subject", str(OTHER_LEASE_ID)),
+            ("runtime_read_identity_binding_sha256", "6" * 64),
+            ("runtime_write_identity_binding_sha256", "7" * 64),
+        ):
+            with self.subTest(field=field):
+                changed = AzureBlobLeaseBootstrapBinding(
+                    **{**asdict(binding), field: value}
+                )
+                self.assertNotEqual(
+                    calculate_azure_blob_lease_bootstrap_binding_sha256(changed),
+                    digest,
+                )
 
     def test_bootstrap_requires_capability_before_token_or_network(self) -> None:
         provider = _TokenProvider()
@@ -1216,16 +1369,27 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
         self.assertEqual(headers["content-length"], "0")
         self.assertEqual(result.expected_etag, EXPECTED_ETAG)
         self.assertEqual(result.target_binding_sha256, TARGET_SHA256)
+        self.assertEqual(result.token_subject, TOKEN_SUBJECT)
+        self.assertEqual(
+            result.read_identity_binding_sha256, READ_IDENTITY_SHA256
+        )
+        self.assertEqual(
+            result.write_identity_binding_sha256, WRITE_IDENTITY_SHA256
+        )
         self.assertEqual(
             provider.calls,
             [
                 {
                     "audience": "https://storage.azure.com/.default",
-                    "identity_binding_sha256": WRITE_IDENTITY_SHA256,
+                    "identity_binding_sha256": (
+                        BOOTSTRAP_WRITE_IDENTITY_SHA256
+                    ),
                 },
                 {
                     "audience": "https://storage.azure.com/.default",
-                    "identity_binding_sha256": READ_IDENTITY_SHA256,
+                    "identity_binding_sha256": (
+                        BOOTSTRAP_READ_IDENTITY_SHA256
+                    ),
                 },
             ],
         )
@@ -1389,7 +1553,8 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
     def test_bootstrap_cross_binds_owner_infrastructure_before_http(self) -> None:
         for field, value in (
             ("owner_binding_sha256", "0" * 64),
-            ("provisioner_principal_id", str(OTHER_LEASE_ID)),
+            ("bootstrap_principal_id", str(OTHER_LEASE_ID)),
+            ("runtime_principal_id", str(OTHER_LEASE_ID)),
             ("tenant_id", str(OTHER_LEASE_ID)),
             (
                 "coordination_storage_account_resource_id",
@@ -1418,6 +1583,18 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
                     )
                 self.assertEqual(opener.calls, [])
 
+    def test_acquisition_safety_binds_runtime_not_bootstrap_principal(self) -> None:
+        with self.assertRaisesRegex(
+            AzureBlobLeaseError,
+            r"^AZURE_BLOB_LEASE_ACQUISITION_SAFETY_INVALID$",
+        ):
+            build_lease_acquisition_safety_evidence(
+                binding=_binding(token_subject=BOOTSTRAP_TOKEN_SUBJECT),
+                infrastructure_safety_evidence=(
+                    _infrastructure_safety_evidence()
+                ),
+            )
+
     def test_bootstrap_rejects_wrong_token_subject_before_http(self) -> None:
         opener = _Opener()
         adapter = AzureBlobLeaseBootstrapAdapter(
@@ -1441,7 +1618,12 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
         adapter = AzureBlobLeaseBootstrapAdapter(
             binding=_bootstrap_binding(),
             infrastructure_safety_evidence=_infrastructure_safety_evidence(),
-            token_provider=_TokenProvider(_jwt(tid=str(OTHER_LEASE_ID))),
+            token_provider=_TokenProvider(
+                _jwt(
+                    oid=BOOTSTRAP_TOKEN_SUBJECT,
+                    tid=str(OTHER_LEASE_ID),
+                )
+            ),
             opener=opener,
             clock=lambda: datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
         )
@@ -2768,6 +2950,33 @@ class AzurePerformanceLeaseTests(unittest.TestCase):
             AzureBlobLeaseError, r"^AZURE_BLOB_LEASE_TOKEN_UNAVAILABLE$"
         ):
             token_adapter.acquire(LEASE_ID)
+
+    def test_assert_capability_is_consumed_before_token_failure(self) -> None:
+        self.acquire_held()
+        calls = 0
+
+        def token_failure(**_: str) -> str:
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("must stay redacted")
+
+        adapter, _ = self.adapter(
+            _Opener(),
+            token_provider=token_failure,
+        )
+        adapter._test_live_action_capability = None
+        one_use = _lease_capability(adapter, uses=1)
+
+        with self.assertRaisesRegex(
+            AzureBlobLeaseError, r"^AZURE_BLOB_LEASE_TOKEN_UNAVAILABLE$"
+        ):
+            adapter.assert_held(LEASE_ID, one_use)
+        with self.assertRaisesRegex(
+            AzureBlobLeaseError,
+            r"^AZURE_BLOB_LEASE_LIVE_CAPABILITY_EXHAUSTED$",
+        ):
+            adapter.assert_held(LEASE_ID, one_use)
+        self.assertEqual(calls, 1)
 
     def test_private_state_rejects_tampering_permissions_and_binding_change(self) -> None:
         self.acquire_held()

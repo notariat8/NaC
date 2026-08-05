@@ -11,6 +11,11 @@ import time
 from typing import Any, Callable
 import uuid
 
+from .azure_performance_lease_broker import (
+    AzurePerformanceLeaseBroker,
+    BrokerRoleScopeClaims,
+    LeaseBrokerError,
+)
 from .test_environment import TestEnvironmentBff, ValidatedClaims
 from .workbench_endpoint import WorkbenchEndpoint, WorkbenchResponse
 
@@ -27,6 +32,9 @@ def create_fastapi_app(
     bff: TestEnvironmentBff,
     validated_claims_dependency: Callable[..., ValidatedClaims],
     workbench_endpoint: WorkbenchEndpoint | None = None,
+    performance_lease_broker: AzurePerformanceLeaseBroker | None = None,
+    performance_lease_claims_dependency: Callable[..., BrokerRoleScopeClaims]
+    | None = None,
     ready: bool = True,
 ) -> Any:
     """Create the ASGI adapter around already validated Entra claims.
@@ -187,6 +195,65 @@ def create_fastapi_app(
             methods=["GET"],
         )
 
+    if (performance_lease_broker is None) != (
+        performance_lease_claims_dependency is None
+    ):
+        raise TypeError("performance lease broker composition is incomplete")
+    if performance_lease_broker is not None:
+        async def performance_lease_operation(
+            request: object,
+            operation: str,
+            claims: object = Depends(performance_lease_claims_dependency),
+        ):
+            if operation not in {"acquire", "assert", "release"}:
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": "not found"},
+                    headers=_security_headers(),
+                )
+            content_length = request.headers.get("content-length")
+            if (
+                content_length is None
+                or not content_length.isascii()
+                or not content_length.isdigit()
+                or not 1 <= int(content_length) <= 16_384
+            ):
+                return _performance_lease_error(JSONResponse, 400)
+            body_bytes = await request.body()
+            if len(body_bytes) != int(content_length):
+                return _performance_lease_error(JSONResponse, 400)
+            try:
+                import json
+
+                body = json.loads(body_bytes)
+                if type(body) is not dict or set(body) != {"ticket"}:
+                    raise ValueError
+                method_name = {
+                    "acquire": "acquire",
+                    "assert": "assert_held",
+                    "release": "release",
+                }[operation]
+                receipt = await run_sync_with_request_budget(
+                    getattr(performance_lease_broker, method_name),
+                    ticket=body["ticket"],
+                    claims=claims,
+                )
+            except (LeaseBrokerError, TypeError, ValueError):
+                return _performance_lease_error(JSONResponse, 403)
+            return JSONResponse(
+                status_code=200,
+                content=receipt.as_dict(),
+                headers=_security_headers(),
+            )
+
+        performance_lease_operation.__annotations__["request"] = Request
+        app.add_api_route(
+            "/v1/internal/performance-lease/{operation}",
+            performance_lease_operation,
+            methods=["POST"],
+            include_in_schema=False,
+        )
+
     return app
 
 
@@ -286,6 +353,14 @@ def _security_headers() -> dict[str, str]:
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
     }
+
+
+def _performance_lease_error(response_type: Any, status_code: int) -> Any:
+    return response_type(
+        status_code=status_code,
+        content={"detail": "request denied"},
+        headers=_security_headers(),
+    )
 
 
 def _workbench_error(status_code: int) -> WorkbenchResponse:

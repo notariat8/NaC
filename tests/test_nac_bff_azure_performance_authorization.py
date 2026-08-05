@@ -35,6 +35,8 @@ PHASE_PLAN = "8" * 64
 MONITOR_ANCHOR = "9" * 64
 MONITOR_POLICY = monitor_policy_sha256()
 BOOTSTRAP_BINDING = "a" * 64
+LEASE_BINDING = "b" * 64
+LEASE_SAFETY = "c" * 64
 
 
 def _owner_authorization():
@@ -178,12 +180,146 @@ def _issue_bootstrap(root: Path, safety):
         return authorization._issue_verified_bootstrap_authority(
             owner_authorization=_owner_authorization(),
             infrastructure_safety_verification=safety,
-            execution_bindings=_execution_bindings(),
+            execution_bindings=_execution_bindings(
+                lease_binding_sha256=BOOTSTRAP_BINDING,
+                lease_acquisition_safety_evidence_sha256=(
+                    BOOTSTRAP_BINDING
+                ),
+            ),
             bootstrap_binding_sha256=BOOTSTRAP_BINDING,
         )
 
 
+def _transition_bootstrap(root: Path, bootstrap_authority, safety):
+    commit_path, slots, evidence_path = _artifact_paths(root)
+    with patch.object(
+        authorization,
+        "validate_infrastructure_safety_evidence",
+        return_value=safety,
+    ):
+        return authorization._transition_verified_bootstrap_authority(
+            bootstrap_authority=bootstrap_authority,
+            bootstrap_binding_sha256=BOOTSTRAP_BINDING,
+            owner_authorization=_owner_authorization(),
+            infrastructure_safety_verification=safety,
+            execution_bindings=_execution_bindings(
+                lease_binding_sha256=LEASE_BINDING,
+                lease_acquisition_safety_evidence_sha256=LEASE_SAFETY,
+            ),
+            action_bindings={
+                authorization.TARGET_GET: (TARGET, 2),
+                authorization.BLOB_LEASE_ACQUIRE: (LEASE_BINDING, 2),
+                authorization.BLOB_LEASE_ASSERT_HELD: (LEASE_BINDING, 8),
+                authorization.BLOB_LEASE_RELEASE: (LEASE_BINDING, 2),
+            },
+            repo_root=root,
+            run_binding_sha256=RUN,
+            checkpoint_commit_path=commit_path,
+            checkpoint_slot_paths=slots,
+            final_evidence_path=evidence_path,
+        )
+
+
 class AzurePerformanceAuthorizationTests(unittest.TestCase):
+    def test_bootstrap_transition_requires_exact_exhaustion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            safety = _safety_verification()
+            bootstrap = _issue_bootstrap(root, safety)
+            authorization._authorize_live_action(
+                bootstrap.capability,
+                action=authorization.BLOB_BOOTSTRAP,
+                target_binding_sha256=TARGET,
+                binding_sha256=BOOTSTRAP_BINDING,
+                consume=True,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "^PERFORMANCE_BOOTSTRAP_TRANSITION_NOT_READY$",
+            ):
+                _transition_bootstrap(root, bootstrap, safety)
+
+    def test_exhausted_bootstrap_transitions_once_to_runtime_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            safety = _safety_verification()
+            bootstrap = _issue_bootstrap(root, safety)
+            for _ in range(2):
+                authorization._authorize_live_action(
+                    bootstrap.capability,
+                    action=authorization.BLOB_BOOTSTRAP,
+                    target_binding_sha256=TARGET,
+                    binding_sha256=BOOTSTRAP_BINDING,
+                    consume=True,
+                )
+
+            runtime = _transition_bootstrap(root, bootstrap, safety)
+            authorization._authorize_live_action(
+                runtime.capability,
+                action=authorization.BLOB_LEASE_ACQUIRE,
+                target_binding_sha256=TARGET,
+                binding_sha256=LEASE_BINDING,
+                consume=True,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "^PERFORMANCE_LIVE_CAPABILITY_INVALID$",
+            ):
+                authorization._authorize_live_action(
+                    bootstrap.capability,
+                    action=authorization.BLOB_BOOTSTRAP,
+                    target_binding_sha256=TARGET,
+                    binding_sha256=BOOTSTRAP_BINDING,
+                    consume=False,
+                )
+            with self.assertRaisesRegex(
+                ValueError,
+                "^PERFORMANCE_BOOTSTRAP_TRANSITION_REPLAYED$",
+            ):
+                _transition_bootstrap(root, bootstrap, safety)
+
+    def test_bootstrap_transition_rejects_owner_binding_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            safety = _safety_verification()
+            bootstrap = _issue_bootstrap(root, safety)
+            for _ in range(2):
+                authorization._authorize_live_action(
+                    bootstrap.capability,
+                    action=authorization.BLOB_BOOTSTRAP,
+                    target_binding_sha256=TARGET,
+                    binding_sha256=BOOTSTRAP_BINDING,
+                    consume=True,
+                )
+            with self.assertRaisesRegex(
+                ValueError,
+                "^PERFORMANCE_BOOTSTRAP_TRANSITION_BINDING_MISMATCH$",
+            ), patch.object(
+                authorization,
+                "validate_infrastructure_safety_evidence",
+                return_value=safety,
+            ):
+                commit_path, slots, evidence_path = _artifact_paths(root)
+                authorization._transition_verified_bootstrap_authority(
+                    bootstrap_authority=bootstrap,
+                    bootstrap_binding_sha256=BOOTSTRAP_BINDING,
+                    owner_authorization=_owner_authorization(),
+                    infrastructure_safety_verification=safety,
+                    execution_bindings=_execution_bindings(
+                        lease_binding_sha256=LEASE_BINDING,
+                        lease_acquisition_safety_evidence_sha256=LEASE_SAFETY,
+                        monitor_policy_sha256="d" * 64,
+                    ),
+                    action_bindings={
+                        authorization.TARGET_GET: (TARGET, 2),
+                    },
+                    repo_root=root,
+                    run_binding_sha256=RUN,
+                    checkpoint_commit_path=commit_path,
+                    checkpoint_slot_paths=slots,
+                    final_evidence_path=evidence_path,
+                )
+
     def test_bootstrap_authority_contains_only_bounded_blob_bootstrap(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

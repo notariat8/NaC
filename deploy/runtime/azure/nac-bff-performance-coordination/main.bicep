@@ -20,6 +20,12 @@ param subscriptionId string
 @description('Exact Azure resource group bound by the combined owner approval.')
 param resourceGroupName string
 
+@description('Deployment mode binding. The CLI and template accept Incremental only.')
+@allowed([
+  'Incremental'
+])
+param deploymentMode string = 'Incremental'
+
 @description('Globally unique name for the dedicated performance-coordination storage account.')
 @minLength(3)
 @maxLength(24)
@@ -31,11 +37,29 @@ param bffStorageAccountResourceId string
 @description('Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID.')
 param wormStorageAccountResourceId string
 
-@description('Object ID of the dedicated Entra service principal used by both bootstrap and runtime. Blob add creates the bound blob; blob write cannot split overwrite, lease, and break operations.')
-param provisionerPrincipalId string
+@description('Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route.')
+param brokerPrincipalId string
 
-@description('Single public IPv4 address allowed to reach the dedicated data plane during the approved run.')
-param allowedClientIpAddress string
+@description('Object ID of the owner-gated application service principal allowed to call the fixed broker route. It receives no Storage DataAction.')
+param brokerCallerServicePrincipalId string
+
+@description('Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker.')
+param brokerFunctionAppResourceId string
+
+@description('SHA-256 of the exact deployed BFF Function package containing the broker implementation.')
+@minLength(64)
+@maxLength(64)
+param brokerFunctionPackageSha256 string
+
+@description('SHA-256 of the public certificate used by the broker to verify short-lived activation tickets.')
+@minLength(64)
+@maxLength(64)
+param brokerTicketVerificationCertificateSha256 string
+
+@description('Exact public IPv4 addresses reported by the bound BFF Function App for broker egress. Local runner addresses are forbidden.')
+@minLength(1)
+@maxLength(32)
+param brokerOutboundIpAddresses array
 
 @description('Hash binding used as the only lease blob basename.')
 @minLength(64)
@@ -49,15 +73,26 @@ var containerName = 'nac-bff-performance-leases'
 var leaseBlobPath = 'locks/${targetBindingSha256}.lock'
 var bffStorageAccountResourceIdSegments = split(bffStorageAccountResourceId, '/')
 var wormStorageAccountResourceIdSegments = split(wormStorageAccountResourceId, '/')
+var brokerFunctionAppResourceIdSegments = split(brokerFunctionAppResourceId, '/')
 var bffStorageAccountName = last(bffStorageAccountResourceIdSegments)
 var wormStorageAccountName = last(wormStorageAccountResourceIdSegments)
-var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName
+var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName && deploymentMode == 'Incremental'
   ? '${tenantId}/${subscriptionId}/${resourceGroupName}'
   : fail('Performance coordination deployment scope does not match the owner-bound tenant, subscription, and resource group.')
-var validatedBffStorageAccountResourceId = length(bffStorageAccountResourceIdSegments) == 9 && empty(bffStorageAccountResourceIdSegments[0]) && toLower(bffStorageAccountResourceIdSegments[1]) == 'subscriptions' && bffStorageAccountResourceIdSegments[2] == subscriptionId && toLower(bffStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(bffStorageAccountResourceIdSegments[4]) && toLower(bffStorageAccountResourceIdSegments[5]) == 'providers' && toLower(bffStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(bffStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(bffStorageAccountName) && toLower(resourceId(subscriptionId, bffStorageAccountResourceIdSegments[4], 'Microsoft.Storage/storageAccounts', bffStorageAccountName)) == toLower(bffStorageAccountResourceId)
+var validatedBffStorageAccountResourceId = length(bffStorageAccountResourceIdSegments) == 9 && empty(bffStorageAccountResourceIdSegments[0]) && toLower(bffStorageAccountResourceIdSegments[1]) == 'subscriptions' && bffStorageAccountResourceIdSegments[2] == subscriptionId && toLower(bffStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(bffStorageAccountResourceIdSegments[4]) && toLower(bffStorageAccountResourceIdSegments[5]) == 'providers' && toLower(bffStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(bffStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(bffStorageAccountName) && toLower(resourceId(
+    subscriptionId,
+    bffStorageAccountResourceIdSegments[4],
+    'Microsoft.Storage/storageAccounts',
+    bffStorageAccountName
+  )) == toLower(bffStorageAccountResourceId)
   ? bffStorageAccountResourceId
   : fail('BFF storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.')
-var validatedWormStorageAccountResourceId = length(wormStorageAccountResourceIdSegments) == 9 && empty(wormStorageAccountResourceIdSegments[0]) && toLower(wormStorageAccountResourceIdSegments[1]) == 'subscriptions' && wormStorageAccountResourceIdSegments[2] == subscriptionId && toLower(wormStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(wormStorageAccountResourceIdSegments[4]) && toLower(wormStorageAccountResourceIdSegments[5]) == 'providers' && toLower(wormStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(wormStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(wormStorageAccountName) && toLower(resourceId(subscriptionId, wormStorageAccountResourceIdSegments[4], 'Microsoft.Storage/storageAccounts', wormStorageAccountName)) == toLower(wormStorageAccountResourceId)
+var validatedWormStorageAccountResourceId = length(wormStorageAccountResourceIdSegments) == 9 && empty(wormStorageAccountResourceIdSegments[0]) && toLower(wormStorageAccountResourceIdSegments[1]) == 'subscriptions' && wormStorageAccountResourceIdSegments[2] == subscriptionId && toLower(wormStorageAccountResourceIdSegments[3]) == 'resourcegroups' && !empty(wormStorageAccountResourceIdSegments[4]) && toLower(wormStorageAccountResourceIdSegments[5]) == 'providers' && toLower(wormStorageAccountResourceIdSegments[6]) == 'microsoft.storage' && toLower(wormStorageAccountResourceIdSegments[7]) == 'storageaccounts' && !empty(wormStorageAccountName) && toLower(resourceId(
+    subscriptionId,
+    wormStorageAccountResourceIdSegments[4],
+    'Microsoft.Storage/storageAccounts',
+    wormStorageAccountName
+  )) == toLower(wormStorageAccountResourceId)
   ? wormStorageAccountResourceId
   : fail('WORM storage account resource ID is not an authoritative storage account ID in the owner-bound subscription.')
 var coordinationStorageAccountResourceId = resourceId('Microsoft.Storage/storageAccounts', storageAccountName)
@@ -65,20 +100,29 @@ var validatedStorageAccountName = !empty(validatedDeploymentScope) && toLower(co
   ? storageAccountName
   : fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.')
 var isolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
-var leaseDataRoleDefinitionGuid = guid(
+var brokerLeaseDataRoleDefinitionGuid = guid(
   subscription().id,
   resourceGroup().id,
   validatedStorageAccountName,
   containerName,
-  'nac-bff-performance-lease-read-write-v1'
+  'nac-bff-performance-lease-broker-read-write-v1'
 )
 var blobReadDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
-var blobAddDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
 var blobWriteDataAction = 'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
-// Azure blob add authorizes creation; blob write authorizes overwrite and lease acquire/release/break.
-// The dedicated account and exact-path ABAC condition limit scope; sealed bootstrap and
-// runtime APIs omit overwrite and break as defense-in-depth, not Azure-enforced filtering.
-var exactLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobAddDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+// Blob write includes create, overwrite and every lease action. The credential is therefore
+// assigned only to the non-exportable Function managed identity. The local measurement runner
+// receives no Storage DataAction, token or certificate and can reach only the fixed broker API.
+var exactBrokerLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
+var validatedBrokerFunctionAppResourceId = length(brokerFunctionAppResourceIdSegments) == 9 && empty(brokerFunctionAppResourceIdSegments[0]) && toLower(brokerFunctionAppResourceIdSegments[1]) == 'subscriptions' && brokerFunctionAppResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionAppResourceIdSegments[3]) == 'resourcegroups' && !empty(brokerFunctionAppResourceIdSegments[4]) && toLower(brokerFunctionAppResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionAppResourceIdSegments[6]) == 'microsoft.web' && toLower(brokerFunctionAppResourceIdSegments[7]) == 'sites' && !empty(brokerFunctionAppResourceIdSegments[8])
+  ? brokerFunctionAppResourceId
+  : fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.')
+var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && !empty(brokerPrincipalId) && !empty(brokerCallerServicePrincipalId) && toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)
+  ? brokerPrincipalId
+  : fail('Distinct broker managed identity and owner-gated caller service principal are required.')
+var brokerIpRules = [for address in brokerOutboundIpAddresses: {
+  action: 'Allow'
+  value: address
+}]
 // Keep this mandatory set aligned with effective_coordination_tags() in the
 // infrastructure safety verifier. union() prevents caller overrides.
 var mandatoryResourceTags = {
@@ -113,12 +157,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     networkAcls: {
       bypass: 'None'
       defaultAction: 'Deny'
-      ipRules: [
-        {
-          action: 'Allow'
-          value: allowedClientIpAddress
-        }
-      ]
+      ipRules: brokerIpRules
       resourceAccessRules: []
       virtualNetworkRules: []
     }
@@ -150,19 +189,22 @@ resource leaseContainer 'Microsoft.Storage/storageAccounts/blobServices/containe
       lease_blob_path: leaseBlobPath
       lease_blob_type: 'BlockBlob'
       lease_blob_content_length: '0'
-      lease_blob_bootstrap: 'owner-gated-put-if-absent-before-runtime'
-      azure_blob_write_authorization: 'includes-create-overwrite-lease-and-break'
-      operation_restriction_boundary: 'sealed-app-api-defense-in-depth-not-azure-enforced'
-      principal_separation: 'single-owner-bound-bootstrap-and-runtime-principal'
+      lease_blob_bootstrap: 'broker-internal-put-if-absent-before-acquire'
+      broker_authorization: 'non-exportable-managed-identity-read-write-no-delete'
+      azure_blob_write_authorization: 'broker-uami-write-includes-create-overwrite-lease-and-break'
+      operation_restriction_boundary: 'owner-ticketed-fixed-function-route'
+      local_runner_storage_authorization: 'none'
+      brokerFunctionPackageSha256: brokerFunctionPackageSha256
+      brokerTicketVerificationCertificateSha256: brokerTicketVerificationCertificateSha256
     }
   }
 }
 
-resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: leaseDataRoleDefinitionGuid
+resource brokerLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: brokerLeaseDataRoleDefinitionGuid
   properties: {
-    roleName: 'NaC BFF Performance Lease Read Write ${isolationSuffix}'
-    description: 'Read/write one ABAC-conditioned blob path. Write includes create, overwrite, lease, and break; delete, ownership, and container management are excluded.'
+    roleName: 'NaC BFF Performance Lease Broker Read Write ${isolationSuffix}'
+    description: 'Broker-only read/write on one ABAC-conditioned blob path. The managed-identity credential is never exported to the local runner.'
     type: 'CustomRole'
     permissions: [
       {
@@ -170,7 +212,6 @@ resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
         notActions: []
         dataActions: [
           'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
-          'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
           'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
         ]
         notDataActions: []
@@ -182,16 +223,16 @@ resource leaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   }
 }
 
-resource provisionerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(leaseContainer.id, provisionerPrincipalId, leaseDataRole.id, leaseBlobPath)
+resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(leaseContainer.id, validatedBrokerPrincipalId, brokerLeaseDataRole.id, leaseBlobPath)
   scope: leaseContainer
   properties: {
-    condition: exactLeaseBlobCondition
+    condition: exactBrokerLeaseBlobCondition
     conditionVersion: '2.0'
-    description: 'Read/write authorization scoped to the exact NaC BFF performance lease blob path; Azure does not filter write operations.'
-    principalId: provisionerPrincipalId
+    description: 'Non-exportable BFF lease-broker managed identity scoped to the exact performance lease blob path.'
+    principalId: validatedBrokerPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: leaseDataRole.id
+    roleDefinitionId: brokerLeaseDataRole.id
   }
 }
 
@@ -210,12 +251,16 @@ output leaseBlobUri string = '${storageAccount.properties.primaryEndpoints.blob}
 output requiredLeaseBlobType string = 'BlockBlob'
 output requiredLeaseBlobContentLength int = 0
 output targetBindingSha256 string = targetBindingSha256
-output leaseDataRoleDefinitionId string = leaseDataRole.id
-output provisionerLeaseRoleAssignmentId string = provisionerLeaseBinding.id
-output exactLeaseBlobCondition string = exactLeaseBlobCondition
-output allowedDataActions array = [
+output brokerLeaseDataRoleDefinitionId string = brokerLeaseDataRole.id
+output brokerLeaseRoleAssignmentId string = brokerLeaseBinding.id
+output brokerPrincipalIdBinding string = validatedBrokerPrincipalId
+output brokerCallerServicePrincipalIdBinding string = brokerCallerServicePrincipalId
+output brokerFunctionAppResourceIdBinding string = validatedBrokerFunctionAppResourceId
+output brokerFunctionPackageSha256Binding string = brokerFunctionPackageSha256
+output brokerTicketVerificationCertificateSha256Binding string = brokerTicketVerificationCertificateSha256
+output exactBrokerLeaseBlobCondition string = exactBrokerLeaseBlobCondition
+output brokerAllowedDataActions array = [
   blobReadDataAction
-  blobAddDataAction
   blobWriteDataAction
 ]
 output deploymentScopeBinding string = validatedDeploymentScope
@@ -232,6 +277,8 @@ output azureRbacOperationRestrictionEnforced bool = false
 output operationRestrictionDefenseInDepth array = [
   'dedicated-storage-account'
   'exact-container-and-blob-path-abac'
-  'sealed-bootstrap-and-runtime-application-apis'
+  'non-exportable-function-managed-identity'
+  'owner-ticketed-fixed-broker-api'
 ]
-output principalSeparationMode string = 'SINGLE_OWNER_BOUND_PRINCIPAL_FOR_BOOTSTRAP_AND_RUNTIME'
+output localRunnerStorageDataActions array = []
+output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'

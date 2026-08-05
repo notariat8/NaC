@@ -1,8 +1,10 @@
 # M365 BFF Performance Acceptance
 
-Status: Issue #733 defines an offline contract and offline adapters for Azure
-Monitor and a dedicated Azure Blob lease. No live CLI command or live action is
-implemented.
+Status: Issue #735 implements the owner-bound live CLI and composition path
+offline. It binds the reproducible WORM baseline before any irreversible lock,
+coordination infrastructure, Azure Monitor, the dedicated Blob lease, and
+exactly 500 synthetic GETs to one later owner approval. This slice creates no
+Azure resource and performs no live call.
 
 The machine-readable sources are the
 [acceptance contract](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -130,25 +132,33 @@ credits, free grants, and current pricing are deliberately outside this claim.
 
 ## Exclusive Lease
 
-The dedicated offline adapter is
-`src/nac_bff/azure_performance_lease.py`. Lease storage, BFF storage, and WORM
-evidence storage must be separate. The adapter may expose only:
+The local boundary is
+`src/nac_bff/azure_performance_lease_broker_client.py`; the server-side broker
+and durable state machine are in `src/nac_bff/azure_performance_lease_broker.py`
+and `src/nac_bff/azure_performance_lease_broker_storage.py`. Lease storage, BFF
+storage, and WORM evidence storage must be separate. The broker API may expose
+only:
 
 1. `acquire(-1)` with a UUID persisted first
 2. `assert_held`
 3. `release`
 
 The persistent state machine is exactly `ACQUIRE_INTENT`,
-`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`. Before each target
+`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`, `LOST`. Before each target
 dispatch, the same lease ID must be confirmed as held on the same bound blob.
 Resume requires the same lease ID, target binding, and lease binding.
+Every `assert_held` receipt is checked before clock, Monitor, or target work for
+exact `HELD`, lease binding, target binding, and state digest. If a previously
+held lease is authoritatively absent, the broker first persists terminal
+`LOST`.
 
 A lost or foreign lease and any binding drift block without dispatch.
-Automatic reacquire, lease break, and blob delete are forbidden in the runtime
-adapter. A separate bootstrap adapter may create the exact bound zero-byte
-block blob once with `If-None-Match: *`, or inspect an existing blob only with
-`HEAD`. Overwrite is forbidden; the strong response ETag becomes part of the
-later lease binding. An outcome may become `PASSED` only after `RELEASED` is
+Automatic reacquire, lease break, and blob delete are forbidden in the broker
+and local adapter. The Function UAMI may internally create the exact bound
+zero-byte block blob once with `If-None-Match: *`, or inspect an existing blob
+with `HEAD`. The broker generates the private Azure lease ID and returns no
+lease ID, Storage token, or Storage URL to the local runner. An outcome may
+become `PASSED` only after `RELEASED` is
 durably stored. `HELD`,
 an uncertain release outcome, or a merely sent release is insufficient.
 The final release receipt must state exact `RELEASED`; final evidence stores it
@@ -157,37 +167,39 @@ as `lease_release_lifecycle_state` and separately binds
 `target_binding_sha256` and `lease_binding_sha256` must match the measurement.
 A lifecycle-state hash without the exact state and matching target binding is
 not release proof.
+The lease binding and `SHA256(lifecycle_state)` must also match the receipt
+exactly. If the release response is lost and the lease is subsequently absent,
+the state is conservatively persisted as terminal `LOST`; `RELEASED` is never
+inferred from absence alone.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage
-resource ID and provisioner principal to the exact `lease_binding_sha256`,
-strong ETag, target binding, and token subject (`oid`). The envelope digest and
-lease digest are runtime execution bindings. The lease adapter accepts neither
-a raw nor a merely decoded JWT. The token provider must return a sealed result
-binding scope, identity, `oid`, `tid`, `nbf`, and `exp`; `alg:none` is rejected
-before state or HTTP. The `oid` and `tid` claims are checked against owner-bound
-evidence. In addition, `aud` must equal `https://storage.azure.com` and
-the numeric time claims must satisfy `nbf <= trusted_clock < exp`. Any mismatch
-blocks before state and without an acquire request.
+resource ID, Function UAMI, and provisioning caller to the exact
+`lease_binding_sha256`, target binding, and signed activation ticket. The local
+runner requests only `api://funktion8.de/nac-bff/.default`. The BFF accepts only
+the fixed `Performance.Lease` app role; the RS256 ticket is valid for at most 60
+seconds and binds exactly one operation plus owner, tenant, audience, actor,
+commit, tree, Function package, plan, target, blob path, and nonce. Only the
+Function UAMI requests `https://storage.azure.com/.default` server-side. Any
+mismatch blocks before broker state and Storage HTTP.
 After a real process restart, infrastructure is re-attested read-only.
 Serialized safety evidence alone authorizes nothing because the process-bound
 capability is not serialized. Only fresh re-attestation preserving the same
-owner, tenant, principal, target, and lease binding may reconcile the existing
+owner, tenant, both principals, target, and lease binding may reconcile the existing
 lease; stale pre-restart evidence cannot authorize another mutation.
 
 The offline IaC is under
-`deploy/runtime/azure/nac-bff-performance-coordination`. It binds the existing
-Entra service principal by object ID, allows only one explicit client IP on the
-storage endpoint, and sets the network default to `Deny`. Shared keys, public
-blobs, and delete, owner, or container DataActions remain excluded. The
-exact-path role includes `blobs/add/action` for the one-time conditional
-creation, `blobs/read` for readback, and `blobs/write` for lease operations.
-Azure also authorizes overwrite and lease break through the write DataAction.
-ABAC therefore fixes the path while
-the sealed application API fixes the operation: bootstrap only uses
-conditional `PUT` or `HEAD`; runtime only acquires, asserts, and releases. The
-strong ETag is then carried into the runtime binding. The blob token is
-requested only for scope `https://storage.azure.com/.default`.
+`deploy/runtime/azure/nac-bff-performance-coordination`. It binds the Function
+UAMI, the distinct provisioning caller, Function package, ticket certificate,
+and authoritative Function outbound IPs. Only those outbound IPs are allowed
+at the Storage endpoint and the network default is `Deny`. Shared keys, public
+blobs, and delete, owner, or container DataActions remain excluded. Only the
+Function UAMI receives `blobs/read` and `blobs/write` on the exact container and
+blob path; the local caller receives no Storage DataAction. Because Azure
+`write` also covers overwrite and lease break, ABAC and the fixed broker API
+jointly enforce the narrower operation boundary. Before acquire, the exact
+`Performance.Lease` assignment and hash-bound Function settings are configured
+and read back without exposing their values.
 
 ## Owner Gate And Evidence
 
@@ -207,6 +219,11 @@ approval. Before provisioning it binds all deterministic inputs:
 - `infrastructure_source_sha256`
 - `infrastructure_parameters_sha256`
 - `infrastructure_binding_sha256`
+- `worm_baseline_binding_sha256`
+- `worm_baseline_compiled_arm_sha256`
+- `worm_baseline_parameters_sha256`
+- `worm_baseline_source_sha256`
+- `deployment_sequence_sha256`
 - `target_binding_sha256`
 - `expected_activation_hash`
 - `correlation_id`
@@ -217,6 +234,11 @@ approval. Before provisioning it binds all deterministic inputs:
 ARM/parameter artifacts compiled with Bicep `0.45.15.27210`. CI must reproduce
 both artifacts byte-for-byte, and the later live path uses only that bound
 output.
+
+The WORM baseline is created before the coordination infrastructure in the
+same `rg-nac-bff-test` resource group and is then read back. The bound sequence
+must not set an irreversible immutability lock. Such a lock remains a separate
+future governance decision.
 
 The whole-minute UTC `monitor_window_anchor` bounds the earliest monitor
 observation. Immediately before the first lease or monitor network call,
@@ -244,6 +266,20 @@ owner tags plus the seven immutable NaC coordination tags.
 The actual resource IDs of the existing BFF storage and WORM evidence storage
 are also bound in advance. The predeployment name check must prove that the
 coordination account does not yet exist. A separate postdeployment readback
+is preceded by create-once restart receipts: the first successful run persists
+the original `nameAvailable=true` receipt before the first deployment and an
+exact `Succeeded` deployment receipt immediately after coordination deployment.
+On restart with a complete receipt pair, a fresh GET of the same deterministic
+deployment is validated before any provider mutation. Owner, target, source,
+parameter, and hash bindings must match; this path performs exactly zero name
+probes and zero deployment creates, then repeats all safety readbacks freshly.
+`Running`, `Failed`, missing, replaced, incomplete, tampered, or mismatched
+receipts block. If a crash leaves only the original name receipt, the fresh-name
+path may continue only after a new current `nameAvailable=true` probe; otherwise
+it blocks without redeployment. Historical receipt state alone never authorizes
+a deployment. The strict temporal relation is
+`original observed < started <= completed < current reconciliation observed`.
+The postdeployment readback
 must prove its exact resource ID, location, effective tags, and complete
 storage/network configuration: public network enabled, default `Deny`, bypass
 `None`, exactly one allowed IP rule, no VNet or resource-access rule, no shared
@@ -261,7 +297,7 @@ future skew. After deployment, complete Effective RBAC/ABAC readback must start
 at the tenant-root management group matching the owner tenant and prove the
 subscription's authoritative ordered management-group ancestry. It covers
 tenant root, the management-group chain, subscription, resource group, storage
-account, blob service, and container must prove the exact provisioner identity,
+account, blob service, and container must prove the exact bootstrap and runtime identities,
 all transitive Entra groups, role, DataActions, condition, and scope; any
 broader direct, group-based, or inherited data-plane assignment, and every
 effective control-plane assignment, blocks bootstrap and lease acquire. A
@@ -309,7 +345,10 @@ read, never the owner preflight, acquisition, runner, or target traffic. After
 the settled-window coverage, monitor attestation, target and hash bindings, and
 zero-remaining execution budget are validated, a durable
 `nac.m365-bff-performance-pending-finalization/v1` record is written before
-release. A crash-safe resume may reconcile release only with the same lease ID
+release. An early cleanup release is likewise bound first by an atomic
+`nac.m365-bff-performance-release-recovery/v1` checkpoint. After process
+restart this checkpoint is reconciled before any new acquire and is cleared
+only after an exact `RELEASED` receipt. A crash-safe resume may reconcile release only with the same lease ID
 and exact target binding; it may not acquire, reread Monitor, or dispatch the
 target.
 Authoritative checkpoints are opened with `O_NOFOLLOW` and validated with
@@ -357,10 +396,13 @@ The existing plan command remains offline and sends zero requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #733 implements the adapters for offline verification, but activates no
-live CLI command, Azure resource action, Blob or lease mutation, Monitor read,
-or target dispatch. Direct adapter calls fail before token, network, or state
-access unless they receive the exact bounded capability issued after immutable
-owner-comment and sealed infrastructure-safety verification. A later live
-composition requires that fresh owner-bound capability for every Blob call,
-Monitor read, and target GET.
+This PR performs no live action: no Azure resource action, Blob or lease
+mutation, Monitor read, or target dispatch. The implemented live CLI path,
+`nac m365 teams-sharepoint bff-performance-acceptance`, remains closed by the
+two flags `--owner-approved` and `--execute-live-acceptance`, each required
+exactly once, plus the immutable owner gate. It executes only after a fresh
+hash-bound owner approval. Direct adapter calls fail before token, network, or
+state access unless they receive the exact bounded capability issued after
+immutable owner-comment and sealed infrastructure-safety verification; every
+Blob call, Monitor read, and target GET requires this fresh owner-bound
+capability.

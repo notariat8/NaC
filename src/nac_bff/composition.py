@@ -11,6 +11,12 @@ import time
 from typing import Any
 
 from .bpmn_asset import CanonicalBpmnAssetFilePort
+from .azure_performance_lease_broker import BrokerRoleScopeClaims
+from .azure_performance_lease_broker_composition import (
+    PERFORMANCE_LEASE_APP_ROLE,
+    PERFORMANCE_LEASE_TICKET_SCOPE,
+    build_performance_lease_broker,
+)
 from .entra_access_token import build_entra_access_token_validator
 from .fastapi_adapter import (
     create_fastapi_app,
@@ -194,6 +200,9 @@ def build_configured_app(
     access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
     bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
+    performance_lease_broker_factory: Callable[..., Any] = (
+        build_performance_lease_broker
+    ),
 ) -> Any:
     """Compose the configured app, raising only generic configuration errors."""
 
@@ -234,6 +243,21 @@ def build_configured_app(
         bpmn_asset_port=bpmn_asset_port,
         request_budget_factory=request_budget_factory,
     )
+    performance_lease_broker = None
+    performance_lease_claims_dependency = None
+    if values.get("NAC_BFF_PERFORMANCE_LEASE_ENABLED") == "true":
+        performance_lease_broker = performance_lease_broker_factory(values)
+        performance_validator = validator_factory(
+            expected_tenant_id=settings.tenant_id,
+            expected_audience=settings.audience,
+            expected_issuer=settings.issuer,
+            required_roles={PERFORMANCE_LEASE_APP_ROLE},
+            jwks_uri=settings.jwks_uri,
+        )
+        performance_lease_claims_dependency = _performance_lease_claims_dependency(
+            performance_validator,
+            expected_tenant_id=settings.tenant_id,
+        )
     return create_fastapi_app(
         bff=bff,
         workbench_endpoint=workbench_endpoint,
@@ -241,6 +265,8 @@ def build_configured_app(
             validator,
             expected_tenant_id=settings.tenant_id,
         ),
+        performance_lease_broker=performance_lease_broker,
+        performance_lease_claims_dependency=performance_lease_claims_dependency,
         ready=False,
     )
 
@@ -256,6 +282,9 @@ def create_app_from_env(
     access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
     bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
+    performance_lease_broker_factory: Callable[..., Any] = (
+        build_performance_lease_broker
+    ),
 ) -> Any:
     """Build the runtime app and fail closed to deny-all on every start error."""
 
@@ -268,6 +297,7 @@ def create_app_from_env(
             access_port_factory=access_port_factory,
             workspace_port_factory=workspace_port_factory,
             bpmn_asset_port_factory=bpmn_asset_port_factory,
+            performance_lease_broker_factory=performance_lease_broker_factory,
         )
     except Exception:
         return create_unconfigured_app()
@@ -307,6 +337,43 @@ def _claims_dependency(
         return claims
 
     return validated_claims
+
+
+def _performance_lease_claims_dependency(
+    validator: Callable[[object], Any],
+    *,
+    expected_tenant_id: str,
+) -> Callable[..., Any]:
+    try:
+        from fastapi import Header, HTTPException
+    except ImportError as exc:  # pragma: no cover - runtime packaging failure
+        raise CompositionError("FastAPI is unavailable") from exc
+
+    async def validated_performance_claims(
+        authorization=Header(default=None, alias="Authorization"),
+    ) -> BrokerRoleScopeClaims:
+        try:
+            claims = await run_sync_with_request_budget(validator, authorization)
+        except TimeoutError:
+            raise HTTPException(status_code=503, detail="service unavailable") from None
+        except Exception:
+            claims = None
+        if (
+            not isinstance(claims, ValidatedClaims)
+            or claims.tenant_id != expected_tenant_id
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="authentication required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return BrokerRoleScopeClaims(
+            owner_subject=claims.object_id,
+            role=PERFORMANCE_LEASE_APP_ROLE,
+            scope=PERFORMANCE_LEASE_TICKET_SCOPE,
+        )
+
+    return validated_performance_claims
 
 
 @contextmanager

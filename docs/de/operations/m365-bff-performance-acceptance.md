@@ -1,8 +1,11 @@
 # M365-BFF-Performance-Abnahme
 
-Status: Issue #733 definiert einen Offline-Vertrag sowie Offline-Adapter für
-Azure Monitor und eine dedizierte Azure-Blob-Lease. Ein Live-CLI-Befehl und
-eine Live-Aktion sind nicht implementiert.
+Status: Issue #735 implementiert den owner-gebundenen Live-CLI- und
+Kompositionspfad offline. Er bindet die reproduzierbare, noch nicht
+irreversibel gesperrte WORM-Baseline, die Koordinationsinfrastruktur, Azure
+Monitor, die dedizierte Blob-Lease und exakt 500 synthetische GETs an eine
+einzige spätere Owner-Freigabe. In diesem Slice werden keine Azure-Ressourcen
+erstellt und keine Live-Aufrufe ausgeführt.
 
 Die maschinenlesbaren Quellen sind der
 [Abnahmevertrag](../../../workflows/contracts/m365-bff-performance-acceptance.contract.json)
@@ -135,27 +138,35 @@ nicht Teil dieser Aussage.
 
 ## Exklusive Lease
 
-Der dedizierte Offline-Adapter liegt in
-`src/nac_bff/azure_performance_lease.py`. Lease-Storage, BFF-Storage und
-WORM-Evidence-Storage müssen getrennt sein. Der Adapter darf nur diese
-Operationen anbieten:
+Die lokale Grenze liegt in
+`src/nac_bff/azure_performance_lease_broker_client.py`; der serverseitige
+Broker und seine persistente State Machine liegen in
+`src/nac_bff/azure_performance_lease_broker.py` und
+`src/nac_bff/azure_performance_lease_broker_storage.py`. Lease-Storage,
+BFF-Storage und WORM-Evidence-Storage müssen getrennt sein. Die Broker-API darf
+nur diese Operationen anbieten:
 
 1. `acquire(-1)` mit einer vorab persistent gespeicherten UUID
 2. `assert_held`
 3. `release`
 
 Die persistente State Machine lautet exakt `ACQUIRE_INTENT`,
-`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`. Vor jedem
+`ACQUIRE_IN_FLIGHT`, `HELD`, `RELEASE_INTENT`, `RELEASED`, `LOST`. Vor jedem
 Target-Dispatch muss dieselbe Lease-ID auf demselben gebundenen Blob als
 gehalten bestätigt werden. Resume setzt dieselbe Lease-ID, dieselbe
 Zielbindung und dieselbe Lease-Bindung voraus.
+Jedes `assert_held`-Receipt wird vor Uhr-, Monitor- oder Target-Arbeit auf
+exakt `HELD`, Lease-Bindung, Zielbindung und Zustands-Hash geprüft. Ist eine
+zuvor gehaltene Lease autoritativ nicht mehr vorhanden, persistiert der Broker
+zuerst terminal `LOST`.
 
 Eine verlorene oder fremde Lease sowie Binding-Drift blockieren ohne Dispatch.
-Automatisches Reacquire, Lease-Break und Blob-Delete sind im Runtime-Adapter
-verboten. Ein separater Bootstrap-Adapter darf das exakt gebundene
-Null-Byte-Block-Blob einmalig mit `If-None-Match: *` anlegen oder ein bereits
-vorhandenes Blob nur per `HEAD` prüfen. Überschreiben ist ausgeschlossen; der
-starke ETag aus der Antwort wird zur späteren Lease-Bindung. Ein Ergebnis darf
+Automatisches Reacquire, Lease-Break und Blob-Delete sind in Broker und lokalem
+Adapter verboten. Die Function-UAMI darf das exakt gebundene
+Null-Byte-Block-Blob intern einmalig mit `If-None-Match: *` anlegen oder ein
+bereits vorhandenes Blob per `HEAD` prüfen. Der Broker erzeugt die private
+Azure-Lease-ID selbst und gibt weder Lease-ID, Storage-Token noch Storage-URL
+an den lokalen Runner zurück. Ein Ergebnis darf
 ausschließlich im dauerhaft geschriebenen Zustand
 `RELEASED` den Status `PASSED` erhalten. `HELD`, ein unklarer Release-Ausgang
 oder ein lediglich gesendeter Release reichen nicht aus.
@@ -165,41 +176,42 @@ zusätzlich `lease_release_state_evidence_sha256`.
 `target_binding_sha256` und `lease_binding_sha256` müssen zur Messung passen.
 Ein Lifecycle-State-Hash ohne exakten Zustand und passende target binding ist
 kein Release-Nachweis.
+Zusätzlich müssen Lease-Bindung und `SHA256(lifecycle_state)` exakt zum Receipt
+passen. Geht die Release-Antwort verloren und ist die Lease anschließend nicht
+mehr vorhanden, wird der Zustand konservativ terminal als `LOST` persistiert;
+`RELEASED` wird niemals aus dem bloßen Nichtvorhandensein abgeleitet.
 
 Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
 vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren
-Koordinations-Resource-ID sowie Provisioner-Identität an den exakten
-`lease_binding_sha256`, den starken ETag, die Zielbindung und das Token-Subject
-(`oid`) binden. Envelope- und Lease-Hash werden Runtime-Execution-Bindungen.
-Der Lease-Adapter akzeptiert keinen rohen oder nur dekodierten JWT. Der
-Token-Provider muss ein versiegeltes Ergebnis liefern, das Scope,
-Identitätsbindung, `oid`, `tid`, `nbf` und `exp` bindet; `alg:none` wird vor
-State und HTTP verworfen. Die Claims `oid` und `tid` werden gegen die
-owner-gebundene Evidence geprüft. Zusätzlich müssen `aud` exakt
-`https://storage.azure.com` und die numerischen Zeitclaims
-`nbf <= trusted_clock < exp` erfüllen. Jede Abweichung blockiert vor State und
-ohne Acquire-Request.
+Koordinations-Resource-ID, Function-UAMI und Provisioning-Caller an den exakten
+`lease_binding_sha256`, die Zielbindung und das signierte Aktivierungsticket
+binden. Der lokale Runner fordert ausschließlich ein App-Token für
+`api://funktion8.de/nac-bff/.default` an. Der BFF akzeptiert dafür nur die feste
+App-Rolle `Performance.Lease`; das höchstens 60 Sekunden gültige RS256-Ticket
+bindet genau eine Operation sowie Owner, Tenant, Audience, Actor, Commit, Tree,
+Function-Paket, Plan, Ziel, Blob-Pfad und Nonce. Nur die Function-UAMI fordert
+serverseitig `https://storage.azure.com/.default` an. Jede Abweichung blockiert
+vor Broker-State und Storage-HTTP.
 Nach einem echten Prozessneustart wird die Infrastruktur ausschließlich
 read-only neu attestiert. Serialisierte Safety-Evidence allein autorisiert
 nichts, weil die prozessgebundene Capability nicht serialisiert wird. Nur eine
-frische Re-Attestation mit identischem Owner, Tenant, Principal, Ziel und
+frische Re-Attestation mit identischem Owner, Tenant, beiden Principals, Ziel und
 Lease-Bindung darf die bestehende Lease reconciliieren; der alte abgelaufene
 Nachweis autorisiert keine neue Mutation.
 
 Die Offline-IaC liegt unter
-`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet den
-bestehenden Entra-Service-Principal per Objekt-ID, erlaubt am Storage-Endpunkt
-nur eine explizite Client-IP und setzt die Netzwerk-Defaultregel auf `Deny`.
-Shared Keys, öffentliche Blobs sowie Delete-, Owner- und Container-DataActions
-bleiben ausgeschlossen. Die exakt pfadgebundene Rolle enthält
-`blobs/add/action` für das einmalige bedingte Anlegen, `blobs/read` für den
-Readback und `blobs/write` für Lease-Operationen. Azure autorisiert über die
-Write-DataAction zugleich Overwrite und Lease-Break.
-Darum begrenzen ABAC den Pfad und die versiegelte Anwendungsschnittstelle die
-Operation: Bootstrap nur `PUT` mit Create-Precondition oder `HEAD`, Runtime nur
-Acquire, Assert und Release. Der starke ETag wird anschließend in die
-Runtime-Bindung übernommen. Der Blob-Token wird ausschließlich für den Scope
-`https://storage.azure.com/.default` angefordert.
+`deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet die
+Function-UAMI, den davon getrennten Provisioning-Caller, Function-Paket,
+Ticket-Zertifikat und die autoritativen Function-Outbound-IPs. Am
+Storage-Endpunkt sind ausschließlich diese Outbound-IPs erlaubt; die
+Netzwerk-Defaultregel ist `Deny`. Shared Keys, öffentliche Blobs sowie Delete-,
+Owner- und Container-DataActions bleiben ausgeschlossen. Nur die Function-UAMI
+erhält am exakten Container und Blob-Pfad `blobs/read` und `blobs/write`; der
+lokale Caller erhält keine Storage-DataAction. Da Azure `write` auch Overwrite
+und Lease-Break umfasst, erzwingen ABAC und die feste Broker-API gemeinsam die
+engere Operationsgrenze. Vor Acquire werden außerdem die exakte
+`Performance.Lease`-Zuweisung und der hashgebundene Function-Settings-Satz
+gesetzt und ohne Ausgabe seiner Werte zurückgelesen.
 
 ## Owner-Gate und Evidence
 
@@ -220,6 +232,11 @@ Eingaben:
 - `infrastructure_source_sha256`
 - `infrastructure_parameters_sha256`
 - `infrastructure_binding_sha256`
+- `worm_baseline_binding_sha256`
+- `worm_baseline_compiled_arm_sha256`
+- `worm_baseline_parameters_sha256`
+- `worm_baseline_source_sha256`
+- `deployment_sequence_sha256`
 - `target_binding_sha256`
 - `expected_activation_hash`
 - `correlation_id`
@@ -230,6 +247,11 @@ Eingaben:
 Bicep `0.45.15.27210` kanonisch kompilierten ARM-/Parameter-Artefakte. CI muss
 beide Artefakte bytegenau reproduzieren; der spätere Live-Pfad verwendet nur
 diese gebundene Ausgabe.
+
+Die WORM-Baseline wird vor der Koordinationsinfrastruktur in derselben
+Resource Group `rg-nac-bff-test` angelegt und anschließend read-only
+abgeglichen. Der gebundene Ablauf darf keinen irreversiblen Immutability-Lock
+setzen. Ein solcher Lock bleibt eine eigene spätere Governance-Entscheidung.
 
 Der UTC-minutengenaue `monitor_window_anchor` begrenzt den frühesten
 Monitorzeitpunkt. Unmittelbar vor dem ersten Lease- oder Monitor-Netzwerkzugriff
@@ -258,6 +280,22 @@ plus den sieben unveränderlichen NaC-Koordinationstags.
 Die tatsächlichen Resource-IDs des bestehenden BFF-Storage und des
 WORM-Evidence-Storage sind ebenfalls vorab gebunden. Die Namensprüfung vor dem
 Deployment muss belegen, dass das Koordinationskonto noch nicht existiert. Ein
+erfolgreicher Erstlauf persistiert diesen ursprünglichen
+`nameAvailable=true`-Receipt unveränderlich vor dem ersten Deployment und einen
+exakten `Succeeded`-Deployment-Receipt unmittelbar nach dem
+Koordinationsdeployment. Bei einem Neustart mit vollständigem Receipt-Paar wird
+vor jeder Provider-Mutation ein frisches GET desselben deterministischen
+Deployments geprüft. Owner-, Ziel-, Quell-, Parameter- und Hashbindungen müssen
+übereinstimmen; es erfolgen dabei exakt null Namensprüfungen und null
+Deployment-Creates. Danach werden die vollständigen Safety-Readbacks frisch
+wiederholt. `Running`, `Failed`, fehlende, ersetzte, unvollständige, manipulierte
+oder abweichende Receipts blockieren. Liegt nach einem Absturz nur der
+ursprüngliche Namens-Receipt vor, darf der Fresh-Name-Pfad ausschließlich nach
+einer neuen aktuellen Prüfung mit `nameAvailable=true` fortgesetzt werden;
+andernfalls wird ohne Redeployment blockiert. Der historische Receipt allein
+autorisiert nie ein Deployment. Es gilt strikt
+`original observed < started <= completed < current reconciliation observed`.
+Ein
 getrennter Readback nach dem Deployment muss dessen exakte Resource-ID, Region,
 effektive Tags und die vollständige Storage-/Netzwerkkonfiguration bestätigen:
 öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, genau
@@ -328,6 +366,10 @@ Validierung von Settled-Window-Abdeckung, Monitor-Attestation, Ziel- und
 Hashbindungen sowie dem auf null projizierten Restbudget wird vor dem Release
 ein dauerhafter
 `nac.m365-bff-performance-pending-finalization/v1`-Datensatz geschrieben. Ein
+früher Cleanup-Release wird analog zuerst durch einen atomaren
+`nac.m365-bff-performance-release-recovery/v1`-Checkpoint gebunden. Nach einem
+Prozessneustart wird dieser Checkpoint vor jedem neuen Acquire reconciliiert
+und erst nach einem exakten `RELEASED`-Receipt gelöscht. Ein
 autoritativer Checkpoint wird mit `O_NOFOLLOW` geöffnet und anhand desselben
 Dateideskriptors per `fstat` geprüft; atomare Ersetzungen verwenden einen zuvor
 auf Eigentümer und Modus geprüften Verzeichnisdeskriptor. Symlinks oder unsichere
@@ -377,11 +419,15 @@ Der bestehende Planbefehl bleibt offline und sendet null Requests:
 nac m365 teams-sharepoint bff-performance-acceptance-plan
 ```
 
-Issue #733 implementiert die Adapter für Offline-Verifikation, aktiviert aber
-keinen Live-CLI-Befehl, keine Azure-Ressourcenaktion, keine Blob-/Lease-Mutation,
-keinen Monitor-Read und keinen Target-Dispatch. Direkte Adapteraufrufe blockieren
-vor Token-, Netzwerk- oder State-Zugriff, wenn nicht die exakte begrenzte
-Capability aus unveränderlicher Owner-Kommentar- und versiegelter
-Infrastruktur-Safety-Verifikation vorliegt. Eine spätere Live-Komposition
-benötigt diese frische owner-gebundene Capability für jeden Blob-Aufruf,
-Monitor-Read und Target-GET.
+Dieser PR führt keine Live-Aktion aus: keine Azure-Ressourcenaktion, keine
+Blob-/Lease-Mutation, keinen Monitor-Read und keinen Target-Dispatch. Der
+implementierte Live-CLI-Pfad
+`nac m365 teams-sharepoint bff-performance-acceptance` bleibt durch die beiden
+jeweils genau einmal erforderlichen Flags `--owner-approved` und
+`--execute-live-acceptance` sowie das unveränderliche Owner-Gate geschlossen.
+Er wird erst nach einer frischen hashgebundenen Owner-Freigabe ausgeführt.
+Direkte Adapteraufrufe blockieren vor Token-, Netzwerk- oder State-Zugriff,
+wenn nicht die exakte begrenzte Capability aus unveränderlicher
+Owner-Kommentar- und versiegelter Infrastruktur-Safety-Verifikation vorliegt;
+jeder Blob-Aufruf, Monitor-Read und Target-GET benötigt diese frische
+owner-gebundene Capability.
