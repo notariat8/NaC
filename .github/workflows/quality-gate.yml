@@ -161,7 +161,9 @@ jobs:
           path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components
 
       - name: Install pinned Bicep compiler
-        run: az bicep install --version v0.45.6
+        run: |
+          az bicep uninstall
+          az bicep install --version v0.45.6
 
       - name: Reproduce Azure BFF Bicep artifacts
         run: |
