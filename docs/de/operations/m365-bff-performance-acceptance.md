@@ -212,6 +212,18 @@ und Lease-Break umfasst, erzwingen ABAC und die feste Broker-API gemeinsam die
 engere Operationsgrenze. Vor Acquire werden außerdem die exakte
 `Performance.Lease`-Zuweisung und der hashgebundene Function-Settings-Satz
 gesetzt und ohne Ausgabe seiner Werte zurückgelesen.
+Die ID der Rollenzuweisung ist stabil an die autoritative Function-Ressourcen-ID
+gebunden, während ihr Principal aus der aktuellen System-Assigned Identity
+aufgelöst wird. ARM erlaubt die erst zur Deploymentzeit aufgelöste Principal-ID
+nicht als Bestandteil des Rollenzuweisungsnamens. Ein Identitätswechsel ist
+deshalb bewusst fail-closed: Azure darf eine bestehende Rollenzuweisung nicht
+auf einen anderen Principal aktualisieren. Der effektive RBAC-Readback indexiert alle
+sichtbaren Rollenzuweisungen an jedem geprüften Vorgängerscope, nicht nur die
+Zuweisungen des erwarteten Principals. Eine zurückgebliebene Zuweisung derselben
+Broker-Rolle an die Runtime-UAMI oder an eine frühere Function-Systemidentität
+blockiert den Lauf. Sie wird weder automatisch gelöscht noch zurückgerollt;
+vor einer Neuzuweisung nach Identitätsrotation erfordert ihre Entfernung eine
+separat owner-freigegebene und evidenzgebundene Bereinigung.
 Die bestehende User-Assigned Identity der Function bleibt getrennt für Graph,
 Host-Storage und Application Insights gebunden; sie erhält keine Lease-Rolle.
 

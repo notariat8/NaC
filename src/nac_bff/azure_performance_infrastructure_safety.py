@@ -43,7 +43,7 @@ BROKER_ALLOWED_DATA_ACTIONS = frozenset(
 ALLOWED_DATA_ACTIONS = BROKER_ALLOWED_DATA_ACTIONS
 
 PROVENANCE_READBACK_SCHEMA = "nac.azure-provenance-readback/v1"
-EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v1"
+EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v2"
 STORAGE_API_VERSION = "2023-05-01"
 AUTHORIZATION_API_VERSION = "2022-04-01"
 MICROSOFT_GRAPH_API_VERSION = "v1.0"
@@ -1270,6 +1270,7 @@ class AzurePerformanceInfrastructureReadbackAdapter:
 
         relevant = {principal, *groups}
         assignments: list[dict[str, Any]] = []
+        assignment_index: list[dict[str, str]] = []
         pending_assignments: list[tuple[dict[str, Any], str, str]] = []
         role_definitions: dict[str, dict[str, Any]] = {}
         for scope in ancestor_scopes:
@@ -1294,12 +1295,23 @@ class AzurePerformanceInfrastructureReadbackAdapter:
                 candidate_principal = _canonical_uuid(
                     properties.get("principalId"), "EFFECTIVE_ASSIGNMENTS_INVALID"
                 )
-                if candidate_principal not in relevant:
-                    continue
                 role_id = _require_arm_id(
                     properties.get("roleDefinitionId"),
                     "EFFECTIVE_ASSIGNMENT_DATA_ACTIONS_UNRESOLVED",
                 )
+                assignment_id = _require_arm_id(
+                    item.get("id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+                )
+                assignment_index.append(
+                    {
+                        "assignment_id": assignment_id,
+                        "principal_id": candidate_principal,
+                        "role_definition_id": role_id,
+                        "scope": scope,
+                    }
+                )
+                if candidate_principal not in relevant:
+                    continue
                 pending_assignments.append((dict(item), scope, role_id))
         for expanded, scope, role_id in pending_assignments:
             if role_id.casefold() not in role_definitions:
@@ -1322,11 +1334,21 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             "transitive_group_principal_ids": groups,
             "ancestor_scopes": list(ancestor_scopes),
             "effective_role_assignments": assignments,
+            "role_assignment_principal_index": sorted(
+                assignment_index,
+                key=lambda item: (
+                    item["scope"].casefold(),
+                    item["role_definition_id"].casefold(),
+                    item["assignment_id"].casefold(),
+                    item["principal_id"],
+                ),
+            ),
             "completeness_attestation": {
                 "root_ancestry_complete": True,
                 "management_group_ancestry_complete": True,
                 "transitive_group_membership_complete": True,
                 "role_assignments_complete": True,
+                "all_role_assignment_principals_indexed": True,
                 "role_definitions_expanded": True,
             },
         }
@@ -3970,6 +3992,7 @@ def _verify_effective_rbac_readback(
         "transitive_group_principal_ids",
         "ancestor_scopes",
         "effective_role_assignments",
+        "role_assignment_principal_index",
         "completeness_attestation",
     }
     if not isinstance(payload, Mapping) or set(payload) != expected_payload_keys:
@@ -3980,6 +4003,7 @@ def _verify_effective_rbac_readback(
         "management_group_ancestry_complete": True,
         "transitive_group_membership_complete": True,
         "role_assignments_complete": True,
+        "all_role_assignment_principals_indexed": True,
         "role_definitions_expanded": True,
     }
     if completeness != required_completeness:
@@ -4012,6 +4036,10 @@ def _verify_effective_rbac_readback(
         ),
     )
     assignments = payload.get("effective_role_assignments")
+    assignment_index = _validate_role_assignment_principal_index(
+        payload.get("role_assignment_principal_index"),
+        ancestor_scopes=ancestor_scopes,
+    )
     if expected_assignment_id is None:
         _verify_no_effective_storage_data_actions(
             assignments,
@@ -4040,12 +4068,78 @@ def _verify_effective_rbac_readback(
         )
         if exact_count != 1:
             _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE")
+        matching_role_assignments = [
+            item
+            for item in assignment_index
+            if item["role_definition_id"].casefold()
+            == expected_role_definition_id.casefold()
+        ]
+        if matching_role_assignments != [
+            {
+                "assignment_id": expected_assignment_id,
+                "principal_id": principal_id,
+                "role_definition_id": expected_role_definition_id,
+                "scope": expected_scope,
+            }
+        ]:
+            _fail("EXPECTED_ROLE_ASSIGNMENT_NOT_EXCLUSIVE")
     return {
         "effective_assignment_count": exact_count,
         "principal_count": 1 + len(groups),
         "ancestor_scope_count": len(ancestor_scopes),
         "observed_at": _envelope_observed_at(value),
     }
+
+
+def _validate_role_assignment_principal_index(
+    value: Any, *, ancestor_scopes: set[str]
+) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+    result: list[dict[str, str]] = []
+    expected_keys = {
+        "assignment_id",
+        "principal_id",
+        "role_definition_id",
+        "scope",
+    }
+    for item in value:
+        if not isinstance(item, Mapping) or set(item) != expected_keys:
+            _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+        assignment_id = _require_arm_id(
+            item.get("assignment_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        principal_id = _canonical_uuid(
+            item.get("principal_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        role_definition_id = _require_arm_id(
+            item.get("role_definition_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        scope = item.get("scope")
+        if not isinstance(scope, str) or scope.casefold() not in ancestor_scopes:
+            _fail("EFFECTIVE_ASSIGNMENT_SCOPE_INVALID")
+        result.append(
+            {
+                "assignment_id": assignment_id,
+                "principal_id": principal_id,
+                "role_definition_id": role_definition_id,
+                "scope": scope,
+            }
+        )
+    canonical = sorted(
+        result,
+        key=lambda item: (
+            item["scope"].casefold(),
+            item["role_definition_id"].casefold(),
+            item["assignment_id"].casefold(),
+            item["principal_id"],
+        ),
+    )
+    if result != canonical or len(
+        {item["assignment_id"].casefold() for item in result}
+    ) != len(result):
+        _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+    return result
 
 
 def _verify_ancestor_scopes(
@@ -4974,6 +5068,7 @@ def _effective_rbac_payload_from_operations(
         return None
     relevant = {principal, *groups}
     assignments: list[dict[str, Any]] = []
+    assignment_index: list[dict[str, str]] = []
     pending: list[tuple[dict[str, Any], str, str]] = []
     for scope in scopes:
         if index >= len(operations) or not isinstance(scope, str):
@@ -5010,11 +5105,22 @@ def _effective_rbac_payload_from_operations(
                 )
             except AzurePerformanceInfrastructureSafetyError:
                 return None
-            if candidate_principal not in relevant:
-                continue
             role_id = properties.get("roleDefinitionId")
             if not isinstance(role_id, str):
                 return None
+            assignment_id = item.get("id")
+            if not isinstance(assignment_id, str):
+                return None
+            assignment_index.append(
+                {
+                    "assignment_id": assignment_id,
+                    "principal_id": candidate_principal,
+                    "role_definition_id": role_id,
+                    "scope": scope,
+                }
+            )
+            if candidate_principal not in relevant:
+                continue
             pending.append((dict(item), scope, role_id))
     role_cache: dict[str, dict[str, Any]] = {}
     for item, scope, role_id in pending:
@@ -5046,11 +5152,21 @@ def _effective_rbac_payload_from_operations(
         "transitive_group_principal_ids": groups,
         "ancestor_scopes": scopes,
         "effective_role_assignments": assignments,
+        "role_assignment_principal_index": sorted(
+            assignment_index,
+            key=lambda item: (
+                item["scope"].casefold(),
+                item["role_definition_id"].casefold(),
+                item["assignment_id"].casefold(),
+                item["principal_id"],
+            ),
+        ),
         "completeness_attestation": {
             "root_ancestry_complete": True,
             "management_group_ancestry_complete": True,
             "transitive_group_membership_complete": True,
             "role_assignments_complete": True,
+            "all_role_assignment_principals_indexed": True,
             "role_definitions_expanded": True,
         },
     }

@@ -200,6 +200,18 @@ blob path; the local caller receives no Storage DataAction. Because Azure
 jointly enforce the narrower operation boundary. Before acquire, the exact
 `Performance.Lease` assignment and hash-bound Function settings are configured
 and read back without exposing their values.
+The role-assignment ID is stably bound to the authoritative Function resource
+ID, while its principal is resolved from the current system-assigned identity.
+ARM does not permit the principal ID that is resolved only at deployment time
+to participate in the role-assignment name. Identity rotation is therefore
+deliberately fail-closed: Azure must not update an existing role assignment to
+another principal. Effective RBAC readback indexes every visible role
+assignment at every inspected ancestor scope, not only assignments for the
+expected principal. A stale assignment of the same broker role to the runtime
+UAMI or to a previous Function system identity blocks the run. It is neither
+deleted nor rolled back automatically; before reassignment after identity
+rotation, removing it requires a separately owner-approved and evidence-bound
+cleanup.
 The existing Function user-assigned identity remains separately bound to Graph,
 host storage, and Application Insights and receives no lease role.
 

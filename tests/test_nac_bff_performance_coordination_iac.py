@@ -322,7 +322,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             assignment["name"],
         )
         self.assertIn("variables('leaseBlobPath')", assignment["name"])
-        self.assertNotIn("principalId", assignment["name"])
+        self.assertNotIn("validatedBrokerPrincipalId", assignment["name"])
 
     def test_compiled_condition_binds_only_the_exact_blob_path(self) -> None:
         variables = self.template["variables"]

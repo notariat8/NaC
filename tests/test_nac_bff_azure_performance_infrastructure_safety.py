@@ -770,11 +770,35 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
 
     def test_caller_effective_storage_data_action_is_rejected(self) -> None:
         responses = _responses()
+        caller_role_definition_id = (
+            f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+            "roleDefinitions/77777777-2222-4333-8444-555555555555"
+        )
         caller_assignment = deepcopy(_role_assignment())
         caller_assignment["id"] = ROLE_ASSIGNMENT_ID.rsplit("/", 1)[0] + (
             "/44444444-2222-4333-8444-555555555555"
         )
         caller_assignment["properties"]["principalId"] = CALLER_PRINCIPAL_ID
+        caller_assignment["properties"]["roleDefinitionId"] = (
+            caller_role_definition_id
+        )
+        responses[
+            f"https://management.azure.com{caller_role_definition_id}"
+            "?api-version=2022-04-01"
+        ] = {
+            "id": caller_role_definition_id,
+            "properties": {
+                "permissions": [{
+                    "actions": [],
+                    "notActions": [],
+                    "dataActions": [
+                        "Microsoft.Storage/storageAccounts/blobServices/"
+                        "containers/blobs/read"
+                    ],
+                    "notDataActions": [],
+                }]
+            },
+        }
         container_url = (
             f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
             "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
@@ -790,6 +814,35 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT",
         ):
             self._verify(arguments)
+
+    def test_stale_broker_role_assignment_is_rejected(self) -> None:
+        stale_principals = {
+            "runtime-uami": RUNTIME_UAMI_PRINCIPAL_ID,
+            "previous-system-identity": "66666666-2222-4333-8444-555555555555",
+        }
+        for label, stale_principal in stale_principals.items():
+            with self.subTest(label=label):
+                responses = _responses()
+                stale = deepcopy(_role_assignment())
+                stale["id"] = ROLE_ASSIGNMENT_ID.rsplit("/", 1)[0] + (
+                    "/55555555-2222-4333-8444-555555555555"
+                )
+                stale["properties"]["principalId"] = stale_principal
+                container_url = (
+                    f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+                    "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    "&$filter=atScope()"
+                )
+                responses[container_url]["value"].append(stale)
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "EXPECTED_ROLE_ASSIGNMENT_NOT_EXCLUSIVE",
+                ):
+                    self._verify(arguments)
 
     def test_rejects_broader_effective_assignment_at_each_ancestor(self) -> None:
         for index, scope in enumerate(_ancestor_scopes()[:-1]):
@@ -839,7 +892,7 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         )
         for variant, error in (
             ("missing", "EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE"),
-            ("duplicate", "EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE"),
+            ("duplicate", "EFFECTIVE_ASSIGNMENTS_INVALID"),
             ("unresolved", "EFFECTIVE_ASSIGNMENT_DATA_ACTIONS_UNRESOLVED"),
         ):
             with self.subTest(variant=variant):
