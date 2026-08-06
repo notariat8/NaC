@@ -25,6 +25,11 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
     def test_ci_recompiles_and_compares_pinned_bicep_outputs(self) -> None:
+        self.assertRegex(
+            self.quality_workflow,
+            r"az bicep uninstall\s*\n\s*"
+            r"az bicep install --version v0\.45\.6",
+        )
         required = (
             "az bicep install --version v0.45.6",
             "az bicep build --file deploy/runtime/azure/nac-bff/infra/main.bicep --stdout",
