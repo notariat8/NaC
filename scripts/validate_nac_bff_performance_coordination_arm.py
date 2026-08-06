@@ -108,15 +108,6 @@ EXPECTED_PARAMETER_SCHEMAS = {
             )
         },
     },
-    "brokerPrincipalId": {
-        "type": "string",
-        "metadata": {
-            "description": (
-                "Object ID of the non-exportable BFF Function managed identity "
-                "used only by the fixed lease-broker route."
-            )
-        },
-    },
     "brokerCallerServicePrincipalId": {
         "type": "string",
         "metadata": {
@@ -154,17 +145,6 @@ EXPECTED_PARAMETER_SCHEMAS = {
             "description": (
                 "SHA-256 of the public certificate used by the broker to verify "
                 "short-lived activation tickets."
-            )
-        },
-    },
-    "brokerOutboundIpAddresses": {
-        "type": "array",
-        "minLength": 1,
-        "maxLength": 32,
-        "metadata": {
-            "description": (
-                "Exact public IPv4 addresses reported by the bound BFF Function App "
-                "for broker egress. Local runner addresses are forbidden."
             )
         },
     },
@@ -215,7 +195,6 @@ EXPECTED_EXAMPLE_PARAMETERS = {
         "resourceGroups/rg-nac-worm/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormoffline001"
     ),
-    "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
     "brokerCallerServicePrincipalId": "66666666-7777-4888-8999-aaaaaaaaaaaa",
     "brokerFunctionAppResourceId": (
         "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
@@ -224,7 +203,6 @@ EXPECTED_EXAMPLE_PARAMETERS = {
     ),
     "brokerFunctionPackageSha256": "1" * 64,
     "brokerTicketVerificationCertificateSha256": "2" * 64,
-    "brokerOutboundIpAddresses": ["203.0.113.10"],
     "targetBindingSha256": "1" * 64,
     "tags": {
         "owner": "replace-before-owner-gated-deployment",
@@ -292,25 +270,32 @@ EXPECTED_VALIDATED_BROKER_FUNCTION_APP_ID = (
     "'brokerFunctionAppResourceIdSegments')[1]), 'subscriptions')), equals(variables("
     "'brokerFunctionAppResourceIdSegments')[2], parameters('subscriptionId'))), "
     "equals(toLower(variables('brokerFunctionAppResourceIdSegments')[3]), "
-    "'resourcegroups')), not(empty(variables('brokerFunctionAppResourceIdSegments')"
-    "[4]))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), "
+    "'resourcegroups')), equals(variables('brokerFunctionAppResourceIdSegments')"
+    "[4], parameters('resourceGroupName'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), "
     "'providers')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')"
     "[6]), 'microsoft.web')), equals(toLower(variables("
     "'brokerFunctionAppResourceIdSegments')[7]), 'sites')), not(empty(variables("
     "'brokerFunctionAppResourceIdSegments')[8]))), parameters("
     "'brokerFunctionAppResourceId'), fail('Broker Function App resource ID is not "
-    "authoritative in the owner-bound subscription.'))]"
+    "authoritative in the owner-bound resource group.'))]"
 )
 EXPECTED_VALIDATED_BROKER_PRINCIPAL_ID = (
-    "[if(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), "
-    "not(empty(parameters('brokerPrincipalId')))), not(empty(parameters("
-    "'brokerCallerServicePrincipalId')))), not(equals(toLower(parameters("
-    "'brokerPrincipalId')), toLower(parameters('brokerCallerServicePrincipalId'))))), "
-    "parameters('brokerPrincipalId'), fail('Distinct broker managed identity and "
-    "owner-gated caller service principal are required.'))]"
+    "[if(and(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), "
+    "contains(reference(resourceId('Microsoft.Web/sites', variables("
+    "'brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.type, "
+    "'SystemAssigned')), not(empty(reference(resourceId('Microsoft.Web/sites', "
+    "variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', "
+    "'full').identity.principalId))), not(empty(parameters("
+    "'brokerCallerServicePrincipalId')))), not(equals(toLower(reference(resourceId("
+    "'Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), "
+    "'2024-04-01', 'full').identity.principalId), toLower(parameters("
+    "'brokerCallerServicePrincipalId'))))), reference(resourceId("
+    "'Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), "
+    "'2024-04-01', 'full').identity.principalId, fail('The bound broker Function "
+    "requires a system-assigned identity distinct from the owner-gated caller "
+    "service principal.'))]"
 )
 EXPECTED_VARIABLE_KEYS = {
-    "copy",
     "containerName",
     "leaseBlobPath",
     "bffStorageAccountResourceIdSegments",
@@ -329,7 +314,7 @@ EXPECTED_VARIABLE_KEYS = {
     "blobWriteDataAction",
     "exactBrokerLeaseBlobCondition",
     "validatedBrokerFunctionAppResourceId",
-    "validatedBrokerPrincipalId",
+    "brokerResourceAccessRules",
     "mandatoryResourceTags",
     "resourceTags",
 }
@@ -488,20 +473,6 @@ def _validate_id_binding_variables(
 ) -> None:
     if set(variables) != EXPECTED_VARIABLE_KEYS:
         errors.append("variable key set differs from the broker coordination contract")
-    if variables.get("copy") != [
-        {
-            "name": "brokerIpRules",
-            "count": "[length(parameters('brokerOutboundIpAddresses'))]",
-            "input": {
-                "action": "Allow",
-                "value": (
-                    "[parameters('brokerOutboundIpAddresses')"
-                    "[copyIndex('brokerIpRules')]]"
-                ),
-            },
-        }
-    ]:
-        errors.append("broker outbound IP firewall rule expansion differs")
     exact_literals = {
         "containerName": "nac-bff-performance-leases",
         "leaseBlobPath": (
@@ -541,7 +512,12 @@ def _validate_id_binding_variables(
         "validatedBrokerFunctionAppResourceId": (
             EXPECTED_VALIDATED_BROKER_FUNCTION_APP_ID
         ),
-        "validatedBrokerPrincipalId": EXPECTED_VALIDATED_BROKER_PRINCIPAL_ID,
+        "brokerResourceAccessRules": [
+            {
+                "resourceId": "[variables('validatedBrokerFunctionAppResourceId')]",
+                "tenantId": "[parameters('tenantId')]",
+            }
+        ],
         "resourceTags": (
             "[union(parameters('tags'), variables('mandatoryResourceTags'))]"
         ),
@@ -651,8 +627,8 @@ def _validate_storage(
         "networkAcls": {
             "bypass": "None",
             "defaultAction": "Deny",
-            "ipRules": "[variables('brokerIpRules')]",
-            "resourceAccessRules": [],
+            "ipRules": [],
+            "resourceAccessRules": "[variables('brokerResourceAccessRules')]",
             "virtualNetworkRules": [],
         },
     }
@@ -663,7 +639,7 @@ def _validate_storage(
     if not isinstance(network_acls, Mapping):
         errors.append("networkAcls must be an object")
     if resource.get("properties") != expected_properties:
-        errors.append("storage properties or broker outbound IP ACLs are not exact")
+        errors.append("storage properties or broker resource-instance ACLs are not exact")
 
 
 def _validate_blob_service(
@@ -707,7 +683,7 @@ def _validate_container(
     expected_properties = {
         "publicAccess": "None",
         "metadata": {
-            "nac_schema_version": "nac.azure-bff-performance-coordination/v1",
+            "nac_schema_version": "nac.azure-bff-performance-coordination/v2",
             "data_classification": "synthetic-only",
             "lease_blob_path": "[variables('leaseBlobPath')]",
             "lease_blob_type": "BlockBlob",
@@ -719,7 +695,7 @@ def _validate_container(
                 "non-exportable-managed-identity-read-write-no-delete"
             ),
             "azure_blob_write_authorization": (
-                "broker-uami-write-includes-create-overwrite-lease-and-break"
+                "broker-system-identity-write-includes-create-overwrite-lease-and-break"
             ),
             "operation_restriction_boundary": (
                 "owner-ticketed-fixed-function-route"
@@ -797,7 +773,7 @@ def _validate_role_assignments(
         "name": (
             "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/"
             "containers', variables('validatedStorageAccountName'), 'default', "
-            "variables('containerName')), variables('validatedBrokerPrincipalId'), "
+            "variables('containerName')), variables('validatedBrokerFunctionAppResourceId'), "
             "resourceId('Microsoft.Authorization/roleDefinitions', variables("
             "'brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]"
         ),
@@ -808,7 +784,7 @@ def _validate_role_assignments(
                 "Non-exportable BFF lease-broker managed identity scoped to the "
                 "exact performance lease blob path."
             ),
-            "principalId": "[variables('validatedBrokerPrincipalId')]",
+            "principalId": EXPECTED_VALIDATED_BROKER_PRINCIPAL_ID,
             "principalType": "ServicePrincipal",
             "roleDefinitionId": (
                 "[resourceId('Microsoft.Authorization/roleDefinitions', variables("
@@ -824,14 +800,14 @@ def _validate_role_assignments(
         ],
     }
     if resources[0] != expected:
-        errors.append("broker UAMI exact-path role assignment differs")
+        errors.append("broker system-identity exact-path role assignment differs")
 
 
 def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
     expected = {
         "contractSchemaVersion": {
             "type": "string",
-            "value": "nac.azure-bff-performance-coordination/v1",
+            "value": "nac.azure-bff-performance-coordination/v2",
         },
         "storageAccountName": {
             "type": "string",
@@ -907,14 +883,14 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
                 "'Microsoft.Authorization/roleAssignments', guid(resourceId("
                 "'Microsoft.Storage/storageAccounts/blobServices/containers', "
                 "variables('validatedStorageAccountName'), 'default', variables("
-                "'containerName')), variables('validatedBrokerPrincipalId'), "
+                "'containerName')), variables('validatedBrokerFunctionAppResourceId'), "
                 "resourceId('Microsoft.Authorization/roleDefinitions', variables("
                 "'brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
             ),
         },
         "brokerPrincipalIdBinding": {
             "type": "string",
-            "value": "[variables('validatedBrokerPrincipalId')]",
+            "value": EXPECTED_VALIDATED_BROKER_PRINCIPAL_ID,
         },
         "brokerCallerServicePrincipalIdBinding": {
             "type": "string",
@@ -923,6 +899,10 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
         "brokerFunctionAppResourceIdBinding": {
             "type": "string",
             "value": "[variables('validatedBrokerFunctionAppResourceId')]",
+        },
+        "brokerResourceAccessRulesBinding": {
+            "type": "array",
+            "value": "[variables('brokerResourceAccessRules')]",
         },
         "brokerFunctionPackageSha256Binding": {
             "type": "string",
@@ -977,7 +957,7 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
         "localRunnerStorageDataActions": {"type": "array", "value": []},
         "credentialBoundaryMode": {
             "type": "string",
-            "value": "BFF_BROKER_UAMI_ONLY",
+            "value": "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY",
         },
     }
     if outputs != expected:

@@ -152,7 +152,7 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
 
     def test_storage_and_telemetry_use_user_assigned_identity(self) -> None:
         required_terms = [
-            "type: 'UserAssigned'",
+            "type: 'SystemAssigned, UserAssigned'",
             "type: 'UserAssignedIdentity'",
             "userAssignedIdentityResourceId: managedIdentity.id",
             "allowSharedKeyAccess: false",
@@ -163,6 +163,7 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
             "AzureWebJobsStorage__credential: 'managedidentity'",
             "APPLICATIONINSIGHTS_AUTHENTICATION_STRING:",
             "Authorization=AAD",
+            "output functionAppSystemAssignedPrincipalId string",
         ]
 
         for term in required_terms:

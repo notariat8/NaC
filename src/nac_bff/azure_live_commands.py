@@ -955,6 +955,9 @@ def _interruption_deployment_projection(value: dict[str, Any]) -> dict[str, Any]
             "function_app_host_name": _interruption_output(
                 outputs, "functionAppHostName"
             ),
+            "function_app_system_assigned_principal_id": _interruption_output(
+                outputs, "functionAppSystemAssignedPrincipalId"
+            ),
             "managed_identity_resource_id": _interruption_output(
                 outputs, "managedIdentityResourceId"
             ),
@@ -1016,6 +1019,7 @@ def _interruption_identity_projection(
         },
         "function_app": {
             "type": function_identity.get("type"),
+            "system_assigned_principal_id": function_identity.get("principalId"),
             "user_assigned_identities": sorted(
                 projected_assignments, key=lambda item: item["id"].lower()
             ),

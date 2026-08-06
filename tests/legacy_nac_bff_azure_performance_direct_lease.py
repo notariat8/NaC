@@ -1,6 +1,6 @@
 """Archived tests for the superseded direct local Azure Storage lease path.
 
-The active performance lane uses the BFF broker/UAMI boundary and its focused
+The active performance lane uses the BFF broker/system-identity boundary and its focused
 test modules.  This file remains as migration history and is intentionally not
 part of unittest discovery.
 """

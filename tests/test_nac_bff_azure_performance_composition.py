@@ -37,6 +37,7 @@ def _coordination_resources() -> dict[str, str]:
         f"{storage}/blobServices/default/containers/nac-bff-performance-leases"
     )
     return {
+        "broker_principal_id": "11111111-2222-4333-8444-555555555555",
         "coordination_storage_account_resource_id": storage,
         "lease_container_resource_id": container,
         "broker_lease_data_role_definition_id": (
@@ -141,12 +142,10 @@ def _trace_infrastructure_path(
         "storageAccountName": "stcoord",
         "bffStorageAccountResourceId": "bff",
         "wormStorageAccountResourceId": "worm",
-        "brokerPrincipalId": "broker",
         "brokerCallerServicePrincipalId": "caller",
         "brokerFunctionAppResourceId": "function",
         "brokerFunctionPackageSha256": "b" * 64,
         "brokerTicketVerificationCertificateSha256": "c" * 64,
-        "brokerOutboundIpAddresses": ["203.0.113.10"],
         "targetBindingSha256": "a" * 64,
         "location": "location",
         "tags": {},
@@ -284,7 +283,10 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
         self.assertNotIn("provider:name-probe", trace)
         self.assertFalse(any(item.startswith("provider:create:") for item in trace))
         self.assertIn("provider:get:coordination-storage-account-configuration", trace)
-        self.assertIn("provider:get:effective-rbac:broker", trace)
+        self.assertIn(
+            "provider:get:effective-rbac:11111111-2222-4333-8444-555555555555",
+            trace,
+        )
         self.assertIn("provider:get:effective-rbac:caller", trace)
 
     def test_complete_restart_precedes_and_selects_read_only_runtime_activation(self) -> None:

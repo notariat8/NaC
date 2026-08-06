@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import ipaddress
 import json
 import os
 from pathlib import Path
@@ -152,12 +151,10 @@ _PARAMETER_KEYS = frozenset(
         "storageAccountName",
         "bffStorageAccountResourceId",
         "wormStorageAccountResourceId",
-        "brokerPrincipalId",
         "brokerCallerServicePrincipalId",
         "brokerFunctionAppResourceId",
         "brokerFunctionPackageSha256",
         "brokerTicketVerificationCertificateSha256",
-        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "tenantId",
         "subscriptionId",
@@ -279,11 +276,14 @@ def build_performance_infrastructure_owner_gate(
                 "target_binding_sha256": parameters["targetBindingSha256"],
             },
             "redacted_parameter_bindings": {
-                "broker_outbound_ip_addresses_sha256": _sha256_json(
-                    parameters["brokerOutboundIpAddresses"]
+                "broker_resource_access_rule_sha256": _sha256_json(
+                    {
+                        "resourceId": parameters["brokerFunctionAppResourceId"],
+                        "tenantId": parameters["tenantId"],
+                    }
                 ),
-                "broker_principal_sha256": _sha256_text(
-                    parameters["brokerPrincipalId"]
+                "broker_principal_source": (
+                    "bound-function-system-assigned-identity-readback"
                 ),
                 "broker_caller_service_principal_sha256": _sha256_text(
                     parameters["brokerCallerServicePrincipalId"]
@@ -515,26 +515,16 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     try:
-        broker_principal = UUID(str(result["brokerPrincipalId"]))
         broker_caller = UUID(str(result["brokerCallerServicePrincipalId"]))
         function_app_match = _FUNCTION_APP_ID_RE.fullmatch(
             str(result["brokerFunctionAppResourceId"])
         )
-        addresses = [
-            ipaddress.ip_address(str(value))
-            for value in result["brokerOutboundIpAddresses"]
-        ]
     except (TypeError, ValueError):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID") from None
     if (
-        broker_principal == broker_caller
-        or function_app_match is None
+        function_app_match is None
         or function_app_match.group("subscription") != SUBSCRIPTION_ID
         or function_app_match.group("resource_group") != RESOURCE_GROUP
-        or not isinstance(result["brokerOutboundIpAddresses"], list)
-        or not 1 <= len(addresses) <= 32
-        or len({str(address) for address in addresses}) != len(addresses)
-        or any(address.version != 4 or not address.is_global for address in addresses)
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     _require_sha256(result["targetBindingSha256"], "targetBindingSha256")
@@ -550,8 +540,6 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
         key: (
             {tag: tags[tag] for tag in sorted(tags)}
             if key == "tags"
-            else sorted(str(value) for value in result[key])
-            if key == "brokerOutboundIpAddresses"
             else str(result[key])
         )
         for key in sorted(result)

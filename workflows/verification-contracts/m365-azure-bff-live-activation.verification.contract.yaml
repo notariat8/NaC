@@ -361,7 +361,7 @@ interruption_reconciliation_verification:
         live_resource_security_properties_exact_required: true
         live_resource_targets_sha256_required: true
         managed_identity_readback_required: true
-        function_app_identity_assignment_exact: UserAssigned
+        function_app_identity_assignment_exact: SystemAssigned, UserAssigned
         double_resource_inventory_read_required: true
         resource_inventory_drift_allowed: false
         pre_mutation_provider_revalidation_required: true

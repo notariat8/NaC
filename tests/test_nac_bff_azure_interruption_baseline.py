@@ -25,6 +25,7 @@ TREE = "c" * 40
 RESOURCE_SUFFIX = "43o765p7uslni"
 CLIENT_ID = "11111111-1111-4111-8111-111111111111"
 PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222"
+SYSTEM_PRINCIPAL_ID = "33333333-3333-4333-8333-333333333333"
 
 
 def _write_secure_json(path: Path, value: object) -> bytes:
@@ -228,6 +229,7 @@ def _deployment(expectation: dict) -> dict:
         "outputs": {
             "function_app_resource_id": by_type["microsoft.web/sites"]["id"],
             "function_app_host_name": f"{FUNCTION_APP}.azurewebsites.net",
+            "function_app_system_assigned_principal_id": SYSTEM_PRINCIPAL_ID,
             "managed_identity_resource_id": by_type[
                 "microsoft.managedidentity/userassignedidentities"
             ]["id"],
@@ -253,7 +255,8 @@ def _identity_binding() -> dict:
             "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
         },
         "function_app": {
-            "type": "UserAssigned",
+            "type": "SystemAssigned, UserAssigned",
+            "system_assigned_principal_id": SYSTEM_PRINCIPAL_ID,
             "user_assigned_identities": [{
                 "id": identity["id"],
                 "client_id": CLIENT_ID,

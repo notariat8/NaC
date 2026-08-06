@@ -198,7 +198,7 @@
       "test_rejects_management_group_and_ancestor_provenance_tamper",
       "test_rejects_broker_role_or_assignment_drift",
       "test_rejects_function_app_uami_or_package_binding_drift",
-      "test_rejects_private_outbound_address",
+      "test_rejects_mismatched_resource_instance_rule",
       "test_caller_effective_storage_data_action_is_rejected",
       "test_rejects_broader_effective_assignment_at_each_ancestor",
       "test_rejects_missing_duplicate_or_unresolved_effective_assignment",

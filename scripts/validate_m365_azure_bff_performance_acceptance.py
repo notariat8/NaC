@@ -222,8 +222,6 @@ INFRASTRUCTURE_PARAMETER_FIELDS = {
     "brokerCallerServicePrincipalId",
     "brokerFunctionAppResourceId",
     "brokerFunctionPackageSha256",
-    "brokerOutboundIpAddresses",
-    "brokerPrincipalId",
     "brokerTicketVerificationCertificateSha256",
     "deploymentMode",
     "location",
@@ -738,7 +736,8 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         != "src/nac_bff/graph_activation.py"
         or broker_boundary.get("graph_activation_test_path_exact")
         != "tests/test_nac_bff_graph_activation.py"
-        or broker_boundary.get("credential_boundary_exact") != "BFF_BROKER_UAMI_ONLY"
+        or broker_boundary.get("credential_boundary_exact")
+        != "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY"
         or broker_boundary.get("bff_api_application_role_exact")
         != "Performance.Lease"
         or broker_boundary.get("bff_api_application_role_member_type_exact")
@@ -788,8 +787,8 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "broker_function_settings_values_allowed_in_evidence"
         )
         is not False
-        or broker_boundary.get("broker_principal_parameter_exact")
-        != "brokerPrincipalId"
+        or broker_boundary.get("broker_principal_source_exact")
+        != "bound_function_system_assigned_identity_readback"
         or broker_boundary.get("broker_caller_service_principal_parameter_exact")
         != "brokerCallerServicePrincipalId"
         or broker_boundary.get("broker_caller_and_broker_principals_must_be_distinct")
@@ -800,8 +799,18 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         != "brokerFunctionPackageSha256"
         or broker_boundary.get("broker_ticket_certificate_sha256_parameter_exact")
         != "brokerTicketVerificationCertificateSha256"
-        or broker_boundary.get("broker_outbound_ip_addresses_parameter_exact")
-        != "brokerOutboundIpAddresses"
+        or broker_boundary.get(
+            "broker_resource_instance_rule_uses_function_app_resource_id_and_tenant_id"
+        )
+        is not True
+        or broker_boundary.get(
+            "broker_resource_access_rules_must_exactly_equal_bound_function_app_and_tenant"
+        )
+        is not True
+        or broker_boundary.get(
+            "local_runner_outbound_ip_allowed_in_storage_firewall"
+        )
+        is not False
         or broker_boundary.get("broker_allowed_data_actions_exact")
         != [
             "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
@@ -842,7 +851,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
     ):
-        errors.append("BFF broker UAMI and local-runner isolation policy drifted")
+        errors.append("BFF broker identity and local-runner isolation policy drifted")
 
     owner = _mapping(contract.get("activation_and_owner_gate"))
     if set(owner.get("owner_approval_binding_fields_exact", [])) != OWNER_FIELDS:
@@ -1028,7 +1037,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
-            "owner_bound_tenant_subscription_resource_group_storage_broker_and_caller_principals_function_package_certificate_outbound_ips_location_tags_and_network_required"
+            "owner_bound_tenant_subscription_resource_group_storage_broker_and_caller_principals_function_package_certificate_resource_instance_location_tags_and_network_required"
         )
         is not True
         or infrastructure_safety.get(
@@ -1044,7 +1053,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
-            "broker_outbound_ip_readback_must_exactly_match_storage_firewall_rules"
+            "broker_resource_instance_readback_must_exactly_match_storage_firewall_rules"
         )
         is not True
         or infrastructure_safety.get(
@@ -1070,9 +1079,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "public_network_access": "Enabled",
             "default_action": "Deny",
             "bypass": "None",
-            "allowed_ip_rules_exactly_equal_bound_broker_outbound_ip_addresses": True,
+            "allowed_ip_rule_count_exact": 0,
             "virtual_network_rule_count_exact": 0,
-            "resource_access_rule_count_exact": 0,
+            "resource_access_rules_exactly_equal_bound_function_app_and_tenant": True,
             "shared_key_access_allowed": False,
             "blob_public_access_allowed": False,
             "minimum_tls_version": "TLS1_2",
@@ -1082,14 +1091,14 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
             "container_delete_retention_enabled": False,
             "lease_container_public_access_exact": "None",
             "lease_container_metadata_exact": {
-                "nac_schema_version": "nac.azure-bff-performance-coordination/v1",
+                "nac_schema_version": "nac.azure-bff-performance-coordination/v2",
                 "data_classification": "synthetic-only",
                 "lease_blob_path": "locks/<target_binding_sha256>.lock",
                 "lease_blob_type": "BlockBlob",
                 "lease_blob_content_length": "0",
                 "lease_blob_bootstrap": "broker-internal-put-if-absent-before-acquire",
                 "broker_authorization": "non-exportable-managed-identity-read-write-no-delete",
-                "azure_blob_write_authorization": "broker-uami-write-includes-create-overwrite-lease-and-break",
+                "azure_blob_write_authorization": "broker-system-identity-write-includes-create-overwrite-lease-and-break",
                 "operation_restriction_boundary": "owner-ticketed-fixed-function-route",
                 "local_runner_storage_authorization": "none",
                 "brokerFunctionPackageSha256": "<owner_bound_sha256>",
@@ -1312,7 +1321,7 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or resumable.get(
-            "fresh_reattestation_must_preserve_owner_tenant_broker_principal_function_package_certificate_outbound_ips_target_and_lease_binding"
+            "fresh_reattestation_must_preserve_owner_tenant_broker_principal_function_package_certificate_resource_instance_target_and_lease_binding"
         )
         is not True
         or resumable.get(
@@ -1745,7 +1754,7 @@ def main() -> int:
             "class PerformanceLeaseBrokerSettings",
             "def build_performance_lease_broker(",
             "ManagedIdentityCredential",
-            'managed_identity_client_id=_required(values, "AZURE_CLIENT_ID")',
+            "credential = credential_factory()",
             "RsaCertificateTicketSignatureVerifier",
             "AzureBlobAtomicLeaseStateMachine",
         ),
@@ -1891,16 +1900,16 @@ def main() -> int:
             "param tenantId string",
             "param subscriptionId string",
             "param resourceGroupName string",
-            "param brokerPrincipalId string",
             "param brokerCallerServicePrincipalId string",
             "param brokerFunctionAppResourceId string",
             "param brokerFunctionPackageSha256 string",
             "param brokerTicketVerificationCertificateSha256 string",
-            "param brokerOutboundIpAddresses array",
-            "toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)",
+            "output brokerResourceAccessRulesBinding array",
+            "resource brokerFunctionApp 'Microsoft.Web/sites@2024-04-01' existing",
+            "brokerFunctionApp.identity.principalId",
             "output brokerCallerServicePrincipalIdBinding string",
             "output localRunnerStorageDataActions array = []",
-            "output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'",
+            "output credentialBoundaryMode string = 'BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY'",
             "containers/blobs:path] StringEquals",
             "blobBootstrapRequired bool = true",
             "param bffStorageAccountResourceId string",
@@ -2015,8 +2024,8 @@ def main() -> int:
         ),
         INFRA_TESTS: (
             "test_source_binds_non_exportable_broker_identity_and_package",
-            "test_source_role_is_exclusive_to_the_broker_uami",
-            "test_source_assignment_binds_only_broker_uami_to_exact_path",
+            "test_source_role_is_exclusive_to_the_broker_system_identity",
+            "test_source_assignment_binds_only_broker_system_identity_to_exact_path",
             "test_compiled_parameter_contract_binds_broker_boundary",
             "test_compiled_outputs_are_unambiguous_for_broker_boundary",
         ),

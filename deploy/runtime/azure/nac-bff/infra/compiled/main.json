@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.6.27763",
-      "templateHash": "13643045116711268849"
+      "templateHash": "16486527106386001034"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
@@ -277,7 +277,7 @@
       "tags": "[variables('resourceTags')]",
       "kind": "functionapp,linux",
       "identity": {
-        "type": "UserAssigned",
+        "type": "SystemAssigned, UserAssigned",
         "userAssignedIdentities": {
           "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))))]": {}
         }
@@ -367,6 +367,10 @@
     "functionAppHostName": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2024-04-01').defaultHostName]"
+    },
+    "functionAppSystemAssignedPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2024-04-01', 'full').identity.principalId]"
     },
     "managedIdentityResourceId": {
       "type": "string",

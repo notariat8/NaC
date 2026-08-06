@@ -41,6 +41,7 @@ LOCATION = "germanywestcentral"
 RESOURCE_GROUP = "rg-nac-bff-test"
 COORDINATION_NAME = "stnacperflease001"
 OUTBOUND_IP_ADDRESSES = ["8.8.8.8"]
+RUNTIME_UAMI_PRINCIPAL_ID = "aaaaaaaa-2222-4333-8444-555555555555"
 RESOURCE_GROUP_SCOPE = f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}"
 COORDINATION_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Storage/storageAccounts/"
@@ -124,12 +125,10 @@ def _infrastructure_parameters() -> dict[str, object]:
         "subscriptionId": SUBSCRIPTION_ID,
         "resourceGroupName": RESOURCE_GROUP,
         "storageAccountName": COORDINATION_NAME,
-        "brokerPrincipalId": BROKER_PRINCIPAL_ID,
         "brokerCallerServicePrincipalId": CALLER_PRINCIPAL_ID,
         "brokerFunctionAppResourceId": FUNCTION_APP_ID,
         "brokerFunctionPackageSha256": PACKAGE_SHA256,
         "brokerTicketVerificationCertificateSha256": TICKET_CERTIFICATE_SHA256,
-        "brokerOutboundIpAddresses": OUTBOUND_IP_ADDRESSES,
         "targetBindingSha256": TARGET_BINDING,
         "location": LOCATION,
         "tags": TAGS,
@@ -153,6 +152,7 @@ def _restart_binding() -> dict[str, str]:
 
 def _coordination_resources() -> dict[str, str]:
     return {
+        "broker_principal_id": BROKER_PRINCIPAL_ID,
         "coordination_storage_account_resource_id": COORDINATION_ID,
         "lease_container_resource_id": CONTAINER_SCOPE,
         "broker_lease_data_role_definition_id": ROLE_DEFINITION_ID,
@@ -182,11 +182,10 @@ def _storage(name: str, resource_id: str) -> dict[str, object]:
             "networkAcls": {
                 "bypass": "None",
                 "defaultAction": "Deny",
-                "ipRules": [
-                    {"action": "Allow", "value": value}
-                    for value in OUTBOUND_IP_ADDRESSES
+                "ipRules": [],
+                "resourceAccessRules": [
+                    {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
                 ],
-                "resourceAccessRules": [],
                 "virtualNetworkRules": [],
             },
             "publicNetworkAccess": "Enabled",
@@ -201,11 +200,12 @@ def _function_app() -> dict[str, object]:
         "name": "fn-nac-bff-test",
         "type": "Microsoft.Web/sites",
         "identity": {
-            "type": "UserAssigned",
+            "type": "SystemAssigned, UserAssigned",
+            "principalId": BROKER_PRINCIPAL_ID,
             "userAssignedIdentities": {
                 f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.ManagedIdentity/"
                 "userAssignedIdentities/id-nac-bff-broker": {
-                    "principalId": BROKER_PRINCIPAL_ID,
+                    "principalId": RUNTIME_UAMI_PRINCIPAL_ID,
                     "clientId": "99999999-2222-4333-8444-555555555555",
                 }
             },
@@ -213,7 +213,6 @@ def _function_app() -> dict[str, object]:
         "properties": {
             "state": "Running",
             "httpsOnly": True,
-            "outboundIpAddresses": ",".join(OUTBOUND_IP_ADDRESSES),
         },
     }
 
@@ -239,7 +238,7 @@ def _lease_container() -> dict[str, object]:
         "properties": {
             "publicAccess": "None",
             "metadata": {
-                "nac_schema_version": "nac.azure-bff-performance-coordination/v1",
+                "nac_schema_version": "nac.azure-bff-performance-coordination/v2",
                 "data_classification": "synthetic-only",
                 "lease_blob_path": f"locks/{TARGET_BINDING}.lock",
                 "lease_blob_type": "BlockBlob",
@@ -251,7 +250,7 @@ def _lease_container() -> dict[str, object]:
                     "non-exportable-managed-identity-read-write-no-delete"
                 ),
                 "azure_blob_write_authorization": (
-                    "broker-uami-write-includes-create-overwrite-lease-and-break"
+                    "broker-system-identity-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "owner-ticketed-fixed-function-route"
@@ -306,6 +305,12 @@ def _deployment() -> dict[str, object]:
             "parameters": {
                 name: {"value": value}
                 for name, value in _infrastructure_parameters().items()
+            },
+            "outputs": {
+                "brokerPrincipalIdBinding": {
+                    "type": "String",
+                    "value": BROKER_PRINCIPAL_ID,
+                }
             },
         },
     }
@@ -557,7 +562,6 @@ def _build_arguments(directory: Path) -> dict[str, object]:
             "resource_group_name": RESOURCE_GROUP,
             "location": LOCATION,
             "tags": TAGS,
-            "broker_outbound_ip_addresses": OUTBOUND_IP_ADDRESSES,
         }
     finally:
         for item in reversed(patches):
@@ -621,8 +625,10 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             TICKET_CERTIFICATE_SHA256,
         )
         self.assertEqual(
-            evidence["broker_outbound_ip_addresses_sha256"],
-            _json_sha256(OUTBOUND_IP_ADDRESSES),
+            evidence["broker_resource_access_rule_sha256"],
+            _json_sha256(
+                {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
+            ),
         )
         self.assertEqual(evidence["broker_effective_assignment_count"], 1)
         self.assertEqual(
@@ -743,13 +749,22 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         with self.assertRaises(AzurePerformanceInfrastructureSafetyError):
             self._verify(arguments)
 
-    def test_rejects_private_outbound_address(self) -> None:
-        with tempfile.TemporaryDirectory() as value:
+    def test_rejects_mismatched_resource_instance_rule(self) -> None:
+        responses = _responses()
+        storage_url = (
+            f"https://management.azure.com{COORDINATION_ID}"
+            "?api-version=2023-05-01"
+        )
+        responses[storage_url]["properties"]["networkAcls"][
+            "resourceAccessRules"
+        ][0]["resourceId"] = FUNCTION_APP_ID + "-other"
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
             arguments = _build_arguments(Path(value))
-        arguments["broker_outbound_ip_addresses"] = ["127.0.0.1"]
         with self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
-            "BROKER_OUTBOUND_IP_ADDRESSES_INVALID",
+            "COORDINATION_STORAGE_CONFIGURATION_MISMATCH",
         ):
             self._verify(arguments)
 

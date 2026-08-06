@@ -614,6 +614,7 @@ def _inventory_matches(
         set(outputs) == {
             "function_app_resource_id",
             "function_app_host_name",
+            "function_app_system_assigned_principal_id",
             "managed_identity_resource_id",
             "managed_identity_client_id",
             "managed_identity_principal_id",
@@ -622,6 +623,9 @@ def _inventory_matches(
         == str(by_type["microsoft.web/sites"]["id"]).lower()
         and outputs["function_app_host_name"]
         == f"{FUNCTION_APP}.azurewebsites.net"
+        and _UUID_RE.fullmatch(
+            str(outputs["function_app_system_assigned_principal_id"])
+        )
         and str(outputs["managed_identity_resource_id"]).lower()
         == str(identity["id"]).lower()
         and _UUID_RE.fullmatch(
@@ -678,8 +682,12 @@ def _identity_binding_matches(
             "id", "name", "client_id", "principal_id", "tenant_id"
         }
         or not isinstance(function_app, dict)
-        or set(function_app) != {"type", "user_assigned_identities"}
-        or function_app.get("type") != "UserAssigned"
+        or set(function_app) != {
+            "type",
+            "system_assigned_principal_id",
+            "user_assigned_identities",
+        }
+        or function_app.get("type") != "SystemAssigned, UserAssigned"
     ):
         return False
     assignments = function_app.get("user_assigned_identities")
@@ -693,12 +701,19 @@ def _identity_binding_matches(
     identity_id = str(identity_resource.get("id", "")).lower()
     client_id = deployment_outputs.get("managed_identity_client_id")
     principal_id = deployment_outputs.get("managed_identity_principal_id")
+    system_principal_id = deployment_outputs.get(
+        "function_app_system_assigned_principal_id"
+    )
     return bool(
         str(managed.get("id", "")).lower() == identity_id
         and managed.get("name") == identity_resource.get("name")
         and managed.get("client_id") == client_id
         and managed.get("principal_id") == principal_id
         and managed.get("tenant_id") == TENANT_ID
+        and function_app.get("system_assigned_principal_id")
+        == system_principal_id
+        and isinstance(system_principal_id, str)
+        and system_principal_id.lower() != str(principal_id).lower()
         and str(assignment.get("id", "")).lower() == identity_id
         and assignment.get("client_id") == client_id
         and assignment.get("principal_id") == principal_id

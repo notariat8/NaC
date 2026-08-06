@@ -487,8 +487,6 @@ def run_azure_performance_acceptance_live(
         != str(
             infrastructure_parameters["brokerCallerServicePrincipalId"]
         ).casefold()
-        or broker_caller_identity["service_principal_id"].casefold()
-        == str(infrastructure_parameters["brokerPrincipalId"]).casefold()
     ):
         raise ValueError("PERFORMANCE_PROVISIONER_IDENTITY_INVALID")
     bff_token_provider = CertificateBffAppTokenProvider(
@@ -595,7 +593,7 @@ def run_azure_performance_acceptance_live(
         coordination_storage_account_resource_id=(
             coordination_storage_account_resource_id
         ),
-        broker_principal_id=str(infrastructure_parameters["brokerPrincipalId"]),
+        broker_principal_id=coordination.broker_principal_id,
         broker_function_package_sha256=str(
             infrastructure_parameters["brokerFunctionPackageSha256"]
         ),
@@ -795,6 +793,7 @@ def run_azure_performance_acceptance_live(
 
 @dataclass(frozen=True, slots=True)
 class _CoordinationResources:
+    broker_principal_id: str
     coordination_storage_account_resource_id: str
     lease_container_resource_id: str
     broker_lease_data_role_definition_id: str
@@ -867,6 +866,7 @@ def _prepare_performance_infrastructure(
 
 def _coordination_resource_bindings(coordination: Any) -> dict[str, str]:
     return {
+        "broker_principal_id": coordination.broker_principal_id,
         "coordination_storage_account_resource_id": (
             coordination.coordination_storage_account_resource_id
         ),
@@ -917,7 +917,7 @@ def _infrastructure_verification_arguments(
         container_id=coordination.lease_container_resource_id,
     )
     broker_effective_rbac = readback.read_effective_rbac(
-        principal_id=str(parameters["brokerPrincipalId"]),
+        principal_id=coordination.broker_principal_id,
         target_resource_id=coordination.lease_container_resource_id,
         ancestor_scopes=ancestor_scopes,
     )
@@ -958,7 +958,7 @@ def _infrastructure_verification_arguments(
             observation_kind="worm-storage-account-resource-id",
             resource_id=parameters["wormStorageAccountResourceId"],
         ),
-        "broker_principal_id": parameters["brokerPrincipalId"],
+        "broker_principal_id": coordination.broker_principal_id,
         "broker_caller_service_principal_id": parameters[
             "brokerCallerServicePrincipalId"
         ],
@@ -970,9 +970,6 @@ def _infrastructure_verification_arguments(
         ],
         "broker_ticket_verification_certificate_sha256": parameters[
             "brokerTicketVerificationCertificateSha256"
-        ],
-        "broker_outbound_ip_addresses": parameters[
-            "brokerOutboundIpAddresses"
         ],
         "target_binding_sha256": parameters["targetBindingSha256"],
         "broker_role_definition": readback.execute_read(
@@ -999,9 +996,6 @@ def _infrastructure_verification_arguments(
         "resource_group_name": parameters["resourceGroupName"],
         "location": parameters["location"],
         "tags": parameters["tags"],
-        "broker_outbound_ip_addresses": parameters[
-            "brokerOutboundIpAddresses"
-        ],
     }
 
 

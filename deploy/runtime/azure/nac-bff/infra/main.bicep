@@ -214,7 +214,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   tags: resourceTags
   kind: 'functionapp,linux'
   identity: {
-    type: 'UserAssigned'
+    type: 'SystemAssigned, UserAssigned'
     userAssignedIdentities: {
       '${managedIdentity.id}': {}
     }
@@ -288,6 +288,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
 
 output functionAppResourceId string = functionApp.id
 output functionAppHostName string = functionApp.properties.defaultHostName
+output functionAppSystemAssignedPrincipalId string = functionApp.identity.principalId
 output managedIdentityResourceId string = managedIdentity.id
 output managedIdentityClientId string = managedIdentity.properties.clientId
 output managedIdentityPrincipalId string = managedIdentity.properties.principalId

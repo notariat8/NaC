@@ -1207,7 +1207,6 @@ class BoundPerformanceAuthorizationVerifier:
             "worm_storage_account_resource_id": parameters.get(
                 "wormStorageAccountResourceId"
             ),
-            "broker_principal_id": parameters.get("brokerPrincipalId"),
             "broker_caller_service_principal_id": parameters.get(
                 "brokerCallerServicePrincipalId"
             ),
@@ -1221,8 +1220,13 @@ class BoundPerformanceAuthorizationVerifier:
                 "brokerTicketVerificationCertificateSha256"
             ),
             "tags_sha256": _sha256_json(parameters.get("tags", {})),
-            "broker_outbound_ip_addresses_sha256": _sha256_json(
-                parameters.get("brokerOutboundIpAddresses", [])
+            "broker_resource_access_rule_sha256": _sha256_json(
+                {
+                    "resourceId": parameters.get(
+                        "brokerFunctionAppResourceId"
+                    ),
+                    "tenantId": parameters.get("tenantId"),
+                }
             ),
             "toolchain_attestations_sha256": self._infrastructure_approval[
                 "toolchain_attestations_sha256"

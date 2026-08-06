@@ -42,7 +42,6 @@ class PerformanceLeaseBrokerSettings:
     ticket_key_id: str
     ticket_certificate: bytes
     ticket_certificate_sha256: str
-    managed_identity_client_id: str
 
     @classmethod
     def from_env(
@@ -98,7 +97,6 @@ class PerformanceLeaseBrokerSettings:
                     values,
                     "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_SHA256",
                 ),
-                managed_identity_client_id=_required(values, "AZURE_CLIENT_ID"),
             )
         except Exception:
             raise PerformanceLeaseBrokerCompositionError(
@@ -130,7 +128,9 @@ def build_performance_lease_broker(
             ) from None
         credential_factory = ManagedIdentityCredential
     try:
-        credential = credential_factory(client_id=settings.managed_identity_client_id)
+        # Resource-instance Storage rules authorize the Function's
+        # system-assigned identity. Graph and host storage remain on the UAMI.
+        credential = credential_factory()
         verifier = RsaCertificateTicketSignatureVerifier(
             key_id=settings.ticket_key_id,
             certificate_bytes=settings.ticket_certificate,

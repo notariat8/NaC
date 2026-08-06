@@ -59,6 +59,7 @@ APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/735#issuecomment-1"
 )
 CORRELATION_ID = "nac-bff-performance-20260802"
+BROKER_PRINCIPAL_ID = "11111111-2222-4333-8444-555555555555"
 MONITOR_WINDOW_ANCHOR = "2026-08-02T00:00:00Z"
 MONITOR_WINDOW_ANCHOR_SHA256 = hashlib.sha256(
     MONITOR_WINDOW_ANCHOR.encode("utf-8")
@@ -91,7 +92,6 @@ INFRASTRUCTURE_PARAMETERS = {
         "resourceGroups/rg-nac-bff-test/providers/Microsoft.Storage/"
         "storageAccounts/stnacwormtest001"
     ),
-    "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
     "brokerCallerServicePrincipalId": (
         "66666666-7777-4888-8999-aaaaaaaaaaaa"
     ),
@@ -102,7 +102,6 @@ INFRASTRUCTURE_PARAMETERS = {
     ),
     "brokerFunctionPackageSha256": "e" * 64,
     "brokerTicketVerificationCertificateSha256": "f" * 64,
-    "brokerOutboundIpAddresses": ["8.8.8.8"],
     "targetBindingSha256": "0" * 64,
     "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
     "subscriptionId": "37cd9645-6cb9-4278-88ee-e80377cd951c",
@@ -185,7 +184,7 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
         "worm_storage_account_resource_id": parameters[
             "wormStorageAccountResourceId"
         ],
-        "broker_principal_id": parameters["brokerPrincipalId"],
+        "broker_principal_id": BROKER_PRINCIPAL_ID,
         "broker_caller_service_principal_id": parameters[
             "brokerCallerServicePrincipalId"
         ],
@@ -199,8 +198,11 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
             "brokerTicketVerificationCertificateSha256"
         ],
         "tags_sha256": performance._sha256_json(parameters["tags"]),
-        "broker_outbound_ip_addresses_sha256": performance._sha256_json(
-            parameters["brokerOutboundIpAddresses"]
+        "broker_resource_access_rule_sha256": performance._sha256_json(
+            {
+                "resourceId": parameters["brokerFunctionAppResourceId"],
+                "tenantId": parameters["tenantId"],
+            }
         ),
         "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
             "toolchain_attestations_sha256"
@@ -1973,9 +1975,7 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "worm_storage_account_resource_id": INFRASTRUCTURE_PARAMETERS[
                 "wormStorageAccountResourceId"
             ],
-            "broker_principal_id": INFRASTRUCTURE_PARAMETERS[
-                "brokerPrincipalId"
-            ],
+            "broker_principal_id": BROKER_PRINCIPAL_ID,
             "broker_caller_service_principal_id": INFRASTRUCTURE_PARAMETERS[
                 "brokerCallerServicePrincipalId"
             ],
@@ -1993,8 +1993,13 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "tags_sha256": performance._sha256_json(
                 INFRASTRUCTURE_PARAMETERS["tags"]
             ),
-            "broker_outbound_ip_addresses_sha256": performance._sha256_json(
-                INFRASTRUCTURE_PARAMETERS["brokerOutboundIpAddresses"]
+            "broker_resource_access_rule_sha256": performance._sha256_json(
+                {
+                    "resourceId": INFRASTRUCTURE_PARAMETERS[
+                        "brokerFunctionAppResourceId"
+                    ],
+                    "tenantId": INFRASTRUCTURE_PARAMETERS["tenantId"],
+                }
             ),
             "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
                 "toolchain_attestations_sha256"

@@ -7,7 +7,6 @@ from datetime import UTC, datetime, timedelta
 from functools import wraps
 import hashlib
 import hmac
-import ipaddress
 import json
 import os
 from pathlib import Path
@@ -52,13 +51,13 @@ DEPLOYMENT_API_VERSION = "2022-09-01"
 WEB_API_VERSION = "2023-12-01"
 MANAGEMENT_GROUP_API_VERSION = "2021-04-01"
 INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA = (
-    "nac.azure-bff-performance-infrastructure-safety-evidence/v5"
+    "nac.azure-bff-performance-infrastructure-safety-evidence/v6"
 )
 ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA = (
     "nac.azure-bff-performance-original-name-availability-receipt/v1"
 )
 SUCCESSFUL_DEPLOYMENT_RECEIPT_SCHEMA = (
-    "nac.azure-bff-performance-successful-deployment-receipt/v1"
+    "nac.azure-bff-performance-successful-deployment-receipt/v2"
 )
 READBACK_SESSION_SCHEMA = "nac.azure-bff-performance-readback-session/v1"
 SEALED_AZURE_READ_SCHEMA = "nac.azure-sealed-readback-command/v3"
@@ -82,7 +81,7 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "location",
         "tags_sha256",
         "effective_tags_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_resource_access_rule_sha256",
         "toolchain_attestations_sha256",
         "readback_session_sha256",
         "readback_nonce_sha256",
@@ -148,12 +147,12 @@ _FUNCTION_APP_ID_RE = re.compile(
 )
 _RESTART_RECEIPT_BINDING_KEYS = frozenset(
     {
-        "broker_principal_id",
+        "broker_principal_source",
         "broker_caller_service_principal_id",
         "broker_function_app_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_resource_access_rule_sha256",
         "deployment_id",
         "effective_tags_sha256",
         "infrastructure_binding_sha256",
@@ -171,6 +170,7 @@ _RESTART_RECEIPT_BINDING_KEYS = frozenset(
 )
 _COORDINATION_RESOURCE_BINDING_KEYS = frozenset(
     {
+        "broker_principal_id",
         "broker_lease_data_role_definition_id",
         "broker_lease_role_assignment_id",
         "coordination_storage_account_resource_id",
@@ -1554,8 +1554,9 @@ def build_infrastructure_restart_receipt_binding(
             coordination=_storage_account_id(coordination_id),
             location=str(infrastructure_parameters["location"]),
             effective_tags=effective_tags,
-            broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
-                infrastructure_parameters["brokerOutboundIpAddresses"]
+            tenant_id=str(infrastructure_parameters["tenantId"]),
+            broker_function_app_resource_id=str(
+                infrastructure_parameters["brokerFunctionAppResourceId"]
             ),
         )
         binding = {
@@ -1565,8 +1566,8 @@ def build_infrastructure_restart_receipt_binding(
             "subscription_id": subscription_id,
             "resource_group_name": resource_group_name,
             "storage_account_name": storage_account_name,
-            "broker_principal_id": str(
-                infrastructure_parameters["brokerPrincipalId"]
+            "broker_principal_source": (
+                "bound-function-system-assigned-identity-readback"
             ),
             "broker_caller_service_principal_id": (
                 str(infrastructure_parameters["brokerCallerServicePrincipalId"])
@@ -1582,10 +1583,13 @@ def build_infrastructure_restart_receipt_binding(
                     "brokerTicketVerificationCertificateSha256"
                 ]
             ),
-            "broker_outbound_ip_addresses_sha256": _sha256_json(
-                _canonical_public_ipv4_addresses(
-                    infrastructure_parameters["brokerOutboundIpAddresses"]
-                )
+            "broker_resource_access_rule_sha256": _sha256_json(
+                {
+                    "resourceId": str(
+                        infrastructure_parameters["brokerFunctionAppResourceId"]
+                    ),
+                    "tenantId": str(infrastructure_parameters["tenantId"]),
+                }
             ),
             "deployment_id": deployment_id,
             "infrastructure_binding_sha256": infrastructure_approval[
@@ -1769,14 +1773,13 @@ def _broker_function_app_payload(response: Mapping[str, Any]) -> dict[str, Any]:
                 value.get("principalId"), "SEALED_AZURE_READ_RESPONSE_INVALID"
             )
         )
-    outbound = properties.get("outboundIpAddresses")
-    addresses = outbound.split(",") if isinstance(outbound, str) else None
     return {
         "resource_id": response.get("id"),
         "resource_type": response.get("type"),
         "state": properties.get("state"),
         "https_only": properties.get("httpsOnly"),
-        "outbound_ip_addresses": _canonical_public_ipv4_addresses(addresses),
+        "identity_type": identity.get("type"),
+        "system_assigned_principal_id": identity.get("principalId"),
         "user_assigned_principal_ids": sorted(principal_ids),
     }
 
@@ -1872,6 +1875,18 @@ def _lease_container_configuration_payload(
     }
 
 
+def _deployment_output_value(properties: Mapping[str, Any], name: str) -> Any:
+    outputs = properties.get("outputs")
+    item = outputs.get(name) if isinstance(outputs, Mapping) else None
+    if (
+        not isinstance(item, Mapping)
+        or set(item) != {"type", "value"}
+        or str(item.get("type", "")).casefold() != "string"
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    return item["value"]
+
+
 def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     properties = response.get("properties")
     if not isinstance(properties, Mapping):
@@ -1885,6 +1900,9 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(item, Mapping) or set(item) != {"value"}:
             _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
         return item["value"]
+
+    def deployment_output(name: str) -> Any:
+        return _deployment_output_value(properties, name)
 
     completed = properties.get("timestamp")
     started = properties.get("startTime")
@@ -1902,8 +1920,9 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         coordination=_storage_account_id(coordination_id),
         location=str(parameter("location")),
         effective_tags=tags,
-        broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
-            parameter("brokerOutboundIpAddresses")
+        tenant_id=str(parameter("tenantId")),
+        broker_function_app_resource_id=str(
+            parameter("brokerFunctionAppResourceId")
         ),
     )
     return {
@@ -1914,7 +1933,7 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "tenant_id": parameter("tenantId"),
         "coordination_storage_account_resource_id": coordination_id,
         "target_binding_sha256": parameter("targetBindingSha256"),
-        "broker_principal_id": parameter("brokerPrincipalId"),
+        "broker_principal_id": deployment_output("brokerPrincipalIdBinding"),
         "broker_caller_service_principal_id": parameter(
             "brokerCallerServicePrincipalId"
         ),
@@ -1927,8 +1946,11 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "broker_ticket_verification_certificate_sha256": parameter(
             "brokerTicketVerificationCertificateSha256"
         ),
-        "broker_outbound_ip_addresses_sha256": _sha256_json(
-            _canonical_public_ipv4_addresses(parameter("brokerOutboundIpAddresses"))
+        "broker_resource_access_rule_sha256": _sha256_json(
+            {
+                "resourceId": str(parameter("brokerFunctionAppResourceId")),
+                "tenantId": str(parameter("tenantId")),
+            }
         ),
         "effective_tags_sha256": _sha256_json(tags),
         "storage_configuration_sha256": _sha256_json(storage),
@@ -2016,10 +2038,10 @@ def infrastructure_safety_policy_sha256() -> str:
     """Bind the exact readback-provenance and effective-RBAC safety policy."""
 
     policy = {
-        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v11",
+        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v12",
         "container_name": CONTAINER_NAME,
         "broker_data_actions": sorted(BROKER_ALLOWED_DATA_ACTIONS),
-        "credential_boundary": "single-owner-bound-bff-broker-uami",
+        "credential_boundary": "single-owner-bound-bff-broker-system-identity",
         "local_runner_storage_data_actions": [],
         "broker_caller_storage_data_actions": [],
         "broker_caller_complete_effective_rbac_required": True,
@@ -2178,7 +2200,6 @@ def verify_azure_performance_infrastructure_safety(
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
 ) -> tuple[
     Mapping[str, Any], AzurePerformanceInfrastructureReadbackCapability
 ]:
@@ -2256,7 +2277,6 @@ def verify_azure_performance_infrastructure_safety(
         resource_group_name=resource_group_name,
         location=location,
         tags=tags,
-        broker_outbound_ip_addresses=broker_outbound_ip_addresses,
         verified_at=verified_at,
     )
     return evidence, capability
@@ -2296,7 +2316,6 @@ def _verify_azure_performance_infrastructure_safety(
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
     verified_at: datetime,
 ) -> dict[str, Any]:
     verified_at_utc = _format_utc(verified_at)
@@ -2317,9 +2336,6 @@ def _verify_azure_performance_infrastructure_safety(
         _fail("LOCATION_INVALID")
     canonical_tags = _canonical_tags(tags)
     effective_tags = effective_coordination_tags(tags, target_binding_sha256)
-    outbound_addresses = _canonical_public_ipv4_addresses(
-        broker_outbound_ip_addresses
-    )
     broker_principal = _canonical_uuid(
         broker_principal_id, "BROKER_PRINCIPAL_INVALID"
     )
@@ -2362,7 +2378,6 @@ def _verify_azure_performance_infrastructure_safety(
         broker_function_app_readback_envelope,
         expected_resource_id=broker_function_app,
         expected_broker_principal_id=broker_principal,
-        expected_outbound_ip_addresses=outbound_addresses,
         verified_at=verified_at,
         session=readback_session,
     )
@@ -2381,7 +2396,8 @@ def _verify_azure_performance_infrastructure_safety(
         coordination=coordination,
         location=location,
         effective_tags=effective_tags,
-        broker_outbound_ip_addresses=outbound_addresses,
+        tenant_id=tenant,
+        broker_function_app_resource_id=broker_function_app,
     )
     deployment = _verify_deployment_receipt(
         deployment_receipt_envelope,
@@ -2395,7 +2411,6 @@ def _verify_azure_performance_infrastructure_safety(
         broker_ticket_verification_certificate_sha256=(
             broker_ticket_verification_certificate_sha256
         ),
-        broker_outbound_ip_addresses=outbound_addresses,
         storage_configuration_sha256=_sha256_json(storage_configuration),
         effective_tags_sha256=_sha256_json(effective_tags),
         name_observed_at=name_observed_at,
@@ -2589,7 +2604,9 @@ def _verify_azure_performance_infrastructure_safety(
         "location": location,
         "tags_sha256": _sha256_json(canonical_tags),
         "effective_tags_sha256": _sha256_json(effective_tags),
-        "broker_outbound_ip_addresses_sha256": _sha256_json(outbound_addresses),
+        "broker_resource_access_rule_sha256": _sha256_json(
+            {"resourceId": broker_function_app, "tenantId": tenant}
+        ),
         "toolchain_attestations_sha256": toolchain_attestations_sha256,
         "readback_session_sha256": readback_session_sha256,
         "readback_nonce_sha256": readback_session.nonce_sha256,
@@ -2747,9 +2764,6 @@ def validate_infrastructure_safety_evidence(
             resource_group_name=deployment_inputs["resourceGroupName"],
             location=deployment_inputs["location"],
             tags=deployment_inputs["tags"],
-            broker_outbound_ip_addresses=deployment_inputs[
-                "brokerOutboundIpAddresses"
-            ],
             verified_at=_parse_observed_at(
                 result["verified_at_utc"],
                 "INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID",
@@ -2830,11 +2844,9 @@ def _deployment_inputs_from_transcript(
         "subscriptionId",
         "resourceGroupName",
         "storageAccountName",
-        "brokerPrincipalId",
         "brokerFunctionAppResourceId",
         "brokerFunctionPackageSha256",
         "brokerTicketVerificationCertificateSha256",
-        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "location",
         "tags",
@@ -2847,6 +2859,9 @@ def _deployment_inputs_from_transcript(
         if not isinstance(parameter, Mapping) or set(parameter) != {"value"}:
             _fail("INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID")
         result[name] = parameter["value"]
+    result["brokerPrincipalId"] = _deployment_output_value(
+        properties, "brokerPrincipalIdBinding"
+    )
     if not isinstance(result["tags"], Mapping):
         _fail("INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID")
     return result
@@ -2905,7 +2920,6 @@ def _verify_broker_function_app_readback(
     *,
     expected_resource_id: str,
     expected_broker_principal_id: str,
-    expected_outbound_ip_addresses: list[str],
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
 ) -> datetime:
@@ -2916,13 +2930,14 @@ def _verify_broker_function_app_readback(
         error_prefix=prefix,
     )
     payload = value.get("payload")
-    expected_payload = {
-        "resource_id": expected_resource_id,
-        "resource_type": "Microsoft.Web/sites",
-        "state": "Running",
-        "https_only": True,
-        "outbound_ip_addresses": expected_outbound_ip_addresses,
-        "user_assigned_principal_ids": [expected_broker_principal_id],
+    expected_keys = {
+        "resource_id",
+        "resource_type",
+        "state",
+        "https_only",
+        "identity_type",
+        "system_assigned_principal_id",
+        "user_assigned_principal_ids",
     }
     if (
         value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
@@ -2936,7 +2951,20 @@ def _verify_broker_function_app_readback(
             maximum_age=_POSTDEPLOY_MAX_AGE,
             session=session,
         )
-        or payload != expected_payload
+        or not isinstance(payload, Mapping)
+        or set(payload) != expected_keys
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Web/sites"
+        or payload.get("state") != "Running"
+        or payload.get("https_only") is not True
+        or payload.get("identity_type") != "SystemAssigned, UserAssigned"
+        or str(payload.get("system_assigned_principal_id", "")).casefold()
+        != expected_broker_principal_id.casefold()
+        or not isinstance(payload.get("user_assigned_principal_ids"), list)
+        or len(payload["user_assigned_principal_ids"]) != 1
+        or payload["user_assigned_principal_ids"][0].casefold()
+        == expected_broker_principal_id.casefold()
     ):
         _fail(f"{prefix}_INVALID")
     return _envelope_observed_at(value)
@@ -3053,7 +3081,7 @@ def _validate_restart_receipt_binding(
     for key in (
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_resource_access_rule_sha256",
         "effective_tags_sha256",
         "infrastructure_binding_sha256",
         "infrastructure_parameters_sha256",
@@ -3070,10 +3098,6 @@ def _validate_restart_receipt_binding(
     subscription = _canonical_uuid(
         result.get("subscription_id"), "INFRASTRUCTURE_RESTART_BINDING_INVALID"
     )
-    broker = _canonical_uuid(
-        result.get("broker_principal_id"),
-        "INFRASTRUCTURE_RESTART_BINDING_INVALID",
-    )
     broker_caller = _canonical_uuid(
         result.get("broker_caller_service_principal_id"),
         "INFRASTRUCTURE_RESTART_BINDING_INVALID",
@@ -3082,7 +3106,8 @@ def _validate_restart_receipt_binding(
     storage_name = result.get("storage_account_name")
     deployment_id = result.get("deployment_id")
     if (
-        broker == broker_caller
+        result.get("broker_principal_source")
+        != "bound-function-system-assigned-identity-readback"
         or not isinstance(resource_group, str)
         or not resource_group
         or not isinstance(storage_name, str)
@@ -3116,7 +3141,9 @@ def _validate_restart_receipt_binding(
         {
             "tenant_id": tenant,
             "subscription_id": subscription,
-            "broker_principal_id": broker,
+            "broker_principal_source": (
+                "bound-function-system-assigned-identity-readback"
+            ),
             "broker_caller_service_principal_id": broker_caller,
             "broker_function_app_resource_id": function_app_id,
         }
@@ -3236,7 +3263,7 @@ def _validate_reconciliation_deployment_observation(
         "broker_function_app_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_resource_access_rule_sha256",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -3270,7 +3297,7 @@ def _validate_reconciliation_deployment_observation(
             payload.get("broker_principal_id"),
             "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
         )
-        != expected_binding["broker_principal_id"]
+        == expected_binding["broker_caller_service_principal_id"]
         or _canonical_uuid(
             payload.get("broker_caller_service_principal_id"),
             "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
@@ -3284,8 +3311,8 @@ def _validate_reconciliation_deployment_observation(
         != expected_binding[
             "broker_ticket_verification_certificate_sha256"
         ]
-        or payload.get("broker_outbound_ip_addresses_sha256")
-        != expected_binding["broker_outbound_ip_addresses_sha256"]
+        or payload.get("broker_resource_access_rule_sha256")
+        != expected_binding["broker_resource_access_rule_sha256"]
         or payload.get("effective_tags_sha256")
         != expected_binding["effective_tags_sha256"]
         or payload.get("storage_configuration_sha256")
@@ -3342,7 +3369,12 @@ def _validate_coordination_resource_bindings(
         f"{expected_binding['resource_group_name']}"
     )
     if (
-        str(result.get("coordination_storage_account_resource_id", "")).casefold()
+        _canonical_uuid(
+            result.get("broker_principal_id"),
+            "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+        )
+        == expected_binding["broker_caller_service_principal_id"]
+        or str(result.get("coordination_storage_account_resource_id", "")).casefold()
         != coordination_id.casefold()
         or str(result.get("lease_container_resource_id", "")).casefold()
         != container_id.casefold()
@@ -3533,7 +3565,8 @@ def _expected_storage_configuration(
     coordination: Mapping[str, str],
     location: str,
     effective_tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
+    tenant_id: str,
+    broker_function_app_resource_id: str,
 ) -> dict[str, Any]:
     return {
         "id": coordination["id"],
@@ -3554,11 +3587,13 @@ def _expected_storage_configuration(
             "networkAcls": {
                 "bypass": "None",
                 "defaultAction": "Deny",
-                "ipRules": [
-                    {"action": "Allow", "value": address}
-                    for address in broker_outbound_ip_addresses
+                "ipRules": [],
+                "resourceAccessRules": [
+                    {
+                        "resourceId": broker_function_app_resource_id,
+                        "tenantId": tenant_id,
+                    }
                 ],
-                "resourceAccessRules": [],
                 "virtualNetworkRules": [],
             },
             "publicNetworkAccess": "Enabled",
@@ -3600,7 +3635,7 @@ def _expected_lease_container_configuration(
             "publicAccess": "None",
             "metadata": {
                 "nac_schema_version": (
-                    "nac.azure-bff-performance-coordination/v1"
+                    "nac.azure-bff-performance-coordination/v2"
                 ),
                 "data_classification": "synthetic-only",
                 "lease_blob_path": f"locks/{target_binding_sha256}.lock",
@@ -3613,7 +3648,7 @@ def _expected_lease_container_configuration(
                     "non-exportable-managed-identity-read-write-no-delete"
                 ),
                 "azure_blob_write_authorization": (
-                    "broker-uami-write-includes-create-overwrite-lease-and-break"
+                    "broker-system-identity-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "owner-ticketed-fixed-function-route"
@@ -3639,7 +3674,6 @@ def _verify_deployment_receipt(
     broker_function_app_resource_id: str,
     broker_function_package_sha256: str,
     broker_ticket_verification_certificate_sha256: str,
-    broker_outbound_ip_addresses: list[str],
     storage_configuration_sha256: str,
     effective_tags_sha256: str,
     name_observed_at: datetime,
@@ -3667,7 +3701,7 @@ def _verify_deployment_receipt(
         "broker_function_app_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_resource_access_rule_sha256",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -3717,9 +3751,9 @@ def _verify_deployment_receipt(
         != broker_function_package_sha256
         or payload.get("broker_ticket_verification_certificate_sha256")
         != broker_ticket_verification_certificate_sha256
-        or payload.get("broker_outbound_ip_addresses_sha256")
+        or payload.get("broker_resource_access_rule_sha256")
         != _sha256_json(
-            _canonical_public_ipv4_addresses(broker_outbound_ip_addresses)
+            {"resourceId": broker_function_app_resource_id, "tenantId": tenant_id}
         )
         or payload.get("effective_tags_sha256") != effective_tags_sha256
         or payload.get("storage_configuration_sha256")
@@ -5187,30 +5221,6 @@ def _function_app_id(value: Any, *, subscription_id: str) -> str:
     ):
         _fail("BROKER_FUNCTION_APP_RESOURCE_ID_INVALID")
     return value
-
-
-def _canonical_public_ipv4_addresses(value: Any) -> list[str]:
-    if not isinstance(value, list) or not 1 <= len(value) <= 32:
-        _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-    result: list[str] = []
-    for item in value:
-        try:
-            address = ipaddress.ip_address(item)
-        except ValueError:
-            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-        if (
-            not isinstance(address, ipaddress.IPv4Address)
-            or address.is_private
-            or address.is_loopback
-            or address.is_link_local
-            or address.is_multicast
-            or address.is_reserved
-            or address.is_unspecified
-            or str(address) in result
-        ):
-            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-        result.append(str(address))
-    return result
 
 
 def _require_arm_id(value: Any, error_code: str) -> str:

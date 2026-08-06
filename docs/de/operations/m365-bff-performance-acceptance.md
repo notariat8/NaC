@@ -162,7 +162,7 @@ zuerst terminal `LOST`.
 
 Eine verlorene oder fremde Lease sowie Binding-Drift blockieren ohne Dispatch.
 Automatisches Reacquire, Lease-Break und Blob-Delete sind in Broker und lokalem
-Adapter verboten. Die Function-UAMI darf das exakt gebundene
+Adapter verboten. Die System-Assigned Identity der Function darf das exakt gebundene
 Null-Byte-Block-Blob intern einmalig mit `If-None-Match: *` anlegen oder ein
 bereits vorhandenes Blob per `HEAD` prüfen. Der Broker erzeugt die private
 Azure-Lease-ID selbst und gibt weder Lease-ID, Storage-Token noch Storage-URL
@@ -183,13 +183,13 @@ mehr vorhanden, wird der Zustand konservativ terminal als `LOST` persistiert;
 
 Vor `acquire` muss ein kanonischer Lease-Acquisition-Safety-Nachweis die
 vollständige Infrastruktur-Evidence mit Status `SAFE` validieren und deren
-Koordinations-Resource-ID, Function-UAMI und Provisioning-Caller an den exakten
+Koordinations-Resource-ID, Function-System-Identity und Provisioning-Caller an den exakten
 `lease_binding_sha256`, die Zielbindung und das signierte Aktivierungsticket
 binden. Der lokale Runner fordert ausschließlich ein App-Token für
 `api://funktion8.de/nac-bff/.default` an. Der BFF akzeptiert dafür nur die feste
 App-Rolle `Performance.Lease`; das höchstens 60 Sekunden gültige RS256-Ticket
 bindet genau eine Operation sowie Owner, Tenant, Audience, Actor, Commit, Tree,
-Function-Paket, Plan, Ziel, Blob-Pfad und Nonce. Nur die Function-UAMI fordert
+Function-Paket, Plan, Ziel, Blob-Pfad und Nonce. Nur die System-Assigned Identity der Function fordert
 serverseitig `https://storage.azure.com/.default` an. Jede Abweichung blockiert
 vor Broker-State und Storage-HTTP.
 Nach einem echten Prozessneustart wird die Infrastruktur ausschließlich
@@ -201,17 +201,19 @@ Nachweis autorisiert keine neue Mutation.
 
 Die Offline-IaC liegt unter
 `deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet die
-Function-UAMI, den davon getrennten Provisioning-Caller, Function-Paket,
-Ticket-Zertifikat und die autoritativen Function-Outbound-IPs. Am
-Storage-Endpunkt sind ausschließlich diese Outbound-IPs erlaubt; die
+System-Assigned Identity der Function, den davon getrennten Provisioning-Caller, Function-Paket,
+Ticket-Zertifikat und die autoritative Function-Ressourceninstanz. Am
+Storage-Endpunkt ist ausschließlich diese exakte Ressourceninstanz erlaubt; die
 Netzwerk-Defaultregel ist `Deny`. Shared Keys, öffentliche Blobs sowie Delete-,
-Owner- und Container-DataActions bleiben ausgeschlossen. Nur die Function-UAMI
+Owner- und Container-DataActions bleiben ausgeschlossen. Nur die System-Assigned Identity der Function
 erhält am exakten Container und Blob-Pfad `blobs/read` und `blobs/write`; der
 lokale Caller erhält keine Storage-DataAction. Da Azure `write` auch Overwrite
 und Lease-Break umfasst, erzwingen ABAC und die feste Broker-API gemeinsam die
 engere Operationsgrenze. Vor Acquire werden außerdem die exakte
 `Performance.Lease`-Zuweisung und der hashgebundene Function-Settings-Satz
 gesetzt und ohne Ausgabe seiner Werte zurückgelesen.
+Die bestehende User-Assigned Identity der Function bleibt getrennt für Graph,
+Host-Storage und Application Insights gebunden; sie erhält keine Lease-Rolle.
 
 ## Owner-Gate und Evidence
 
@@ -298,8 +300,9 @@ autorisiert nie ein Deployment. Es gilt strikt
 Ein
 getrennter Readback nach dem Deployment muss dessen exakte Resource-ID, Region,
 effektive Tags und die vollständige Storage-/Netzwerkkonfiguration bestätigen:
-öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, genau
-eine erlaubte IP-Regel, keine VNet- oder Resource-Access-Regel, keine Shared Keys
+öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, keine
+IP- oder VNet-Regel, genau eine tenantgebundene Resource-Access-Regel für die
+gebundene Function-Ressourceninstanz, keine Shared Keys
 oder öffentlichen Blobs, TLS 1.2 und ausschließlich HTTPS. Der Blob-Service muss
 Versionierung sowie Blob- und Container-Löschaufbewahrung deaktiviert haben. Der
 Lease-Container muss `publicAccess=None` und exakt die gebundenen Metadaten für

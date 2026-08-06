@@ -112,6 +112,7 @@ _COORDINATION_OUTPUT_KEYS = frozenset(
         "brokerPrincipalIdBinding",
         "brokerCallerServicePrincipalIdBinding",
         "brokerFunctionAppResourceIdBinding",
+        "brokerResourceAccessRulesBinding",
         "brokerFunctionPackageSha256Binding",
         "brokerTicketVerificationCertificateSha256Binding",
         "exactBrokerLeaseBlobCondition",
@@ -462,7 +463,7 @@ class PerformanceCoordinationDeploymentReceipt:
     broker_function_app_resource_id: str
     broker_function_package_sha256: str
     broker_ticket_verification_certificate_sha256: str
-    broker_outbound_ip_addresses_sha256: str
+    broker_resource_access_rule_sha256: str
     broker_lease_data_role_definition_id: str
     broker_lease_role_assignment_id: str
     _authority_id: int
@@ -674,8 +675,13 @@ class PerformanceCoordinationDeploymentPort:
                 broker_ticket_verification_certificate_sha256=outputs[
                     "brokerTicketVerificationCertificateSha256Binding"
                 ],
-                broker_outbound_ip_addresses_sha256=_sha256_json(
-                    state.infrastructure_parameters["brokerOutboundIpAddresses"]
+                broker_resource_access_rule_sha256=_sha256_json(
+                    {
+                        "resourceId": state.infrastructure_parameters[
+                            "brokerFunctionAppResourceId"
+                        ],
+                        "tenantId": state.infrastructure_parameters["tenantId"],
+                    }
                 ),
                 broker_lease_data_role_definition_id=outputs[
                     "brokerLeaseDataRoleDefinitionId"
@@ -778,7 +784,7 @@ def _validate_coordination_deployment(
     bff_id = str(parameters["bffStorageAccountResourceId"])
     worm_id = str(parameters["wormStorageAccountResourceId"])
     expected = {
-        "contractSchemaVersion": "nac.azure-bff-performance-coordination/v1",
+        "contractSchemaVersion": "nac.azure-bff-performance-coordination/v2",
         "storageAccountName": parameters["storageAccountName"],
         "storageAccountResourceId": storage_id,
         "effectiveTags": effective_coordination_tags(parameters["tags"], target),
@@ -796,12 +802,17 @@ def _validate_coordination_deployment(
         "requiredLeaseBlobType": "BlockBlob",
         "requiredLeaseBlobContentLength": 0,
         "targetBindingSha256": target,
-        "brokerPrincipalIdBinding": parameters["brokerPrincipalId"],
         "brokerCallerServicePrincipalIdBinding": parameters[
             "brokerCallerServicePrincipalId"
         ],
         "brokerFunctionAppResourceIdBinding": parameters[
             "brokerFunctionAppResourceId"
+        ],
+        "brokerResourceAccessRulesBinding": [
+            {
+                "resourceId": parameters["brokerFunctionAppResourceId"],
+                "tenantId": parameters["tenantId"],
+            }
         ],
         "brokerFunctionPackageSha256Binding": parameters[
             "brokerFunctionPackageSha256"
@@ -831,13 +842,17 @@ def _validate_coordination_deployment(
             "owner-ticketed-fixed-broker-api",
         ],
         "localRunnerStorageDataActions": [],
-        "credentialBoundaryMode": "BFF_BROKER_UAMI_ONLY",
+        "credentialBoundaryMode": "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY",
     }
     if any(not _equal_arm(outputs.get(key), value) for key, value in expected.items()):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
-    if str(parameters["brokerPrincipalId"]).casefold() == str(
-        parameters["brokerCallerServicePrincipalId"]
-    ).casefold():
+    broker_principal = outputs.get("brokerPrincipalIdBinding")
+    if (
+        not isinstance(broker_principal, str)
+        or _UUID_RE.fullmatch(broker_principal) is None
+        or broker_principal.casefold()
+        == str(parameters["brokerCallerServicePrincipalId"]).casefold()
+    ):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     for key, prefix in (
         (

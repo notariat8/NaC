@@ -154,7 +154,7 @@ held lease is authoritatively absent, the broker first persists terminal
 
 A lost or foreign lease and any binding drift block without dispatch.
 Automatic reacquire, lease break, and blob delete are forbidden in the broker
-and local adapter. The Function UAMI may internally create the exact bound
+and local adapter. The Function system-assigned identity may internally create the exact bound
 zero-byte block blob once with `If-None-Match: *`, or inspect an existing blob
 with `HEAD`. The broker generates the private Azure lease ID and returns no
 lease ID, Storage token, or Storage URL to the local runner. An outcome may
@@ -174,13 +174,13 @@ inferred from absence alone.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage
-resource ID, Function UAMI, and provisioning caller to the exact
+resource ID, Function system identity, and provisioning caller to the exact
 `lease_binding_sha256`, target binding, and signed activation ticket. The local
 runner requests only `api://funktion8.de/nac-bff/.default`. The BFF accepts only
 the fixed `Performance.Lease` app role; the RS256 ticket is valid for at most 60
 seconds and binds exactly one operation plus owner, tenant, audience, actor,
 commit, tree, Function package, plan, target, blob path, and nonce. Only the
-Function UAMI requests `https://storage.azure.com/.default` server-side. Any
+Function system-assigned identity requests `https://storage.azure.com/.default` server-side. Any
 mismatch blocks before broker state and Storage HTTP.
 After a real process restart, infrastructure is re-attested read-only.
 Serialized safety evidence alone authorizes nothing because the process-bound
@@ -190,16 +190,18 @@ lease; stale pre-restart evidence cannot authorize another mutation.
 
 The offline IaC is under
 `deploy/runtime/azure/nac-bff-performance-coordination`. It binds the Function
-UAMI, the distinct provisioning caller, Function package, ticket certificate,
-and authoritative Function outbound IPs. Only those outbound IPs are allowed
-at the Storage endpoint and the network default is `Deny`. Shared keys, public
+system-assigned identity, the distinct provisioning caller, Function package, ticket certificate,
+and the authoritative Function resource instance. Only that exact resource instance
+is allowed at the Storage endpoint, and the network default is `Deny`. Shared keys, public
 blobs, and delete, owner, or container DataActions remain excluded. Only the
-Function UAMI receives `blobs/read` and `blobs/write` on the exact container and
+Function system-assigned identity receives `blobs/read` and `blobs/write` on the exact container and
 blob path; the local caller receives no Storage DataAction. Because Azure
 `write` also covers overwrite and lease break, ABAC and the fixed broker API
 jointly enforce the narrower operation boundary. Before acquire, the exact
 `Performance.Lease` assignment and hash-bound Function settings are configured
 and read back without exposing their values.
+The existing Function user-assigned identity remains separately bound to Graph,
+host storage, and Application Insights and receives no lease role.
 
 ## Owner Gate And Evidence
 

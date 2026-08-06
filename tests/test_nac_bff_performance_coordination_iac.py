@@ -96,8 +96,8 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "defaultToOAuthAuthentication: true",
             "publicAccess: 'None'",
             "defaultAction: 'Deny'",
-            "ipRules: brokerIpRules",
-            "resourceAccessRules: []",
+            "ipRules: []",
+            "resourceAccessRules: brokerResourceAccessRules",
         ):
             self.assertIn(marker, self.source)
         lowered = self.source.lower()
@@ -128,13 +128,12 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
 
     def test_source_binds_non_exportable_broker_identity_and_package(self) -> None:
         for marker in (
-            "param brokerPrincipalId string",
             "param brokerCallerServicePrincipalId string",
             "param brokerFunctionAppResourceId string",
             "param brokerFunctionPackageSha256 string",
             "param brokerTicketVerificationCertificateSha256 string",
-            "param brokerOutboundIpAddresses array",
-            "output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'",
+            "output brokerResourceAccessRulesBinding array",
+            "output credentialBoundaryMode string = 'BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY'",
             "output localRunnerStorageDataActions array = []",
         ):
             self.assertIn(marker, self.source)
@@ -146,11 +145,11 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, self.source)
         self.assertIn(
-            "toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)",
+            "brokerFunctionApp.identity.principalId",
             self.source,
         )
 
-    def test_source_role_is_exclusive_to_the_broker_uami(self) -> None:
+    def test_source_role_is_exclusive_to_the_broker_system_identity(self) -> None:
         broker_match = re.search(
             r"resource brokerLeaseDataRole .*?\n\}\n\nresource brokerLeaseBinding",
             self.source,
@@ -163,7 +162,9 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         self.assertEqual(broker_actions, BROKER_ACTIONS)
         self.assertNotIn("/blobs/delete", broker_match.group(0))
 
-    def test_source_assignment_binds_only_broker_uami_to_exact_path(self) -> None:
+    def test_source_assignment_binds_only_broker_system_identity_to_exact_path(
+        self,
+    ) -> None:
         for marker in (
             "resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01'",
             "principalId: validatedBrokerPrincipalId",
@@ -207,9 +208,8 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
     def test_example_parameters_are_complete_synthetic_and_distinct(self) -> None:
         for marker in (
             "using './main.bicep'",
-            "param brokerPrincipalId = '11111111-2222-4333-8444-555555555555'",
             "param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'",
-            "param brokerOutboundIpAddresses = [",
+            "param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'",
             "param targetBindingSha256 = '1111111111111111111111111111111111111111111111111111111111111111'",
             "Only the BFF Function managed identity receives exact-path Blob read/write.",
             "local runner receives a broker API role",
@@ -246,12 +246,10 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "storageAccountName",
             "bffStorageAccountResourceId",
             "wormStorageAccountResourceId",
-            "brokerPrincipalId",
             "brokerCallerServicePrincipalId",
             "brokerFunctionAppResourceId",
             "brokerFunctionPackageSha256",
             "brokerTicketVerificationCertificateSha256",
-            "brokerOutboundIpAddresses",
             "targetBindingSha256",
             "tags",
         }
@@ -302,29 +300,29 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         assignments = resources_of_type(
             self.template, "Microsoft.Authorization/roleAssignments"
         )
-        by_principal = {
-            assignment["properties"]["principalId"]: assignment
-            for assignment in assignments
-        }
-        expected = {"[variables('validatedBrokerPrincipalId')]": (
-            "brokerLeaseDataRoleDefinitionGuid", "exactBrokerLeaseBlobCondition"
-        )}
-        self.assertEqual(set(by_principal), set(expected))
-        for principal, (role_guid, condition) in expected.items():
-            assignment = by_principal[principal]
-            self.assertEqual(assignment["scope"], EXACT_CONTAINER_SCOPE)
-            self.assertEqual(assignment["properties"]["conditionVersion"], "2.0")
-            self.assertEqual(
-                assignment["properties"]["condition"],
-                f"[variables('{condition}')]",
-            )
-            self.assertEqual(
-                assignment["properties"]["roleDefinitionId"],
-                "[resourceId('Microsoft.Authorization/roleDefinitions', "
-                f"variables('{role_guid}'))]",
-            )
-            self.assertIn(principal[1:-1], assignment["name"])
-            self.assertIn("variables('leaseBlobPath')", assignment["name"])
+        self.assertEqual(len(assignments), 1)
+        assignment = assignments[0]
+        principal = assignment["properties"]["principalId"]
+        self.assertIn("reference(resourceId('Microsoft.Web/sites'", principal)
+        self.assertIn("variables('brokerFunctionAppResourceIdSegments')[8]", principal)
+        self.assertIn("identity.principalId", principal)
+        self.assertEqual(assignment["scope"], EXACT_CONTAINER_SCOPE)
+        self.assertEqual(assignment["properties"]["conditionVersion"], "2.0")
+        self.assertEqual(
+            assignment["properties"]["condition"],
+            "[variables('exactBrokerLeaseBlobCondition')]",
+        )
+        self.assertEqual(
+            assignment["properties"]["roleDefinitionId"],
+            "[resourceId('Microsoft.Authorization/roleDefinitions', "
+            "variables('brokerLeaseDataRoleDefinitionGuid'))]",
+        )
+        self.assertIn(
+            "variables('validatedBrokerFunctionAppResourceId')",
+            assignment["name"],
+        )
+        self.assertIn("variables('leaseBlobPath')", assignment["name"])
+        self.assertNotIn("principalId", assignment["name"])
 
     def test_compiled_condition_binds_only_the_exact_blob_path(self) -> None:
         variables = self.template["variables"]
@@ -355,7 +353,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         )
         self.assertEqual(
             outputs["credentialBoundaryMode"]["value"],
-            "BFF_BROKER_UAMI_ONLY",
+            "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY",
         )
         self.assertNotIn("leaseDataRoleDefinitionId", outputs)
         self.assertNotIn("provisionerLeaseRoleAssignmentId", outputs)

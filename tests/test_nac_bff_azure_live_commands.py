@@ -2538,6 +2538,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             CLIENT_ID,
             COMMIT,
             PRINCIPAL_ID,
+            SYSTEM_PRINCIPAL_ID,
             TREE,
             _deployment,
             _identity_binding,
@@ -2607,6 +2608,10 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                             "type": "String",
                             "value": deployment["outputs"]["function_app_host_name"],
                         },
+                        "functionAppSystemAssignedPrincipalId": {
+                            "type": "String",
+                            "value": SYSTEM_PRINCIPAL_ID,
+                        },
                         "managedIdentityResourceId": {
                             "type": "String",
                             "value": deployment["outputs"]["managed_identity_resource_id"],
@@ -2654,7 +2659,8 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 "tenantId": managed["tenant_id"],
             }
             raw_function_identity = {
-                "type": "UserAssigned",
+                "type": "SystemAssigned, UserAssigned",
+                "principalId": SYSTEM_PRINCIPAL_ID,
                 "userAssignedIdentities": {
                     managed["id"]: {
                         "clientId": CLIENT_ID,

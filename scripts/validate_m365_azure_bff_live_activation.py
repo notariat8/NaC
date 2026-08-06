@@ -302,7 +302,7 @@ INTERRUPTION_PROVIDER_CLASSIFICATIONS = {
         "live_resource_security_properties_exact_required": True,
         "live_resource_targets_sha256_required": True,
         "managed_identity_readback_required": True,
-        "function_app_identity_assignment_exact": "UserAssigned",
+        "function_app_identity_assignment_exact": "SystemAssigned, UserAssigned",
         "double_resource_inventory_read_required": True,
         "resource_inventory_drift_allowed": False,
         "pre_mutation_provider_revalidation_required": True,
