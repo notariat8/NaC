@@ -25,10 +25,16 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
     def test_ci_recompiles_and_compares_pinned_bicep_outputs(self) -> None:
+        self.assertRegex(
+            self.quality_workflow,
+            r"az bicep uninstall\s*\n\s*"
+            r"az bicep install --version v0\.45\.6",
+        )
         required = (
             "az bicep install --version v0.45.6",
-            "az bicep build --file deploy/runtime/azure/nac-bff/infra/main.bicep --stdout",
-            "az bicep build-params --file deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --stdout",
+            'test "$("$HOME/.azure/bin/bicep" --version)" = "Bicep CLI version 0.45.6 (6c73ad60eb)"',
+            '"$HOME/.azure/bin/bicep" build deploy/runtime/azure/nac-bff/infra/main.bicep --stdout',
+            '"$HOME/.azure/bin/bicep" build-params deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --outfile /tmp/nac-bff-main-params.json',
             "cmp /tmp/nac-bff-main.json deploy/runtime/azure/nac-bff/infra/compiled/main.json",
             "cmp /tmp/nac-bff-main-params.json deploy/runtime/azure/nac-bff/infra/compiled/main.example.json",
         )
@@ -71,6 +77,8 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
     def test_baseline_contains_required_azure_native_resources(self) -> None:
         required_resource_types = [
             "Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31",
+            "Microsoft.Network/virtualNetworks@2024-05-01",
+            "Microsoft.Network/virtualNetworks/subnets@2024-05-01",
             "Microsoft.Storage/storageAccounts@2023-05-01",
             "Microsoft.OperationalInsights/workspaces@2023-09-01",
             "Microsoft.Insights/components@2020-02-02",
@@ -125,34 +133,30 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         self.assertEqual(self.template.count("healthCheckPath: '/healthz'"), 1)
         self.assertNotIn("healthCheckPath: '/readyz'", self.template)
 
-    def test_storage_uses_identity_protected_public_endpoint_without_vnet(self) -> None:
+    def test_flex_uses_dedicated_vnet_and_separate_private_endpoint_subnet(self) -> None:
         required_terms = [
-            "publicNetworkAccess: 'Enabled'",
-            "bypass: 'None'",
-            "defaultAction: 'Allow'",
-            "ipRules: []",
-            "virtualNetworkRules: []",
-            "allowBlobPublicAccess: false",
-            "allowSharedKeyAccess: false",
-            "defaultToOAuthAuthentication: true",
-            "minimumTlsVersion: 'TLS1_2'",
-            "supportsHttpsTrafficOnly: true",
+            "addressPrefix: '10.42.0.0/27'",
+            "addressPrefix: '10.42.0.32/27'",
+            "serviceName: 'Microsoft.App/environments'",
+            "privateEndpointNetworkPolicies: 'Disabled'",
+            "virtualNetworkSubnetId: functionIntegrationSubnet.id",
+            "output virtualNetworkResourceId string = virtualNetwork.id",
+            "output functionIntegrationSubnetResourceId string = functionIntegrationSubnet.id",
+            "output privateEndpointSubnetResourceId string = privateEndpointSubnet.id",
         ]
 
         for term in required_terms:
             with self.subTest(term=term):
                 self.assertIn(term, self.template)
 
+        self.assertEqual(self.template.count("serviceName: 'Microsoft.App/environments'"), 1)
+        self.assertEqual(self.template.count("privateEndpointNetworkPolicies: 'Disabled'"), 1)
         self.assertNotIn("serviceEndpoints:", self.template)
-        self.assertNotIn("Microsoft.Network/", self.template)
-        self.assertNotIn("virtualNetworkSubnetId", self.template)
-        self.assertNotIn("privateEndpoint", self.template)
-        self.assertNotIn("bypass: 'AzureServices'", self.template)
-        self.assertNotIn("defaultAction: 'Deny'", self.template)
+        self.assertNotIn("Microsoft.Web/serverFarms'", self.template)
 
     def test_storage_and_telemetry_use_user_assigned_identity(self) -> None:
         required_terms = [
-            "type: 'UserAssigned'",
+            "type: 'SystemAssigned, UserAssigned'",
             "type: 'UserAssignedIdentity'",
             "userAssignedIdentityResourceId: managedIdentity.id",
             "allowSharedKeyAccess: false",
@@ -163,6 +167,7 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
             "AzureWebJobsStorage__credential: 'managedidentity'",
             "APPLICATIONINSIGHTS_AUTHENTICATION_STRING:",
             "Authorization=AAD",
+            "output functionAppSystemAssignedPrincipalId string",
         ]
 
         for term in required_terms:

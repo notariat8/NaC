@@ -98,7 +98,12 @@ EXPECTED_TOP_LEVEL_TYPES = {
     "microsoft.web/sites",
     "microsoft.insights/actiongroups",
 }
-EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
+CURRENT_TOP_LEVEL_TYPES = {
+    *EXPECTED_TOP_LEVEL_TYPES,
+    "microsoft.network/virtualnetworks",
+}
+LEGACY_AZURE_TEMPLATE_HASH = "16486527106386001034"
+LEGACY_DEPLOYMENT_TYPE_COUNTS = {
     "microsoft.authorization/roleassignments": 2,
     "microsoft.insights/components": 1,
     "microsoft.insights/components/currentbillingfeatures": 1,
@@ -110,6 +115,40 @@ EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
     "microsoft.web/serverfarms": 1,
     "microsoft.web/sites": 1,
     "microsoft.web/sites/config": 1,
+}
+EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
+    "microsoft.authorization/roleassignments": 2,
+    "microsoft.insights/components": 1,
+    "microsoft.insights/components/currentbillingfeatures": 1,
+    "microsoft.managedidentity/userassignedidentities": 1,
+    "microsoft.network/virtualnetworks": 1,
+    "microsoft.network/virtualnetworks/subnets": 2,
+    "microsoft.operationalinsights/workspaces": 1,
+    "microsoft.storage/storageaccounts": 1,
+    "microsoft.storage/storageaccounts/blobservices": 1,
+    "microsoft.storage/storageaccounts/blobservices/containers": 1,
+    "microsoft.web/serverfarms": 1,
+    "microsoft.web/sites": 1,
+    "microsoft.web/sites/config": 1,
+}
+LEGACY_TEMPLATE_OUTPUTS = {
+    "functionAppHostName",
+    "functionAppResourceId",
+    "functionAppSystemAssignedPrincipalId",
+    "managedIdentityClientId",
+    "managedIdentityPrincipalId",
+    "managedIdentityResourceId",
+}
+EXPECTED_TEMPLATE_OUTPUTS = {
+    "functionAppHostName",
+    "functionAppResourceId",
+    "functionAppSystemAssignedPrincipalId",
+    "functionIntegrationSubnetResourceId",
+    "managedIdentityClientId",
+    "managedIdentityPrincipalId",
+    "managedIdentityResourceId",
+    "privateEndpointSubnetResourceId",
+    "virtualNetworkResourceId",
 }
 EXPECTATION_KEYS = {
     "schema_version",
@@ -317,12 +356,17 @@ def load_expectation(
     generator = metadata.get("_generator") if isinstance(metadata, dict) else None
     template_hash = generator.get("templateHash") if isinstance(generator, dict) else None
     resources = template.get("resources") if isinstance(template, dict) else None
+    outputs = template.get("outputs") if isinstance(template, dict) else None
     parameter_values = parameters.get("parameters") if isinstance(parameters, dict) else None
     if (
         not isinstance(template_hash, str)
         or not template_hash.isdigit()
         or not isinstance(resources, list)
-        or len(resources) != 12
+        or len(resources) not in {
+            sum(LEGACY_DEPLOYMENT_TYPE_COUNTS.values()),
+            sum(EXPECTED_DEPLOYMENT_TYPE_COUNTS.values()),
+        }
+        or not isinstance(outputs, dict)
         or not isinstance(parameter_values, dict)
     ):
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
@@ -338,6 +382,14 @@ def load_expectation(
     expected_parameter_keys = set(EXPECTED_PARAMETER_VALUES) | {
         "bffApiAudience"
     }
+    sorted_type_counts = dict(sorted(type_counts.items()))
+    expected_outputs = (
+        LEGACY_TEMPLATE_OUTPUTS
+        if sorted_type_counts == LEGACY_DEPLOYMENT_TYPE_COUNTS
+        else EXPECTED_TEMPLATE_OUTPUTS
+        if sorted_type_counts == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+        else None
+    )
     if (
         set(canonical_parameters) != expected_parameter_keys
         or not _UUID_RE.fullmatch(
@@ -347,7 +399,8 @@ def load_expectation(
             canonical_parameters.get(key) != {"value": value}
             for key, value in EXPECTED_PARAMETER_VALUES.items()
         )
-        or dict(sorted(type_counts.items())) != EXPECTED_DEPLOYMENT_TYPE_COUNTS
+        or expected_outputs is None
+        or not _template_outputs_match(outputs, expected_outputs)
     ):
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
     expectation = {
@@ -370,7 +423,7 @@ def load_expectation(
         "bff_api_audience": str(
             canonical_parameters["bffApiAudience"]["value"]
         ).lower(),
-        "deployment_type_counts": dict(sorted(type_counts.items())),
+        "deployment_type_counts": sorted_type_counts,
     }
     if set(expectation) != EXPECTATION_KEYS:
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
@@ -385,9 +438,16 @@ def exact_baseline_matches(
     live_resource_state: object,
     expectation: dict[str, Any],
 ) -> bool:
-    if not _deployment_matches(deployment, expectation):
+    observed_type_counts = _observed_type_counts(expectation)
+    if (
+        observed_type_counts is None
+        or not _deployment_matches(deployment, expectation)
+    ):
         return False
-    if not isinstance(operations, list) or len(operations) != 12:
+    if (
+        not isinstance(operations, list)
+        or len(operations) != sum(observed_type_counts.values())
+    ):
         return False
     operation_counts = Counter()
     operation_ids: set[str] = set()
@@ -409,13 +469,13 @@ def exact_baseline_matches(
     if (
         graph_targets is None
         or dict(sorted(operation_counts.items()))
-        != expectation["deployment_type_counts"]
+        != observed_type_counts
         or not _operation_targets_match(operations, inventory)
         or live_resource_state != {
             "schema_version": (
                 "nac.azure-interruption-live-resource-state/v1"
             ),
-            "resource_count": 12,
+            "resource_count": sum(observed_type_counts.values()),
             "resource_targets_sha256": compact_sha256_json(sorted(
                 (
                     {"id": item["id"].lower(), "type": item["type"]}
@@ -431,7 +491,38 @@ def exact_baseline_matches(
         }
     ):
         return False
-    return _inventory_matches(inventory, deployment, identity_binding)
+    return _inventory_matches(
+        inventory, deployment, identity_binding, expectation
+    )
+
+
+def _template_outputs_match(
+    outputs: dict[str, Any], expected_names: set[str]
+) -> bool:
+    return bool(
+        set(outputs) == expected_names
+        and all(
+            isinstance(wrapper, dict)
+            and set(wrapper) == {"type", "value"}
+            and wrapper.get("type") == "string"
+            and isinstance(wrapper.get("value"), str)
+            for wrapper in outputs.values()
+        )
+    )
+
+
+def _observed_type_counts(
+    expectation: dict[str, Any],
+) -> dict[str, int] | None:
+    desired_type_counts = expectation.get("deployment_type_counts")
+    if desired_type_counts in (
+        LEGACY_DEPLOYMENT_TYPE_COUNTS,
+        EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+    ):
+        return desired_type_counts
+    return None
+
+
 def _operation_targets_match(
     operations: list[dict[str, Any]], inventory: object
 ) -> bool:
@@ -479,6 +570,20 @@ def _operation_targets_match(
         "microsoft.web/sites": {site_id},
         "microsoft.web/sites/config": {f"{site_id}/config/appsettings"},
     }
+    virtual_network = by_type.get("microsoft.network/virtualnetworks")
+    if virtual_network is not None:
+        virtual_network_id = str(virtual_network.get("id", "")).lower()
+        if not virtual_network_id:
+            return False
+        expected.update(
+            {
+                "microsoft.network/virtualnetworks": {virtual_network_id},
+                "microsoft.network/virtualnetworks/subnets": {
+                    f"{virtual_network_id}/subnets/snet-flex-integration",
+                    f"{virtual_network_id}/subnets/snet-private-endpoints",
+                },
+            }
+        )
     actual: dict[str, set[str]] = {}
     role_assignment_parents: set[str] = set()
     for operation in operations:
@@ -508,12 +613,21 @@ def _deployment_matches(deployment: object, expectation: dict[str, Any]) -> bool
         "outputs",
     }:
         return False
+    desired_type_counts = expectation.get("deployment_type_counts")
+    observed_template_hash = expectation.get("azure_template_hash")
+    if (
+        desired_type_counts
+        not in (LEGACY_DEPLOYMENT_TYPE_COUNTS, EXPECTED_DEPLOYMENT_TYPE_COUNTS)
+        or not isinstance(observed_template_hash, str)
+        or not observed_template_hash.isdigit()
+    ):
+        return False
     return bool(
         deployment.get("name") == expectation["deployment_name"]
         and deployment.get("resource_group") == RESOURCE_GROUP
         and deployment.get("provisioning_state") == "Succeeded"
         and deployment.get("mode") == "Incremental"
-        and deployment.get("template_hash") == expectation["azure_template_hash"]
+        and deployment.get("template_hash") == observed_template_hash
         and deployment.get("parameters_sha256")
         == expectation["deployment_parameters_sha256"]
         and deployment.get("bff_api_audience")
@@ -525,8 +639,18 @@ def _inventory_matches(
     inventory: object,
     deployment: dict[str, Any],
     identity_binding: object,
+    expectation: dict[str, Any],
 ) -> bool:
-    if not isinstance(inventory, list) or len(inventory) != 7:
+    current = (
+        expectation.get("deployment_type_counts")
+        == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    )
+    expected_top_level_types = (
+        CURRENT_TOP_LEVEL_TYPES if current else EXPECTED_TOP_LEVEL_TYPES
+    )
+    if not isinstance(inventory, list) or len(inventory) != len(
+        expected_top_level_types
+    ):
         return False
     by_type: dict[str, dict[str, Any]] = {}
     keys = {
@@ -542,7 +666,7 @@ def _inventory_matches(
         ):
             return False
         by_type[item.get("type")] = item
-    if set(by_type) != EXPECTED_TOP_LEVEL_TYPES:
+    if set(by_type) != expected_top_level_types:
         return False
     identity = by_type["microsoft.managedidentity/userassignedidentities"]
     name = identity.get("name")
@@ -554,6 +678,15 @@ def _inventory_matches(
         return False
     names = {
         "microsoft.managedidentity/userassignedidentities": name,
+        **(
+            {
+                "microsoft.network/virtualnetworks": (
+                    f"vnet-nac-bff-test-{token}"
+                )
+            }
+            if current
+            else {}
+        ),
         "microsoft.storage/storageaccounts": f"stnacbff{token}",
         "microsoft.operationalinsights/workspaces": f"log-nac-bff-test-{token}",
         "microsoft.insights/components": f"appi-nac-bff-test-{token}",
@@ -610,18 +743,31 @@ def _inventory_matches(
     outputs = deployment.get("outputs")
     if not isinstance(outputs, dict):
         return False
-    outputs_match = bool(
-        set(outputs) == {
+    expected_output_names = {
             "function_app_resource_id",
             "function_app_host_name",
+            "function_app_system_assigned_principal_id",
             "managed_identity_resource_id",
             "managed_identity_client_id",
             "managed_identity_principal_id",
-        }
+    }
+    if current:
+        expected_output_names.update(
+            {
+                "virtual_network_resource_id",
+                "function_integration_subnet_resource_id",
+                "private_endpoint_subnet_resource_id",
+            }
+        )
+    outputs_match = bool(
+        set(outputs) == expected_output_names
         and str(outputs["function_app_resource_id"]).lower()
         == str(by_type["microsoft.web/sites"]["id"]).lower()
         and outputs["function_app_host_name"]
         == f"{FUNCTION_APP}.azurewebsites.net"
+        and _UUID_RE.fullmatch(
+            str(outputs["function_app_system_assigned_principal_id"])
+        )
         and str(outputs["managed_identity_resource_id"]).lower()
         == str(identity["id"]).lower()
         and _UUID_RE.fullmatch(
@@ -629,6 +775,29 @@ def _inventory_matches(
         )
         and _UUID_RE.fullmatch(
             str(outputs["managed_identity_principal_id"])
+        )
+        and (
+            not current
+            or (
+                str(outputs["virtual_network_resource_id"]).lower()
+                == str(
+                    by_type["microsoft.network/virtualnetworks"]["id"]
+                ).lower()
+                and str(
+                    outputs["function_integration_subnet_resource_id"]
+                ).lower()
+                == (
+                    f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                    "/subnets/snet-flex-integration"
+                ).lower()
+                and str(
+                    outputs["private_endpoint_subnet_resource_id"]
+                ).lower()
+                == (
+                    f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                    "/subnets/snet-private-endpoints"
+                ).lower()
+            )
         )
     )
     return bool(
@@ -678,8 +847,12 @@ def _identity_binding_matches(
             "id", "name", "client_id", "principal_id", "tenant_id"
         }
         or not isinstance(function_app, dict)
-        or set(function_app) != {"type", "user_assigned_identities"}
-        or function_app.get("type") != "UserAssigned"
+        or set(function_app) != {
+            "type",
+            "system_assigned_principal_id",
+            "user_assigned_identities",
+        }
+        or function_app.get("type") != "SystemAssigned, UserAssigned"
     ):
         return False
     assignments = function_app.get("user_assigned_identities")
@@ -693,12 +866,19 @@ def _identity_binding_matches(
     identity_id = str(identity_resource.get("id", "")).lower()
     client_id = deployment_outputs.get("managed_identity_client_id")
     principal_id = deployment_outputs.get("managed_identity_principal_id")
+    system_principal_id = deployment_outputs.get(
+        "function_app_system_assigned_principal_id"
+    )
     return bool(
         str(managed.get("id", "")).lower() == identity_id
         and managed.get("name") == identity_resource.get("name")
         and managed.get("client_id") == client_id
         and managed.get("principal_id") == principal_id
         and managed.get("tenant_id") == TENANT_ID
+        and function_app.get("system_assigned_principal_id")
+        == system_principal_id
+        and isinstance(system_principal_id, str)
+        and system_principal_id.lower() != str(principal_id).lower()
         and str(assignment.get("id", "")).lower() == identity_id
         and assignment.get("client_id") == client_id
         and assignment.get("principal_id") == principal_id

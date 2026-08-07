@@ -260,7 +260,7 @@
             "pre_mutation_provider_revalidation_required": true,
             "owner_bound_lock_hash_revalidation_required": true,
             "managed_identity_readback_required": true,
-            "function_app_identity_assignment_exact": "UserAssigned",
+            "function_app_identity_assignment_exact": "SystemAssigned, UserAssigned",
             "security_property_projection_exact_required": true,
             "provider_managed_read_only_properties_allowed_outside_projection": true,
             "bff_api_audience_bound_to_prepared_parameter_required": true,

@@ -33,6 +33,7 @@ from .azure_performance_infrastructure_safety import (
     CONTAINER_NAME,
     effective_coordination_tags,
     exact_broker_lease_blob_condition,
+    private_network_boundary_sha256,
 )
 
 
@@ -112,6 +113,12 @@ _COORDINATION_OUTPUT_KEYS = frozenset(
         "brokerPrincipalIdBinding",
         "brokerCallerServicePrincipalIdBinding",
         "brokerFunctionAppResourceIdBinding",
+        "brokerVirtualNetworkResourceIdBinding",
+        "brokerFunctionIntegrationSubnetResourceIdBinding",
+        "brokerPrivateEndpointSubnetResourceIdBinding",
+        "coordinationBlobPrivateEndpointResourceId",
+        "coordinationBlobPrivateDnsZoneResourceId",
+        "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId",
         "brokerFunctionPackageSha256Binding",
         "brokerTicketVerificationCertificateSha256Binding",
         "exactBrokerLeaseBlobCondition",
@@ -460,9 +467,15 @@ class PerformanceCoordinationDeploymentReceipt:
     broker_principal_id: str
     broker_caller_service_principal_id: str
     broker_function_app_resource_id: str
+    broker_virtual_network_resource_id: str
+    broker_function_integration_subnet_resource_id: str
+    broker_private_endpoint_subnet_resource_id: str
+    coordination_blob_private_endpoint_resource_id: str
+    coordination_blob_private_dns_zone_resource_id: str
+    coordination_blob_private_dns_vnet_link_resource_id: str
     broker_function_package_sha256: str
     broker_ticket_verification_certificate_sha256: str
-    broker_outbound_ip_addresses_sha256: str
+    broker_private_network_boundary_sha256: str
     broker_lease_data_role_definition_id: str
     broker_lease_role_assignment_id: str
     _authority_id: int
@@ -668,14 +681,40 @@ class PerformanceCoordinationDeploymentPort:
                 broker_function_app_resource_id=outputs[
                     "brokerFunctionAppResourceIdBinding"
                 ],
+                broker_virtual_network_resource_id=outputs[
+                    "brokerVirtualNetworkResourceIdBinding"
+                ],
+                broker_function_integration_subnet_resource_id=outputs[
+                    "brokerFunctionIntegrationSubnetResourceIdBinding"
+                ],
+                broker_private_endpoint_subnet_resource_id=outputs[
+                    "brokerPrivateEndpointSubnetResourceIdBinding"
+                ],
+                coordination_blob_private_endpoint_resource_id=outputs[
+                    "coordinationBlobPrivateEndpointResourceId"
+                ],
+                coordination_blob_private_dns_zone_resource_id=outputs[
+                    "coordinationBlobPrivateDnsZoneResourceId"
+                ],
+                coordination_blob_private_dns_vnet_link_resource_id=outputs[
+                    "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId"
+                ],
                 broker_function_package_sha256=outputs[
                     "brokerFunctionPackageSha256Binding"
                 ],
                 broker_ticket_verification_certificate_sha256=outputs[
                     "brokerTicketVerificationCertificateSha256Binding"
                 ],
-                broker_outbound_ip_addresses_sha256=_sha256_json(
-                    state.infrastructure_parameters["brokerOutboundIpAddresses"]
+                broker_private_network_boundary_sha256=private_network_boundary_sha256(
+                    virtual_network_resource_id=state.infrastructure_parameters[
+                        "brokerVirtualNetworkResourceId"
+                    ],
+                    function_integration_subnet_resource_id=state.infrastructure_parameters[
+                        "brokerFunctionIntegrationSubnetResourceId"
+                    ],
+                    private_endpoint_subnet_resource_id=state.infrastructure_parameters[
+                        "brokerPrivateEndpointSubnetResourceId"
+                    ],
                 ),
                 broker_lease_data_role_definition_id=outputs[
                     "brokerLeaseDataRoleDefinitionId"
@@ -778,7 +817,7 @@ def _validate_coordination_deployment(
     bff_id = str(parameters["bffStorageAccountResourceId"])
     worm_id = str(parameters["wormStorageAccountResourceId"])
     expected = {
-        "contractSchemaVersion": "nac.azure-bff-performance-coordination/v1",
+        "contractSchemaVersion": "nac.azure-bff-performance-coordination/v3",
         "storageAccountName": parameters["storageAccountName"],
         "storageAccountResourceId": storage_id,
         "effectiveTags": effective_coordination_tags(parameters["tags"], target),
@@ -796,13 +835,29 @@ def _validate_coordination_deployment(
         "requiredLeaseBlobType": "BlockBlob",
         "requiredLeaseBlobContentLength": 0,
         "targetBindingSha256": target,
-        "brokerPrincipalIdBinding": parameters["brokerPrincipalId"],
         "brokerCallerServicePrincipalIdBinding": parameters[
             "brokerCallerServicePrincipalId"
         ],
         "brokerFunctionAppResourceIdBinding": parameters[
             "brokerFunctionAppResourceId"
         ],
+        "brokerVirtualNetworkResourceIdBinding": parameters[
+            "brokerVirtualNetworkResourceId"
+        ],
+        "brokerFunctionIntegrationSubnetResourceIdBinding": parameters[
+            "brokerFunctionIntegrationSubnetResourceId"
+        ],
+        "brokerPrivateEndpointSubnetResourceIdBinding": parameters[
+            "brokerPrivateEndpointSubnetResourceId"
+        ],
+        "coordinationBlobPrivateEndpointResourceId": (
+            f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
+            f"Microsoft.Network/privateEndpoints/pep-{parameters['storageAccountName']}"
+        ),
+        "coordinationBlobPrivateDnsZoneResourceId": (
+            f"{_resource_group_scope(RESOURCE_GROUP)}/providers/"
+            "Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
+        ),
         "brokerFunctionPackageSha256Binding": parameters[
             "brokerFunctionPackageSha256"
         ],
@@ -831,13 +886,25 @@ def _validate_coordination_deployment(
             "owner-ticketed-fixed-broker-api",
         ],
         "localRunnerStorageDataActions": [],
-        "credentialBoundaryMode": "BFF_BROKER_UAMI_ONLY",
+        "credentialBoundaryMode": "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY",
     }
     if any(not _equal_arm(outputs.get(key), value) for key, value in expected.items()):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
-    if str(parameters["brokerPrincipalId"]).casefold() == str(
-        parameters["brokerCallerServicePrincipalId"]
-    ).casefold():
+    dns_link_prefix = (
+        f"{expected['coordinationBlobPrivateDnsZoneResourceId']}/"
+        "virtualNetworkLinks/link-nac-bff-"
+    )
+    if not str(
+        outputs.get("coordinationBlobPrivateDnsVirtualNetworkLinkResourceId", "")
+    ).casefold().startswith(dns_link_prefix.casefold()):
+        _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
+    broker_principal = outputs.get("brokerPrincipalIdBinding")
+    if (
+        not isinstance(broker_principal, str)
+        or _UUID_RE.fullmatch(broker_principal) is None
+        or broker_principal.casefold()
+        == str(parameters["brokerCallerServicePrincipalId"]).casefold()
+    ):
         _fail("PERFORMANCE_COORDINATION_OUTPUTS_INVALID")
     for key, prefix in (
         (

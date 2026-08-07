@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import ipaddress
 import json
 import os
 from pathlib import Path
@@ -31,6 +30,7 @@ from .azure_performance_composition import (
 from .azure_performance_infrastructure_safety import (
     effective_coordination_tags,
     infrastructure_safety_policy_sha256,
+    private_network_boundary_sha256,
 )
 
 
@@ -146,18 +146,30 @@ _FUNCTION_APP_ID_RE = re.compile(
     r"(?P<resource_group>[^/]+)/providers/Microsoft\.Web/sites/"
     r"(?P<name>[a-zA-Z0-9-]{1,60})$"
 )
+_VIRTUAL_NETWORK_ID_RE = re.compile(
+    r"^/subscriptions/(?P<subscription>[0-9a-f-]{36})/resourceGroups/"
+    r"(?P<resource_group>[^/]+)/providers/Microsoft\.Network/virtualNetworks/"
+    r"(?P<name>[a-zA-Z0-9-]{1,64})$"
+)
+_SUBNET_ID_RE = re.compile(
+    r"^(?P<vnet>/subscriptions/(?P<subscription>[0-9a-f-]{36})/resourceGroups/"
+    r"(?P<resource_group>[^/]+)/providers/Microsoft\.Network/virtualNetworks/"
+    r"(?P<vnet_name>[a-zA-Z0-9-]{1,64}))/subnets/"
+    r"(?P<name>[a-zA-Z0-9-]{1,80})$"
+)
 _PARAMETER_KEYS = frozenset(
     {
         "location",
         "storageAccountName",
         "bffStorageAccountResourceId",
         "wormStorageAccountResourceId",
-        "brokerPrincipalId",
         "brokerCallerServicePrincipalId",
         "brokerFunctionAppResourceId",
+        "brokerVirtualNetworkResourceId",
+        "brokerFunctionIntegrationSubnetResourceId",
+        "brokerPrivateEndpointSubnetResourceId",
         "brokerFunctionPackageSha256",
         "brokerTicketVerificationCertificateSha256",
-        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "tenantId",
         "subscriptionId",
@@ -279,17 +291,34 @@ def build_performance_infrastructure_owner_gate(
                 "target_binding_sha256": parameters["targetBindingSha256"],
             },
             "redacted_parameter_bindings": {
-                "broker_outbound_ip_addresses_sha256": _sha256_json(
-                    parameters["brokerOutboundIpAddresses"]
+                "broker_private_network_boundary_sha256": private_network_boundary_sha256(
+                    virtual_network_resource_id=parameters[
+                        "brokerVirtualNetworkResourceId"
+                    ],
+                    function_integration_subnet_resource_id=parameters[
+                        "brokerFunctionIntegrationSubnetResourceId"
+                    ],
+                    private_endpoint_subnet_resource_id=parameters[
+                        "brokerPrivateEndpointSubnetResourceId"
+                    ],
                 ),
-                "broker_principal_sha256": _sha256_text(
-                    parameters["brokerPrincipalId"]
+                "broker_principal_source": (
+                    "bound-function-system-assigned-identity-readback"
                 ),
                 "broker_caller_service_principal_sha256": _sha256_text(
                     parameters["brokerCallerServicePrincipalId"]
                 ),
                 "broker_function_app_resource_id_sha256": _sha256_text(
                     parameters["brokerFunctionAppResourceId"]
+                ),
+                "broker_virtual_network_resource_id_sha256": _sha256_text(
+                    parameters["brokerVirtualNetworkResourceId"]
+                ),
+                "broker_function_integration_subnet_resource_id_sha256": _sha256_text(
+                    parameters["brokerFunctionIntegrationSubnetResourceId"]
+                ),
+                "broker_private_endpoint_subnet_resource_id_sha256": _sha256_text(
+                    parameters["brokerPrivateEndpointSubnetResourceId"]
                 ),
                 "broker_function_package_sha256": parameters[
                     "brokerFunctionPackageSha256"
@@ -515,26 +544,36 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     try:
-        broker_principal = UUID(str(result["brokerPrincipalId"]))
         broker_caller = UUID(str(result["brokerCallerServicePrincipalId"]))
         function_app_match = _FUNCTION_APP_ID_RE.fullmatch(
             str(result["brokerFunctionAppResourceId"])
         )
-        addresses = [
-            ipaddress.ip_address(str(value))
-            for value in result["brokerOutboundIpAddresses"]
-        ]
+        virtual_network_match = _VIRTUAL_NETWORK_ID_RE.fullmatch(
+            str(result["brokerVirtualNetworkResourceId"])
+        )
+        function_subnet_match = _SUBNET_ID_RE.fullmatch(
+            str(result["brokerFunctionIntegrationSubnetResourceId"])
+        )
+        private_endpoint_subnet_match = _SUBNET_ID_RE.fullmatch(
+            str(result["brokerPrivateEndpointSubnetResourceId"])
+        )
     except (TypeError, ValueError):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID") from None
     if (
-        broker_principal == broker_caller
-        or function_app_match is None
+        function_app_match is None
+        or virtual_network_match is None
+        or function_subnet_match is None
+        or private_endpoint_subnet_match is None
         or function_app_match.group("subscription") != SUBSCRIPTION_ID
         or function_app_match.group("resource_group") != RESOURCE_GROUP
-        or not isinstance(result["brokerOutboundIpAddresses"], list)
-        or not 1 <= len(addresses) <= 32
-        or len({str(address) for address in addresses}) != len(addresses)
-        or any(address.version != 4 or not address.is_global for address in addresses)
+        or virtual_network_match.group("subscription") != SUBSCRIPTION_ID
+        or virtual_network_match.group("resource_group") != RESOURCE_GROUP
+        or function_subnet_match.group("vnet").casefold()
+        != str(result["brokerVirtualNetworkResourceId"]).casefold()
+        or private_endpoint_subnet_match.group("vnet").casefold()
+        != str(result["brokerVirtualNetworkResourceId"]).casefold()
+        or function_subnet_match.group("name").casefold()
+        == private_endpoint_subnet_match.group("name").casefold()
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     _require_sha256(result["targetBindingSha256"], "targetBindingSha256")
@@ -550,8 +589,6 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
         key: (
             {tag: tags[tag] for tag in sorted(tags)}
             if key == "tags"
-            else sorted(str(value) for value in result[key])
-            if key == "brokerOutboundIpAddresses"
             else str(result[key])
         )
         for key in sorted(result)

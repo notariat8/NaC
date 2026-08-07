@@ -13,6 +13,10 @@ from nac_bff.azure_activation import FUNCTION_APP, RESOURCE_GROUP, SUBSCRIPTION_
 from nac_bff.azure_interruption_baseline import (
     DEPLOYMENT_NAME,
     EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+    EXPECTED_TEMPLATE_OUTPUTS,
+    LEGACY_AZURE_TEMPLATE_HASH,
+    LEGACY_DEPLOYMENT_TYPE_COUNTS,
+    LEGACY_TEMPLATE_OUTPUTS,
     RESOURCE_TAGS,
     exact_baseline_matches,
     load_expectation,
@@ -25,6 +29,8 @@ TREE = "c" * 40
 RESOURCE_SUFFIX = "43o765p7uslni"
 CLIENT_ID = "11111111-1111-4111-8111-111111111111"
 PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222"
+SYSTEM_PRINCIPAL_ID = "33333333-3333-4333-8333-333333333333"
+CURRENT_AZURE_TEMPLATE_HASH = "8487493885361062053"
 
 
 def _write_secure_json(path: Path, value: object) -> bytes:
@@ -41,9 +47,16 @@ def _prepared(
     activation_hash: str = ACTIVATION_HASH,
     commit: str = COMMIT,
     tree: str = TREE,
+    legacy: bool = False,
 ) -> dict:
+    deployment_type_counts = (
+        LEGACY_DEPLOYMENT_TYPE_COUNTS
+        if legacy
+        else EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    )
+    output_names = LEGACY_TEMPLATE_OUTPUTS if legacy else EXPECTED_TEMPLATE_OUTPUTS
     resources = []
-    for resource_type, count in EXPECTED_DEPLOYMENT_TYPE_COUNTS.items():
+    for resource_type, count in deployment_type_counts.items():
         for index in range(count):
             resources.append({
                 "type": resource_type,
@@ -51,8 +64,16 @@ def _prepared(
                 "dependsOn": [],
             })
     template = {
-        "metadata": {"_generator": {"templateHash": "13643045116711268849"}},
+        "metadata": {"_generator": {"templateHash": (
+            LEGACY_AZURE_TEMPLATE_HASH
+            if legacy
+            else CURRENT_AZURE_TEMPLATE_HASH
+        )}},
         "resources": resources,
+        "outputs": {
+            name: {"type": "string", "value": f"[{name}]"}
+            for name in output_names
+        },
     }
     parameters = {
         "parameters": {
@@ -150,16 +171,21 @@ def _resource_id(resource_type: str, name: str) -> str:
     )
 
 
-def _inventory() -> list[dict]:
-    specifications = (
+def _inventory(*, current: bool = True) -> list[dict]:
+    specifications = [
         ("Microsoft.ManagedIdentity/userAssignedIdentities", f"id-nac-bff-test-{RESOURCE_SUFFIX}", None),
+        *(
+            [("Microsoft.Network/virtualNetworks", f"vnet-nac-bff-test-{RESOURCE_SUFFIX}", None)]
+            if current
+            else []
+        ),
         ("Microsoft.Storage/storageAccounts", f"stnacbff{RESOURCE_SUFFIX}", "StorageV2"),
         ("Microsoft.OperationalInsights/workspaces", f"log-nac-bff-test-{RESOURCE_SUFFIX}", None),
         ("Microsoft.Insights/components", f"appi-nac-bff-test-{RESOURCE_SUFFIX}", "web"),
         ("Microsoft.Web/serverfarms", f"plan-nac-bff-test-{RESOURCE_SUFFIX}", "functionapp"),
         ("Microsoft.Web/sites", FUNCTION_APP, "functionapp,linux"),
         ("Microsoft.Insights/ActionGroups", "Application Insights Smart Detection", None),
-    )
+    ]
     rows = []
     for resource_type, name, kind in specifications:
         smart = resource_type.lower() == "microsoft.insights/actiongroups"
@@ -215,7 +241,8 @@ def _inventory() -> list[dict]:
 
 
 def _deployment(expectation: dict) -> dict:
-    inventory = _inventory()
+    current = expectation["deployment_type_counts"] == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    inventory = _inventory(current=current)
     by_type = {row["type"]: row for row in inventory}
     return {
         "name": DEPLOYMENT_NAME,
@@ -228,11 +255,29 @@ def _deployment(expectation: dict) -> dict:
         "outputs": {
             "function_app_resource_id": by_type["microsoft.web/sites"]["id"],
             "function_app_host_name": f"{FUNCTION_APP}.azurewebsites.net",
+            "function_app_system_assigned_principal_id": SYSTEM_PRINCIPAL_ID,
             "managed_identity_resource_id": by_type[
                 "microsoft.managedidentity/userassignedidentities"
             ]["id"],
             "managed_identity_client_id": CLIENT_ID,
             "managed_identity_principal_id": PRINCIPAL_ID,
+            **(
+                {
+                    "virtual_network_resource_id": by_type[
+                        "microsoft.network/virtualnetworks"
+                    ]["id"],
+                    "function_integration_subnet_resource_id": (
+                        f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                        "/subnets/snet-flex-integration"
+                    ),
+                    "private_endpoint_subnet_resource_id": (
+                        f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                        "/subnets/snet-private-endpoints"
+                    ),
+                }
+                if current
+                else {}
+            ),
         },
     }
 
@@ -253,7 +298,8 @@ def _identity_binding() -> dict:
             "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
         },
         "function_app": {
-            "type": "UserAssigned",
+            "type": "SystemAssigned, UserAssigned",
+            "system_assigned_principal_id": SYSTEM_PRINCIPAL_ID,
             "user_assigned_identities": [{
                 "id": identity["id"],
                 "client_id": CLIENT_ID,
@@ -263,8 +309,8 @@ def _identity_binding() -> dict:
     }
 
 
-def _operations() -> list[dict]:
-    by_type = {row["type"]: row for row in _inventory()}
+def _operations(*, current: bool = True) -> list[dict]:
+    by_type = {row["type"]: row for row in _inventory(current=current)}
     identity_id = by_type[
         "microsoft.managedidentity/userassignedidentities"
     ]["id"].lower()
@@ -287,6 +333,23 @@ def _operations() -> list[dict]:
         ("microsoft.authorization/roleassignments", f"{storage_id}/providers/microsoft.authorization/roleassignments/33333333-3333-4333-8333-333333333333"),
         ("microsoft.authorization/roleassignments", f"{component_id}/providers/microsoft.authorization/roleassignments/44444444-4444-4444-8444-444444444444"),
     ]
+    if current:
+        virtual_network_id = by_type[
+            "microsoft.network/virtualnetworks"
+        ]["id"].lower()
+        targets.extend(
+            [
+                ("microsoft.network/virtualnetworks", virtual_network_id),
+                (
+                    "microsoft.network/virtualnetworks/subnets",
+                    f"{virtual_network_id}/subnets/snet-flex-integration",
+                ),
+                (
+                    "microsoft.network/virtualnetworks/subnets",
+                    f"{virtual_network_id}/subnets/snet-private-endpoints",
+                ),
+            ]
+        )
     return sorted(
         [
             {
@@ -300,11 +363,11 @@ def _operations() -> list[dict]:
     )
 
 
-def _live_resource_state() -> dict:
+def _live_resource_state(*, current: bool = True) -> dict:
     targets = sorted(
         (
             {"id": item["id"].lower(), "type": item["type"]}
-            for item in _operations()
+            for item in _operations(current=current)
         ),
         key=lambda item: (item["type"], item["id"]),
     )
@@ -313,12 +376,14 @@ def _live_resource_state() -> dict:
         resource_graph_visible_targets,
     )
 
-    graph_targets = resource_graph_visible_targets(_inventory(), _operations())
+    graph_targets = resource_graph_visible_targets(
+        _inventory(current=current), _operations(current=current)
+    )
     assert graph_targets is not None
 
     return {
         "schema_version": "nac.azure-interruption-live-resource-state/v1",
-        "resource_count": 12,
+        "resource_count": 15 if current else 12,
         "resource_targets_sha256": compact_sha256_json(targets),
         "resource_graph_count": len(graph_targets),
         "resource_graph_targets_sha256": compact_sha256_json(graph_targets),
@@ -336,7 +401,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
 
         self.assertIsNotNone(targets)
         assert targets is not None
-        self.assertEqual(len(targets), 9)
+        self.assertEqual(len(targets), 10)
         expected = sorted(
             [
                 {"id": item["id"].lower(), "type": item["type"].lower()}
@@ -386,7 +451,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertIsNone(expectation)
 
-    def test_expectation_is_bound_to_manifest_template_parameters_and_graph(self):
+    def test_current_expectation_reconciles_exact_current_baseline(self):
         from nac_bff.azure_activation_composition import (
             _deployment_name,
             _sha256_json as activation_sha256_json,
@@ -427,6 +492,22 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
             expectation["deployment_type_counts"],
             EXPECTED_DEPLOYMENT_TYPE_COUNTS,
         )
+        self.assertEqual(sum(expectation["deployment_type_counts"].values()), 15)
+        self.assertEqual(expectation["azure_template_hash"], CURRENT_AZURE_TEMPLATE_HASH)
+        deployment = _deployment(expectation)
+        self.assertEqual(deployment["template_hash"], CURRENT_AZURE_TEMPLATE_HASH)
+        self.assertEqual(deployment["mode"], "Incremental")
+        self.assertEqual(set(deployment["outputs"]), {
+            "function_app_resource_id",
+            "function_app_host_name",
+            "function_app_system_assigned_principal_id",
+            "managed_identity_resource_id",
+            "managed_identity_client_id",
+            "managed_identity_principal_id",
+            "virtual_network_resource_id",
+            "function_integration_subnet_resource_id",
+            "private_endpoint_subnet_resource_id",
+        })
         from nac_bff.azure_activation_runner import _sha256_json
         from nac_bff.azure_interruption_contract import newline_sha256_json
 
@@ -436,13 +517,101 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         self.assertTrue(
             exact_baseline_matches(
                 _inventory(),
-                _deployment(expectation),
+                deployment,
                 _operations(),
                 _identity_binding(),
                 _live_resource_state(),
                 expectation,
             )
         )
+
+    def test_historical_legacy_prepared_run_remains_reconcilable(self):
+        _prepared(self.run_dir, legacy=True)
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+
+        self.assertIsNone(error)
+        assert expectation is not None
+        self.assertEqual(
+            expectation["deployment_type_counts"],
+            LEGACY_DEPLOYMENT_TYPE_COUNTS,
+        )
+        self.assertEqual(
+            expectation["azure_template_hash"], LEGACY_AZURE_TEMPLATE_HASH
+        )
+        self.assertTrue(
+            exact_baseline_matches(
+                _inventory(current=False),
+                _deployment(expectation),
+                _operations(current=False),
+                _identity_binding(),
+                _live_resource_state(current=False),
+                expectation,
+            )
+        )
+
+    def test_current_deployment_cannot_use_legacy_observation(self):
+        _prepared(self.run_dir)
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+        self.assertIsNone(error)
+        assert expectation is not None
+        self.assertFalse(
+            exact_baseline_matches(
+                _inventory(current=False),
+                _deployment(expectation),
+                _operations(current=False),
+                _identity_binding(),
+                _live_resource_state(current=False),
+                expectation,
+            )
+        )
+
+    def test_prepared_template_output_set_must_match_baseline_generation(self):
+        _prepared(self.run_dir)
+        prepared = self.run_dir / "prepared"
+        template_path = prepared / "main.json"
+        tree_template_path = (
+            prepared
+            / "approved-tree"
+            / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+        )
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+        template["outputs"].pop("privateEndpointSubnetResourceId")
+        template_path.chmod(0o600)
+        tree_template_path.chmod(0o600)
+        template_raw = _write_secure_json(template_path, template)
+        template_path.chmod(0o400)
+        _write_secure_json(tree_template_path, template)
+        tree_template_path.chmod(0o400)
+        manifest_path = prepared / "prepared-inputs.redacted.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["bicep_snapshot_sha256"] = hashlib.sha256(
+            template_raw
+        ).hexdigest()
+        manifest_base = {
+            key: value
+            for key, value in manifest.items()
+            if key != "prepared_inputs_sha256"
+        }
+        manifest["prepared_inputs_sha256"] = hashlib.sha256(
+            json.dumps(
+                manifest_base,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        _write_secure_json(manifest_path, manifest)
+
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+
+        self.assertIsNone(expectation)
+        self.assertEqual(error, "INTERRUPTION_BASELINE_BINDING_INVALID")
 
     def test_api_audience_must_differ_from_managed_identity_client_id(self):
         _prepared(self.run_dir)
@@ -581,6 +750,12 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         deployment["template_hash"] = "1"
         cases.append((
             _inventory(), deployment, _operations(), _identity_binding()
+        ))
+        complete_deployment = _deployment(expectation)
+        complete_deployment["mode"] = "Complete"
+        cases.append((
+            _inventory(), complete_deployment, _operations(),
+            _identity_binding(),
         ))
         operations = _operations()
         operations[0]["provisioning_state"] = "Running"

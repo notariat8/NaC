@@ -7,7 +7,6 @@ from datetime import UTC, datetime, timedelta
 from functools import wraps
 import hashlib
 import hmac
-import ipaddress
 import json
 import os
 from pathlib import Path
@@ -44,21 +43,23 @@ BROKER_ALLOWED_DATA_ACTIONS = frozenset(
 ALLOWED_DATA_ACTIONS = BROKER_ALLOWED_DATA_ACTIONS
 
 PROVENANCE_READBACK_SCHEMA = "nac.azure-provenance-readback/v1"
-EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v1"
+EFFECTIVE_RBAC_READBACK_SCHEMA = "nac.azure-effective-rbac-readback/v2"
 STORAGE_API_VERSION = "2023-05-01"
 AUTHORIZATION_API_VERSION = "2022-04-01"
 MICROSOFT_GRAPH_API_VERSION = "v1.0"
 DEPLOYMENT_API_VERSION = "2022-09-01"
 WEB_API_VERSION = "2023-12-01"
+NETWORK_API_VERSION = "2024-05-01"
+PRIVATE_DNS_API_VERSION = "2024-06-01"
 MANAGEMENT_GROUP_API_VERSION = "2021-04-01"
 INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA = (
-    "nac.azure-bff-performance-infrastructure-safety-evidence/v5"
+    "nac.azure-bff-performance-infrastructure-safety-evidence/v8"
 )
 ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA = (
     "nac.azure-bff-performance-original-name-availability-receipt/v1"
 )
 SUCCESSFUL_DEPLOYMENT_RECEIPT_SCHEMA = (
-    "nac.azure-bff-performance-successful-deployment-receipt/v1"
+    "nac.azure-bff-performance-successful-deployment-receipt/v2"
 )
 READBACK_SESSION_SCHEMA = "nac.azure-bff-performance-readback-session/v1"
 SEALED_AZURE_READ_SCHEMA = "nac.azure-sealed-readback-command/v3"
@@ -82,7 +83,7 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "location",
         "tags_sha256",
         "effective_tags_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_private_network_boundary_sha256",
         "toolchain_attestations_sha256",
         "readback_session_sha256",
         "readback_nonce_sha256",
@@ -97,7 +98,14 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "lease_blob_path",
         "broker_principal_id",
         "broker_caller_service_principal_id",
+        "runtime_uami_principal_id",
         "broker_function_app_resource_id",
+        "broker_virtual_network_resource_id",
+        "broker_function_integration_subnet_resource_id",
+        "broker_private_endpoint_subnet_resource_id",
+        "coordination_blob_private_endpoint_resource_id",
+        "coordination_blob_private_dns_zone_resource_id",
+        "coordination_blob_private_dns_vnet_link_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
         "broker_role_definition_id",
@@ -108,6 +116,9 @@ _INFRASTRUCTURE_SAFETY_EVIDENCE_KEYS = frozenset(
         "broker_effective_assignment_count",
         "broker_effective_principal_count",
         "broker_attested_ancestor_scope_count",
+        "runtime_uami_effective_storage_data_action_count",
+        "runtime_uami_effective_principal_count",
+        "runtime_uami_attested_ancestor_scope_count",
         "tenant_root_management_group_scope",
         "deployment_receipt_sha256",
         "storage_configuration_sha256",
@@ -148,12 +159,12 @@ _FUNCTION_APP_ID_RE = re.compile(
 )
 _RESTART_RECEIPT_BINDING_KEYS = frozenset(
     {
-        "broker_principal_id",
+        "broker_principal_source",
         "broker_caller_service_principal_id",
         "broker_function_app_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_private_network_boundary_sha256",
         "deployment_id",
         "effective_tags_sha256",
         "infrastructure_binding_sha256",
@@ -171,10 +182,14 @@ _RESTART_RECEIPT_BINDING_KEYS = frozenset(
 )
 _COORDINATION_RESOURCE_BINDING_KEYS = frozenset(
     {
+        "broker_principal_id",
         "broker_lease_data_role_definition_id",
         "broker_lease_role_assignment_id",
         "coordination_storage_account_resource_id",
         "lease_container_resource_id",
+        "coordination_blob_private_endpoint_resource_id",
+        "coordination_blob_private_dns_zone_resource_id",
+        "coordination_blob_private_dns_vnet_link_resource_id",
     }
 )
 
@@ -198,6 +213,9 @@ _READBACK_TRANSCRIPT_KEYS = frozenset(
         "bff_storage",
         "worm_storage",
         "broker_function_app",
+        "broker_virtual_network",
+        "broker_function_integration_subnet",
+        "broker_private_endpoint_subnet",
         "coordination_name",
         "deployment_receipt",
         "coordination_storage",
@@ -208,6 +226,10 @@ _READBACK_TRANSCRIPT_KEYS = frozenset(
         "subscription_ancestry",
         "broker_effective_rbac",
         "broker_caller_effective_rbac",
+        "runtime_uami_effective_rbac",
+        "coordination_blob_private_endpoint",
+        "coordination_blob_private_dns_zone_group",
+        "coordination_blob_private_dns_vnet_link",
     }
 )
 _SEALED_READ_SPECS = {
@@ -223,9 +245,33 @@ _SEALED_READ_SPECS = {
         WEB_API_VERSION,
         "azure-resource-manager/function-apps-get",
     ),
+    "broker-virtual-network": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/virtual-networks-get",
+    ),
+    "broker-function-integration-subnet": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/subnets-get",
+    ),
+    "broker-private-endpoint-subnet": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/subnets-get",
+    ),
     "coordination-storage-account-configuration": (
         STORAGE_API_VERSION,
         "azure-resource-manager/storage-accounts-get",
+    ),
+    "coordination-blob-private-endpoint": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/private-endpoints-get",
+    ),
+    "coordination-blob-private-dns-zone-group": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/private-dns-zone-groups-get",
+    ),
+    "coordination-blob-private-dns-vnet-link": (
+        PRIVATE_DNS_API_VERSION,
+        "azure-resource-manager/private-dns-vnet-links-list",
     ),
     "coordination-blob-service-configuration": (
         STORAGE_API_VERSION,
@@ -873,6 +919,7 @@ class AzurePerformanceInfrastructureRestartReceiptStore:
         resources = _validate_coordination_resource_bindings(
             coordination_resources,
             expected_binding=self._binding,
+            expected_deployment_resources=measured,
         )
         _require_named_sha256(
             create_deployment_receipt_sha256,
@@ -1025,8 +1072,11 @@ class AzurePerformanceInfrastructureReadbackAdapter:
         normalized_resource = _require_arm_id(
             resource_id, "SEALED_AZURE_READ_RESOURCE_INVALID"
         )
+        read_resource = normalized_resource
+        if observation_kind == "coordination-blob-private-dns-vnet-link":
+            read_resource = normalized_resource.rsplit("/", 1)[0]
         url = (
-            f"https://management.azure.com{normalized_resource}"
+            f"https://management.azure.com{read_resource}"
             f"?api-version={api_version}"
         )
         argv = (
@@ -1050,6 +1100,13 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             payload = {"resource_id": response.get("id")}
         elif observation_kind == "coordination-broker-function-app":
             payload = _broker_function_app_payload(response)
+        elif observation_kind == "broker-virtual-network":
+            payload = _virtual_network_payload(response)
+        elif observation_kind in {
+            "broker-function-integration-subnet",
+            "broker-private-endpoint-subnet",
+        }:
+            payload = _subnet_payload(response)
         elif observation_kind in {
             "coordination-broker-role-definition",
             "coordination-broker-role-assignment",
@@ -1057,6 +1114,12 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             payload = {"resource": response}
         elif observation_kind == "coordination-storage-account-configuration":
             payload = _storage_configuration_payload(response)
+        elif observation_kind == "coordination-blob-private-endpoint":
+            payload = _private_endpoint_payload(response)
+        elif observation_kind == "coordination-blob-private-dns-zone-group":
+            payload = _private_dns_zone_group_payload(response)
+        elif observation_kind == "coordination-blob-private-dns-vnet-link":
+            payload = _private_dns_vnet_link_collection_payload(response)
         elif observation_kind == "coordination-blob-service-configuration":
             payload = _blob_service_configuration_payload(response)
         elif observation_kind == "coordination-lease-container-configuration":
@@ -1083,7 +1146,7 @@ class AzurePerformanceInfrastructureReadbackAdapter:
                 environment=self._environment,
                 argv=argv,
                 api_version=api_version,
-                resource_id=normalized_resource,
+                resource_id=read_resource,
                 response_bytes=response_bytes,
             )
         )
@@ -1270,6 +1333,7 @@ class AzurePerformanceInfrastructureReadbackAdapter:
 
         relevant = {principal, *groups}
         assignments: list[dict[str, Any]] = []
+        assignment_index: list[dict[str, str]] = []
         pending_assignments: list[tuple[dict[str, Any], str, str]] = []
         role_definitions: dict[str, dict[str, Any]] = {}
         for scope in ancestor_scopes:
@@ -1294,12 +1358,23 @@ class AzurePerformanceInfrastructureReadbackAdapter:
                 candidate_principal = _canonical_uuid(
                     properties.get("principalId"), "EFFECTIVE_ASSIGNMENTS_INVALID"
                 )
-                if candidate_principal not in relevant:
-                    continue
                 role_id = _require_arm_id(
                     properties.get("roleDefinitionId"),
                     "EFFECTIVE_ASSIGNMENT_DATA_ACTIONS_UNRESOLVED",
                 )
+                assignment_id = _require_arm_id(
+                    item.get("id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+                )
+                assignment_index.append(
+                    {
+                        "assignment_id": assignment_id,
+                        "principal_id": candidate_principal,
+                        "role_definition_id": role_id,
+                        "scope": scope,
+                    }
+                )
+                if candidate_principal not in relevant:
+                    continue
                 pending_assignments.append((dict(item), scope, role_id))
         for expanded, scope, role_id in pending_assignments:
             if role_id.casefold() not in role_definitions:
@@ -1322,11 +1397,21 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             "transitive_group_principal_ids": groups,
             "ancestor_scopes": list(ancestor_scopes),
             "effective_role_assignments": assignments,
+            "role_assignment_principal_index": sorted(
+                assignment_index,
+                key=lambda item: (
+                    item["scope"].casefold(),
+                    item["role_definition_id"].casefold(),
+                    item["assignment_id"].casefold(),
+                    item["principal_id"],
+                ),
+            ),
             "completeness_attestation": {
                 "root_ancestry_complete": True,
                 "management_group_ancestry_complete": True,
                 "transitive_group_membership_complete": True,
                 "role_assignments_complete": True,
+                "all_role_assignment_principals_indexed": True,
                 "role_definitions_expanded": True,
             },
         }
@@ -1504,6 +1589,24 @@ def effective_coordination_tags(
     }
 
 
+def private_network_boundary_sha256(
+    *,
+    virtual_network_resource_id: str,
+    function_integration_subnet_resource_id: str,
+    private_endpoint_subnet_resource_id: str,
+) -> str:
+    """Bind the exact VNet and separated Flex/private-endpoint subnets."""
+
+    values = {
+        "virtualNetworkResourceId": virtual_network_resource_id,
+        "functionIntegrationSubnetResourceId": function_integration_subnet_resource_id,
+        "privateEndpointSubnetResourceId": private_endpoint_subnet_resource_id,
+    }
+    if any(not isinstance(value, str) or not value.startswith("/") for value in values.values()):
+        _fail("BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID")
+    return _sha256_json(values)
+
+
 def canonical_observation_sha256(value: Mapping[str, Any]) -> str:
     """Digest a canonical observation envelope, excluding its digest field."""
 
@@ -1554,9 +1657,6 @@ def build_infrastructure_restart_receipt_binding(
             coordination=_storage_account_id(coordination_id),
             location=str(infrastructure_parameters["location"]),
             effective_tags=effective_tags,
-            broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
-                infrastructure_parameters["brokerOutboundIpAddresses"]
-            ),
         )
         binding = {
             "owner_binding_sha256": owner_binding_sha256,
@@ -1565,8 +1665,8 @@ def build_infrastructure_restart_receipt_binding(
             "subscription_id": subscription_id,
             "resource_group_name": resource_group_name,
             "storage_account_name": storage_account_name,
-            "broker_principal_id": str(
-                infrastructure_parameters["brokerPrincipalId"]
+            "broker_principal_source": (
+                "bound-function-system-assigned-identity-readback"
             ),
             "broker_caller_service_principal_id": (
                 str(infrastructure_parameters["brokerCallerServicePrincipalId"])
@@ -1582,10 +1682,18 @@ def build_infrastructure_restart_receipt_binding(
                     "brokerTicketVerificationCertificateSha256"
                 ]
             ),
-            "broker_outbound_ip_addresses_sha256": _sha256_json(
-                _canonical_public_ipv4_addresses(
-                    infrastructure_parameters["brokerOutboundIpAddresses"]
-                )
+            "broker_private_network_boundary_sha256": private_network_boundary_sha256(
+                virtual_network_resource_id=str(
+                    infrastructure_parameters["brokerVirtualNetworkResourceId"]
+                ),
+                function_integration_subnet_resource_id=str(
+                    infrastructure_parameters[
+                        "brokerFunctionIntegrationSubnetResourceId"
+                    ]
+                ),
+                private_endpoint_subnet_resource_id=str(
+                    infrastructure_parameters["brokerPrivateEndpointSubnetResourceId"]
+                ),
             ),
             "deployment_id": deployment_id,
             "infrastructure_binding_sha256": infrastructure_approval[
@@ -1769,15 +1877,204 @@ def _broker_function_app_payload(response: Mapping[str, Any]) -> dict[str, Any]:
                 value.get("principalId"), "SEALED_AZURE_READ_RESPONSE_INVALID"
             )
         )
-    outbound = properties.get("outboundIpAddresses")
-    addresses = outbound.split(",") if isinstance(outbound, str) else None
     return {
         "resource_id": response.get("id"),
         "resource_type": response.get("type"),
         "state": properties.get("state"),
         "https_only": properties.get("httpsOnly"),
-        "outbound_ip_addresses": _canonical_public_ipv4_addresses(addresses),
+        "virtual_network_subnet_id": properties.get("virtualNetworkSubnetId"),
+        "identity_type": identity.get("type"),
+        "system_assigned_principal_id": identity.get("principalId"),
         "user_assigned_principal_ids": sorted(principal_ids),
+    }
+
+
+def _virtual_network_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    address_space = (
+        properties.get("addressSpace") if isinstance(properties, Mapping) else None
+    )
+    subnets = properties.get("subnets") if isinstance(properties, Mapping) else None
+    if (
+        not isinstance(properties, Mapping)
+        or not isinstance(address_space, Mapping)
+        or not isinstance(address_space.get("addressPrefixes"), list)
+        or not isinstance(subnets, list)
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    subnet_ids: list[str] = []
+    for subnet in subnets:
+        if not isinstance(subnet, Mapping) or not isinstance(subnet.get("id"), str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        subnet_ids.append(subnet["id"])
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "location": response.get("location"),
+        "address_prefixes": sorted(address_space["addressPrefixes"]),
+        "subnet_resource_ids": sorted(subnet_ids, key=str.casefold),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _subnet_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    delegations = properties.get("delegations") if isinstance(properties, Mapping) else None
+    if not isinstance(properties, Mapping) or not isinstance(delegations, list):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    delegation_service_names: list[str] = []
+    for delegation in delegations:
+        delegation_properties = (
+            delegation.get("properties") if isinstance(delegation, Mapping) else None
+        )
+        service_name = (
+            delegation_properties.get("serviceName")
+            if isinstance(delegation_properties, Mapping)
+            else None
+        )
+        if not isinstance(service_name, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        delegation_service_names.append(service_name)
+
+    def resource_id(name: str) -> Any:
+        value = properties.get(name)
+        return value.get("id") if isinstance(value, Mapping) else None
+
+    service_endpoints = properties.get("serviceEndpoints", [])
+    service_endpoint_policies = properties.get("serviceEndpointPolicies", [])
+    if not isinstance(service_endpoints, list) or not isinstance(
+        service_endpoint_policies, list
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    endpoint_names = []
+    for endpoint in service_endpoints:
+        service = endpoint.get("service") if isinstance(endpoint, Mapping) else None
+        if not isinstance(service, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        endpoint_names.append(service)
+    policy_ids = []
+    for policy in service_endpoint_policies:
+        policy_id = policy.get("id") if isinstance(policy, Mapping) else None
+        if not isinstance(policy_id, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        policy_ids.append(policy_id)
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "address_prefix": properties.get("addressPrefix"),
+        "delegation_service_names": sorted(delegation_service_names),
+        "private_endpoint_network_policies": properties.get(
+            "privateEndpointNetworkPolicies"
+        ),
+        "private_link_service_network_policies": properties.get(
+            "privateLinkServiceNetworkPolicies"
+        ),
+        "network_security_group_resource_id": resource_id("networkSecurityGroup"),
+        "route_table_resource_id": resource_id("routeTable"),
+        "nat_gateway_resource_id": resource_id("natGateway"),
+        "service_endpoint_service_names": sorted(endpoint_names),
+        "service_endpoint_policy_resource_ids": sorted(policy_ids, key=str.casefold),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _private_endpoint_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    if not isinstance(properties, Mapping):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    connections = properties.get("privateLinkServiceConnections")
+    subnet = properties.get("subnet")
+    if not isinstance(connections, list) or not isinstance(subnet, Mapping):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    redacted_connections = []
+    for item in connections:
+        item_properties = item.get("properties") if isinstance(item, Mapping) else None
+        state = (
+            item_properties.get("privateLinkServiceConnectionState")
+            if isinstance(item_properties, Mapping)
+            else None
+        )
+        if not isinstance(item_properties, Mapping) or not isinstance(state, Mapping):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        redacted_connections.append(
+            {
+                "name": item.get("name"),
+                "private_link_service_id": item_properties.get(
+                    "privateLinkServiceId"
+                ),
+                "group_ids": item_properties.get("groupIds"),
+                "status": state.get("status"),
+            }
+        )
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "location": response.get("location"),
+        "subnet_resource_id": subnet.get("id"),
+        "connections": redacted_connections,
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _private_dns_zone_group_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    configs = (
+        properties.get("privateDnsZoneConfigs")
+        if isinstance(properties, Mapping)
+        else None
+    )
+    if not isinstance(configs, list):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    zone_ids = []
+    for item in configs:
+        item_properties = item.get("properties") if isinstance(item, Mapping) else None
+        if not isinstance(item_properties, Mapping):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        zone_id = item_properties.get("privateDnsZoneId")
+        if not isinstance(zone_id, str) or not zone_id.startswith("/"):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        zone_ids.append(zone_id)
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "private_dns_zone_resource_ids": sorted(zone_ids),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _private_dns_vnet_link_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    virtual_network = (
+        properties.get("virtualNetwork") if isinstance(properties, Mapping) else None
+    )
+    if not isinstance(properties, Mapping) or not isinstance(
+        virtual_network, Mapping
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "location": response.get("location"),
+        "virtual_network_resource_id": virtual_network.get("id"),
+        "registration_enabled": properties.get("registrationEnabled"),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _private_dns_vnet_link_collection_payload(
+    response: Mapping[str, Any],
+) -> dict[str, Any]:
+    if set(response) != {"value"} or not isinstance(response.get("value"), list):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    if any(not isinstance(item, Mapping) for item in response["value"]):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    links = [_private_dns_vnet_link_payload(item) for item in response["value"]]
+    return {
+        "pagination_complete": True,
+        "links": sorted(
+            links,
+            key=lambda item: str(item.get("resource_id", "")).casefold(),
+        ),
     }
 
 
@@ -1788,8 +2085,36 @@ def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any
     if not all(isinstance(item, Mapping) for item in (properties, sku, tags)):
         _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
     network = properties.get("networkAcls")
-    if not isinstance(network, Mapping):
+    private_endpoint_connections = properties.get("privateEndpointConnections")
+    if not isinstance(network, Mapping) or not isinstance(
+        private_endpoint_connections, list
+    ):
         _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    redacted_connections = []
+    for item in private_endpoint_connections:
+        item_properties = item.get("properties") if isinstance(item, Mapping) else None
+        private_endpoint = (
+            item_properties.get("privateEndpoint")
+            if isinstance(item_properties, Mapping)
+            else None
+        )
+        state = (
+            item_properties.get("privateLinkServiceConnectionState")
+            if isinstance(item_properties, Mapping)
+            else None
+        )
+        if not isinstance(private_endpoint, Mapping) or not isinstance(state, Mapping):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        endpoint_id = private_endpoint.get("id")
+        if not isinstance(endpoint_id, str) or not endpoint_id.startswith("/"):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        redacted_connections.append(
+            {
+                "private_endpoint_resource_id": endpoint_id,
+                "status": state.get("status"),
+                "provisioning_state": item_properties.get("provisioningState"),
+            }
+        )
     return {
         "id": response.get("id"),
         "name": response.get("name"),
@@ -1819,6 +2144,10 @@ def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any
                 "virtualNetworkRules": network.get("virtualNetworkRules"),
             },
             "publicNetworkAccess": properties.get("publicNetworkAccess"),
+            "privateEndpointConnections": sorted(
+                redacted_connections,
+                key=lambda item: item["private_endpoint_resource_id"].casefold(),
+            ),
             "supportsHttpsTrafficOnly": properties.get("supportsHttpsTrafficOnly"),
         },
     }
@@ -1872,6 +2201,18 @@ def _lease_container_configuration_payload(
     }
 
 
+def _deployment_output_value(properties: Mapping[str, Any], name: str) -> Any:
+    outputs = properties.get("outputs")
+    item = outputs.get(name) if isinstance(outputs, Mapping) else None
+    if (
+        not isinstance(item, Mapping)
+        or set(item) != {"type", "value"}
+        or str(item.get("type", "")).casefold() != "string"
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    return item["value"]
+
+
 def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     properties = response.get("properties")
     if not isinstance(properties, Mapping):
@@ -1885,6 +2226,9 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(item, Mapping) or set(item) != {"value"}:
             _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
         return item["value"]
+
+    def deployment_output(name: str) -> Any:
+        return _deployment_output_value(properties, name)
 
     completed = properties.get("timestamp")
     started = properties.get("startTime")
@@ -1902,9 +2246,6 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         coordination=_storage_account_id(coordination_id),
         location=str(parameter("location")),
         effective_tags=tags,
-        broker_outbound_ip_addresses=_canonical_public_ipv4_addresses(
-            parameter("brokerOutboundIpAddresses")
-        ),
     )
     return {
         "deployment_id": response.get("id"),
@@ -1914,12 +2255,21 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "tenant_id": parameter("tenantId"),
         "coordination_storage_account_resource_id": coordination_id,
         "target_binding_sha256": parameter("targetBindingSha256"),
-        "broker_principal_id": parameter("brokerPrincipalId"),
+        "broker_principal_id": deployment_output("brokerPrincipalIdBinding"),
         "broker_caller_service_principal_id": parameter(
             "brokerCallerServicePrincipalId"
         ),
         "broker_function_app_resource_id": parameter(
             "brokerFunctionAppResourceId"
+        ),
+        "coordination_blob_private_endpoint_resource_id": deployment_output(
+            "coordinationBlobPrivateEndpointResourceId"
+        ),
+        "coordination_blob_private_dns_zone_resource_id": deployment_output(
+            "coordinationBlobPrivateDnsZoneResourceId"
+        ),
+        "coordination_blob_private_dns_vnet_link_resource_id": deployment_output(
+            "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId"
         ),
         "broker_function_package_sha256": parameter(
             "brokerFunctionPackageSha256"
@@ -1927,8 +2277,16 @@ def _deployment_receipt_payload(response: Mapping[str, Any]) -> dict[str, Any]:
         "broker_ticket_verification_certificate_sha256": parameter(
             "brokerTicketVerificationCertificateSha256"
         ),
-        "broker_outbound_ip_addresses_sha256": _sha256_json(
-            _canonical_public_ipv4_addresses(parameter("brokerOutboundIpAddresses"))
+        "broker_private_network_boundary_sha256": private_network_boundary_sha256(
+            virtual_network_resource_id=str(
+                parameter("brokerVirtualNetworkResourceId")
+            ),
+            function_integration_subnet_resource_id=str(
+                parameter("brokerFunctionIntegrationSubnetResourceId")
+            ),
+            private_endpoint_subnet_resource_id=str(
+                parameter("brokerPrivateEndpointSubnetResourceId")
+            ),
         ),
         "effective_tags_sha256": _sha256_json(tags),
         "storage_configuration_sha256": _sha256_json(storage),
@@ -2016,18 +2374,27 @@ def infrastructure_safety_policy_sha256() -> str:
     """Bind the exact readback-provenance and effective-RBAC safety policy."""
 
     policy = {
-        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v11",
+        "schema_version": "nac.azure-bff-performance-infrastructure-safety/v14",
         "container_name": CONTAINER_NAME,
         "broker_data_actions": sorted(BROKER_ALLOWED_DATA_ACTIONS),
-        "credential_boundary": "single-owner-bound-bff-broker-uami",
+        "credential_boundary": "single-owner-bound-bff-broker-system-identity",
         "local_runner_storage_data_actions": [],
         "broker_caller_storage_data_actions": [],
         "broker_caller_complete_effective_rbac_required": True,
+        "runtime_uami_storage_data_actions": [],
+        "runtime_uami_complete_effective_rbac_required": True,
         "coordination_name_policy": (
             "immutable-original-available-or-read-only-exact-success-reconciliation"
         ),
         "postdeployment_coordination_resource_readback_required": True,
         "exact_full_storage_and_network_readback_required": True,
+        "coordination_storage_public_network_access": "Disabled",
+        "coordination_storage_firewall_rules": [],
+        "function_flex_vnet_integration_exact_subnet_required": True,
+        "private_endpoint_subnet_must_be_distinct": True,
+        "coordination_blob_private_endpoint_exact_readback_required": True,
+        "coordination_blob_private_dns_zone_group_exact_readback_required": True,
+        "coordination_blob_private_dns_vnet_link_exact_readback_required": True,
         "exact_blob_service_resource_readback_required": True,
         "blob_versioning_enabled": False,
         "blob_delete_retention_enabled": False,
@@ -2165,6 +2532,18 @@ def verify_azure_performance_infrastructure_safety(
     broker_caller_service_principal_id: str,
     broker_function_app_resource_id: str,
     broker_function_app_readback_envelope: Mapping[str, Any],
+    broker_virtual_network_resource_id: str,
+    broker_virtual_network_readback_envelope: Mapping[str, Any],
+    broker_function_integration_subnet_resource_id: str,
+    broker_function_integration_subnet_readback_envelope: Mapping[str, Any],
+    broker_private_endpoint_subnet_resource_id: str,
+    broker_private_endpoint_subnet_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_endpoint_resource_id: str,
+    coordination_blob_private_dns_zone_resource_id: str,
+    coordination_blob_private_dns_vnet_link_resource_id: str,
+    coordination_blob_private_endpoint_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_dns_zone_group_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_dns_vnet_link_readback_envelope: Mapping[str, Any],
     broker_function_package_sha256: str,
     broker_ticket_verification_certificate_sha256: str,
     target_binding_sha256: str,
@@ -2173,12 +2552,12 @@ def verify_azure_performance_infrastructure_safety(
     subscription_ancestry_readback_envelope: Mapping[str, Any],
     broker_effective_rbac_readback_envelope: Mapping[str, Any],
     broker_caller_effective_rbac_readback_envelope: Mapping[str, Any],
+    runtime_uami_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
 ) -> tuple[
     Mapping[str, Any], AzurePerformanceInfrastructureReadbackCapability
 ]:
@@ -2194,11 +2573,18 @@ def verify_azure_performance_infrastructure_safety(
         bff_storage_readback_envelope,
         worm_storage_readback_envelope,
         broker_function_app_readback_envelope,
+        broker_virtual_network_readback_envelope,
+        broker_function_integration_subnet_readback_envelope,
+        broker_private_endpoint_subnet_readback_envelope,
         broker_role_definition,
         broker_role_assignment,
         subscription_ancestry_readback_envelope,
         broker_effective_rbac_readback_envelope,
         broker_caller_effective_rbac_readback_envelope,
+        runtime_uami_effective_rbac_readback_envelope,
+        coordination_blob_private_endpoint_readback_envelope,
+        coordination_blob_private_dns_zone_group_readback_envelope,
+        coordination_blob_private_dns_vnet_link_readback_envelope,
     )
     if type(coordination_name_readback_envelope) is AzurePerformanceInfrastructureReadbackResult:
         _require_adapter_results(capability, coordination_name_readback_envelope)
@@ -2235,6 +2621,40 @@ def verify_azure_performance_infrastructure_safety(
         broker_function_app_readback_envelope=(
             broker_function_app_readback_envelope
         ),
+        broker_virtual_network_resource_id=broker_virtual_network_resource_id,
+        broker_virtual_network_readback_envelope=(
+            broker_virtual_network_readback_envelope
+        ),
+        broker_function_integration_subnet_resource_id=(
+            broker_function_integration_subnet_resource_id
+        ),
+        broker_function_integration_subnet_readback_envelope=(
+            broker_function_integration_subnet_readback_envelope
+        ),
+        broker_private_endpoint_subnet_resource_id=(
+            broker_private_endpoint_subnet_resource_id
+        ),
+        broker_private_endpoint_subnet_readback_envelope=(
+            broker_private_endpoint_subnet_readback_envelope
+        ),
+        coordination_blob_private_endpoint_resource_id=(
+            coordination_blob_private_endpoint_resource_id
+        ),
+        coordination_blob_private_dns_zone_resource_id=(
+            coordination_blob_private_dns_zone_resource_id
+        ),
+        coordination_blob_private_dns_vnet_link_resource_id=(
+            coordination_blob_private_dns_vnet_link_resource_id
+        ),
+        coordination_blob_private_endpoint_readback_envelope=(
+            coordination_blob_private_endpoint_readback_envelope
+        ),
+        coordination_blob_private_dns_zone_group_readback_envelope=(
+            coordination_blob_private_dns_zone_group_readback_envelope
+        ),
+        coordination_blob_private_dns_vnet_link_readback_envelope=(
+            coordination_blob_private_dns_vnet_link_readback_envelope
+        ),
         broker_function_package_sha256=broker_function_package_sha256,
         broker_ticket_verification_certificate_sha256=(
             broker_ticket_verification_certificate_sha256
@@ -2251,12 +2671,14 @@ def verify_azure_performance_infrastructure_safety(
         broker_caller_effective_rbac_readback_envelope=(
             broker_caller_effective_rbac_readback_envelope
         ),
+        runtime_uami_effective_rbac_readback_envelope=(
+            runtime_uami_effective_rbac_readback_envelope
+        ),
         tenant_id=tenant_id,
         subscription_id=subscription_id,
         resource_group_name=resource_group_name,
         location=location,
         tags=tags,
-        broker_outbound_ip_addresses=broker_outbound_ip_addresses,
         verified_at=verified_at,
     )
     return evidence, capability
@@ -2283,6 +2705,18 @@ def _verify_azure_performance_infrastructure_safety(
     broker_caller_service_principal_id: str,
     broker_function_app_resource_id: str,
     broker_function_app_readback_envelope: Mapping[str, Any],
+    broker_virtual_network_resource_id: str,
+    broker_virtual_network_readback_envelope: Mapping[str, Any],
+    broker_function_integration_subnet_resource_id: str,
+    broker_function_integration_subnet_readback_envelope: Mapping[str, Any],
+    broker_private_endpoint_subnet_resource_id: str,
+    broker_private_endpoint_subnet_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_endpoint_resource_id: str,
+    coordination_blob_private_dns_zone_resource_id: str,
+    coordination_blob_private_dns_vnet_link_resource_id: str,
+    coordination_blob_private_endpoint_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_dns_zone_group_readback_envelope: Mapping[str, Any],
+    coordination_blob_private_dns_vnet_link_readback_envelope: Mapping[str, Any],
     broker_function_package_sha256: str,
     broker_ticket_verification_certificate_sha256: str,
     target_binding_sha256: str,
@@ -2291,12 +2725,12 @@ def _verify_azure_performance_infrastructure_safety(
     subscription_ancestry_readback_envelope: Mapping[str, Any],
     broker_effective_rbac_readback_envelope: Mapping[str, Any],
     broker_caller_effective_rbac_readback_envelope: Mapping[str, Any],
+    runtime_uami_effective_rbac_readback_envelope: Mapping[str, Any],
     tenant_id: str,
     subscription_id: str,
     resource_group_name: str,
     location: str,
     tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
     verified_at: datetime,
 ) -> dict[str, Any]:
     verified_at_utc = _format_utc(verified_at)
@@ -2317,9 +2751,6 @@ def _verify_azure_performance_infrastructure_safety(
         _fail("LOCATION_INVALID")
     canonical_tags = _canonical_tags(tags)
     effective_tags = effective_coordination_tags(tags, target_binding_sha256)
-    outbound_addresses = _canonical_public_ipv4_addresses(
-        broker_outbound_ip_addresses
-    )
     broker_principal = _canonical_uuid(
         broker_principal_id, "BROKER_PRINCIPAL_INVALID"
     )
@@ -2332,6 +2763,51 @@ def _verify_azure_performance_infrastructure_safety(
     broker_function_app = _function_app_id(
         broker_function_app_resource_id,
         subscription_id=subscription,
+    )
+    broker_virtual_network = _require_arm_id(
+        broker_virtual_network_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    broker_function_integration_subnet = _require_arm_id(
+        broker_function_integration_subnet_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    broker_private_endpoint_subnet = _require_arm_id(
+        broker_private_endpoint_subnet_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    subnet_prefix = f"{broker_virtual_network}/subnets/"
+    if (
+        not broker_function_integration_subnet.casefold().startswith(
+            subnet_prefix.casefold()
+        )
+        or not broker_private_endpoint_subnet.casefold().startswith(
+            subnet_prefix.casefold()
+        )
+        or broker_function_integration_subnet.casefold()
+        == broker_private_endpoint_subnet.casefold()
+    ):
+        _fail("BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID")
+    coordination_private_endpoint = _require_arm_id(
+        coordination_blob_private_endpoint_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    coordination_private_dns_zone = _require_arm_id(
+        coordination_blob_private_dns_zone_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    coordination_private_dns_vnet_link = _require_arm_id(
+        coordination_blob_private_dns_vnet_link_resource_id,
+        "BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID",
+    )
+    if not coordination_private_dns_vnet_link.casefold().startswith(
+        f"{coordination_private_dns_zone}/virtualNetworkLinks/".casefold()
+    ):
+        _fail("BROKER_PRIVATE_NETWORK_BOUNDARY_INVALID")
+    network_boundary_sha256 = private_network_boundary_sha256(
+        virtual_network_resource_id=broker_virtual_network,
+        function_integration_subnet_resource_id=broker_function_integration_subnet,
+        private_endpoint_subnet_resource_id=broker_private_endpoint_subnet,
     )
     _require_named_sha256(
         broker_function_package_sha256, "BROKER_FUNCTION_PACKAGE_SHA256_INVALID"
@@ -2358,14 +2834,48 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
-    function_app_observed_at = _verify_broker_function_app_readback(
+    function_app_readback = _verify_broker_function_app_readback(
         broker_function_app_readback_envelope,
         expected_resource_id=broker_function_app,
         expected_broker_principal_id=broker_principal,
-        expected_outbound_ip_addresses=outbound_addresses,
+        expected_virtual_network_subnet_id=broker_function_integration_subnet,
         verified_at=verified_at,
         session=readback_session,
     )
+    virtual_network_observed_at = _verify_virtual_network_readback(
+        broker_virtual_network_readback_envelope,
+        expected_resource_id=broker_virtual_network,
+        expected_location=location,
+        expected_subnet_resource_ids={
+            broker_function_integration_subnet,
+            broker_private_endpoint_subnet,
+        },
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    function_subnet_observed_at = _verify_subnet_readback(
+        broker_function_integration_subnet_readback_envelope,
+        observation_kind="broker-function-integration-subnet",
+        expected_resource_id=broker_function_integration_subnet,
+        expected_address_prefix="10.42.0.0/27",
+        expected_delegation_service_names=["Microsoft.App/environments"],
+        expected_private_endpoint_network_policies="Enabled",
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    private_endpoint_subnet_observed_at = _verify_subnet_readback(
+        broker_private_endpoint_subnet_readback_envelope,
+        observation_kind="broker-private-endpoint-subnet",
+        expected_resource_id=broker_private_endpoint_subnet,
+        expected_address_prefix="10.42.0.32/27",
+        expected_delegation_service_names=[],
+        expected_private_endpoint_network_policies="Disabled",
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    runtime_uami_principal = function_app_readback["runtime_uami_principal_id"]
+    if runtime_uami_principal in {broker_principal, broker_caller_principal}:
+        _fail("RUNTIME_UAMI_PRINCIPAL_INVALID")
     name_observed_at, name_available = _verify_name_readback(
         coordination_name_readback_envelope,
         expected_name=coordination_storage_account_name,
@@ -2381,7 +2891,6 @@ def _verify_azure_performance_infrastructure_safety(
         coordination=coordination,
         location=location,
         effective_tags=effective_tags,
-        broker_outbound_ip_addresses=outbound_addresses,
     )
     deployment = _verify_deployment_receipt(
         deployment_receipt_envelope,
@@ -2391,11 +2900,20 @@ def _verify_azure_performance_infrastructure_safety(
         broker_principal_id=broker_principal,
         broker_caller_service_principal_id=broker_caller_principal,
         broker_function_app_resource_id=broker_function_app,
+        broker_private_network_boundary_sha256=network_boundary_sha256,
+        coordination_blob_private_endpoint_resource_id=(
+            coordination_private_endpoint
+        ),
+        coordination_blob_private_dns_zone_resource_id=(
+            coordination_private_dns_zone
+        ),
+        coordination_blob_private_dns_vnet_link_resource_id=(
+            coordination_private_dns_vnet_link
+        ),
         broker_function_package_sha256=broker_function_package_sha256,
         broker_ticket_verification_certificate_sha256=(
             broker_ticket_verification_certificate_sha256
         ),
-        broker_outbound_ip_addresses=outbound_addresses,
         storage_configuration_sha256=_sha256_json(storage_configuration),
         effective_tags_sha256=_sha256_json(effective_tags),
         name_observed_at=name_observed_at,
@@ -2409,6 +2927,17 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
+    private_endpoint_connections = coordination_resource["properties"].get(
+        "privateEndpointConnections"
+    )
+    if private_endpoint_connections != [
+        {
+            "private_endpoint_resource_id": coordination_private_endpoint,
+            "status": "Approved",
+            "provisioning_state": "Succeeded",
+        }
+    ]:
+        _fail("COORDINATION_BLOB_PRIVATE_ENDPOINT_CONNECTIONS_INVALID")
     blob_service_configuration = _expected_blob_service_configuration(coordination)
     blob_service_resource, blob_service_observed_at = (
         _coordination_child_resource_readback(
@@ -2439,6 +2968,31 @@ def _verify_azure_performance_infrastructure_safety(
             verified_at=verified_at,
             session=readback_session,
         )
+    )
+    private_endpoint_observed_at = _verify_private_endpoint_readback(
+        coordination_blob_private_endpoint_readback_envelope,
+        expected_resource_id=coordination_private_endpoint,
+        expected_location=location,
+        expected_subnet_resource_id=broker_private_endpoint_subnet,
+        expected_storage_account_resource_id=coordination["id"],
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    private_dns_zone_group_observed_at = _verify_private_dns_zone_group_readback(
+        coordination_blob_private_dns_zone_group_readback_envelope,
+        expected_resource_id=(
+            f"{coordination_private_endpoint}/privateDnsZoneGroups/default"
+        ),
+        expected_private_dns_zone_resource_id=coordination_private_dns_zone,
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    private_dns_vnet_link_observed_at = _verify_private_dns_vnet_link_readback(
+        coordination_blob_private_dns_vnet_link_readback_envelope,
+        expected_resource_id=coordination_private_dns_vnet_link,
+        expected_virtual_network_resource_id=broker_virtual_network,
+        verified_at=verified_at,
+        session=readback_session,
     )
 
     if coordination["name"] != coordination_storage_account_name:
@@ -2523,6 +3077,7 @@ def _verify_azure_performance_infrastructure_safety(
         expected_role_definition_id=broker_role_definition_id,
         expected_condition=broker_condition,
         expected_data_actions=BROKER_ALLOWED_DATA_ACTIONS,
+        forbidden_storage_data_actions_error=None,
         authoritative_management_group_scopes=ancestry["management_group_scopes"],
         verified_at=verified_at,
         session=readback_session,
@@ -2536,6 +3091,25 @@ def _verify_azure_performance_infrastructure_safety(
         expected_role_definition_id=None,
         expected_condition=None,
         expected_data_actions=None,
+        forbidden_storage_data_actions_error=(
+            "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT"
+        ),
+        authoritative_management_group_scopes=ancestry["management_group_scopes"],
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    runtime_uami_rbac = _verify_effective_rbac_readback(
+        runtime_uami_effective_rbac_readback_envelope,
+        coordination=coordination,
+        principal_id=runtime_uami_principal,
+        expected_assignment_id=None,
+        expected_scope=container_scope,
+        expected_role_definition_id=None,
+        expected_condition=None,
+        expected_data_actions=None,
+        forbidden_storage_data_actions_error=(
+            "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT"
+        ),
         authoritative_management_group_scopes=ancestry["management_group_scopes"],
         verified_at=verified_at,
         session=readback_session,
@@ -2543,7 +3117,10 @@ def _verify_azure_performance_infrastructure_safety(
     postdeployment_observed_at = {
         "bff_storage": _envelope_observed_at(bff_storage_readback_envelope),
         "worm_storage": _envelope_observed_at(worm_storage_readback_envelope),
-        "broker_function_app": function_app_observed_at,
+        "broker_function_app": function_app_readback["observed_at"],
+        "broker_virtual_network": virtual_network_observed_at,
+        "broker_function_integration_subnet": function_subnet_observed_at,
+        "broker_private_endpoint_subnet": private_endpoint_subnet_observed_at,
         "coordination_storage": coordination_observed_at,
         "blob_service": blob_service_observed_at,
         "lease_container": lease_container_observed_at,
@@ -2552,6 +3129,14 @@ def _verify_azure_performance_infrastructure_safety(
         "subscription_ancestry": ancestry_observed_at,
         "broker_effective_rbac": broker_rbac["observed_at"],
         "broker_caller_effective_rbac": broker_caller_rbac["observed_at"],
+        "runtime_uami_effective_rbac": runtime_uami_rbac["observed_at"],
+        "coordination_blob_private_endpoint": private_endpoint_observed_at,
+        "coordination_blob_private_dns_zone_group": (
+            private_dns_zone_group_observed_at
+        ),
+        "coordination_blob_private_dns_vnet_link": (
+            private_dns_vnet_link_observed_at
+        ),
     }
     if any(
         observed_at <= deployment["receipt_observed_at"]
@@ -2563,6 +3148,13 @@ def _verify_azure_performance_infrastructure_safety(
         "bff_storage": dict(bff_storage_readback_envelope),
         "worm_storage": dict(worm_storage_readback_envelope),
         "broker_function_app": dict(broker_function_app_readback_envelope),
+        "broker_virtual_network": dict(broker_virtual_network_readback_envelope),
+        "broker_function_integration_subnet": dict(
+            broker_function_integration_subnet_readback_envelope
+        ),
+        "broker_private_endpoint_subnet": dict(
+            broker_private_endpoint_subnet_readback_envelope
+        ),
         "coordination_name": dict(coordination_name_readback_envelope),
         "deployment_receipt": dict(deployment_receipt_envelope),
         "coordination_storage": dict(coordination_storage_readback_envelope),
@@ -2574,6 +3166,18 @@ def _verify_azure_performance_infrastructure_safety(
         "broker_effective_rbac": dict(broker_effective_rbac_readback_envelope),
         "broker_caller_effective_rbac": dict(
             broker_caller_effective_rbac_readback_envelope
+        ),
+        "runtime_uami_effective_rbac": dict(
+            runtime_uami_effective_rbac_readback_envelope
+        ),
+        "coordination_blob_private_endpoint": dict(
+            coordination_blob_private_endpoint_readback_envelope
+        ),
+        "coordination_blob_private_dns_zone_group": dict(
+            coordination_blob_private_dns_zone_group_readback_envelope
+        ),
+        "coordination_blob_private_dns_vnet_link": dict(
+            coordination_blob_private_dns_vnet_link_readback_envelope
         ),
     }
     evidence = {
@@ -2589,7 +3193,7 @@ def _verify_azure_performance_infrastructure_safety(
         "location": location,
         "tags_sha256": _sha256_json(canonical_tags),
         "effective_tags_sha256": _sha256_json(effective_tags),
-        "broker_outbound_ip_addresses_sha256": _sha256_json(outbound_addresses),
+        "broker_private_network_boundary_sha256": network_boundary_sha256,
         "toolchain_attestations_sha256": toolchain_attestations_sha256,
         "readback_session_sha256": readback_session_sha256,
         "readback_nonce_sha256": readback_session.nonce_sha256,
@@ -2606,7 +3210,22 @@ def _verify_azure_performance_infrastructure_safety(
         "lease_blob_path": f"locks/{target_binding_sha256}.lock",
         "broker_principal_id": broker_principal,
         "broker_caller_service_principal_id": broker_caller_principal,
+        "runtime_uami_principal_id": runtime_uami_principal,
         "broker_function_app_resource_id": broker_function_app,
+        "broker_virtual_network_resource_id": broker_virtual_network,
+        "broker_function_integration_subnet_resource_id": (
+            broker_function_integration_subnet
+        ),
+        "broker_private_endpoint_subnet_resource_id": broker_private_endpoint_subnet,
+        "coordination_blob_private_endpoint_resource_id": (
+            coordination_private_endpoint
+        ),
+        "coordination_blob_private_dns_zone_resource_id": (
+            coordination_private_dns_zone
+        ),
+        "coordination_blob_private_dns_vnet_link_resource_id": (
+            coordination_private_dns_vnet_link
+        ),
         "broker_function_package_sha256": broker_function_package_sha256,
         "broker_ticket_verification_certificate_sha256": (
             broker_ticket_verification_certificate_sha256
@@ -2619,6 +3238,15 @@ def _verify_azure_performance_infrastructure_safety(
         "broker_effective_assignment_count": 1,
         "broker_effective_principal_count": broker_rbac["principal_count"],
         "broker_attested_ancestor_scope_count": broker_rbac["ancestor_scope_count"],
+        "runtime_uami_effective_storage_data_action_count": runtime_uami_rbac[
+            "effective_storage_data_action_count"
+        ],
+        "runtime_uami_effective_principal_count": runtime_uami_rbac[
+            "principal_count"
+        ],
+        "runtime_uami_attested_ancestor_scope_count": runtime_uami_rbac[
+            "ancestor_scope_count"
+        ],
         "tenant_root_management_group_scope": ancestry[
             "tenant_root_management_group_scope"
         ],
@@ -2667,6 +3295,7 @@ def validate_infrastructure_safety_evidence(
         or _SHA256_RE.fullmatch(result["owner_binding_sha256"]) is None
         or not _fresh_evidence_timestamp(result.get("verified_at_utc"))
         or result.get("broker_effective_assignment_count") != 1
+        or result.get("runtime_uami_effective_storage_data_action_count") != 0
         or not isinstance(observation_digests, Mapping)
         or set(observation_digests) != _READBACK_TRANSCRIPT_KEYS
         or any(
@@ -2724,6 +3353,42 @@ def validate_infrastructure_safety_evidence(
             broker_function_app_readback_envelope=transcript[
                 "broker_function_app"
             ],
+            broker_virtual_network_resource_id=deployment_inputs[
+                "brokerVirtualNetworkResourceId"
+            ],
+            broker_virtual_network_readback_envelope=transcript[
+                "broker_virtual_network"
+            ],
+            broker_function_integration_subnet_resource_id=deployment_inputs[
+                "brokerFunctionIntegrationSubnetResourceId"
+            ],
+            broker_function_integration_subnet_readback_envelope=transcript[
+                "broker_function_integration_subnet"
+            ],
+            broker_private_endpoint_subnet_resource_id=deployment_inputs[
+                "brokerPrivateEndpointSubnetResourceId"
+            ],
+            broker_private_endpoint_subnet_readback_envelope=transcript[
+                "broker_private_endpoint_subnet"
+            ],
+            coordination_blob_private_endpoint_resource_id=result[
+                "coordination_blob_private_endpoint_resource_id"
+            ],
+            coordination_blob_private_dns_zone_resource_id=result[
+                "coordination_blob_private_dns_zone_resource_id"
+            ],
+            coordination_blob_private_dns_vnet_link_resource_id=result[
+                "coordination_blob_private_dns_vnet_link_resource_id"
+            ],
+            coordination_blob_private_endpoint_readback_envelope=transcript[
+                "coordination_blob_private_endpoint"
+            ],
+            coordination_blob_private_dns_zone_group_readback_envelope=transcript[
+                "coordination_blob_private_dns_zone_group"
+            ],
+            coordination_blob_private_dns_vnet_link_readback_envelope=transcript[
+                "coordination_blob_private_dns_vnet_link"
+            ],
             broker_function_package_sha256=deployment_inputs[
                 "brokerFunctionPackageSha256"
             ],
@@ -2742,14 +3407,14 @@ def validate_infrastructure_safety_evidence(
             broker_caller_effective_rbac_readback_envelope=transcript[
                 "broker_caller_effective_rbac"
             ],
+            runtime_uami_effective_rbac_readback_envelope=transcript[
+                "runtime_uami_effective_rbac"
+            ],
             tenant_id=deployment_inputs["tenantId"],
             subscription_id=deployment_inputs["subscriptionId"],
             resource_group_name=deployment_inputs["resourceGroupName"],
             location=deployment_inputs["location"],
             tags=deployment_inputs["tags"],
-            broker_outbound_ip_addresses=deployment_inputs[
-                "brokerOutboundIpAddresses"
-            ],
             verified_at=_parse_observed_at(
                 result["verified_at_utc"],
                 "INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID",
@@ -2830,11 +3495,12 @@ def _deployment_inputs_from_transcript(
         "subscriptionId",
         "resourceGroupName",
         "storageAccountName",
-        "brokerPrincipalId",
         "brokerFunctionAppResourceId",
+        "brokerVirtualNetworkResourceId",
+        "brokerFunctionIntegrationSubnetResourceId",
+        "brokerPrivateEndpointSubnetResourceId",
         "brokerFunctionPackageSha256",
         "brokerTicketVerificationCertificateSha256",
-        "brokerOutboundIpAddresses",
         "targetBindingSha256",
         "location",
         "tags",
@@ -2847,6 +3513,20 @@ def _deployment_inputs_from_transcript(
         if not isinstance(parameter, Mapping) or set(parameter) != {"value"}:
             _fail("INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID")
         result[name] = parameter["value"]
+    result["brokerPrincipalId"] = _deployment_output_value(
+        properties, "brokerPrincipalIdBinding"
+    )
+    result["coordinationBlobPrivateEndpointResourceId"] = _deployment_output_value(
+        properties, "coordinationBlobPrivateEndpointResourceId"
+    )
+    result["coordinationBlobPrivateDnsZoneResourceId"] = _deployment_output_value(
+        properties, "coordinationBlobPrivateDnsZoneResourceId"
+    )
+    result["coordinationBlobPrivateDnsVirtualNetworkLinkResourceId"] = (
+        _deployment_output_value(
+            properties, "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId"
+        )
+    )
     if not isinstance(result["tags"], Mapping):
         _fail("INFRASTRUCTURE_SAFETY_EVIDENCE_INVALID")
     return result
@@ -2905,10 +3585,10 @@ def _verify_broker_function_app_readback(
     *,
     expected_resource_id: str,
     expected_broker_principal_id: str,
-    expected_outbound_ip_addresses: list[str],
+    expected_virtual_network_subnet_id: str,
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
-) -> datetime:
+) -> dict[str, Any]:
     prefix = "BROKER_FUNCTION_APP_READBACK"
     _verify_envelope_shape_and_digest(
         value,
@@ -2916,13 +3596,15 @@ def _verify_broker_function_app_readback(
         error_prefix=prefix,
     )
     payload = value.get("payload")
-    expected_payload = {
-        "resource_id": expected_resource_id,
-        "resource_type": "Microsoft.Web/sites",
-        "state": "Running",
-        "https_only": True,
-        "outbound_ip_addresses": expected_outbound_ip_addresses,
-        "user_assigned_principal_ids": [expected_broker_principal_id],
+    expected_keys = {
+        "resource_id",
+        "resource_type",
+        "state",
+        "https_only",
+        "virtual_network_subnet_id",
+        "identity_type",
+        "system_assigned_principal_id",
+        "user_assigned_principal_ids",
     }
     if (
         value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
@@ -2936,7 +3618,316 @@ def _verify_broker_function_app_readback(
             maximum_age=_POSTDEPLOY_MAX_AGE,
             session=session,
         )
-        or payload != expected_payload
+        or not isinstance(payload, Mapping)
+        or set(payload) != expected_keys
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Web/sites"
+        or payload.get("state") != "Running"
+        or payload.get("https_only") is not True
+        or str(payload.get("virtual_network_subnet_id", "")).casefold()
+        != expected_virtual_network_subnet_id.casefold()
+        or payload.get("identity_type") != "SystemAssigned, UserAssigned"
+        or str(payload.get("system_assigned_principal_id", "")).casefold()
+        != expected_broker_principal_id.casefold()
+        or not isinstance(payload.get("user_assigned_principal_ids"), list)
+        or len(payload["user_assigned_principal_ids"]) != 1
+    ):
+        _fail(f"{prefix}_INVALID")
+    runtime_uami_principal_id = _canonical_uuid(
+        payload["user_assigned_principal_ids"][0], f"{prefix}_INVALID"
+    )
+    if runtime_uami_principal_id == expected_broker_principal_id:
+        _fail(f"{prefix}_INVALID")
+    return {
+        "runtime_uami_principal_id": runtime_uami_principal_id,
+        "observed_at": _envelope_observed_at(value),
+    }
+
+
+def _verify_virtual_network_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_location: str,
+    expected_subnet_resource_ids: set[str],
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "BROKER_VIRTUAL_NETWORK_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != "broker-virtual-network"
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/virtual-networks-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload)
+        != {
+            "resource_id",
+            "resource_type",
+            "location",
+            "address_prefixes",
+            "subnet_resource_ids",
+            "provisioning_state",
+        }
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Network/virtualNetworks"
+        or payload.get("location") != expected_location
+        or payload.get("address_prefixes") != ["10.42.0.0/24"]
+        or not isinstance(payload.get("subnet_resource_ids"), list)
+        or {
+            str(item).casefold()
+            for item in payload["subnet_resource_ids"]
+        }
+        != {item.casefold() for item in expected_subnet_resource_ids}
+        or len(payload["subnet_resource_ids"]) != 2
+        or payload.get("provisioning_state") != "Succeeded"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
+
+
+def _verify_subnet_readback(
+    value: Mapping[str, Any],
+    *,
+    observation_kind: str,
+    expected_resource_id: str,
+    expected_address_prefix: str,
+    expected_delegation_service_names: list[str],
+    expected_private_endpoint_network_policies: str,
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "BROKER_SUBNET_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != observation_kind
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source") != "azure-resource-manager/subnets-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload)
+        != {
+            "resource_id",
+            "resource_type",
+            "address_prefix",
+            "delegation_service_names",
+            "private_endpoint_network_policies",
+            "private_link_service_network_policies",
+            "network_security_group_resource_id",
+            "route_table_resource_id",
+            "nat_gateway_resource_id",
+            "service_endpoint_service_names",
+            "service_endpoint_policy_resource_ids",
+            "provisioning_state",
+        }
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Network/virtualNetworks/subnets"
+        or payload.get("address_prefix") != expected_address_prefix
+        or payload.get("delegation_service_names")
+        != expected_delegation_service_names
+        or payload.get("private_endpoint_network_policies")
+        != expected_private_endpoint_network_policies
+        or payload.get("private_link_service_network_policies") != "Enabled"
+        or payload.get("network_security_group_resource_id") is not None
+        or payload.get("route_table_resource_id") is not None
+        or payload.get("nat_gateway_resource_id") is not None
+        or payload.get("service_endpoint_service_names") != []
+        or payload.get("service_endpoint_policy_resource_ids") != []
+        or payload.get("provisioning_state") != "Succeeded"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
+
+
+def _verify_private_endpoint_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_location: str,
+    expected_subnet_resource_id: str,
+    expected_storage_account_resource_id: str,
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "COORDINATION_BLOB_PRIVATE_ENDPOINT_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    connections = payload.get("connections") if isinstance(payload, Mapping) else None
+    expected_payload_keys = {
+        "resource_id",
+        "resource_type",
+        "location",
+        "subnet_resource_id",
+        "connections",
+        "provisioning_state",
+    }
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != "coordination-blob-private-endpoint"
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/private-endpoints-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload) != expected_payload_keys
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Network/privateEndpoints"
+        or payload.get("location") != expected_location
+        or str(payload.get("subnet_resource_id", "")).casefold()
+        != expected_subnet_resource_id.casefold()
+        or payload.get("provisioning_state") != "Succeeded"
+        or not isinstance(connections, list)
+        or len(connections) != 1
+    ):
+        _fail(f"{prefix}_INVALID")
+    connection = connections[0]
+    if (
+        not isinstance(connection, Mapping)
+        or set(connection)
+        != {"name", "private_link_service_id", "group_ids", "status"}
+        or not isinstance(connection.get("name"), str)
+        or not connection["name"]
+        or str(connection.get("private_link_service_id", "")).casefold()
+        != expected_storage_account_resource_id.casefold()
+        or connection.get("group_ids") != ["blob"]
+        or connection.get("status") != "Approved"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
+
+
+def _verify_private_dns_zone_group_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_private_dns_zone_resource_id: str,
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "COORDINATION_BLOB_PRIVATE_DNS_ZONE_GROUP_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind")
+        != "coordination-blob-private-dns-zone-group"
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/private-dns-zone-groups-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload)
+        != {
+            "resource_id",
+            "resource_type",
+            "private_dns_zone_resource_ids",
+            "provisioning_state",
+        }
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type")
+        != "Microsoft.Network/privateEndpoints/privateDnsZoneGroups"
+        or payload.get("private_dns_zone_resource_ids")
+        != [expected_private_dns_zone_resource_id]
+        or payload.get("provisioning_state") != "Succeeded"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
+
+
+def _verify_private_dns_vnet_link_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_virtual_network_resource_id: str,
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "COORDINATION_BLOB_PRIVATE_DNS_VNET_LINK_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    links = payload.get("links") if isinstance(payload, Mapping) else None
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind")
+        != "coordination-blob-private-dns-vnet-link"
+        or value.get("api_version") != PRIVATE_DNS_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/private-dns-vnet-links-list"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload) != {"pagination_complete", "links"}
+        or payload.get("pagination_complete") is not True
+        or not isinstance(links, list)
+        or len(links) != 1
+    ):
+        _fail(f"{prefix}_INVALID")
+    link = links[0]
+    if (
+        not isinstance(link, Mapping)
+        or set(link)
+        != {
+            "resource_id",
+            "resource_type",
+            "location",
+            "virtual_network_resource_id",
+            "registration_enabled",
+            "provisioning_state",
+        }
+        or str(link.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or link.get("resource_type")
+        != "Microsoft.Network/privateDnsZones/virtualNetworkLinks"
+        or link.get("location") != "global"
+        or str(link.get("virtual_network_resource_id", "")).casefold()
+        != expected_virtual_network_resource_id.casefold()
+        or link.get("registration_enabled") is not False
+        or link.get("provisioning_state") != "Succeeded"
     ):
         _fail(f"{prefix}_INVALID")
     return _envelope_observed_at(value)
@@ -2987,7 +3978,14 @@ def _coordination_resource_readback(
         or not isinstance(payload, Mapping)
     ):
         _fail(f"{prefix}_INVALID")
-    if payload != expected_configuration:
+    measured = dict(payload)
+    measured_properties = measured.get("properties")
+    if not isinstance(measured_properties, Mapping):
+        _fail(f"{prefix}_INVALID")
+    static_properties = dict(measured_properties)
+    static_properties.pop("privateEndpointConnections", None)
+    measured["properties"] = static_properties
+    if measured != expected_configuration:
         _fail("COORDINATION_STORAGE_CONFIGURATION_MISMATCH")
     return dict(payload), _envelope_observed_at(value)
 
@@ -3053,7 +4051,7 @@ def _validate_restart_receipt_binding(
     for key in (
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_private_network_boundary_sha256",
         "effective_tags_sha256",
         "infrastructure_binding_sha256",
         "infrastructure_parameters_sha256",
@@ -3070,10 +4068,6 @@ def _validate_restart_receipt_binding(
     subscription = _canonical_uuid(
         result.get("subscription_id"), "INFRASTRUCTURE_RESTART_BINDING_INVALID"
     )
-    broker = _canonical_uuid(
-        result.get("broker_principal_id"),
-        "INFRASTRUCTURE_RESTART_BINDING_INVALID",
-    )
     broker_caller = _canonical_uuid(
         result.get("broker_caller_service_principal_id"),
         "INFRASTRUCTURE_RESTART_BINDING_INVALID",
@@ -3082,7 +4076,8 @@ def _validate_restart_receipt_binding(
     storage_name = result.get("storage_account_name")
     deployment_id = result.get("deployment_id")
     if (
-        broker == broker_caller
+        result.get("broker_principal_source")
+        != "bound-function-system-assigned-identity-readback"
         or not isinstance(resource_group, str)
         or not resource_group
         or not isinstance(storage_name, str)
@@ -3116,7 +4111,9 @@ def _validate_restart_receipt_binding(
         {
             "tenant_id": tenant,
             "subscription_id": subscription,
-            "broker_principal_id": broker,
+            "broker_principal_source": (
+                "bound-function-system-assigned-identity-readback"
+            ),
             "broker_caller_service_principal_id": broker_caller,
             "broker_function_app_resource_id": function_app_id,
         }
@@ -3234,9 +4231,12 @@ def _validate_reconciliation_deployment_observation(
         "broker_principal_id",
         "broker_caller_service_principal_id",
         "broker_function_app_resource_id",
+        "coordination_blob_private_endpoint_resource_id",
+        "coordination_blob_private_dns_zone_resource_id",
+        "coordination_blob_private_dns_vnet_link_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_private_network_boundary_sha256",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -3270,7 +4270,7 @@ def _validate_reconciliation_deployment_observation(
             payload.get("broker_principal_id"),
             "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
         )
-        != expected_binding["broker_principal_id"]
+        == expected_binding["broker_caller_service_principal_id"]
         or _canonical_uuid(
             payload.get("broker_caller_service_principal_id"),
             "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
@@ -3284,8 +4284,8 @@ def _validate_reconciliation_deployment_observation(
         != expected_binding[
             "broker_ticket_verification_certificate_sha256"
         ]
-        or payload.get("broker_outbound_ip_addresses_sha256")
-        != expected_binding["broker_outbound_ip_addresses_sha256"]
+        or payload.get("broker_private_network_boundary_sha256")
+        != expected_binding["broker_private_network_boundary_sha256"]
         or payload.get("effective_tags_sha256")
         != expected_binding["effective_tags_sha256"]
         or payload.get("storage_configuration_sha256")
@@ -3314,6 +4314,18 @@ def _validate_reconciliation_deployment_observation(
         "observation_source": envelope["observation_source"],
         "observation_sha256": envelope["observation_sha256"],
         "payload_sha256": _sha256_json(payload),
+        "coordination_blob_private_endpoint_resource_id": _require_arm_id(
+            payload["coordination_blob_private_endpoint_resource_id"],
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        ),
+        "coordination_blob_private_dns_zone_resource_id": _require_arm_id(
+            payload["coordination_blob_private_dns_zone_resource_id"],
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        ),
+        "coordination_blob_private_dns_vnet_link_resource_id": _require_arm_id(
+            payload["coordination_blob_private_dns_vnet_link_resource_id"],
+            "INFRASTRUCTURE_RECONCILIATION_DEPLOYMENT_INVALID",
+        ),
     }
 
 
@@ -3321,6 +4333,7 @@ def _validate_coordination_resource_bindings(
     value: Mapping[str, str],
     *,
     expected_binding: Mapping[str, str],
+    expected_deployment_resources: Mapping[str, Any] | None = None,
 ) -> dict[str, str]:
     if not isinstance(value, Mapping) or set(value) not in {
         _COORDINATION_RESOURCE_BINDING_KEYS,
@@ -3337,12 +4350,27 @@ def _validate_coordination_resource_bindings(
     lease_blob_path = f"locks/{expected_binding['target_binding_sha256']}.lock"
     if value.get("lease_blob_path", lease_blob_path) != lease_blob_path:
         _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
+    if expected_deployment_resources is not None and any(
+        str(result[key]).casefold()
+        != str(expected_deployment_resources[key]).casefold()
+        for key in (
+            "coordination_blob_private_endpoint_resource_id",
+            "coordination_blob_private_dns_zone_resource_id",
+            "coordination_blob_private_dns_vnet_link_resource_id",
+        )
+    ):
+        _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
     resource_group_scope = (
         f"/subscriptions/{expected_binding['subscription_id']}/resourceGroups/"
         f"{expected_binding['resource_group_name']}"
     )
     if (
-        str(result.get("coordination_storage_account_resource_id", "")).casefold()
+        _canonical_uuid(
+            result.get("broker_principal_id"),
+            "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+        )
+        == expected_binding["broker_caller_service_principal_id"]
+        or str(result.get("coordination_storage_account_resource_id", "")).casefold()
         != coordination_id.casefold()
         or str(result.get("lease_container_resource_id", "")).casefold()
         != container_id.casefold()
@@ -3356,10 +4384,34 @@ def _validate_coordination_resource_bindings(
         result.get("broker_lease_role_assignment_id"),
         "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
     )
-    if not role_definition.casefold().startswith(
+    private_endpoint = _require_arm_id(
+        result.get("coordination_blob_private_endpoint_resource_id"),
+        "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+    )
+    private_dns_zone = _require_arm_id(
+        result.get("coordination_blob_private_dns_zone_resource_id"),
+        "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+    )
+    private_dns_vnet_link = _require_arm_id(
+        result.get("coordination_blob_private_dns_vnet_link_resource_id"),
+        "INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID",
+    )
+    if (
+        not role_definition.casefold().startswith(
         f"{resource_group_scope}/providers/microsoft.authorization/roledefinitions/".casefold()
-    ) or not role_assignment.casefold().startswith(
-        f"{container_id}/providers/microsoft.authorization/roleassignments/".casefold()
+        )
+        or not role_assignment.casefold().startswith(
+            f"{container_id}/providers/microsoft.authorization/roleassignments/".casefold()
+        )
+        or not private_endpoint.casefold().startswith(
+            f"{resource_group_scope}/providers/microsoft.network/privateendpoints/".casefold()
+        )
+        or not private_dns_zone.casefold().startswith(
+            f"{resource_group_scope}/providers/microsoft.network/privatednszones/".casefold()
+        )
+        or not private_dns_vnet_link.casefold().startswith(
+            f"{private_dns_zone}/virtualnetworklinks/".casefold()
+        )
     ):
         _fail("INFRASTRUCTURE_COORDINATION_RESOURCE_BINDING_INVALID")
     result["lease_blob_path"] = lease_blob_path
@@ -3533,7 +4585,6 @@ def _expected_storage_configuration(
     coordination: Mapping[str, str],
     location: str,
     effective_tags: Mapping[str, str],
-    broker_outbound_ip_addresses: list[str],
 ) -> dict[str, Any]:
     return {
         "id": coordination["id"],
@@ -3554,14 +4605,11 @@ def _expected_storage_configuration(
             "networkAcls": {
                 "bypass": "None",
                 "defaultAction": "Deny",
-                "ipRules": [
-                    {"action": "Allow", "value": address}
-                    for address in broker_outbound_ip_addresses
-                ],
+                "ipRules": [],
                 "resourceAccessRules": [],
                 "virtualNetworkRules": [],
             },
-            "publicNetworkAccess": "Enabled",
+            "publicNetworkAccess": "Disabled",
             "supportsHttpsTrafficOnly": True,
         },
     }
@@ -3600,7 +4648,7 @@ def _expected_lease_container_configuration(
             "publicAccess": "None",
             "metadata": {
                 "nac_schema_version": (
-                    "nac.azure-bff-performance-coordination/v1"
+                    "nac.azure-bff-performance-coordination/v3"
                 ),
                 "data_classification": "synthetic-only",
                 "lease_blob_path": f"locks/{target_binding_sha256}.lock",
@@ -3613,7 +4661,7 @@ def _expected_lease_container_configuration(
                     "non-exportable-managed-identity-read-write-no-delete"
                 ),
                 "azure_blob_write_authorization": (
-                    "broker-uami-write-includes-create-overwrite-lease-and-break"
+                    "broker-system-identity-write-includes-create-overwrite-lease-and-break"
                 ),
                 "operation_restriction_boundary": (
                     "owner-ticketed-fixed-function-route"
@@ -3637,9 +4685,12 @@ def _verify_deployment_receipt(
     broker_principal_id: str,
     broker_caller_service_principal_id: str,
     broker_function_app_resource_id: str,
+    broker_private_network_boundary_sha256: str,
+    coordination_blob_private_endpoint_resource_id: str,
+    coordination_blob_private_dns_zone_resource_id: str,
+    coordination_blob_private_dns_vnet_link_resource_id: str,
     broker_function_package_sha256: str,
     broker_ticket_verification_certificate_sha256: str,
-    broker_outbound_ip_addresses: list[str],
     storage_configuration_sha256: str,
     effective_tags_sha256: str,
     name_observed_at: datetime,
@@ -3665,9 +4716,12 @@ def _verify_deployment_receipt(
         "broker_principal_id",
         "broker_caller_service_principal_id",
         "broker_function_app_resource_id",
+        "coordination_blob_private_endpoint_resource_id",
+        "coordination_blob_private_dns_zone_resource_id",
+        "coordination_blob_private_dns_vnet_link_resource_id",
         "broker_function_package_sha256",
         "broker_ticket_verification_certificate_sha256",
-        "broker_outbound_ip_addresses_sha256",
+        "broker_private_network_boundary_sha256",
         "effective_tags_sha256",
         "storage_configuration_sha256",
     }
@@ -3713,14 +4767,24 @@ def _verify_deployment_receipt(
         != broker_caller_service_principal_id
         or str(payload.get("broker_function_app_resource_id", "")).casefold()
         != broker_function_app_resource_id.casefold()
+        or str(
+            payload.get("coordination_blob_private_endpoint_resource_id", "")
+        ).casefold()
+        != coordination_blob_private_endpoint_resource_id.casefold()
+        or str(
+            payload.get("coordination_blob_private_dns_zone_resource_id", "")
+        ).casefold()
+        != coordination_blob_private_dns_zone_resource_id.casefold()
+        or str(
+            payload.get("coordination_blob_private_dns_vnet_link_resource_id", "")
+        ).casefold()
+        != coordination_blob_private_dns_vnet_link_resource_id.casefold()
         or payload.get("broker_function_package_sha256")
         != broker_function_package_sha256
         or payload.get("broker_ticket_verification_certificate_sha256")
         != broker_ticket_verification_certificate_sha256
-        or payload.get("broker_outbound_ip_addresses_sha256")
-        != _sha256_json(
-            _canonical_public_ipv4_addresses(broker_outbound_ip_addresses)
-        )
+        or payload.get("broker_private_network_boundary_sha256")
+        != broker_private_network_boundary_sha256
         or payload.get("effective_tags_sha256") != effective_tags_sha256
         or payload.get("storage_configuration_sha256")
         != storage_configuration_sha256
@@ -3886,6 +4950,7 @@ def _verify_effective_rbac_readback(
     expected_role_definition_id: str | None,
     expected_condition: str | None,
     expected_data_actions: frozenset[str] | None,
+    forbidden_storage_data_actions_error: str | None,
     authoritative_management_group_scopes: list[str],
     verified_at: datetime,
     session: AzurePerformanceInfrastructureReadbackSession,
@@ -3936,6 +5001,7 @@ def _verify_effective_rbac_readback(
         "transitive_group_principal_ids",
         "ancestor_scopes",
         "effective_role_assignments",
+        "role_assignment_principal_index",
         "completeness_attestation",
     }
     if not isinstance(payload, Mapping) or set(payload) != expected_payload_keys:
@@ -3946,6 +5012,7 @@ def _verify_effective_rbac_readback(
         "management_group_ancestry_complete": True,
         "transitive_group_membership_complete": True,
         "role_assignments_complete": True,
+        "all_role_assignment_principals_indexed": True,
         "role_definitions_expanded": True,
     }
     if completeness != required_completeness:
@@ -3978,12 +5045,21 @@ def _verify_effective_rbac_readback(
         ),
     )
     assignments = payload.get("effective_role_assignments")
+    assignment_index = _validate_role_assignment_principal_index(
+        payload.get("role_assignment_principal_index"),
+        ancestor_scopes=ancestor_scopes,
+    )
     if expected_assignment_id is None:
+        if forbidden_storage_data_actions_error is None:
+            _fail("EFFECTIVE_RBAC_READBACK_INVALID")
         _verify_no_effective_storage_data_actions(
             assignments,
             principal_id=principal_id,
             group_principal_ids=frozenset(groups),
             ancestor_scopes=ancestor_scopes,
+            forbidden_storage_data_actions_error=(
+                forbidden_storage_data_actions_error
+            ),
         )
         exact_count = 0
     else:
@@ -4006,12 +5082,81 @@ def _verify_effective_rbac_readback(
         )
         if exact_count != 1:
             _fail("EXPECTED_EFFECTIVE_ASSIGNMENT_NOT_UNIQUE")
+        matching_role_assignments = [
+            item
+            for item in assignment_index
+            if item["role_definition_id"].casefold()
+            == expected_role_definition_id.casefold()
+        ]
+        if matching_role_assignments != [
+            {
+                "assignment_id": expected_assignment_id,
+                "principal_id": principal_id,
+                "role_definition_id": expected_role_definition_id,
+                "scope": expected_scope,
+            }
+        ]:
+            _fail("EXPECTED_ROLE_ASSIGNMENT_NOT_EXCLUSIVE")
     return {
         "effective_assignment_count": exact_count,
+        "effective_storage_data_action_count": (
+            len(expected_data_actions) if expected_data_actions is not None else 0
+        ),
         "principal_count": 1 + len(groups),
         "ancestor_scope_count": len(ancestor_scopes),
         "observed_at": _envelope_observed_at(value),
     }
+
+
+def _validate_role_assignment_principal_index(
+    value: Any, *, ancestor_scopes: set[str]
+) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+    result: list[dict[str, str]] = []
+    expected_keys = {
+        "assignment_id",
+        "principal_id",
+        "role_definition_id",
+        "scope",
+    }
+    for item in value:
+        if not isinstance(item, Mapping) or set(item) != expected_keys:
+            _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+        assignment_id = _require_arm_id(
+            item.get("assignment_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        principal_id = _canonical_uuid(
+            item.get("principal_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        role_definition_id = _require_arm_id(
+            item.get("role_definition_id"), "EFFECTIVE_ASSIGNMENTS_INVALID"
+        )
+        scope = item.get("scope")
+        if not isinstance(scope, str) or scope.casefold() not in ancestor_scopes:
+            _fail("EFFECTIVE_ASSIGNMENT_SCOPE_INVALID")
+        result.append(
+            {
+                "assignment_id": assignment_id,
+                "principal_id": principal_id,
+                "role_definition_id": role_definition_id,
+                "scope": scope,
+            }
+        )
+    canonical = sorted(
+        result,
+        key=lambda item: (
+            item["scope"].casefold(),
+            item["role_definition_id"].casefold(),
+            item["assignment_id"].casefold(),
+            item["principal_id"],
+        ),
+    )
+    if result != canonical or len(
+        {item["assignment_id"].casefold() for item in result}
+    ) != len(result):
+        _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
+    return result
 
 
 def _verify_ancestor_scopes(
@@ -4124,6 +5269,7 @@ def _verify_no_effective_storage_data_actions(
     principal_id: str,
     group_principal_ids: frozenset[str],
     ancestor_scopes: set[str],
+    forbidden_storage_data_actions_error: str,
 ) -> None:
     if not isinstance(values, list):
         _fail("EFFECTIVE_ASSIGNMENTS_INVALID")
@@ -4142,18 +5288,73 @@ def _verify_no_effective_storage_data_actions(
         data_actions = _expanded_permission_actions(
             value, properties, field_name="dataActions"
         )
+        control_actions = _expanded_permission_actions(
+            value, properties, field_name="actions"
+        )
         if (
             properties.get("principalType") != expected_principal_type
             or not isinstance(scope, str)
             or scope.casefold() not in ancestor_scopes
             or data_actions is None
+            or control_actions is None
         ):
             _fail("EFFECTIVE_RBAC_READBACK_INVALID")
-        if any(
-            action.casefold().startswith("microsoft.storage/")
-            for action in data_actions
+        if (
+            _permission_set_has_unresolved_subtraction_or_wildcard(
+                value,
+                properties,
+                field_name="dataActions",
+                not_field_name="notDataActions",
+            )
+            or _permission_set_has_unresolved_subtraction_or_wildcard(
+                value,
+                properties,
+                field_name="actions",
+                not_field_name="notActions",
+            )
+            or bool(control_actions)
+            or any(
+                action.casefold().startswith("microsoft.storage/")
+                for action in data_actions
+            )
         ):
-            _fail("BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT")
+            _fail(forbidden_storage_data_actions_error)
+
+
+def _permission_set_has_unresolved_subtraction_or_wildcard(
+    value: Mapping[str, Any],
+    properties: Mapping[str, Any],
+    *,
+    field_name: str,
+    not_field_name: str,
+) -> bool:
+    direct = _field(value, properties, field_name)
+    if direct is not None:
+        actions = _data_actions(direct)
+        if actions is None or any("*" in action for action in actions):
+            return True
+        direct_not = _field(value, properties, not_field_name)
+        return direct_not not in (None, [])
+    role = value.get("roleDefinition")
+    if not isinstance(role, Mapping):
+        return True
+    role_properties = role.get("properties", role)
+    if not isinstance(role_properties, Mapping):
+        return True
+    permissions = role_properties.get("permissions")
+    if not isinstance(permissions, list) or not permissions:
+        return True
+    for permission in permissions:
+        if not isinstance(permission, Mapping):
+            return True
+        actions = _data_actions(permission.get(field_name))
+        if (
+            actions is None
+            or any("*" in action for action in actions)
+            or permission.get(not_field_name) not in (None, [])
+        ):
+            return True
+    return False
 
 
 def _verify_effective_assignments(
@@ -4851,6 +6052,13 @@ def _expected_operation_for_envelope(
         return {"resource_id": response.get("id")}
     if kind == "coordination-broker-function-app":
         return _broker_function_app_payload(response)
+    if kind == "broker-virtual-network":
+        return _virtual_network_payload(response)
+    if kind in {
+        "broker-function-integration-subnet",
+        "broker-private-endpoint-subnet",
+    }:
+        return _subnet_payload(response)
     if kind in {
         "coordination-broker-role-definition",
         "coordination-broker-role-assignment",
@@ -4858,6 +6066,12 @@ def _expected_operation_for_envelope(
         return {"resource": response}
     if kind == "coordination-storage-account-configuration":
         return _storage_configuration_payload(response)
+    if kind == "coordination-blob-private-endpoint":
+        return _private_endpoint_payload(response)
+    if kind == "coordination-blob-private-dns-zone-group":
+        return _private_dns_zone_group_payload(response)
+    if kind == "coordination-blob-private-dns-vnet-link":
+        return _private_dns_vnet_link_collection_payload(response)
     if kind == "coordination-blob-service-configuration":
         return _blob_service_configuration_payload(response)
     if kind == "coordination-lease-container-configuration":
@@ -4940,6 +6154,7 @@ def _effective_rbac_payload_from_operations(
         return None
     relevant = {principal, *groups}
     assignments: list[dict[str, Any]] = []
+    assignment_index: list[dict[str, str]] = []
     pending: list[tuple[dict[str, Any], str, str]] = []
     for scope in scopes:
         if index >= len(operations) or not isinstance(scope, str):
@@ -4976,11 +6191,22 @@ def _effective_rbac_payload_from_operations(
                 )
             except AzurePerformanceInfrastructureSafetyError:
                 return None
-            if candidate_principal not in relevant:
-                continue
             role_id = properties.get("roleDefinitionId")
             if not isinstance(role_id, str):
                 return None
+            assignment_id = item.get("id")
+            if not isinstance(assignment_id, str):
+                return None
+            assignment_index.append(
+                {
+                    "assignment_id": assignment_id,
+                    "principal_id": candidate_principal,
+                    "role_definition_id": role_id,
+                    "scope": scope,
+                }
+            )
+            if candidate_principal not in relevant:
+                continue
             pending.append((dict(item), scope, role_id))
     role_cache: dict[str, dict[str, Any]] = {}
     for item, scope, role_id in pending:
@@ -5012,11 +6238,21 @@ def _effective_rbac_payload_from_operations(
         "transitive_group_principal_ids": groups,
         "ancestor_scopes": scopes,
         "effective_role_assignments": assignments,
+        "role_assignment_principal_index": sorted(
+            assignment_index,
+            key=lambda item: (
+                item["scope"].casefold(),
+                item["role_definition_id"].casefold(),
+                item["assignment_id"].casefold(),
+                item["principal_id"],
+            ),
+        ),
         "completeness_attestation": {
             "root_ancestry_complete": True,
             "management_group_ancestry_complete": True,
             "transitive_group_membership_complete": True,
             "role_assignments_complete": True,
+            "all_role_assignment_principals_indexed": True,
             "role_definitions_expanded": True,
         },
     }
@@ -5187,30 +6423,6 @@ def _function_app_id(value: Any, *, subscription_id: str) -> str:
     ):
         _fail("BROKER_FUNCTION_APP_RESOURCE_ID_INVALID")
     return value
-
-
-def _canonical_public_ipv4_addresses(value: Any) -> list[str]:
-    if not isinstance(value, list) or not 1 <= len(value) <= 32:
-        _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-    result: list[str] = []
-    for item in value:
-        try:
-            address = ipaddress.ip_address(item)
-        except ValueError:
-            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-        if (
-            not isinstance(address, ipaddress.IPv4Address)
-            or address.is_private
-            or address.is_loopback
-            or address.is_link_local
-            or address.is_multicast
-            or address.is_reserved
-            or address.is_unspecified
-            or str(address) in result
-        ):
-            _fail("BROKER_OUTBOUND_IP_ADDRESSES_INVALID")
-        result.append(str(address))
-    return result
 
 
 def _require_arm_id(value: Any, error_code: str) -> str:

@@ -224,7 +224,7 @@ def _managed_identity_check(root: Path) -> dict[str, object]:
             _BICEP_PATH,
             (
                 "Microsoft.ManagedIdentity/userAssignedIdentities@",
-                "type: 'UserAssigned'",
+                "type: 'SystemAssigned, UserAssigned'",
                 "userAssignedIdentityResourceId: managedIdentity.id",
                 "allowSharedKeyAccess: false",
                 "defaultToOAuthAuthentication: true",
@@ -238,9 +238,9 @@ def _managed_identity_check(root: Path) -> dict[str, object]:
     ]
     return _group(
         "managed_identity",
-        "User-assigned managed identity",
+        "Separated system- and user-assigned managed identities",
         requirements,
-        "Restore managed-identity-only storage and telemetry bindings, then rerun the offline check.",
+        "Restore the system-assigned broker boundary and the client-id-bound UAMI storage, telemetry and Graph bindings, then rerun the offline check.",
     )
 
 

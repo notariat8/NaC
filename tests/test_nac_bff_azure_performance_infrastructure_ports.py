@@ -81,6 +81,21 @@ ROLE_ASSIGNMENT_ID = (
     f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
     "55555555-5555-4555-8555-555555555555"
 )
+VIRTUAL_NETWORK_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/virtualNetworks/"
+    "vnet-nac-bff-test"
+)
+FUNCTION_INTEGRATION_SUBNET_ID = f"{VIRTUAL_NETWORK_ID}/subnets/snet-flex-integration"
+PRIVATE_ENDPOINT_SUBNET_ID = f"{VIRTUAL_NETWORK_ID}/subnets/snet-private-endpoints"
+PRIVATE_ENDPOINT_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateEndpoints/"
+    f"pep-{COORDINATION_NAME}"
+)
+PRIVATE_DNS_ZONE_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateDnsZones/"
+    "privatelink.blob.core.windows.net"
+)
+PRIVATE_DNS_VNET_LINK_ID = f"{PRIVATE_DNS_ZONE_ID}/virtualNetworkLinks/link-nac-bff-test"
 
 
 def _sha256_json(value: object) -> str:
@@ -101,12 +116,13 @@ def _infra_parameters() -> dict[str, object]:
         "storageAccountName": COORDINATION_NAME,
         "bffStorageAccountResourceId": BFF_ID,
         "wormStorageAccountResourceId": WORM_ID,
-        "brokerPrincipalId": PRINCIPAL_ID,
         "brokerCallerServicePrincipalId": CALLER_PRINCIPAL_ID,
         "brokerFunctionAppResourceId": FUNCTION_APP_ID,
+        "brokerVirtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+        "brokerFunctionIntegrationSubnetResourceId": FUNCTION_INTEGRATION_SUBNET_ID,
+        "brokerPrivateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
         "brokerFunctionPackageSha256": PACKAGE_SHA256,
         "brokerTicketVerificationCertificateSha256": TICKET_CERTIFICATE_SHA256,
-        "brokerOutboundIpAddresses": ["8.8.8.8"],
         "targetBindingSha256": TARGET,
         "tenantId": TENANT_ID,
         "subscriptionId": SUBSCRIPTION_ID,
@@ -203,6 +219,8 @@ class _FakeAzureExecutor:
         self.bound_artifact_digests: list[tuple[str, str]] = []
         self.locked = False
         self.worm_output_drift = False
+        self.coordination_principal_output_missing = False
+        self.coordination_principal_matches_caller = False
         self.fail_operation: str | None = None
         self.worm_deployment: dict[str, object] | None = None
 
@@ -248,7 +266,13 @@ class _FakeAzureExecutor:
             return self._ok(self._worm_policy())
         if command.operation == DEPLOYMENT_SEQUENCE[2]:
             parameters = self._bound_parameters(command)
-            return self._ok(self._coordination_deployment(command, parameters))
+            deployment = self._coordination_deployment(command, parameters)
+            outputs = deployment["properties"]["outputs"]
+            if self.coordination_principal_output_missing:
+                outputs.pop("brokerPrincipalIdBinding")
+            if self.coordination_principal_matches_caller:
+                outputs["brokerPrincipalIdBinding"]["value"] = CALLER_PRINCIPAL_ID
+            return self._ok(deployment)
         raise AssertionError(f"unexpected operation: {command.operation}")
 
     @staticmethod
@@ -400,7 +424,7 @@ class _FakeAzureExecutor:
             f"{COORDINATION_ID}/blobServices/default/containers/{CONTAINER_NAME}"
         )
         outputs = {
-            "contractSchemaVersion": "nac.azure-bff-performance-coordination/v1",
+            "contractSchemaVersion": "nac.azure-bff-performance-coordination/v3",
             "storageAccountName": COORDINATION_NAME,
             "storageAccountResourceId": COORDINATION_ID,
             "effectiveTags": effective_coordination_tags(
@@ -425,6 +449,18 @@ class _FakeAzureExecutor:
             "brokerPrincipalIdBinding": PRINCIPAL_ID,
             "brokerCallerServicePrincipalIdBinding": CALLER_PRINCIPAL_ID,
             "brokerFunctionAppResourceIdBinding": FUNCTION_APP_ID,
+            "brokerVirtualNetworkResourceIdBinding": VIRTUAL_NETWORK_ID,
+            "brokerFunctionIntegrationSubnetResourceIdBinding": (
+                FUNCTION_INTEGRATION_SUBNET_ID
+            ),
+            "brokerPrivateEndpointSubnetResourceIdBinding": (
+                PRIVATE_ENDPOINT_SUBNET_ID
+            ),
+            "coordinationBlobPrivateEndpointResourceId": PRIVATE_ENDPOINT_ID,
+            "coordinationBlobPrivateDnsZoneResourceId": PRIVATE_DNS_ZONE_ID,
+            "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId": (
+                PRIVATE_DNS_VNET_LINK_ID
+            ),
             "brokerFunctionPackageSha256Binding": PACKAGE_SHA256,
             "brokerTicketVerificationCertificateSha256Binding": (
                 TICKET_CERTIFICATE_SHA256
@@ -458,7 +494,7 @@ class _FakeAzureExecutor:
                 "owner-ticketed-fixed-broker-api",
             ],
             "localRunnerStorageDataActions": [],
-            "credentialBoundaryMode": "BFF_BROKER_UAMI_ONLY",
+            "credentialBoundaryMode": "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY",
         }
         return {
             "id": (
@@ -579,8 +615,16 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             TICKET_CERTIFICATE_SHA256,
         )
         self.assertEqual(
-            coordination.broker_outbound_ip_addresses_sha256,
-            _sha256_json(["8.8.8.8"]),
+            coordination.broker_private_network_boundary_sha256,
+            _sha256_json(
+                {
+                    "virtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+                    "functionIntegrationSubnetResourceId": (
+                        FUNCTION_INTEGRATION_SUBNET_ID
+                    ),
+                    "privateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
+                }
+            ),
         )
         self.assertEqual(
             [command.operation for command in executor.commands],
@@ -675,6 +719,35 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
         ) as caught:
             UnlockedWormBaselineDeploymentPort(failure).deploy(self.authority())
         self.assertNotIn("provider", str(caught.exception).casefold())
+
+    def test_dynamic_broker_principal_output_is_mandatory_and_distinct(self) -> None:
+        for attribute, expected_error in (
+            (
+                "coordination_principal_output_missing",
+                "AZURE_DEPLOYMENT_RECEIPT_INVALID",
+            ),
+            (
+                "coordination_principal_matches_caller",
+                "PERFORMANCE_COORDINATION_OUTPUTS_INVALID",
+            ),
+        ):
+            with self.subTest(attribute=attribute):
+                executor = _FakeAzureExecutor()
+                setattr(executor, attribute, True)
+                authority = self.authority()
+                worm_receipt = UnlockedWormBaselineDeploymentPort(executor).deploy(
+                    authority
+                )
+                worm_readback = UnlockedWormBaselineReadbackPort(
+                    executor
+                ).verify_exact_unlocked_baseline(authority, worm_receipt)
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructurePortError,
+                    f"^{expected_error}$",
+                ):
+                    PerformanceCoordinationDeploymentPort(executor).deploy(
+                        authority, worm_readback
+                    )
 
     def test_owner_comment_or_measured_binding_drift_is_rejected_offline(self) -> None:
         approval = _approval()

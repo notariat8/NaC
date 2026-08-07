@@ -88,7 +88,6 @@ def _env() -> dict[str, str]:
         "NAC_BFF_PERFORMANCE_LEASE_TICKET_CERTIFICATE_SHA256": hashlib.sha256(
             cert
         ).hexdigest(),
-        "AZURE_CLIENT_ID": "22222222-2222-4222-8222-222222222222",
     }
 
 
@@ -109,8 +108,8 @@ class PerformanceLeaseBrokerCompositionTests(unittest.TestCase):
         self.assertEqual(settings.blob_path, BLOB_PATH)
         calls: list[str] = []
 
-        def credential_factory(*, client_id: str):
-            calls.append(client_id)
+        def credential_factory():
+            calls.append("system-assigned")
             return _Credential()
 
         broker = build_performance_lease_broker(
@@ -119,7 +118,7 @@ class PerformanceLeaseBrokerCompositionTests(unittest.TestCase):
             opener=_Opener(),
         )
         self.assertIs(type(broker), AzurePerformanceLeaseBroker)
-        self.assertEqual(calls, [env["AZURE_CLIENT_ID"]])
+        self.assertEqual(calls, ["system-assigned"])
         self.assertEqual(PERFORMANCE_LEASE_APP_ROLE, "Performance.Lease")
         self.assertEqual(PERFORMANCE_LEASE_TICKET_SCOPE, "nac.performance.lease")
 

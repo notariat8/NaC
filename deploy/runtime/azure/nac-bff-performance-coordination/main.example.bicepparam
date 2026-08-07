@@ -13,14 +13,13 @@ param bffStorageAccountResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e803
 param wormStorageAccountResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-worm/providers/Microsoft.Storage/storageAccounts/stnacwormoffline001'
 // Only the BFF Function managed identity receives exact-path Blob read/write.
 // The local runner receives a broker API role and no Storage DataAction or token.
-param brokerPrincipalId = '11111111-2222-4333-8444-555555555555'
 param brokerCallerServicePrincipalId = '66666666-7777-4888-8999-aaaaaaaaaaaa'
 param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'
+param brokerVirtualNetworkResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline'
+param brokerFunctionIntegrationSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-flex-integration'
+param brokerPrivateEndpointSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-private-endpoints'
 param brokerFunctionPackageSha256 = '1111111111111111111111111111111111111111111111111111111111111111'
 param brokerTicketVerificationCertificateSha256 = '2222222222222222222222222222222222222222222222222222222222222222'
-param brokerOutboundIpAddresses = [
-  '203.0.113.10'
-]
 param targetBindingSha256 = '1111111111111111111111111111111111111111111111111111111111111111'
 param tags = {
   owner: 'replace-before-owner-gated-deployment'

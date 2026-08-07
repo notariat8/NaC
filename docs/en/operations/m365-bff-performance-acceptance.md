@@ -14,7 +14,7 @@ The exact mode is `endpoint_scoped_conservative_measurement`.
 
 ## Claim Boundary
 
-This lane measures one synthetic GET endpoint only. It does not claim a
+This lane measures one synthetic GET endpoint only. It neither collects nor claims a
 tenant-wide SharePoint baseline, tenant-wide request allowance, or tenant-wide
 resource-unit allowance. The status of all three claims is explicitly
 `NOT_CLAIMED`.
@@ -154,7 +154,7 @@ held lease is authoritatively absent, the broker first persists terminal
 
 A lost or foreign lease and any binding drift block without dispatch.
 Automatic reacquire, lease break, and blob delete are forbidden in the broker
-and local adapter. The Function UAMI may internally create the exact bound
+and local adapter. The Function system-assigned identity may internally create the exact bound
 zero-byte block blob once with `If-None-Match: *`, or inspect an existing blob
 with `HEAD`. The broker generates the private Azure lease ID and returns no
 lease ID, Storage token, or Storage URL to the local runner. An outcome may
@@ -174,13 +174,13 @@ inferred from absence alone.
 
 Before `acquire`, a canonical lease-acquisition safety envelope must validate
 the complete infrastructure `SAFE` evidence and bind its coordination storage
-resource ID, Function UAMI, and provisioning caller to the exact
+resource ID, Function system identity, and provisioning caller to the exact
 `lease_binding_sha256`, target binding, and signed activation ticket. The local
 runner requests only `api://funktion8.de/nac-bff/.default`. The BFF accepts only
 the fixed `Performance.Lease` app role; the RS256 ticket is valid for at most 60
 seconds and binds exactly one operation plus owner, tenant, audience, actor,
 commit, tree, Function package, plan, target, blob path, and nonce. Only the
-Function UAMI requests `https://storage.azure.com/.default` server-side. Any
+Function system-assigned identity requests `https://storage.azure.com/.default` server-side. Any
 mismatch blocks before broker state and Storage HTTP.
 After a real process restart, infrastructure is re-attested read-only.
 Serialized safety evidence alone authorizes nothing because the process-bound
@@ -190,16 +190,35 @@ lease; stale pre-restart evidence cannot authorize another mutation.
 
 The offline IaC is under
 `deploy/runtime/azure/nac-bff-performance-coordination`. It binds the Function
-UAMI, the distinct provisioning caller, Function package, ticket certificate,
-and authoritative Function outbound IPs. Only those outbound IPs are allowed
-at the Storage endpoint and the network default is `Deny`. Shared keys, public
+system-assigned identity, the distinct provisioning caller, Function package, ticket certificate,
+and the authoritative Function, VNet, and two distinct subnet resource IDs. The Flex
+Function uses its dedicated `/27` integration subnet; the coordination Blob endpoint
+uses the separate private-endpoint subnet and `privatelink.blob.core.windows.net`.
+Public Storage network access is disabled. Shared keys, public
 blobs, and delete, owner, or container DataActions remain excluded. Only the
-Function UAMI receives `blobs/read` and `blobs/write` on the exact container and
+Function system-assigned identity receives `blobs/read` and `blobs/write` on the exact container and
 blob path; the local caller receives no Storage DataAction. Because Azure
 `write` also covers overwrite and lease break, ABAC and the fixed broker API
-jointly enforce the narrower operation boundary. Before acquire, the exact
+jointly enforce the narrower operation boundary. The container metadata uses
+exactly `nac.azure-bff-performance-coordination/v3`. Before acquire, the exact
 `Performance.Lease` assignment and hash-bound Function settings are configured
 and read back without exposing their values.
+The role-assignment ID is stably bound to the authoritative Function resource
+ID, while its principal is resolved from the current system-assigned identity.
+ARM does not permit the principal ID that is resolved only at deployment time
+to participate in the role-assignment name. Identity rotation is therefore
+deliberately fail-closed: Azure must not update an existing role assignment to
+another principal. Effective RBAC readback indexes every visible role
+assignment at every inspected ancestor scope, not only assignments for the
+expected principal. A stale assignment to a previous Function system identity
+blocks the run. A stale assignment is neither
+deleted nor rolled back automatically; before reassignment after identity
+rotation, removing it requires a separately owner-approved and evidence-bound
+cleanup.
+The existing Function runtime UAMI remains separately bound to Graph, host
+storage, and Application Insights. A separate, complete effective-RBAC readback
+must prove exactly zero effective coordination-Storage DataActions for it,
+regardless of role name or built-in, custom, direct, group, or inherited source.
 
 ## Owner Gate And Evidence
 
@@ -281,9 +300,12 @@ a deployment. The strict temporal relation is
 `original observed < started <= completed < current reconciliation observed`.
 The postdeployment readback
 must prove its exact resource ID, location, effective tags, and complete
-storage/network configuration: public network enabled, default `Deny`, bypass
-`None`, exactly one allowed IP rule, no VNet or resource-access rule, no shared
-keys or public blobs, TLS 1.2, and HTTPS only. Blob versioning and Blob/container
+storage/network configuration: public network disabled, default `Deny`, bypass
+`None`, no IP, VNet, or resource-access rule, exactly one Blob private endpoint
+on the owner-bound private-endpoint subnet, one `privatelink.blob.core.windows.net`
+zone group, and one link to the owner-bound VNet. The Function readback must show
+the distinct owner-bound Flex integration subnet. Shared keys and public blobs
+remain disabled, with TLS 1.2 and HTTPS only. Blob versioning and Blob/container
 delete retention must be disabled. The lease container must have
 `publicAccess=None` and exactly the bound metadata for schema, synthetic
 classification, lock path, Blob type, bootstrap, authorization boundary, and
@@ -300,7 +322,9 @@ tenant root, the management-group chain, subscription, resource group, storage
 account, blob service, and container must prove the exact bootstrap and runtime identities,
 all transitive Entra groups, role, DataActions, condition, and scope; any
 broader direct, group-based, or inherited data-plane assignment, and every
-effective control-plane assignment, blocks bootstrap and lease acquire. A
+effective control-plane assignment, blocks bootstrap and lease acquire. The
+infrastructure safety evidence uses exactly
+`nac.azure-bff-performance-infrastructure-safety-evidence/v8`. A
 caller-selected Azure scope mismatch blocks before network access, and the
 Bicep template independently fails when its actual tenant, subscription, or
 resource group differs from those bound parameter values.

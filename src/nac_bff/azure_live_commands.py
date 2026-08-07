@@ -95,6 +95,8 @@ _SMART_DETECTION_ACTION_GROUP_TYPE = "Microsoft.Insights/ActionGroups"
 _SMART_DETECTION_ACTION_GROUP_API_VERSION = "2021-09-01"
 _RESOURCE_DETAIL_API_VERSIONS = {
     "microsoft.managedidentity/userassignedidentities": "2023-01-31",
+    "microsoft.network/virtualnetworks": "2024-05-01",
+    "microsoft.network/virtualnetworks/subnets": "2024-05-01",
     "microsoft.storage/storageaccounts": "2023-05-01",
     "microsoft.storage/storageaccounts/blobservices": "2023-05-01",
     "microsoft.storage/storageaccounts/blobservices/containers": "2023-05-01",
@@ -686,7 +688,7 @@ def _interruption_live_resource_state(
     identity_binding: dict[str, Any],
     resource_graph: list[dict[str, str]],
 ) -> dict[str, Any]:
-    if len(details) != 12 or len(operations) != 12:
+    if len(details) != len(operations) or len(operations) not in {12, 15}:
         raise ValueError("AZURE_INTERRUPTION_RESOURCE_STATE_INVALID")
     _require_exact_resource_graph(resource_graph, inventory, operations)
     actual_graph = [
@@ -717,6 +719,7 @@ def _interruption_live_resource_state(
     principal_id = managed["principal_id"]
     tenant_id = managed["tenant_id"]
     storage = inventory_by_type["microsoft.storage/storageaccounts"]
+    virtual_network = inventory_by_type.get("microsoft.network/virtualnetworks")
     workspace = inventory_by_type["microsoft.operationalinsights/workspaces"]
     component = inventory_by_type["microsoft.insights/components"]
     plan = inventory_by_type["microsoft.web/serverfarms"]
@@ -742,6 +745,27 @@ def _interruption_live_resource_state(
                 "principalId": principal_id,
                 "tenantId": tenant_id,
             })
+        elif resource_type == "microsoft.network/virtualnetworks":
+            valid = _virtual_network_state_matches(properties, target["id"])
+        elif resource_type == "microsoft.network/virtualnetworks/subnets":
+            if not isinstance(virtual_network, dict):
+                valid = False
+            elif target["id"].endswith("/subnets/snet-flex-integration"):
+                valid = _subnet_state_matches(
+                    properties,
+                    address_prefix="10.42.0.0/27",
+                    delegation_services=["Microsoft.App/environments"],
+                    private_endpoint_network_policies="Enabled",
+                )
+            elif target["id"].endswith("/subnets/snet-private-endpoints"):
+                valid = _subnet_state_matches(
+                    properties,
+                    address_prefix="10.42.0.32/27",
+                    delegation_services=[],
+                    private_endpoint_network_policies="Disabled",
+                )
+            else:
+                valid = False
         elif resource_type == "microsoft.storage/storageaccounts":
             valid = _security_projection_matches(properties, {
                 "accessTier": "Hot",
@@ -890,6 +914,74 @@ def _security_projection_matches(actual: object, expected: object) -> bool:
     return actual == expected
 
 
+def _virtual_network_state_matches(
+    properties: dict[str, Any], resource_id: str
+) -> bool:
+    subnets = properties.get("subnets")
+    if not isinstance(subnets, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("id"), str)
+        for item in subnets
+    ):
+        return False
+    return bool(
+        _security_projection_matches(
+            properties,
+            {
+                "addressSpace": {"addressPrefixes": ["10.42.0.0/24"]},
+                "provisioningState": "Succeeded",
+            },
+        )
+        and {item["id"].lower() for item in subnets}
+        == {
+            f"{resource_id}/subnets/snet-flex-integration".lower(),
+            f"{resource_id}/subnets/snet-private-endpoints".lower(),
+        }
+        and len(subnets) == 2
+    )
+
+
+def _subnet_state_matches(
+    properties: dict[str, Any],
+    *,
+    address_prefix: str,
+    delegation_services: list[str],
+    private_endpoint_network_policies: str,
+) -> bool:
+    delegations = properties.get("delegations")
+    if not isinstance(delegations, list):
+        return False
+    actual_services = []
+    for item in delegations:
+        item_properties = item.get("properties") if isinstance(item, dict) else None
+        service_name = (
+            item_properties.get("serviceName")
+            if isinstance(item_properties, dict)
+            else None
+        )
+        if not isinstance(service_name, str):
+            return False
+        actual_services.append(service_name)
+    return bool(
+        _security_projection_matches(
+            properties,
+            {
+                "addressPrefix": address_prefix,
+                "privateEndpointNetworkPolicies": (
+                    private_endpoint_network_policies
+                ),
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "provisioningState": "Succeeded",
+            },
+        )
+        and sorted(actual_services) == sorted(delegation_services)
+        and properties.get("networkSecurityGroup") is None
+        and properties.get("routeTable") is None
+        and properties.get("natGateway") is None
+        and properties.get("serviceEndpoints", []) == []
+        and properties.get("serviceEndpointPolicies", []) == []
+    )
+
+
 def _function_site_state_matches(
     properties: dict[str, Any],
     storage: dict[str, Any],
@@ -955,6 +1047,9 @@ def _interruption_deployment_projection(value: dict[str, Any]) -> dict[str, Any]
             "function_app_host_name": _interruption_output(
                 outputs, "functionAppHostName"
             ),
+            "function_app_system_assigned_principal_id": _interruption_output(
+                outputs, "functionAppSystemAssignedPrincipalId"
+            ),
             "managed_identity_resource_id": _interruption_output(
                 outputs, "managedIdentityResourceId"
             ),
@@ -965,6 +1060,25 @@ def _interruption_deployment_projection(value: dict[str, Any]) -> dict[str, Any]
                 outputs, "managedIdentityPrincipalId"
             ),
         }
+        network_output_names = {
+            "virtualNetworkResourceId": "virtual_network_resource_id",
+            "functionIntegrationSubnetResourceId": (
+                "function_integration_subnet_resource_id"
+            ),
+            "privateEndpointSubnetResourceId": (
+                "private_endpoint_subnet_resource_id"
+            ),
+        }
+        present_network_outputs = {
+            name for name in network_output_names if name in outputs
+        }
+        if present_network_outputs not in (set(), set(network_output_names)):
+            raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_INVALID")
+        for arm_name, projected_name in network_output_names.items():
+            if arm_name in present_network_outputs:
+                projected_outputs[projected_name] = _interruption_output(
+                    outputs, arm_name
+                )
     except (KeyError, TypeError, ValueError):
         raise ValueError("AZURE_INTERRUPTION_DEPLOYMENT_INVALID") from None
     return {
@@ -1016,6 +1130,7 @@ def _interruption_identity_projection(
         },
         "function_app": {
             "type": function_identity.get("type"),
+            "system_assigned_principal_id": function_identity.get("principalId"),
             "user_assigned_identities": sorted(
                 projected_assignments, key=lambda item: item["id"].lower()
             ),
@@ -1661,6 +1776,10 @@ def _resource_detail_type_from_id(value: str) -> str | None:
         if "/config/" in lowered:
             return "microsoft.web/sites/config"
         return "microsoft.web/sites"
+    if "/microsoft.network/virtualnetworks/" in lowered:
+        if "/subnets/" in lowered:
+            return "microsoft.network/virtualnetworks/subnets"
+        return "microsoft.network/virtualnetworks"
     candidates = (
         "microsoft.managedidentity/userassignedidentities",
         "microsoft.operationalinsights/workspaces",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 import hashlib
+import hmac
 import json
 import threading
 from typing import Any, Callable, Iterator, Mapping
@@ -17,7 +18,7 @@ from .azure_performance_authorization import (
     BLOB_LEASE_RELEASE,
     _authorize_live_action,
 )
-from .azure_performance_lease_broker import RECEIPT_VERSION
+from .azure_performance_lease_broker import RECEIPT_VERSION, SignedActivationTicket
 
 
 _OPERATIONS = frozenset({"acquire", "assert", "release"})
@@ -213,6 +214,7 @@ class BrokeredAzureBlobLeaseAdapter:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_AUTH_UNAVAILABLE") from None
         if type(ticket) is not dict or not _valid_token(token):
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_AUTH_INVALID")
+        ticket_fingerprint = _submitted_ticket_fingerprint(ticket)
         body = _canonical_json({"ticket": ticket})
         if len(body) > 16_384:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_REQUEST_INVALID")
@@ -238,6 +240,10 @@ class BrokeredAzureBlobLeaseAdapter:
         receipt = _validate_receipt(raw, operation=operation)
         if receipt["binding_fingerprint"] != self._expected_binding_fingerprint:
             raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_BINDING_MISMATCH")
+        if not hmac.compare_digest(
+            receipt["ticket_fingerprint"], ticket_fingerprint
+        ):
+            raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_TICKET_MISMATCH")
         if receipt["outcome"] not in _SUCCESS[operation]:
             if receipt["retry"] not in {"RETRY_SAME_TICKET", "ASSERT_BEFORE_RETRY"}:
                 self._discard_ticket(operation)
@@ -291,6 +297,21 @@ def _validate_receipt(raw: bytes, *, operation: str) -> dict[str, str]:
     ):
         raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_RESPONSE_INVALID")
     return value
+
+
+def _submitted_ticket_fingerprint(value: Mapping[str, Any]) -> str:
+    try:
+        ticket = SignedActivationTicket.from_mapping(value)
+        material = (
+            ticket.payload.canonical_bytes()
+            + b"\x00"
+            + ticket.key_id.encode("ascii")
+            + b"\x00"
+            + ticket.signature
+        )
+    except Exception:
+        raise BrokeredAzureBlobLeaseError("BROKERED_LEASE_AUTH_INVALID") from None
+    return _sha256(material)
 
 
 def _valid_token(value: object) -> bool:

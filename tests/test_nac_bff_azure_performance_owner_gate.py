@@ -57,7 +57,6 @@ def _parameters() -> dict[str, object]:
             f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Storage/storageAccounts/stnacwormtest001"
         ),
-        "brokerPrincipalId": "11111111-2222-4333-8444-555555555555",
         "brokerCallerServicePrincipalId": (
             "66666666-7777-4888-8999-aaaaaaaaaaaa"
         ),
@@ -65,11 +64,24 @@ def _parameters() -> dict[str, object]:
             f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Web/sites/func-nac-bff-test-funktion8"
         ),
+        "brokerVirtualNetworkResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test"
+        ),
+        "brokerFunctionIntegrationSubnetResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test/"
+            "subnets/snet-flex-integration"
+        ),
+        "brokerPrivateEndpointSubnetResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test/"
+            "subnets/snet-private-endpoints"
+        ),
         "brokerFunctionPackageSha256": "e" * 64,
         "brokerTicketVerificationCertificateSha256": TOOLCHAIN[
             "provisioner_certificate_sha256"
         ],
-        "brokerOutboundIpAddresses": ["8.8.8.8"],
         "targetBindingSha256": target,
         "tenantId": TENANT_ID,
         "subscriptionId": SUBSCRIPTION_ID,
@@ -185,7 +197,6 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
         self.assertEqual(result["boundaries"]["network_accessed"], False)
         self.assertEqual(result["boundaries"]["azure_resources_created"], 0)
         self.assertNotIn("11111111-2222", result["owner_comment_body"])
-        self.assertNotIn("8.8.8.8", result["owner_comment_body"])
         self.assertEqual(
             _validate_owner_execution_bindings(
                 result["owner_execution_bindings"]
@@ -196,7 +207,10 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
     def test_parameter_change_changes_infrastructure_and_body_bindings(self) -> None:
         first = self.build()
         changed = _parameters()
-        changed["brokerOutboundIpAddresses"] = ["1.1.1.1"]
+        changed["brokerFunctionAppResourceId"] = (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Web/sites/func-nac-bff-test-alternate"
+        )
         second = self.build(changed)
 
         self.assertNotEqual(

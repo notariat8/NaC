@@ -33,6 +33,8 @@ from nac_bff.azure_performance_lease_broker import (
     ReleaseOutcome,
     RsaCertificateTicketSignatureVerifier,
     RetryDirective,
+    lease_broker_policy,
+    lease_broker_state_bootstrap_policy,
 )
 
 
@@ -55,6 +57,18 @@ FUNCTION_PACKAGE = "4" * 64
 PLAN = "5" * 64
 TARGET = "6" * 64
 BLOB_PATH = f"locks/{TARGET}.lock"
+
+
+class PolicyTests(unittest.TestCase):
+    def test_storage_identity_labels_bind_broker_system_assigned_identity(self) -> None:
+        self.assertEqual(
+            lease_broker_policy()["storage_token_holder"],
+            "broker_system_assigned_identity_only",
+        )
+        self.assertEqual(
+            lease_broker_state_bootstrap_policy()["runtime_creator"],
+            "broker_system_assigned_identity_only",
+        )
 
 
 def _b64(value: bytes) -> str:

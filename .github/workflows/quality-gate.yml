@@ -161,12 +161,15 @@ jobs:
           path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components
 
       - name: Install pinned Bicep compiler
-        run: az bicep install --version v0.45.6
+        run: |
+          az bicep uninstall
+          az bicep install --version v0.45.6
 
       - name: Reproduce Azure BFF Bicep artifacts
         run: |
-          az bicep build --file deploy/runtime/azure/nac-bff/infra/main.bicep --stdout > /tmp/nac-bff-main.json
-          az bicep build-params --file deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --stdout > /tmp/nac-bff-main-params.json
+          test "$("$HOME/.azure/bin/bicep" --version)" = "Bicep CLI version 0.45.6 (6c73ad60eb)"
+          "$HOME/.azure/bin/bicep" build deploy/runtime/azure/nac-bff/infra/main.bicep --stdout > /tmp/nac-bff-main.json
+          "$HOME/.azure/bin/bicep" build-params deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --outfile /tmp/nac-bff-main-params.json
           cmp /tmp/nac-bff-main.json deploy/runtime/azure/nac-bff/infra/compiled/main.json
           cmp /tmp/nac-bff-main-params.json deploy/runtime/azure/nac-bff/infra/compiled/main.example.json
 

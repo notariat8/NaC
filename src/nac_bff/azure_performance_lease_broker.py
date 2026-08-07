@@ -52,7 +52,7 @@ def lease_broker_policy() -> dict[str, Any]:
         "redirects_followed": 0,
         "fresh_same_run_ticket_may_reconcile_persisted_intent": True,
         "same_ticket_retry_reuses_persisted_private_lease_id": True,
-        "storage_token_holder": "broker_uami_only",
+        "storage_token_holder": "broker_system_assigned_identity_only",
     }
 
 
@@ -70,7 +70,7 @@ def lease_broker_state_bootstrap_policy() -> dict[str, Any]:
         "forbidden_operations": ["delete", "overwrite"],
         "owner_and_target_binding_required": True,
         "put_precondition": "If-None-Match:*",
-        "runtime_creator": "broker_uami_only",
+        "runtime_creator": "broker_system_assigned_identity_only",
         "strong_etag_readback_required": True,
     }
 

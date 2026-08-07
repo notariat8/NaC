@@ -21,7 +21,7 @@
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "208cf3b19e32e6247b6bc9167c37d10b68d6b114b0dca063bb35cc1c54177e86"
+      "sha256": "92a56be68828dc5ef09cd492b9afeaad6b38f76bb135b960b9b930579ecb54e5"
     },
     {
       "relativePath": "scripts/quality_gate.py",

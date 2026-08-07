@@ -419,7 +419,11 @@ class AzureBlobWormContractTests(unittest.TestCase):
 
     def test_ci_compiles_s6b_bicep_with_pinned_toolchain(self) -> None:
         workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
-        self.assertIn("az bicep install --version v0.45.6", workflow)
+        self.assertRegex(
+            workflow,
+            r"az bicep uninstall\s*\n\s*"
+            r"az bicep install --version v0\.45\.6",
+        )
         self.assertIn(
             "az bicep build --file deploy/runtime/azure/immutable-evidence/main.bicep --stdout",
             workflow,

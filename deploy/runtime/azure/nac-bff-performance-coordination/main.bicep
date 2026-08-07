@@ -37,14 +37,20 @@ param bffStorageAccountResourceId string
 @description('Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID.')
 param wormStorageAccountResourceId string
 
-@description('Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route.')
-param brokerPrincipalId string
-
 @description('Object ID of the owner-gated application service principal allowed to call the fixed broker route. It receives no Storage DataAction.')
 param brokerCallerServicePrincipalId string
 
 @description('Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker.')
 param brokerFunctionAppResourceId string
+
+@description('Authoritative ARM resource ID of the dedicated Flex Consumption integration subnet.')
+param brokerFunctionIntegrationSubnetResourceId string
+
+@description('Authoritative ARM resource ID of the separate subnet reserved for private endpoints.')
+param brokerPrivateEndpointSubnetResourceId string
+
+@description('Authoritative ARM resource ID of the VNet containing both broker subnets.')
+param brokerVirtualNetworkResourceId string
 
 @description('SHA-256 of the exact deployed BFF Function package containing the broker implementation.')
 @minLength(64)
@@ -55,11 +61,6 @@ param brokerFunctionPackageSha256 string
 @minLength(64)
 @maxLength(64)
 param brokerTicketVerificationCertificateSha256 string
-
-@description('Exact public IPv4 addresses reported by the bound BFF Function App for broker egress. Local runner addresses are forbidden.')
-@minLength(1)
-@maxLength(32)
-param brokerOutboundIpAddresses array
 
 @description('Hash binding used as the only lease blob basename.')
 @minLength(64)
@@ -74,6 +75,9 @@ var leaseBlobPath = 'locks/${targetBindingSha256}.lock'
 var bffStorageAccountResourceIdSegments = split(bffStorageAccountResourceId, '/')
 var wormStorageAccountResourceIdSegments = split(wormStorageAccountResourceId, '/')
 var brokerFunctionAppResourceIdSegments = split(brokerFunctionAppResourceId, '/')
+var brokerFunctionIntegrationSubnetResourceIdSegments = split(brokerFunctionIntegrationSubnetResourceId, '/')
+var brokerPrivateEndpointSubnetResourceIdSegments = split(brokerPrivateEndpointSubnetResourceId, '/')
+var brokerVirtualNetworkResourceIdSegments = split(brokerVirtualNetworkResourceId, '/')
 var bffStorageAccountName = last(bffStorageAccountResourceIdSegments)
 var wormStorageAccountName = last(wormStorageAccountResourceIdSegments)
 var validatedDeploymentScope = tenant().tenantId == tenantId && subscription().subscriptionId == subscriptionId && resourceGroup().name == resourceGroupName && deploymentMode == 'Incremental'
@@ -100,6 +104,7 @@ var validatedStorageAccountName = !empty(validatedDeploymentScope) && toLower(co
   ? storageAccountName
   : fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.')
 var isolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
+var brokerNetworkSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedBrokerVirtualNetworkResourceId)
 var brokerLeaseDataRoleDefinitionGuid = guid(
   subscription().id,
   resourceGroup().id,
@@ -113,16 +118,28 @@ var blobWriteDataAction = 'Microsoft.Storage/storageAccounts/blobServices/contai
 // assigned only to the non-exportable Function managed identity. The local measurement runner
 // receives no Storage DataAction, token or certificate and can reach only the fixed broker API.
 var exactBrokerLeaseBlobCondition = '((!(ActionMatches{\'${blobReadDataAction}\'}) AND !(ActionMatches{\'${blobWriteDataAction}\'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals \'${containerName}\' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals \'${leaseBlobPath}\'))'
-var validatedBrokerFunctionAppResourceId = length(brokerFunctionAppResourceIdSegments) == 9 && empty(brokerFunctionAppResourceIdSegments[0]) && toLower(brokerFunctionAppResourceIdSegments[1]) == 'subscriptions' && brokerFunctionAppResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionAppResourceIdSegments[3]) == 'resourcegroups' && !empty(brokerFunctionAppResourceIdSegments[4]) && toLower(brokerFunctionAppResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionAppResourceIdSegments[6]) == 'microsoft.web' && toLower(brokerFunctionAppResourceIdSegments[7]) == 'sites' && !empty(brokerFunctionAppResourceIdSegments[8])
+var validatedBrokerFunctionAppResourceId = length(brokerFunctionAppResourceIdSegments) == 9 && empty(brokerFunctionAppResourceIdSegments[0]) && toLower(brokerFunctionAppResourceIdSegments[1]) == 'subscriptions' && brokerFunctionAppResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionAppResourceIdSegments[3]) == 'resourcegroups' && brokerFunctionAppResourceIdSegments[4] == resourceGroupName && toLower(brokerFunctionAppResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionAppResourceIdSegments[6]) == 'microsoft.web' && toLower(brokerFunctionAppResourceIdSegments[7]) == 'sites' && !empty(brokerFunctionAppResourceIdSegments[8])
   ? brokerFunctionAppResourceId
-  : fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.')
-var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && !empty(brokerPrincipalId) && !empty(brokerCallerServicePrincipalId) && toLower(brokerPrincipalId) != toLower(brokerCallerServicePrincipalId)
-  ? brokerPrincipalId
-  : fail('Distinct broker managed identity and owner-gated caller service principal are required.')
-var brokerIpRules = [for address in brokerOutboundIpAddresses: {
-  action: 'Allow'
-  value: address
-}]
+  : fail('Broker Function App resource ID is not authoritative in the owner-bound resource group.')
+var validatedBrokerVirtualNetworkResourceId = length(brokerVirtualNetworkResourceIdSegments) == 9 && empty(brokerVirtualNetworkResourceIdSegments[0]) && toLower(brokerVirtualNetworkResourceIdSegments[1]) == 'subscriptions' && brokerVirtualNetworkResourceIdSegments[2] == subscriptionId && toLower(brokerVirtualNetworkResourceIdSegments[3]) == 'resourcegroups' && brokerVirtualNetworkResourceIdSegments[4] == resourceGroupName && toLower(brokerVirtualNetworkResourceIdSegments[5]) == 'providers' && toLower(brokerVirtualNetworkResourceIdSegments[6]) == 'microsoft.network' && toLower(brokerVirtualNetworkResourceIdSegments[7]) == 'virtualnetworks' && !empty(brokerVirtualNetworkResourceIdSegments[8])
+  ? brokerVirtualNetworkResourceId
+  : fail('Broker VNet resource ID is not authoritative in the owner-bound resource group.')
+var validatedBrokerFunctionIntegrationSubnetResourceId = length(brokerFunctionIntegrationSubnetResourceIdSegments) == 11 && empty(brokerFunctionIntegrationSubnetResourceIdSegments[0]) && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[1]) == 'subscriptions' && brokerFunctionIntegrationSubnetResourceIdSegments[2] == subscriptionId && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[3]) == 'resourcegroups' && brokerFunctionIntegrationSubnetResourceIdSegments[4] == resourceGroupName && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[5]) == 'providers' && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[6]) == 'microsoft.network' && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[7]) == 'virtualnetworks' && !empty(brokerFunctionIntegrationSubnetResourceIdSegments[8]) && toLower(brokerFunctionIntegrationSubnetResourceIdSegments[9]) == 'subnets' && !empty(brokerFunctionIntegrationSubnetResourceIdSegments[10]) && toLower('${validatedBrokerVirtualNetworkResourceId}/subnets/${brokerFunctionIntegrationSubnetResourceIdSegments[10]}') == toLower(brokerFunctionIntegrationSubnetResourceId)
+  ? brokerFunctionIntegrationSubnetResourceId
+  : fail('Broker Function integration subnet is not authoritative in the owner-bound VNet.')
+var validatedBrokerPrivateEndpointSubnetResourceId = length(brokerPrivateEndpointSubnetResourceIdSegments) == 11 && empty(brokerPrivateEndpointSubnetResourceIdSegments[0]) && toLower(brokerPrivateEndpointSubnetResourceIdSegments[1]) == 'subscriptions' && brokerPrivateEndpointSubnetResourceIdSegments[2] == subscriptionId && toLower(brokerPrivateEndpointSubnetResourceIdSegments[3]) == 'resourcegroups' && brokerPrivateEndpointSubnetResourceIdSegments[4] == resourceGroupName && toLower(brokerPrivateEndpointSubnetResourceIdSegments[5]) == 'providers' && toLower(brokerPrivateEndpointSubnetResourceIdSegments[6]) == 'microsoft.network' && toLower(brokerPrivateEndpointSubnetResourceIdSegments[7]) == 'virtualnetworks' && !empty(brokerPrivateEndpointSubnetResourceIdSegments[8]) && toLower(brokerPrivateEndpointSubnetResourceIdSegments[9]) == 'subnets' && !empty(brokerPrivateEndpointSubnetResourceIdSegments[10]) && toLower('${validatedBrokerVirtualNetworkResourceId}/subnets/${brokerPrivateEndpointSubnetResourceIdSegments[10]}') == toLower(brokerPrivateEndpointSubnetResourceId) && toLower(brokerPrivateEndpointSubnetResourceId) != toLower(validatedBrokerFunctionIntegrationSubnetResourceId)
+  ? brokerPrivateEndpointSubnetResourceId
+  : fail('Broker private-endpoint subnet must be authoritative and separate from the Function integration subnet.')
+
+resource brokerFunctionApp 'Microsoft.Web/sites@2024-04-01' existing = {
+  name: brokerFunctionAppResourceIdSegments[8]
+}
+
+var validatedBrokerPrincipalId = !empty(validatedBrokerFunctionAppResourceId) && contains(brokerFunctionApp.identity.type, 'SystemAssigned') && !empty(brokerFunctionApp.identity.principalId) && !empty(brokerCallerServicePrincipalId) && toLower(brokerFunctionApp.identity.principalId) != toLower(brokerCallerServicePrincipalId)
+  ? brokerFunctionApp.identity.principalId
+  : fail('The bound broker Function requires a system-assigned identity distinct from the owner-gated caller service principal.')
+var privateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
+var privateEndpointName = 'pep-${validatedStorageAccountName}'
 // Keep this mandatory set aligned with effective_coordination_tags() in the
 // infrastructure safety verifier. union() prevents caller overrides.
 var mandatoryResourceTags = {
@@ -152,15 +169,71 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     defaultToOAuthAuthentication: true
     isHnsEnabled: false
     minimumTlsVersion: 'TLS1_2'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     supportsHttpsTrafficOnly: true
     networkAcls: {
       bypass: 'None'
       defaultAction: 'Deny'
-      ipRules: brokerIpRules
+      ipRules: []
       resourceAccessRules: []
       virtualNetworkRules: []
     }
+  }
+}
+
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: privateDnsZoneName
+  location: 'global'
+  tags: resourceTags
+}
+
+resource privateDnsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: privateDnsZone
+  name: 'link-nac-bff-${brokerNetworkSuffix}'
+  location: 'global'
+  tags: resourceTags
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: validatedBrokerVirtualNetworkResourceId
+    }
+  }
+}
+
+resource coordinationBlobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
+  name: privateEndpointName
+  location: location
+  tags: resourceTags
+  properties: {
+    subnet: {
+      id: validatedBrokerPrivateEndpointSubnetResourceId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'blob'
+        properties: {
+          groupIds: [
+            'blob'
+          ]
+          privateLinkServiceId: storageAccount.id
+        }
+      }
+    ]
+  }
+}
+
+resource coordinationBlobPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = {
+  parent: coordinationBlobPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'blob'
+        properties: {
+          privateDnsZoneId: privateDnsZone.id
+        }
+      }
+    ]
   }
 }
 
@@ -184,14 +257,14 @@ resource leaseContainer 'Microsoft.Storage/storageAccounts/blobServices/containe
   properties: {
     publicAccess: 'None'
     metadata: {
-      nac_schema_version: 'nac.azure-bff-performance-coordination/v1'
+      nac_schema_version: 'nac.azure-bff-performance-coordination/v3'
       data_classification: 'synthetic-only'
       lease_blob_path: leaseBlobPath
       lease_blob_type: 'BlockBlob'
       lease_blob_content_length: '0'
       lease_blob_bootstrap: 'broker-internal-put-if-absent-before-acquire'
       broker_authorization: 'non-exportable-managed-identity-read-write-no-delete'
-      azure_blob_write_authorization: 'broker-uami-write-includes-create-overwrite-lease-and-break'
+      azure_blob_write_authorization: 'broker-system-identity-write-includes-create-overwrite-lease-and-break'
       operation_restriction_boundary: 'owner-ticketed-fixed-function-route'
       local_runner_storage_authorization: 'none'
       brokerFunctionPackageSha256: brokerFunctionPackageSha256
@@ -224,7 +297,7 @@ resource brokerLeaseDataRole 'Microsoft.Authorization/roleDefinitions@2022-04-01
 }
 
 resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(leaseContainer.id, validatedBrokerPrincipalId, brokerLeaseDataRole.id, leaseBlobPath)
+  name: guid(leaseContainer.id, validatedBrokerFunctionAppResourceId, brokerLeaseDataRole.id, leaseBlobPath)
   scope: leaseContainer
   properties: {
     condition: exactBrokerLeaseBlobCondition
@@ -236,7 +309,7 @@ resource brokerLeaseBinding 'Microsoft.Authorization/roleAssignments@2022-04-01'
   }
 }
 
-output contractSchemaVersion string = 'nac.azure-bff-performance-coordination/v1'
+output contractSchemaVersion string = 'nac.azure-bff-performance-coordination/v3'
 output storageAccountName string = storageAccount.name
 output storageAccountResourceId string = storageAccount.id
 output effectiveTags object = resourceTags
@@ -256,6 +329,12 @@ output brokerLeaseRoleAssignmentId string = brokerLeaseBinding.id
 output brokerPrincipalIdBinding string = validatedBrokerPrincipalId
 output brokerCallerServicePrincipalIdBinding string = brokerCallerServicePrincipalId
 output brokerFunctionAppResourceIdBinding string = validatedBrokerFunctionAppResourceId
+output brokerVirtualNetworkResourceIdBinding string = validatedBrokerVirtualNetworkResourceId
+output brokerFunctionIntegrationSubnetResourceIdBinding string = validatedBrokerFunctionIntegrationSubnetResourceId
+output brokerPrivateEndpointSubnetResourceIdBinding string = validatedBrokerPrivateEndpointSubnetResourceId
+output coordinationBlobPrivateEndpointResourceId string = coordinationBlobPrivateEndpoint.id
+output coordinationBlobPrivateDnsZoneResourceId string = privateDnsZone.id
+output coordinationBlobPrivateDnsVirtualNetworkLinkResourceId string = privateDnsVirtualNetworkLink.id
 output brokerFunctionPackageSha256Binding string = brokerFunctionPackageSha256
 output brokerTicketVerificationCertificateSha256Binding string = brokerTicketVerificationCertificateSha256
 output exactBrokerLeaseBlobCondition string = exactBrokerLeaseBlobCondition
@@ -281,4 +360,4 @@ output operationRestrictionDefenseInDepth array = [
   'owner-ticketed-fixed-broker-api'
 ]
 output localRunnerStorageDataActions array = []
-output credentialBoundaryMode string = 'BFF_BROKER_UAMI_ONLY'
+output credentialBoundaryMode string = 'BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY'

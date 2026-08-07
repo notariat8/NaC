@@ -51,6 +51,9 @@ param tags object = {}
 
 var resourceToken = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var deploymentContainerName = 'function-releases'
+var virtualNetworkName = 'vnet-nac-bff-${environmentName}-${resourceToken}'
+var functionIntegrationSubnetName = 'snet-flex-integration'
+var privateEndpointSubnetName = 'snet-private-endpoints'
 var corsAllowedOrigins = [
   'https://funktion8.sharepoint.com'
   'https://teams.microsoft.com'
@@ -71,6 +74,51 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   name: 'id-nac-bff-${environmentName}-${resourceToken}'
   location: location
   tags: resourceTags
+}
+
+// Flex Consumption requires a dedicated subnet delegated to Microsoft.App/environments.
+// Private endpoints cannot share that subnet, so the VNet contains a second, isolated
+// subnet for data-plane private links used by owner-gated supporting infrastructure.
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+  name: virtualNetworkName
+  location: location
+  tags: resourceTags
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '10.42.0.0/24'
+      ]
+    }
+  }
+}
+
+resource functionIntegrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = {
+  parent: virtualNetwork
+  name: functionIntegrationSubnetName
+  properties: {
+    addressPrefix: '10.42.0.0/27'
+    delegations: [
+      {
+        name: 'flex-consumption'
+        properties: {
+          serviceName: 'Microsoft.App/environments'
+        }
+      }
+    ]
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+  }
+}
+
+resource privateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = {
+  parent: virtualNetwork
+  name: privateEndpointSubnetName
+  properties: {
+    addressPrefix: '10.42.0.32/27'
+    delegations: []
+    privateEndpointNetworkPolicies: 'Disabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+  }
 }
 
 // This low-cost baseline keeps Function host and deployment artifacts on the public
@@ -214,7 +262,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   tags: resourceTags
   kind: 'functionapp,linux'
   identity: {
-    type: 'UserAssigned'
+    type: 'SystemAssigned, UserAssigned'
     userAssignedIdentities: {
       '${managedIdentity.id}': {}
     }
@@ -224,6 +272,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     publicNetworkAccess: 'Enabled'
     serverFarmId: flexConsumptionPlan.id
+    virtualNetworkSubnetId: functionIntegrationSubnet.id
     siteConfig: {
       alwaysOn: false
       cors: {
@@ -288,6 +337,10 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
 
 output functionAppResourceId string = functionApp.id
 output functionAppHostName string = functionApp.properties.defaultHostName
+output functionAppSystemAssignedPrincipalId string = functionApp.identity.principalId
+output virtualNetworkResourceId string = virtualNetwork.id
+output functionIntegrationSubnetResourceId string = functionIntegrationSubnet.id
+output privateEndpointSubnetResourceId string = privateEndpointSubnet.id
 output managedIdentityResourceId string = managedIdentity.id
 output managedIdentityClientId string = managedIdentity.properties.clientId
 output managedIdentityPrincipalId string = managedIdentity.properties.principalId

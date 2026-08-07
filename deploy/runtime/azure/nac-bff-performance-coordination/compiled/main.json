@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "17455115071111927619"
+      "templateHash": "9835329599425180423"
     },
     "description": "Dedicated Azure Blob coordination boundary for one NaC BFF performance run."
   },
@@ -68,12 +68,6 @@
         "description": "Authoritative ARM resource ID of the existing WORM evidence storage account. The account name is derived from this ID."
       }
     },
-    "brokerPrincipalId": {
-      "type": "string",
-      "metadata": {
-        "description": "Object ID of the non-exportable BFF Function managed identity used only by the fixed lease-broker route."
-      }
-    },
     "brokerCallerServicePrincipalId": {
       "type": "string",
       "metadata": {
@@ -84,6 +78,24 @@
       "type": "string",
       "metadata": {
         "description": "Authoritative ARM resource ID of the BFF Function App hosting the fixed lease broker."
+      }
+    },
+    "brokerFunctionIntegrationSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Authoritative ARM resource ID of the dedicated Flex Consumption integration subnet."
+      }
+    },
+    "brokerPrivateEndpointSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Authoritative ARM resource ID of the separate subnet reserved for private endpoints."
+      }
+    },
+    "brokerVirtualNetworkResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Authoritative ARM resource ID of the VNet containing both broker subnets."
       }
     },
     "brokerFunctionPackageSha256": {
@@ -100,14 +112,6 @@
       "maxLength": 64,
       "metadata": {
         "description": "SHA-256 of the public certificate used by the broker to verify short-lived activation tickets."
-      }
-    },
-    "brokerOutboundIpAddresses": {
-      "type": "array",
-      "minLength": 1,
-      "maxLength": 32,
-      "metadata": {
-        "description": "Exact public IPv4 addresses reported by the bound BFF Function App for broker egress. Local runner addresses are forbidden."
       }
     },
     "targetBindingSha256": {
@@ -127,21 +131,14 @@
     }
   },
   "variables": {
-    "copy": [
-      {
-        "name": "brokerIpRules",
-        "count": "[length(parameters('brokerOutboundIpAddresses'))]",
-        "input": {
-          "action": "Allow",
-          "value": "[parameters('brokerOutboundIpAddresses')[copyIndex('brokerIpRules')]]"
-        }
-      }
-    ],
     "containerName": "nac-bff-performance-leases",
     "leaseBlobPath": "[format('locks/{0}.lock', parameters('targetBindingSha256'))]",
     "bffStorageAccountResourceIdSegments": "[split(parameters('bffStorageAccountResourceId'), '/')]",
     "wormStorageAccountResourceIdSegments": "[split(parameters('wormStorageAccountResourceId'), '/')]",
     "brokerFunctionAppResourceIdSegments": "[split(parameters('brokerFunctionAppResourceId'), '/')]",
+    "brokerFunctionIntegrationSubnetResourceIdSegments": "[split(parameters('brokerFunctionIntegrationSubnetResourceId'), '/')]",
+    "brokerPrivateEndpointSubnetResourceIdSegments": "[split(parameters('brokerPrivateEndpointSubnetResourceId'), '/')]",
+    "brokerVirtualNetworkResourceIdSegments": "[split(parameters('brokerVirtualNetworkResourceId'), '/')]",
     "bffStorageAccountName": "[last(variables('bffStorageAccountResourceIdSegments'))]",
     "wormStorageAccountName": "[last(variables('wormStorageAccountResourceIdSegments'))]",
     "validatedDeploymentScope": "[if(and(and(and(equals(tenant().tenantId, parameters('tenantId')), equals(subscription().subscriptionId, parameters('subscriptionId'))), equals(resourceGroup().name, parameters('resourceGroupName'))), equals(parameters('deploymentMode'), 'Incremental')), format('{0}/{1}/{2}', parameters('tenantId'), parameters('subscriptionId'), parameters('resourceGroupName')), fail('Performance coordination deployment scope does not match the owner-bound tenant, subscription, and resource group.'))]",
@@ -150,12 +147,17 @@
     "coordinationStorageAccountResourceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
     "validatedStorageAccountName": "[if(and(and(and(and(and(and(not(empty(variables('validatedDeploymentScope'))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedBffStorageAccountResourceId'))))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(variables('validatedBffStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('bffStorageAccountName'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('wormStorageAccountName'))))), not(equals(toLower(variables('bffStorageAccountName')), toLower(variables('wormStorageAccountName'))))), parameters('storageAccountName'), fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.'))]",
     "isolationSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedStorageAccountName'))]",
+    "brokerNetworkSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedBrokerVirtualNetworkResourceId'))]",
     "brokerLeaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-broker-read-write-v1')]",
     "blobReadDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
     "blobWriteDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
     "exactBrokerLeaseBlobCondition": "[format('((!(ActionMatches{{''{0}''}}) AND !(ActionMatches{{''{1}''}})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals ''{2}'' AND @Resource[Microsoft.Storage/storageAccounts/blobServices/containers/blobs:path] StringEquals ''{3}''))', variables('blobReadDataAction'), variables('blobWriteDataAction'), variables('containerName'), variables('leaseBlobPath'))]",
-    "validatedBrokerFunctionAppResourceId": "[if(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerFunctionAppResourceIdSegments')), 9), empty(variables('brokerFunctionAppResourceIdSegments')[0])), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerFunctionAppResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[3]), 'resourcegroups')), not(empty(variables('brokerFunctionAppResourceIdSegments')[4]))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[6]), 'microsoft.web')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[7]), 'sites')), not(empty(variables('brokerFunctionAppResourceIdSegments')[8]))), parameters('brokerFunctionAppResourceId'), fail('Broker Function App resource ID is not authoritative in the owner-bound subscription.'))]",
-    "validatedBrokerPrincipalId": "[if(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), not(empty(parameters('brokerPrincipalId')))), not(empty(parameters('brokerCallerServicePrincipalId')))), not(equals(toLower(parameters('brokerPrincipalId')), toLower(parameters('brokerCallerServicePrincipalId'))))), parameters('brokerPrincipalId'), fail('Distinct broker managed identity and owner-gated caller service principal are required.'))]",
+    "validatedBrokerFunctionAppResourceId": "[if(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerFunctionAppResourceIdSegments')), 9), empty(variables('brokerFunctionAppResourceIdSegments')[0])), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerFunctionAppResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[3]), 'resourcegroups')), equals(variables('brokerFunctionAppResourceIdSegments')[4], parameters('resourceGroupName'))), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[6]), 'microsoft.web')), equals(toLower(variables('brokerFunctionAppResourceIdSegments')[7]), 'sites')), not(empty(variables('brokerFunctionAppResourceIdSegments')[8]))), parameters('brokerFunctionAppResourceId'), fail('Broker Function App resource ID is not authoritative in the owner-bound resource group.'))]",
+    "validatedBrokerVirtualNetworkResourceId": "[if(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerVirtualNetworkResourceIdSegments')), 9), empty(variables('brokerVirtualNetworkResourceIdSegments')[0])), equals(toLower(variables('brokerVirtualNetworkResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerVirtualNetworkResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerVirtualNetworkResourceIdSegments')[3]), 'resourcegroups')), equals(variables('brokerVirtualNetworkResourceIdSegments')[4], parameters('resourceGroupName'))), equals(toLower(variables('brokerVirtualNetworkResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerVirtualNetworkResourceIdSegments')[6]), 'microsoft.network')), equals(toLower(variables('brokerVirtualNetworkResourceIdSegments')[7]), 'virtualnetworks')), not(empty(variables('brokerVirtualNetworkResourceIdSegments')[8]))), parameters('brokerVirtualNetworkResourceId'), fail('Broker VNet resource ID is not authoritative in the owner-bound resource group.'))]",
+    "validatedBrokerFunctionIntegrationSubnetResourceId": "[if(and(and(and(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerFunctionIntegrationSubnetResourceIdSegments')), 11), empty(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[0])), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[3]), 'resourcegroups')), equals(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[4], parameters('resourceGroupName'))), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[6]), 'microsoft.network')), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[7]), 'virtualnetworks')), not(empty(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[8]))), equals(toLower(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[9]), 'subnets')), not(empty(variables('brokerFunctionIntegrationSubnetResourceIdSegments')[10]))), equals(toLower(format('{0}/subnets/{1}', variables('validatedBrokerVirtualNetworkResourceId'), variables('brokerFunctionIntegrationSubnetResourceIdSegments')[10])), toLower(parameters('brokerFunctionIntegrationSubnetResourceId')))), parameters('brokerFunctionIntegrationSubnetResourceId'), fail('Broker Function integration subnet is not authoritative in the owner-bound VNet.'))]",
+    "validatedBrokerPrivateEndpointSubnetResourceId": "[if(and(and(and(and(and(and(and(and(and(and(and(and(and(equals(length(variables('brokerPrivateEndpointSubnetResourceIdSegments')), 11), empty(variables('brokerPrivateEndpointSubnetResourceIdSegments')[0])), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[1]), 'subscriptions')), equals(variables('brokerPrivateEndpointSubnetResourceIdSegments')[2], parameters('subscriptionId'))), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[3]), 'resourcegroups')), equals(variables('brokerPrivateEndpointSubnetResourceIdSegments')[4], parameters('resourceGroupName'))), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[5]), 'providers')), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[6]), 'microsoft.network')), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[7]), 'virtualnetworks')), not(empty(variables('brokerPrivateEndpointSubnetResourceIdSegments')[8]))), equals(toLower(variables('brokerPrivateEndpointSubnetResourceIdSegments')[9]), 'subnets')), not(empty(variables('brokerPrivateEndpointSubnetResourceIdSegments')[10]))), equals(toLower(format('{0}/subnets/{1}', variables('validatedBrokerVirtualNetworkResourceId'), variables('brokerPrivateEndpointSubnetResourceIdSegments')[10])), toLower(parameters('brokerPrivateEndpointSubnetResourceId')))), not(equals(toLower(parameters('brokerPrivateEndpointSubnetResourceId')), toLower(variables('validatedBrokerFunctionIntegrationSubnetResourceId'))))), parameters('brokerPrivateEndpointSubnetResourceId'), fail('Broker private-endpoint subnet must be authoritative and separate from the Function integration subnet.'))]",
+    "privateDnsZoneName": "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
+    "privateEndpointName": "[format('pep-{0}', variables('validatedStorageAccountName'))]",
     "mandatoryResourceTags": {
       "blobPrecreation": "owner-gated-before-runtime",
       "dataClassification": "synthetic-only",
@@ -186,16 +188,84 @@
         "defaultToOAuthAuthentication": true,
         "isHnsEnabled": false,
         "minimumTlsVersion": "TLS1_2",
-        "publicNetworkAccess": "Enabled",
+        "publicNetworkAccess": "Disabled",
         "supportsHttpsTrafficOnly": true,
         "networkAcls": {
           "bypass": "None",
           "defaultAction": "Deny",
-          "ipRules": "[variables('brokerIpRules')]",
+          "ipRules": [],
           "resourceAccessRules": [],
           "virtualNetworkRules": []
         }
       }
+    },
+    {
+      "type": "Microsoft.Network/privateDnsZones",
+      "apiVersion": "2024-06-01",
+      "name": "[variables('privateDnsZoneName')]",
+      "location": "global",
+      "tags": "[variables('resourceTags')]"
+    },
+    {
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "apiVersion": "2024-06-01",
+      "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('brokerNetworkSuffix')))]",
+      "location": "global",
+      "tags": "[variables('resourceTags')]",
+      "properties": {
+        "registrationEnabled": false,
+        "virtualNetwork": {
+          "id": "[variables('validatedBrokerVirtualNetworkResourceId')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('privateEndpointName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('resourceTags')]",
+      "properties": {
+        "subnet": {
+          "id": "[variables('validatedBrokerPrivateEndpointSubnetResourceId')]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "blob",
+            "properties": {
+              "groupIds": [
+                "blob"
+              ],
+              "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('validatedStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2024-05-01",
+      "name": "[format('{0}/{1}', variables('privateEndpointName'), 'default')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "blob",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]",
+        "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+      ]
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices",
@@ -221,14 +291,14 @@
       "properties": {
         "publicAccess": "None",
         "metadata": {
-          "nac_schema_version": "nac.azure-bff-performance-coordination/v1",
+          "nac_schema_version": "nac.azure-bff-performance-coordination/v3",
           "data_classification": "synthetic-only",
           "lease_blob_path": "[variables('leaseBlobPath')]",
           "lease_blob_type": "BlockBlob",
           "lease_blob_content_length": "0",
           "lease_blob_bootstrap": "broker-internal-put-if-absent-before-acquire",
           "broker_authorization": "non-exportable-managed-identity-read-write-no-delete",
-          "azure_blob_write_authorization": "broker-uami-write-includes-create-overwrite-lease-and-break",
+          "azure_blob_write_authorization": "broker-system-identity-write-includes-create-overwrite-lease-and-break",
           "operation_restriction_boundary": "owner-ticketed-fixed-function-route",
           "local_runner_storage_authorization": "none",
           "brokerFunctionPackageSha256": "[parameters('brokerFunctionPackageSha256')]",
@@ -267,12 +337,12 @@
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName'))]",
-      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerFunctionAppResourceId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath'))]",
       "properties": {
         "condition": "[variables('exactBrokerLeaseBlobCondition')]",
         "conditionVersion": "2.0",
         "description": "Non-exportable BFF lease-broker managed identity scoped to the exact performance lease blob path.",
-        "principalId": "[variables('validatedBrokerPrincipalId')]",
+        "principalId": "[if(and(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), contains(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.type, 'SystemAssigned')), not(empty(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId))), not(empty(parameters('brokerCallerServicePrincipalId')))), not(equals(toLower(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId), toLower(parameters('brokerCallerServicePrincipalId'))))), reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId, fail('The bound broker Function requires a system-assigned identity distinct from the owner-gated caller service principal.'))]",
         "principalType": "ServicePrincipal",
         "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid'))]"
       },
@@ -285,7 +355,7 @@
   "outputs": {
     "contractSchemaVersion": {
       "type": "string",
-      "value": "nac.azure-bff-performance-coordination/v1"
+      "value": "nac.azure-bff-performance-coordination/v3"
     },
     "storageAccountName": {
       "type": "string",
@@ -349,11 +419,11 @@
     },
     "brokerLeaseRoleAssignmentId": {
       "type": "string",
-      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerPrincipalId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
+      "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('validatedStorageAccountName'), 'default', variables('containerName')), variables('validatedBrokerFunctionAppResourceId'), resourceId('Microsoft.Authorization/roleDefinitions', variables('brokerLeaseDataRoleDefinitionGuid')), variables('leaseBlobPath')))]"
     },
     "brokerPrincipalIdBinding": {
       "type": "string",
-      "value": "[variables('validatedBrokerPrincipalId')]"
+      "value": "[if(and(and(and(and(not(empty(variables('validatedBrokerFunctionAppResourceId'))), contains(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.type, 'SystemAssigned')), not(empty(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId))), not(empty(parameters('brokerCallerServicePrincipalId')))), not(equals(toLower(reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId), toLower(parameters('brokerCallerServicePrincipalId'))))), reference(resourceId('Microsoft.Web/sites', variables('brokerFunctionAppResourceIdSegments')[8]), '2024-04-01', 'full').identity.principalId, fail('The bound broker Function requires a system-assigned identity distinct from the owner-gated caller service principal.'))]"
     },
     "brokerCallerServicePrincipalIdBinding": {
       "type": "string",
@@ -362,6 +432,30 @@
     "brokerFunctionAppResourceIdBinding": {
       "type": "string",
       "value": "[variables('validatedBrokerFunctionAppResourceId')]"
+    },
+    "brokerVirtualNetworkResourceIdBinding": {
+      "type": "string",
+      "value": "[variables('validatedBrokerVirtualNetworkResourceId')]"
+    },
+    "brokerFunctionIntegrationSubnetResourceIdBinding": {
+      "type": "string",
+      "value": "[variables('validatedBrokerFunctionIntegrationSubnetResourceId')]"
+    },
+    "brokerPrivateEndpointSubnetResourceIdBinding": {
+      "type": "string",
+      "value": "[variables('validatedBrokerPrivateEndpointSubnetResourceId')]"
+    },
+    "coordinationBlobPrivateEndpointResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+    },
+    "coordinationBlobPrivateDnsZoneResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+    },
+    "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('brokerNetworkSuffix')))]"
     },
     "brokerFunctionPackageSha256Binding": {
       "type": "string",
@@ -423,7 +517,7 @@
     },
     "credentialBoundaryMode": {
       "type": "string",
-      "value": "BFF_BROKER_UAMI_ONLY"
+      "value": "BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY"
     }
   }
 }
