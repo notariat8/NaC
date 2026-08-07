@@ -13,6 +13,10 @@ from nac_bff.azure_activation import FUNCTION_APP, RESOURCE_GROUP, SUBSCRIPTION_
 from nac_bff.azure_interruption_baseline import (
     DEPLOYMENT_NAME,
     EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+    EXPECTED_TEMPLATE_OUTPUTS,
+    LEGACY_AZURE_TEMPLATE_HASH,
+    LEGACY_DEPLOYMENT_TYPE_COUNTS,
+    LEGACY_TEMPLATE_OUTPUTS,
     RESOURCE_TAGS,
     exact_baseline_matches,
     load_expectation,
@@ -26,6 +30,7 @@ RESOURCE_SUFFIX = "43o765p7uslni"
 CLIENT_ID = "11111111-1111-4111-8111-111111111111"
 PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222"
 SYSTEM_PRINCIPAL_ID = "33333333-3333-4333-8333-333333333333"
+CURRENT_AZURE_TEMPLATE_HASH = "8487493885361062053"
 
 
 def _write_secure_json(path: Path, value: object) -> bytes:
@@ -42,9 +47,16 @@ def _prepared(
     activation_hash: str = ACTIVATION_HASH,
     commit: str = COMMIT,
     tree: str = TREE,
+    legacy: bool = False,
 ) -> dict:
+    deployment_type_counts = (
+        LEGACY_DEPLOYMENT_TYPE_COUNTS
+        if legacy
+        else EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    )
+    output_names = LEGACY_TEMPLATE_OUTPUTS if legacy else EXPECTED_TEMPLATE_OUTPUTS
     resources = []
-    for resource_type, count in EXPECTED_DEPLOYMENT_TYPE_COUNTS.items():
+    for resource_type, count in deployment_type_counts.items():
         for index in range(count):
             resources.append({
                 "type": resource_type,
@@ -52,8 +64,16 @@ def _prepared(
                 "dependsOn": [],
             })
     template = {
-        "metadata": {"_generator": {"templateHash": "13643045116711268849"}},
+        "metadata": {"_generator": {"templateHash": (
+            LEGACY_AZURE_TEMPLATE_HASH
+            if legacy
+            else CURRENT_AZURE_TEMPLATE_HASH
+        )}},
         "resources": resources,
+        "outputs": {
+            name: {"type": "string", "value": f"[{name}]"}
+            for name in output_names
+        },
     }
     parameters = {
         "parameters": {
@@ -223,7 +243,12 @@ def _deployment(expectation: dict) -> dict:
         "resource_group": RESOURCE_GROUP,
         "provisioning_state": "Succeeded",
         "mode": "Incremental",
-        "template_hash": expectation["azure_template_hash"],
+        "template_hash": (
+            expectation["azure_template_hash"]
+            if expectation["deployment_type_counts"]
+            == LEGACY_DEPLOYMENT_TYPE_COUNTS
+            else LEGACY_AZURE_TEMPLATE_HASH
+        ),
         "parameters_sha256": expectation["deployment_parameters_sha256"],
         "bff_api_audience": expectation["bff_api_audience"],
         "outputs": {
@@ -389,7 +414,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertIsNone(expectation)
 
-    def test_expectation_is_bound_to_manifest_template_parameters_and_graph(self):
+    def test_current_expectation_reconciles_exact_legacy_predecessor(self):
         from nac_bff.azure_activation_composition import (
             _deployment_name,
             _sha256_json as activation_sha256_json,
@@ -430,11 +455,50 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
             expectation["deployment_type_counts"],
             EXPECTED_DEPLOYMENT_TYPE_COUNTS,
         )
+        self.assertEqual(sum(expectation["deployment_type_counts"].values()), 15)
+        self.assertEqual(expectation["azure_template_hash"], CURRENT_AZURE_TEMPLATE_HASH)
+        deployment = _deployment(expectation)
+        self.assertEqual(deployment["template_hash"], LEGACY_AZURE_TEMPLATE_HASH)
+        self.assertEqual(deployment["mode"], "Incremental")
+        self.assertEqual(set(deployment["outputs"]), {
+            "function_app_resource_id",
+            "function_app_host_name",
+            "function_app_system_assigned_principal_id",
+            "managed_identity_resource_id",
+            "managed_identity_client_id",
+            "managed_identity_principal_id",
+        })
         from nac_bff.azure_activation_runner import _sha256_json
         from nac_bff.azure_interruption_contract import newline_sha256_json
 
         self.assertEqual(
             newline_sha256_json(expectation), _sha256_json(expectation)
+        )
+        self.assertTrue(
+            exact_baseline_matches(
+                _inventory(),
+                deployment,
+                _operations(),
+                _identity_binding(),
+                _live_resource_state(),
+                expectation,
+            )
+        )
+
+    def test_historical_legacy_prepared_run_remains_reconcilable(self):
+        _prepared(self.run_dir, legacy=True)
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+
+        self.assertIsNone(error)
+        assert expectation is not None
+        self.assertEqual(
+            expectation["deployment_type_counts"],
+            LEGACY_DEPLOYMENT_TYPE_COUNTS,
+        )
+        self.assertEqual(
+            expectation["azure_template_hash"], LEGACY_AZURE_TEMPLATE_HASH
         )
         self.assertTrue(
             exact_baseline_matches(
@@ -446,6 +510,71 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
                 expectation,
             )
         )
+
+    def test_current_deployment_cannot_be_projected_as_legacy_observation(self):
+        _prepared(self.run_dir)
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+        self.assertIsNone(error)
+        assert expectation is not None
+        deployment = _deployment(expectation)
+        deployment["template_hash"] = expectation["azure_template_hash"]
+
+        self.assertFalse(
+            exact_baseline_matches(
+                _inventory(),
+                deployment,
+                _operations(),
+                _identity_binding(),
+                _live_resource_state(),
+                expectation,
+            )
+        )
+
+    def test_prepared_template_output_set_must_match_baseline_generation(self):
+        _prepared(self.run_dir)
+        prepared = self.run_dir / "prepared"
+        template_path = prepared / "main.json"
+        tree_template_path = (
+            prepared
+            / "approved-tree"
+            / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+        )
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+        template["outputs"].pop("privateEndpointSubnetResourceId")
+        template_path.chmod(0o600)
+        tree_template_path.chmod(0o600)
+        template_raw = _write_secure_json(template_path, template)
+        template_path.chmod(0o400)
+        _write_secure_json(tree_template_path, template)
+        tree_template_path.chmod(0o400)
+        manifest_path = prepared / "prepared-inputs.redacted.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["bicep_snapshot_sha256"] = hashlib.sha256(
+            template_raw
+        ).hexdigest()
+        manifest_base = {
+            key: value
+            for key, value in manifest.items()
+            if key != "prepared_inputs_sha256"
+        }
+        manifest["prepared_inputs_sha256"] = hashlib.sha256(
+            json.dumps(
+                manifest_base,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        _write_secure_json(manifest_path, manifest)
+
+        expectation, error = _load_expectation(
+            self.run_dir, self.state, self.request
+        )
+
+        self.assertIsNone(expectation)
+        self.assertEqual(error, "INTERRUPTION_BASELINE_BINDING_INVALID")
 
     def test_api_audience_must_differ_from_managed_identity_client_id(self):
         _prepared(self.run_dir)
@@ -584,6 +713,12 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         deployment["template_hash"] = "1"
         cases.append((
             _inventory(), deployment, _operations(), _identity_binding()
+        ))
+        complete_deployment = _deployment(expectation)
+        complete_deployment["mode"] = "Complete"
+        cases.append((
+            _inventory(), complete_deployment, _operations(),
+            _identity_binding(),
         ))
         operations = _operations()
         operations[0]["provisioning_state"] = "Running"

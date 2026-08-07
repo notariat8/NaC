@@ -98,7 +98,8 @@ EXPECTED_TOP_LEVEL_TYPES = {
     "microsoft.web/sites",
     "microsoft.insights/actiongroups",
 }
-EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
+LEGACY_AZURE_TEMPLATE_HASH = "16486527106386001034"
+LEGACY_DEPLOYMENT_TYPE_COUNTS = {
     "microsoft.authorization/roleassignments": 2,
     "microsoft.insights/components": 1,
     "microsoft.insights/components/currentbillingfeatures": 1,
@@ -110,6 +111,40 @@ EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
     "microsoft.web/serverfarms": 1,
     "microsoft.web/sites": 1,
     "microsoft.web/sites/config": 1,
+}
+EXPECTED_DEPLOYMENT_TYPE_COUNTS = {
+    "microsoft.authorization/roleassignments": 2,
+    "microsoft.insights/components": 1,
+    "microsoft.insights/components/currentbillingfeatures": 1,
+    "microsoft.managedidentity/userassignedidentities": 1,
+    "microsoft.network/virtualnetworks": 1,
+    "microsoft.network/virtualnetworks/subnets": 2,
+    "microsoft.operationalinsights/workspaces": 1,
+    "microsoft.storage/storageaccounts": 1,
+    "microsoft.storage/storageaccounts/blobservices": 1,
+    "microsoft.storage/storageaccounts/blobservices/containers": 1,
+    "microsoft.web/serverfarms": 1,
+    "microsoft.web/sites": 1,
+    "microsoft.web/sites/config": 1,
+}
+LEGACY_TEMPLATE_OUTPUTS = {
+    "functionAppHostName",
+    "functionAppResourceId",
+    "functionAppSystemAssignedPrincipalId",
+    "managedIdentityClientId",
+    "managedIdentityPrincipalId",
+    "managedIdentityResourceId",
+}
+EXPECTED_TEMPLATE_OUTPUTS = {
+    "functionAppHostName",
+    "functionAppResourceId",
+    "functionAppSystemAssignedPrincipalId",
+    "functionIntegrationSubnetResourceId",
+    "managedIdentityClientId",
+    "managedIdentityPrincipalId",
+    "managedIdentityResourceId",
+    "privateEndpointSubnetResourceId",
+    "virtualNetworkResourceId",
 }
 EXPECTATION_KEYS = {
     "schema_version",
@@ -317,12 +352,17 @@ def load_expectation(
     generator = metadata.get("_generator") if isinstance(metadata, dict) else None
     template_hash = generator.get("templateHash") if isinstance(generator, dict) else None
     resources = template.get("resources") if isinstance(template, dict) else None
+    outputs = template.get("outputs") if isinstance(template, dict) else None
     parameter_values = parameters.get("parameters") if isinstance(parameters, dict) else None
     if (
         not isinstance(template_hash, str)
         or not template_hash.isdigit()
         or not isinstance(resources, list)
-        or len(resources) != 12
+        or len(resources) not in {
+            sum(LEGACY_DEPLOYMENT_TYPE_COUNTS.values()),
+            sum(EXPECTED_DEPLOYMENT_TYPE_COUNTS.values()),
+        }
+        or not isinstance(outputs, dict)
         or not isinstance(parameter_values, dict)
     ):
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
@@ -338,6 +378,14 @@ def load_expectation(
     expected_parameter_keys = set(EXPECTED_PARAMETER_VALUES) | {
         "bffApiAudience"
     }
+    sorted_type_counts = dict(sorted(type_counts.items()))
+    expected_outputs = (
+        LEGACY_TEMPLATE_OUTPUTS
+        if sorted_type_counts == LEGACY_DEPLOYMENT_TYPE_COUNTS
+        else EXPECTED_TEMPLATE_OUTPUTS
+        if sorted_type_counts == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+        else None
+    )
     if (
         set(canonical_parameters) != expected_parameter_keys
         or not _UUID_RE.fullmatch(
@@ -347,7 +395,8 @@ def load_expectation(
             canonical_parameters.get(key) != {"value": value}
             for key, value in EXPECTED_PARAMETER_VALUES.items()
         )
-        or dict(sorted(type_counts.items())) != EXPECTED_DEPLOYMENT_TYPE_COUNTS
+        or expected_outputs is None
+        or not _template_outputs_match(outputs, expected_outputs)
     ):
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
     expectation = {
@@ -370,7 +419,7 @@ def load_expectation(
         "bff_api_audience": str(
             canonical_parameters["bffApiAudience"]["value"]
         ).lower(),
-        "deployment_type_counts": dict(sorted(type_counts.items())),
+        "deployment_type_counts": sorted_type_counts,
     }
     if set(expectation) != EXPECTATION_KEYS:
         return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
@@ -385,9 +434,16 @@ def exact_baseline_matches(
     live_resource_state: object,
     expectation: dict[str, Any],
 ) -> bool:
-    if not _deployment_matches(deployment, expectation):
+    observed_type_counts = _observed_type_counts(expectation)
+    if (
+        observed_type_counts is None
+        or not _deployment_matches(deployment, expectation)
+    ):
         return False
-    if not isinstance(operations, list) or len(operations) != 12:
+    if (
+        not isinstance(operations, list)
+        or len(operations) != sum(observed_type_counts.values())
+    ):
         return False
     operation_counts = Counter()
     operation_ids: set[str] = set()
@@ -409,13 +465,13 @@ def exact_baseline_matches(
     if (
         graph_targets is None
         or dict(sorted(operation_counts.items()))
-        != expectation["deployment_type_counts"]
+        != observed_type_counts
         or not _operation_targets_match(operations, inventory)
         or live_resource_state != {
             "schema_version": (
                 "nac.azure-interruption-live-resource-state/v1"
             ),
-            "resource_count": 12,
+            "resource_count": sum(observed_type_counts.values()),
             "resource_targets_sha256": compact_sha256_json(sorted(
                 (
                     {"id": item["id"].lower(), "type": item["type"]}
@@ -432,6 +488,35 @@ def exact_baseline_matches(
     ):
         return False
     return _inventory_matches(inventory, deployment, identity_binding)
+
+
+def _template_outputs_match(
+    outputs: dict[str, Any], expected_names: set[str]
+) -> bool:
+    return bool(
+        set(outputs) == expected_names
+        and all(
+            isinstance(wrapper, dict)
+            and set(wrapper) == {"type", "value"}
+            and wrapper.get("type") == "string"
+            and isinstance(wrapper.get("value"), str)
+            for wrapper in outputs.values()
+        )
+    )
+
+
+def _observed_type_counts(
+    expectation: dict[str, Any],
+) -> dict[str, int] | None:
+    desired_type_counts = expectation.get("deployment_type_counts")
+    if desired_type_counts in (
+        LEGACY_DEPLOYMENT_TYPE_COUNTS,
+        EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+    ):
+        return LEGACY_DEPLOYMENT_TYPE_COUNTS
+    return None
+
+
 def _operation_targets_match(
     operations: list[dict[str, Any]], inventory: object
 ) -> bool:
@@ -508,12 +593,22 @@ def _deployment_matches(deployment: object, expectation: dict[str, Any]) -> bool
         "outputs",
     }:
         return False
+    desired_type_counts = expectation.get("deployment_type_counts")
+    if desired_type_counts == LEGACY_DEPLOYMENT_TYPE_COUNTS:
+        observed_template_hash = expectation.get("azure_template_hash")
+    elif (
+        desired_type_counts == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+        and expectation.get("azure_template_hash") != LEGACY_AZURE_TEMPLATE_HASH
+    ):
+        observed_template_hash = LEGACY_AZURE_TEMPLATE_HASH
+    else:
+        return False
     return bool(
         deployment.get("name") == expectation["deployment_name"]
         and deployment.get("resource_group") == RESOURCE_GROUP
         and deployment.get("provisioning_state") == "Succeeded"
         and deployment.get("mode") == "Incremental"
-        and deployment.get("template_hash") == expectation["azure_template_hash"]
+        and deployment.get("template_hash") == observed_template_hash
         and deployment.get("parameters_sha256")
         == expectation["deployment_parameters_sha256"]
         and deployment.get("bff_api_audience")

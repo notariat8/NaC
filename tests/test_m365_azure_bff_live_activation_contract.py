@@ -1078,6 +1078,7 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.DOMAIN_PATH,
             validator.VERIFICATION_PATH,
             validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
+            validator.INTERRUPTION_BASELINE_TEMPLATE_PATH,
         ):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)

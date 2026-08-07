@@ -798,6 +798,9 @@ class _CoordinationResources:
     lease_container_resource_id: str
     broker_lease_data_role_definition_id: str
     broker_lease_role_assignment_id: str
+    coordination_blob_private_endpoint_resource_id: str
+    coordination_blob_private_dns_zone_resource_id: str
+    coordination_blob_private_dns_vnet_link_resource_id: str
 
 
 def _prepare_performance_infrastructure(
@@ -877,6 +880,15 @@ def _coordination_resource_bindings(coordination: Any) -> dict[str, str]:
         "broker_lease_role_assignment_id": (
             coordination.broker_lease_role_assignment_id
         ),
+        "coordination_blob_private_endpoint_resource_id": (
+            coordination.coordination_blob_private_endpoint_resource_id
+        ),
+        "coordination_blob_private_dns_zone_resource_id": (
+            coordination.coordination_blob_private_dns_zone_resource_id
+        ),
+        "coordination_blob_private_dns_vnet_link_resource_id": (
+            coordination.coordination_blob_private_dns_vnet_link_resource_id
+        ),
     }
 
 
@@ -916,6 +928,13 @@ def _infrastructure_verification_arguments(
         blob_service_id=blob_service_id,
         container_id=coordination.lease_container_resource_id,
     )
+    broker_function_app_readback = readback.execute_read(
+        observation_kind="coordination-broker-function-app",
+        resource_id=parameters["brokerFunctionAppResourceId"],
+    )
+    runtime_uami_principal_id = _single_function_uami_principal_id(
+        broker_function_app_readback
+    )
     broker_effective_rbac = readback.read_effective_rbac(
         principal_id=coordination.broker_principal_id,
         target_resource_id=coordination.lease_container_resource_id,
@@ -923,6 +942,11 @@ def _infrastructure_verification_arguments(
     )
     broker_caller_effective_rbac = readback.read_effective_rbac(
         principal_id=str(parameters["brokerCallerServicePrincipalId"]),
+        target_resource_id=coordination.lease_container_resource_id,
+        ancestor_scopes=ancestor_scopes,
+    )
+    runtime_uami_effective_rbac = readback.read_effective_rbac(
+        principal_id=runtime_uami_principal_id,
         target_resource_id=coordination.lease_container_resource_id,
         ancestor_scopes=ancestor_scopes,
     )
@@ -965,6 +989,24 @@ def _infrastructure_verification_arguments(
         "broker_function_app_resource_id": parameters[
             "brokerFunctionAppResourceId"
         ],
+        "broker_virtual_network_resource_id": parameters[
+            "brokerVirtualNetworkResourceId"
+        ],
+        "broker_function_integration_subnet_resource_id": parameters[
+            "brokerFunctionIntegrationSubnetResourceId"
+        ],
+        "broker_private_endpoint_subnet_resource_id": parameters[
+            "brokerPrivateEndpointSubnetResourceId"
+        ],
+        "coordination_blob_private_endpoint_resource_id": (
+            coordination.coordination_blob_private_endpoint_resource_id
+        ),
+        "coordination_blob_private_dns_zone_resource_id": (
+            coordination.coordination_blob_private_dns_zone_resource_id
+        ),
+        "coordination_blob_private_dns_vnet_link_resource_id": (
+            coordination.coordination_blob_private_dns_vnet_link_resource_id
+        ),
         "broker_function_package_sha256": parameters[
             "brokerFunctionPackageSha256"
         ],
@@ -980,9 +1022,23 @@ def _infrastructure_verification_arguments(
             observation_kind="coordination-broker-role-assignment",
             resource_id=coordination.broker_lease_role_assignment_id,
         ),
-        "broker_function_app_readback_envelope": readback.execute_read(
-            observation_kind="coordination-broker-function-app",
-            resource_id=parameters["brokerFunctionAppResourceId"],
+        "broker_function_app_readback_envelope": broker_function_app_readback,
+        "coordination_blob_private_endpoint_readback_envelope": readback.execute_read(
+            observation_kind="coordination-blob-private-endpoint",
+            resource_id=coordination.coordination_blob_private_endpoint_resource_id,
+        ),
+        "coordination_blob_private_dns_zone_group_readback_envelope": readback.execute_read(
+            observation_kind="coordination-blob-private-dns-zone-group",
+            resource_id=(
+                f"{coordination.coordination_blob_private_endpoint_resource_id}"
+                "/privateDnsZoneGroups/default"
+            ),
+        ),
+        "coordination_blob_private_dns_vnet_link_readback_envelope": readback.execute_read(
+            observation_kind="coordination-blob-private-dns-vnet-link",
+            resource_id=(
+                coordination.coordination_blob_private_dns_vnet_link_resource_id
+            ),
         ),
         "subscription_ancestry_readback_envelope": ancestry,
         "broker_effective_rbac_readback_envelope": (
@@ -991,12 +1047,34 @@ def _infrastructure_verification_arguments(
         "broker_caller_effective_rbac_readback_envelope": (
             broker_caller_effective_rbac
         ),
+        "runtime_uami_effective_rbac_readback_envelope": (
+            runtime_uami_effective_rbac
+        ),
         "tenant_id": parameters["tenantId"],
         "subscription_id": parameters["subscriptionId"],
         "resource_group_name": parameters["resourceGroupName"],
         "location": parameters["location"],
         "tags": parameters["tags"],
     }
+
+
+def _single_function_uami_principal_id(function_app_readback: Any) -> str:
+    payload = (
+        function_app_readback.get("payload")
+        if hasattr(function_app_readback, "get")
+        else None
+    )
+    principal_ids = (
+        payload.get("user_assigned_principal_ids")
+        if isinstance(payload, dict)
+        else None
+    )
+    if not isinstance(principal_ids, list) or len(principal_ids) != 1:
+        raise ValueError("PERFORMANCE_FUNCTION_UAMI_READBACK_INVALID")
+    try:
+        return str(UUID(principal_ids[0]))
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError("PERFORMANCE_FUNCTION_UAMI_READBACK_INVALID") from None
 
 
 def _effective_ancestor_scopes(

@@ -64,6 +64,20 @@ def _parameters() -> dict[str, object]:
             f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
             "providers/Microsoft.Web/sites/func-nac-bff-test-funktion8"
         ),
+        "brokerVirtualNetworkResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test"
+        ),
+        "brokerFunctionIntegrationSubnetResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test/"
+            "subnets/snet-flex-integration"
+        ),
+        "brokerPrivateEndpointSubnetResourceId": (
+            f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}/"
+            "providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test/"
+            "subnets/snet-private-endpoints"
+        ),
         "brokerFunctionPackageSha256": "e" * 64,
         "brokerTicketVerificationCertificateSha256": TOOLCHAIN[
             "provisioner_certificate_sha256"

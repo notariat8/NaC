@@ -81,6 +81,21 @@ ROLE_ASSIGNMENT_ID = (
     f"{CONTAINER_ID}/providers/Microsoft.Authorization/roleAssignments/"
     "55555555-5555-4555-8555-555555555555"
 )
+VIRTUAL_NETWORK_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/virtualNetworks/"
+    "vnet-nac-bff-test"
+)
+FUNCTION_INTEGRATION_SUBNET_ID = f"{VIRTUAL_NETWORK_ID}/subnets/snet-flex-integration"
+PRIVATE_ENDPOINT_SUBNET_ID = f"{VIRTUAL_NETWORK_ID}/subnets/snet-private-endpoints"
+PRIVATE_ENDPOINT_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateEndpoints/"
+    f"pep-{COORDINATION_NAME}"
+)
+PRIVATE_DNS_ZONE_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateDnsZones/"
+    "privatelink.blob.core.windows.net"
+)
+PRIVATE_DNS_VNET_LINK_ID = f"{PRIVATE_DNS_ZONE_ID}/virtualNetworkLinks/link-nac-bff-test"
 
 
 def _sha256_json(value: object) -> str:
@@ -103,6 +118,9 @@ def _infra_parameters() -> dict[str, object]:
         "wormStorageAccountResourceId": WORM_ID,
         "brokerCallerServicePrincipalId": CALLER_PRINCIPAL_ID,
         "brokerFunctionAppResourceId": FUNCTION_APP_ID,
+        "brokerVirtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+        "brokerFunctionIntegrationSubnetResourceId": FUNCTION_INTEGRATION_SUBNET_ID,
+        "brokerPrivateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
         "brokerFunctionPackageSha256": PACKAGE_SHA256,
         "brokerTicketVerificationCertificateSha256": TICKET_CERTIFICATE_SHA256,
         "targetBindingSha256": TARGET,
@@ -406,7 +424,7 @@ class _FakeAzureExecutor:
             f"{COORDINATION_ID}/blobServices/default/containers/{CONTAINER_NAME}"
         )
         outputs = {
-            "contractSchemaVersion": "nac.azure-bff-performance-coordination/v2",
+            "contractSchemaVersion": "nac.azure-bff-performance-coordination/v3",
             "storageAccountName": COORDINATION_NAME,
             "storageAccountResourceId": COORDINATION_ID,
             "effectiveTags": effective_coordination_tags(
@@ -431,9 +449,18 @@ class _FakeAzureExecutor:
             "brokerPrincipalIdBinding": PRINCIPAL_ID,
             "brokerCallerServicePrincipalIdBinding": CALLER_PRINCIPAL_ID,
             "brokerFunctionAppResourceIdBinding": FUNCTION_APP_ID,
-            "brokerResourceAccessRulesBinding": [
-                {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
-            ],
+            "brokerVirtualNetworkResourceIdBinding": VIRTUAL_NETWORK_ID,
+            "brokerFunctionIntegrationSubnetResourceIdBinding": (
+                FUNCTION_INTEGRATION_SUBNET_ID
+            ),
+            "brokerPrivateEndpointSubnetResourceIdBinding": (
+                PRIVATE_ENDPOINT_SUBNET_ID
+            ),
+            "coordinationBlobPrivateEndpointResourceId": PRIVATE_ENDPOINT_ID,
+            "coordinationBlobPrivateDnsZoneResourceId": PRIVATE_DNS_ZONE_ID,
+            "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId": (
+                PRIVATE_DNS_VNET_LINK_ID
+            ),
             "brokerFunctionPackageSha256Binding": PACKAGE_SHA256,
             "brokerTicketVerificationCertificateSha256Binding": (
                 TICKET_CERTIFICATE_SHA256
@@ -588,9 +615,15 @@ class AzurePerformanceInfrastructurePortsTests(unittest.TestCase):
             TICKET_CERTIFICATE_SHA256,
         )
         self.assertEqual(
-            coordination.broker_resource_access_rule_sha256,
+            coordination.broker_private_network_boundary_sha256,
             _sha256_json(
-                {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
+                {
+                    "virtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+                    "functionIntegrationSubnetResourceId": (
+                        FUNCTION_INTEGRATION_SUBNET_ID
+                    ),
+                    "privateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
+                }
             ),
         )
         self.assertEqual(

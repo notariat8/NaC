@@ -95,9 +95,11 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "allowSharedKeyAccess: false",
             "defaultToOAuthAuthentication: true",
             "publicAccess: 'None'",
+            "publicNetworkAccess: 'Disabled'",
             "defaultAction: 'Deny'",
             "ipRules: []",
-            "resourceAccessRules: brokerResourceAccessRules",
+            "resourceAccessRules: []",
+            "virtualNetworkRules: []",
         ):
             self.assertIn(marker, self.source)
         lowered = self.source.lower()
@@ -108,6 +110,39 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "microsoft.resources/deploymentscripts",
         ):
             self.assertNotIn(forbidden, lowered)
+
+    def test_source_requires_exact_distinct_flex_network_boundaries(self) -> None:
+        for marker in (
+            "param brokerVirtualNetworkResourceId string",
+            "param brokerFunctionIntegrationSubnetResourceId string",
+            "param brokerPrivateEndpointSubnetResourceId string",
+            "length(brokerVirtualNetworkResourceIdSegments) == 9",
+            "length(brokerFunctionIntegrationSubnetResourceIdSegments) == 11",
+            "length(brokerPrivateEndpointSubnetResourceIdSegments) == 11",
+            "toLower('${validatedBrokerVirtualNetworkResourceId}/subnets/",
+            "toLower(brokerPrivateEndpointSubnetResourceId) != toLower(validatedBrokerFunctionIntegrationSubnetResourceId)",
+            "fail('Broker VNet resource ID is not authoritative",
+            "fail('Broker Function integration subnet is not authoritative",
+            "fail('Broker private-endpoint subnet must be authoritative and separate",
+        ):
+            self.assertIn(marker, self.source)
+
+    def test_source_has_exact_blob_private_endpoint_dns_topology(self) -> None:
+        for marker in (
+            "var privateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'",
+            "resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01'",
+            "resource privateDnsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01'",
+            "id: validatedBrokerVirtualNetworkResourceId",
+            "registrationEnabled: false",
+            "resource coordinationBlobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01'",
+            "id: validatedBrokerPrivateEndpointSubnetResourceId",
+            "groupIds:",
+            "'blob'",
+            "privateLinkServiceId: storageAccount.id",
+            "resource coordinationBlobPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01'",
+            "privateDnsZoneId: privateDnsZone.id",
+        ):
+            self.assertIn(marker, self.source)
 
     def test_owner_gated_broker_contract_matches_runtime_path(self) -> None:
         for marker in (
@@ -130,9 +165,11 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         for marker in (
             "param brokerCallerServicePrincipalId string",
             "param brokerFunctionAppResourceId string",
+            "param brokerVirtualNetworkResourceId string",
+            "param brokerFunctionIntegrationSubnetResourceId string",
+            "param brokerPrivateEndpointSubnetResourceId string",
             "param brokerFunctionPackageSha256 string",
             "param brokerTicketVerificationCertificateSha256 string",
-            "output brokerResourceAccessRulesBinding array",
             "output credentialBoundaryMode string = 'BFF_BROKER_SYSTEM_ASSIGNED_IDENTITY_ONLY'",
             "output localRunnerStorageDataActions array = []",
         ):
@@ -148,6 +185,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "brokerFunctionApp.identity.principalId",
             self.source,
         )
+        self.assertNotIn("brokerResourceAccessRules", self.source)
 
     def test_source_role_is_exclusive_to_the_broker_system_identity(self) -> None:
         broker_match = re.search(
@@ -209,7 +247,9 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         for marker in (
             "using './main.bicep'",
             "param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'",
-            "param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'",
+            "param brokerVirtualNetworkResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline'",
+            "param brokerFunctionIntegrationSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-flex-integration'",
+            "param brokerPrivateEndpointSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-private-endpoints'",
             "param targetBindingSha256 = '1111111111111111111111111111111111111111111111111111111111111111'",
             "Only the BFF Function managed identity receives exact-path Blob read/write.",
             "local runner receives a broker API role",
@@ -248,6 +288,9 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "wormStorageAccountResourceId",
             "brokerCallerServicePrincipalId",
             "brokerFunctionAppResourceId",
+            "brokerFunctionIntegrationSubnetResourceId",
+            "brokerPrivateEndpointSubnetResourceId",
+            "brokerVirtualNetworkResourceId",
             "brokerFunctionPackageSha256",
             "brokerTicketVerificationCertificateSha256",
             "targetBindingSha256",
@@ -263,12 +306,132 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             Counter(
                 {
                     "Microsoft.Storage/storageAccounts": 1,
+                    "Microsoft.Network/privateDnsZones": 1,
+                    "Microsoft.Network/privateDnsZones/virtualNetworkLinks": 1,
+                    "Microsoft.Network/privateEndpoints": 1,
+                    "Microsoft.Network/privateEndpoints/privateDnsZoneGroups": 1,
                     "Microsoft.Storage/storageAccounts/blobServices": 1,
                     "Microsoft.Storage/storageAccounts/blobServices/containers": 1,
                     "Microsoft.Authorization/roleDefinitions": 1,
                     "Microsoft.Authorization/roleAssignments": 1,
                 }
             ),
+        )
+
+    def test_compiled_v3_storage_network_boundary_is_closed(self) -> None:
+        self.assertEqual(
+            self.template["outputs"]["contractSchemaVersion"]["value"],
+            "nac.azure-bff-performance-coordination/v3",
+        )
+        storage = resources_of_type(
+            self.template, "Microsoft.Storage/storageAccounts"
+        )[0]
+        self.assertEqual(storage["properties"]["publicNetworkAccess"], "Disabled")
+        self.assertEqual(
+            storage["properties"]["networkAcls"],
+            {
+                "bypass": "None",
+                "defaultAction": "Deny",
+                "ipRules": [],
+                "resourceAccessRules": [],
+                "virtualNetworkRules": [],
+            },
+        )
+        self.assertNotIn("brokerResourceAccessRules", self.template["variables"])
+
+    def test_compiled_network_ids_are_authoritative_and_subnets_are_distinct(
+        self,
+    ) -> None:
+        variables = self.template["variables"]
+        vnet = variables["validatedBrokerVirtualNetworkResourceId"]
+        function_subnet = variables[
+            "validatedBrokerFunctionIntegrationSubnetResourceId"
+        ]
+        private_endpoint_subnet = variables[
+            "validatedBrokerPrivateEndpointSubnetResourceId"
+        ]
+        self.assertIn("equals(length", vnet)
+        self.assertIn("'microsoft.network'", vnet)
+        self.assertIn("'virtualnetworks'", vnet)
+        self.assertIn("parameters('resourceGroupName')", vnet)
+        self.assertIn("variables('validatedBrokerVirtualNetworkResourceId')", function_subnet)
+        self.assertIn("'subnets'", function_subnet)
+        self.assertIn("parameters('brokerFunctionIntegrationSubnetResourceId')", function_subnet)
+        self.assertIn("variables('validatedBrokerVirtualNetworkResourceId')", private_endpoint_subnet)
+        self.assertIn("parameters('brokerPrivateEndpointSubnetResourceId')", private_endpoint_subnet)
+        self.assertIn(
+            "variables('validatedBrokerFunctionIntegrationSubnetResourceId')",
+            private_endpoint_subnet,
+        )
+        self.assertIn("not(equals", private_endpoint_subnet)
+
+    def test_compiled_blob_private_endpoint_and_dns_are_exact(self) -> None:
+        dns_zone = resources_of_type(
+            self.template, "Microsoft.Network/privateDnsZones"
+        )[0]
+        self.assertEqual(dns_zone["name"], "[variables('privateDnsZoneName')]")
+        self.assertEqual(
+            self.template["variables"]["privateDnsZoneName"],
+            "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
+        )
+
+        vnet_link = resources_of_type(
+            self.template,
+            "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+        )[0]
+        self.assertEqual(
+            vnet_link["properties"],
+            {
+                "registrationEnabled": False,
+                "virtualNetwork": {
+                    "id": "[variables('validatedBrokerVirtualNetworkResourceId')]"
+                },
+            },
+        )
+
+        private_endpoint = resources_of_type(
+            self.template, "Microsoft.Network/privateEndpoints"
+        )[0]
+        self.assertEqual(
+            private_endpoint["properties"],
+            {
+                "subnet": {
+                    "id": "[variables('validatedBrokerPrivateEndpointSubnetResourceId')]"
+                },
+                "privateLinkServiceConnections": [
+                    {
+                        "name": "blob",
+                        "properties": {
+                            "groupIds": ["blob"],
+                            "privateLinkServiceId": (
+                                "[resourceId('Microsoft.Storage/storageAccounts', "
+                                "variables('validatedStorageAccountName'))]"
+                            ),
+                        },
+                    }
+                ],
+            },
+        )
+
+        zone_group = resources_of_type(
+            self.template,
+            "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+        )[0]
+        self.assertEqual(
+            zone_group["properties"],
+            {
+                "privateDnsZoneConfigs": [
+                    {
+                        "name": "blob",
+                        "properties": {
+                            "privateDnsZoneId": (
+                                "[resourceId('Microsoft.Network/privateDnsZones', "
+                                "variables('privateDnsZoneName'))]"
+                            )
+                        },
+                    }
+                ]
+            },
         )
 
     def test_compiled_broker_resource_guard_is_fail_closed(self) -> None:
@@ -343,6 +506,12 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "brokerAllowedDataActions",
             "brokerFunctionPackageSha256Binding",
             "brokerTicketVerificationCertificateSha256Binding",
+            "brokerVirtualNetworkResourceIdBinding",
+            "brokerFunctionIntegrationSubnetResourceIdBinding",
+            "brokerPrivateEndpointSubnetResourceIdBinding",
+            "coordinationBlobPrivateEndpointResourceId",
+            "coordinationBlobPrivateDnsZoneResourceId",
+            "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId",
             "localRunnerStorageDataActions",
             "credentialBoundaryMode",
         }
@@ -358,6 +527,7 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
         self.assertNotIn("leaseDataRoleDefinitionId", outputs)
         self.assertNotIn("provisionerLeaseRoleAssignmentId", outputs)
         self.assertNotIn("allowedDataActions", outputs)
+        self.assertNotIn("brokerResourceAccessRulesBinding", outputs)
 
     def test_compiled_container_metadata_matches_identity_contract(self) -> None:
         container = resources_of_type(
@@ -365,6 +535,10 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "Microsoft.Storage/storageAccounts/blobServices/containers",
         )[0]
         metadata = container["properties"]["metadata"]
+        self.assertEqual(
+            metadata["nac_schema_version"],
+            "nac.azure-bff-performance-coordination/v3",
+        )
         self.assertEqual(
             metadata["broker_authorization"],
             "non-exportable-managed-identity-read-write-no-delete",

@@ -40,6 +40,9 @@ APPROVED_GIT_TREE_PATH = Path("src/nac_bff/approved_git_tree.py")
 INTERRUPTION_BASELINE_PATH = Path(
     "src/nac_bff/azure_interruption_baseline.py"
 )
+INTERRUPTION_BASELINE_TEMPLATE_PATH = Path(
+    "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+)
 INTERRUPTION_CONTRACT_PATH = Path(
     "src/nac_bff/azure_interruption_contract.py"
 )
@@ -308,6 +311,59 @@ INTERRUPTION_PROVIDER_CLASSIFICATIONS = {
         "pre_mutation_provider_revalidation_required": True,
         "owner_bound_lock_hash_revalidation_required": True,
     },
+}
+INTERRUPTION_BASELINE_TRANSITION = {
+    "legacy_template_hash_exact": "16486527106386001034",
+    "legacy_deployment_type_counts_exact": {
+        "microsoft.authorization/roleassignments": 2,
+        "microsoft.insights/components": 1,
+        "microsoft.insights/components/currentbillingfeatures": 1,
+        "microsoft.managedidentity/userassignedidentities": 1,
+        "microsoft.operationalinsights/workspaces": 1,
+        "microsoft.storage/storageaccounts": 1,
+        "microsoft.storage/storageaccounts/blobservices": 1,
+        "microsoft.storage/storageaccounts/blobservices/containers": 1,
+        "microsoft.web/serverfarms": 1,
+        "microsoft.web/sites": 1,
+        "microsoft.web/sites/config": 1,
+    },
+    "desired_deployment_type_counts_exact": {
+        "microsoft.authorization/roleassignments": 2,
+        "microsoft.insights/components": 1,
+        "microsoft.insights/components/currentbillingfeatures": 1,
+        "microsoft.managedidentity/userassignedidentities": 1,
+        "microsoft.network/virtualnetworks": 1,
+        "microsoft.network/virtualnetworks/subnets": 2,
+        "microsoft.operationalinsights/workspaces": 1,
+        "microsoft.storage/storageaccounts": 1,
+        "microsoft.storage/storageaccounts/blobservices": 1,
+        "microsoft.storage/storageaccounts/blobservices/containers": 1,
+        "microsoft.web/serverfarms": 1,
+        "microsoft.web/sites": 1,
+        "microsoft.web/sites/config": 1,
+    },
+    "legacy_template_outputs_exact": {
+        "functionAppHostName",
+        "functionAppResourceId",
+        "functionAppSystemAssignedPrincipalId",
+        "managedIdentityClientId",
+        "managedIdentityPrincipalId",
+        "managedIdentityResourceId",
+    },
+    "desired_template_outputs_exact": {
+        "functionAppHostName",
+        "functionAppResourceId",
+        "functionAppSystemAssignedPrincipalId",
+        "functionIntegrationSubnetResourceId",
+        "managedIdentityClientId",
+        "managedIdentityPrincipalId",
+        "managedIdentityResourceId",
+        "privateEndpointSubnetResourceId",
+        "virtualNetworkResourceId",
+    },
+    "legacy_observation_operation_count_exact": 12,
+    "desired_deployment_operation_count_exact": 15,
+    "deployment_mode_exact": "Incremental",
 }
 INTERRUPTION_INSPECTION_DOC_MARKER = (
     "# bff-azure-interruption-inspection-command"
@@ -1185,6 +1241,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "exact_baseline_matches",
         "BICEP_BASELINE_EXACT",
         "EXPECTED_DEPLOYMENT_TYPE_COUNTS",
+        "LEGACY_DEPLOYMENT_TYPE_COUNTS",
+        "LEGACY_AZURE_TEMPLATE_HASH",
+        "EXPECTED_TEMPLATE_OUTPUTS",
+        "LEGACY_TEMPLATE_OUTPUTS",
         "APPROVED_TREE_BICEP_PATH",
         "GitApprovedTreeSource",
         "INTERRUPTION_BASELINE_GIT_PROVENANCE_INVALID",
@@ -1193,7 +1253,10 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "INTERRUPTION_BASELINE_BINDING_MISMATCH",
     ),
     INTERRUPTION_BASELINE_TEST_PATH: (
-        "test_expectation_is_bound_to_manifest_template_parameters_and_graph",
+        "test_current_expectation_reconciles_exact_legacy_predecessor",
+        "test_historical_legacy_prepared_run_remains_reconcilable",
+        "test_current_deployment_cannot_be_projected_as_legacy_observation",
+        "test_prepared_template_output_set_must_match_baseline_generation",
         "test_inventory_deployment_and_operation_drift_are_rejected",
         "test_self_consistent_manifest_with_false_git_provenance_is_rejected",
         "test_self_consistent_manifest_with_incomplete_parameters_is_rejected",
@@ -1438,24 +1501,7 @@ def main() -> int:
 
 
 def _run_behavioral_tests(repo_root: Path) -> list[str]:
-    try:
-        common_dir = subprocess.run(
-            ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        ).stdout.strip()
-        common_path = Path(common_dir)
-        if not common_path.is_absolute():
-            common_path = repo_root / common_path
-        trusted_test_parent = common_path.resolve().parent
-    except (OSError, subprocess.SubprocessError):
-        trusted_test_parent = repo_root
-    temporary = tempfile.TemporaryDirectory(
-        prefix=".nac-bff-validator-",
-        dir=trusted_test_parent,
-    )
+    temporary = tempfile.TemporaryDirectory(prefix="nac-bff-validator-")
     test_home = Path(temporary.name)
     env = dict(os.environ)
     env["HOME"] = str(test_home)
@@ -3165,6 +3211,95 @@ def _validate_interruption_runtime_protocol(
     )
     if not baseline_match_call:
         errors.append("interruption runtime must validate the exact Bicep baseline")
+    baseline_transition_bindings = (
+        (
+            "LEGACY_AZURE_TEMPLATE_HASH",
+            INTERRUPTION_BASELINE_TRANSITION["legacy_template_hash_exact"],
+        ),
+        (
+            "LEGACY_DEPLOYMENT_TYPE_COUNTS",
+            INTERRUPTION_BASELINE_TRANSITION[
+                "legacy_deployment_type_counts_exact"
+            ],
+        ),
+        (
+            "EXPECTED_DEPLOYMENT_TYPE_COUNTS",
+            INTERRUPTION_BASELINE_TRANSITION[
+                "desired_deployment_type_counts_exact"
+            ],
+        ),
+        (
+            "LEGACY_TEMPLATE_OUTPUTS",
+            INTERRUPTION_BASELINE_TRANSITION["legacy_template_outputs_exact"],
+        ),
+        (
+            "EXPECTED_TEMPLATE_OUTPUTS",
+            INTERRUPTION_BASELINE_TRANSITION["desired_template_outputs_exact"],
+        ),
+    )
+    for name, expected in baseline_transition_bindings:
+        if _literal_assignment(baseline_tree, name) != expected:
+            errors.append(
+                f"interruption baseline transition binding {name} differs"
+            )
+    if (
+        sum(INTERRUPTION_BASELINE_TRANSITION[
+            "legacy_deployment_type_counts_exact"
+        ].values())
+        != INTERRUPTION_BASELINE_TRANSITION[
+            "legacy_observation_operation_count_exact"
+        ]
+        or sum(INTERRUPTION_BASELINE_TRANSITION[
+            "desired_deployment_type_counts_exact"
+        ].values())
+        != INTERRUPTION_BASELINE_TRANSITION[
+            "desired_deployment_operation_count_exact"
+        ]
+    ):
+        errors.append("interruption baseline transition operation counts differ")
+    try:
+        baseline_template = json.loads(
+            (repo_root / INTERRUPTION_BASELINE_TEMPLATE_PATH).read_text(
+                encoding="utf-8"
+            )
+        )
+        baseline_resources = baseline_template["resources"]
+        baseline_outputs = baseline_template["outputs"]
+        baseline_template_hash = baseline_template["metadata"]["_generator"][
+            "templateHash"
+        ]
+        baseline_type_counts: dict[str, int] = {}
+        for resource in baseline_resources:
+            resource_type = resource["type"].lower()
+            baseline_type_counts[resource_type] = (
+                baseline_type_counts.get(resource_type, 0) + 1
+            )
+    except (KeyError, OSError, TypeError, ValueError):
+        errors.append("interruption current compiled baseline is invalid")
+    else:
+        if dict(sorted(baseline_type_counts.items())) != (
+            INTERRUPTION_BASELINE_TRANSITION[
+                "desired_deployment_type_counts_exact"
+            ]
+        ):
+            errors.append(
+                "interruption current compiled baseline resource counts differ"
+            )
+        if set(baseline_outputs) != INTERRUPTION_BASELINE_TRANSITION[
+            "desired_template_outputs_exact"
+        ]:
+            errors.append(
+                "interruption current compiled baseline output set differs"
+            )
+        if (
+            not isinstance(baseline_template_hash, str)
+            or not baseline_template_hash.isdigit()
+            or baseline_template_hash
+            == INTERRUPTION_BASELINE_TRANSITION["legacy_template_hash_exact"]
+        ):
+            errors.append(
+                "interruption current compiled baseline template hash differs"
+            )
     source_codes = (
         _string_literals(reconciliation_tree)
         | _string_literals(cli_tree)

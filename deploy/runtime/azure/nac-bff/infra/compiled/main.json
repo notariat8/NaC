@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.45.6.27763",
-      "templateHash": "16486527106386001034"
+      "version": "0.45.15.27210",
+      "templateHash": "1141625100916717439"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
@@ -94,6 +94,9 @@
   "variables": {
     "resourceToken": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('environmentName')))]",
     "deploymentContainerName": "function-releases",
+    "virtualNetworkName": "[format('vnet-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))]",
+    "functionIntegrationSubnetName": "snet-flex-integration",
+    "privateEndpointSubnetName": "snet-private-endpoints",
     "corsAllowedOrigins": [
       "https://funktion8.sharepoint.com",
       "https://teams.microsoft.com",
@@ -110,6 +113,55 @@
       "name": "[format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))]",
       "location": "[parameters('location')]",
       "tags": "[variables('resourceTags')]"
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('resourceTags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.42.0.0/24"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2024-05-01",
+      "name": "[format('{0}/{1}', variables('virtualNetworkName'), variables('functionIntegrationSubnetName'))]",
+      "properties": {
+        "addressPrefix": "10.42.0.0/27",
+        "delegations": [
+          {
+            "name": "flex-consumption",
+            "properties": {
+              "serviceName": "Microsoft.App/environments"
+            }
+          }
+        ],
+        "privateEndpointNetworkPolicies": "Enabled",
+        "privateLinkServiceNetworkPolicies": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2024-05-01",
+      "name": "[format('{0}/{1}', variables('virtualNetworkName'), variables('privateEndpointSubnetName'))]",
+      "properties": {
+        "addressPrefix": "10.42.0.32/27",
+        "delegations": [],
+        "privateEndpointNetworkPolicies": "Disabled",
+        "privateLinkServiceNetworkPolicies": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+      ]
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -287,6 +339,7 @@
         "httpsOnly": true,
         "publicNetworkAccess": "Enabled",
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('plan-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]",
+        "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('functionIntegrationSubnetName'))]",
         "siteConfig": {
           "alwaysOn": false,
           "cors": {
@@ -328,6 +381,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', format('stnacbff{0}', variables('resourceToken')), 'default', variables('deploymentContainerName'))]",
         "[resourceId('Microsoft.Web/serverfarms', format('plan-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('functionIntegrationSubnetName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]",
         "[extensionResourceId(resourceId('Microsoft.Insights/components', format('appi-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Insights/components', format('appi-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), variables('monitoringMetricsPublisherRoleId')))]",
         "[resourceId('Microsoft.Storage/storageAccounts', format('stnacbff{0}', variables('resourceToken')))]",
@@ -371,6 +425,18 @@
     "functionAppSystemAssignedPrincipalId": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2024-04-01', 'full').identity.principalId]"
+    },
+    "virtualNetworkResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+    },
+    "functionIntegrationSubnetResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('functionIntegrationSubnetName'))]"
+    },
+    "privateEndpointSubnetResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('privateEndpointSubnetName'))]"
     },
     "managedIdentityResourceId": {
       "type": "string",

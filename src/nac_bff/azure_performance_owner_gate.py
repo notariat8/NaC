@@ -30,6 +30,7 @@ from .azure_performance_composition import (
 from .azure_performance_infrastructure_safety import (
     effective_coordination_tags,
     infrastructure_safety_policy_sha256,
+    private_network_boundary_sha256,
 )
 
 
@@ -145,6 +146,17 @@ _FUNCTION_APP_ID_RE = re.compile(
     r"(?P<resource_group>[^/]+)/providers/Microsoft\.Web/sites/"
     r"(?P<name>[a-zA-Z0-9-]{1,60})$"
 )
+_VIRTUAL_NETWORK_ID_RE = re.compile(
+    r"^/subscriptions/(?P<subscription>[0-9a-f-]{36})/resourceGroups/"
+    r"(?P<resource_group>[^/]+)/providers/Microsoft\.Network/virtualNetworks/"
+    r"(?P<name>[a-zA-Z0-9-]{1,64})$"
+)
+_SUBNET_ID_RE = re.compile(
+    r"^(?P<vnet>/subscriptions/(?P<subscription>[0-9a-f-]{36})/resourceGroups/"
+    r"(?P<resource_group>[^/]+)/providers/Microsoft\.Network/virtualNetworks/"
+    r"(?P<vnet_name>[a-zA-Z0-9-]{1,64}))/subnets/"
+    r"(?P<name>[a-zA-Z0-9-]{1,80})$"
+)
 _PARAMETER_KEYS = frozenset(
     {
         "location",
@@ -153,6 +165,9 @@ _PARAMETER_KEYS = frozenset(
         "wormStorageAccountResourceId",
         "brokerCallerServicePrincipalId",
         "brokerFunctionAppResourceId",
+        "brokerVirtualNetworkResourceId",
+        "brokerFunctionIntegrationSubnetResourceId",
+        "brokerPrivateEndpointSubnetResourceId",
         "brokerFunctionPackageSha256",
         "brokerTicketVerificationCertificateSha256",
         "targetBindingSha256",
@@ -276,11 +291,16 @@ def build_performance_infrastructure_owner_gate(
                 "target_binding_sha256": parameters["targetBindingSha256"],
             },
             "redacted_parameter_bindings": {
-                "broker_resource_access_rule_sha256": _sha256_json(
-                    {
-                        "resourceId": parameters["brokerFunctionAppResourceId"],
-                        "tenantId": parameters["tenantId"],
-                    }
+                "broker_private_network_boundary_sha256": private_network_boundary_sha256(
+                    virtual_network_resource_id=parameters[
+                        "brokerVirtualNetworkResourceId"
+                    ],
+                    function_integration_subnet_resource_id=parameters[
+                        "brokerFunctionIntegrationSubnetResourceId"
+                    ],
+                    private_endpoint_subnet_resource_id=parameters[
+                        "brokerPrivateEndpointSubnetResourceId"
+                    ],
                 ),
                 "broker_principal_source": (
                     "bound-function-system-assigned-identity-readback"
@@ -290,6 +310,15 @@ def build_performance_infrastructure_owner_gate(
                 ),
                 "broker_function_app_resource_id_sha256": _sha256_text(
                     parameters["brokerFunctionAppResourceId"]
+                ),
+                "broker_virtual_network_resource_id_sha256": _sha256_text(
+                    parameters["brokerVirtualNetworkResourceId"]
+                ),
+                "broker_function_integration_subnet_resource_id_sha256": _sha256_text(
+                    parameters["brokerFunctionIntegrationSubnetResourceId"]
+                ),
+                "broker_private_endpoint_subnet_resource_id_sha256": _sha256_text(
+                    parameters["brokerPrivateEndpointSubnetResourceId"]
                 ),
                 "broker_function_package_sha256": parameters[
                     "brokerFunctionPackageSha256"
@@ -519,12 +548,32 @@ def _validate_parameters(value: Mapping[str, Any]) -> dict[str, Any]:
         function_app_match = _FUNCTION_APP_ID_RE.fullmatch(
             str(result["brokerFunctionAppResourceId"])
         )
+        virtual_network_match = _VIRTUAL_NETWORK_ID_RE.fullmatch(
+            str(result["brokerVirtualNetworkResourceId"])
+        )
+        function_subnet_match = _SUBNET_ID_RE.fullmatch(
+            str(result["brokerFunctionIntegrationSubnetResourceId"])
+        )
+        private_endpoint_subnet_match = _SUBNET_ID_RE.fullmatch(
+            str(result["brokerPrivateEndpointSubnetResourceId"])
+        )
     except (TypeError, ValueError):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID") from None
     if (
         function_app_match is None
+        or virtual_network_match is None
+        or function_subnet_match is None
+        or private_endpoint_subnet_match is None
         or function_app_match.group("subscription") != SUBSCRIPTION_ID
         or function_app_match.group("resource_group") != RESOURCE_GROUP
+        or virtual_network_match.group("subscription") != SUBSCRIPTION_ID
+        or virtual_network_match.group("resource_group") != RESOURCE_GROUP
+        or function_subnet_match.group("vnet").casefold()
+        != str(result["brokerVirtualNetworkResourceId"]).casefold()
+        or private_endpoint_subnet_match.group("vnet").casefold()
+        != str(result["brokerVirtualNetworkResourceId"]).casefold()
+        or function_subnet_match.group("name").casefold()
+        == private_endpoint_subnet_match.group("name").casefold()
     ):
         raise ValueError("INFRASTRUCTURE_PARAMETERS_INVALID")
     _require_sha256(result["targetBindingSha256"], "targetBindingSha256")

@@ -15,6 +15,9 @@ param wormStorageAccountResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80
 // The local runner receives a broker API role and no Storage DataAction or token.
 param brokerCallerServicePrincipalId = '66666666-7777-4888-8999-aaaaaaaaaaaa'
 param brokerFunctionAppResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/fn-nac-bff-test'
+param brokerVirtualNetworkResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline'
+param brokerFunctionIntegrationSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-flex-integration'
+param brokerPrivateEndpointSubnetResourceId = '/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/virtualNetworks/vnet-nac-bff-test-offline/subnets/snet-private-endpoints'
 param brokerFunctionPackageSha256 = '1111111111111111111111111111111111111111111111111111111111111111'
 param brokerTicketVerificationCertificateSha256 = '2222222222222222222222222222222222222222222222222222222222222222'
 param targetBindingSha256 = '1111111111111111111111111111111111111111111111111111111111111111'

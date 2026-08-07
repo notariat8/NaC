@@ -16,7 +16,7 @@ Der Modus lautet exakt `endpoint_scoped_conservative_measurement`.
 ## Aussagegrenze
 
 Diese Lane misst ausschließlich einen synthetischen GET-Endpunkt. Sie erhebt
-keine tenantweite SharePoint-Baseline, keine tenantweite Request-Allowance und
+und erfasst keine tenantweite SharePoint-Baseline, keine tenantweite Request-Allowance und
 keine tenantweite Resource-Unit-Allowance. Der Status dieser drei Aussagen ist
 explizit `NOT_CLAIMED`.
 
@@ -202,14 +202,19 @@ Nachweis autorisiert keine neue Mutation.
 Die Offline-IaC liegt unter
 `deploy/runtime/azure/nac-bff-performance-coordination`. Sie bindet die
 System-Assigned Identity der Function, den davon getrennten Provisioning-Caller, Function-Paket,
-Ticket-Zertifikat und die autoritative Function-Ressourceninstanz. Am
-Storage-Endpunkt ist ausschließlich diese exakte Ressourceninstanz erlaubt; die
-Netzwerk-Defaultregel ist `Deny`. Shared Keys, öffentliche Blobs sowie Delete-,
+Ticket-Zertifikat sowie die autoritativen IDs von Function, VNet und zwei
+getrennten Subnetzen. Die Flex Function nutzt ausschließlich ihr dediziertes
+`/27`-Integrationssubnetz; der Coordination-Blob-Endpunkt liegt im getrennten
+Private-Endpoint-Subnetz und wird über `privatelink.blob.core.windows.net`
+aufgelöst. Öffentlicher Storage-Netzwerkzugriff ist deaktiviert. Shared Keys,
+öffentliche Blobs sowie Delete-,
 Owner- und Container-DataActions bleiben ausgeschlossen. Nur die System-Assigned Identity der Function
 erhält am exakten Container und Blob-Pfad `blobs/read` und `blobs/write`; der
 lokale Caller erhält keine Storage-DataAction. Da Azure `write` auch Overwrite
 und Lease-Break umfasst, erzwingen ABAC und die feste Broker-API gemeinsam die
-engere Operationsgrenze. Vor Acquire werden außerdem die exakte
+engere Operationsgrenze. Die Container-Metadaten verwenden exakt das
+Koordinationsschema `nac.azure-bff-performance-coordination/v3`. Vor Acquire
+werden außerdem die exakte
 `Performance.Lease`-Zuweisung und der hashgebundene Function-Settings-Satz
 gesetzt und ohne Ausgabe seiner Werte zurückgelesen.
 Die ID der Rollenzuweisung ist stabil an die autoritative Function-Ressourcen-ID
@@ -219,13 +224,16 @@ nicht als Bestandteil des Rollenzuweisungsnamens. Ein Identitätswechsel ist
 deshalb bewusst fail-closed: Azure darf eine bestehende Rollenzuweisung nicht
 auf einen anderen Principal aktualisieren. Der effektive RBAC-Readback indexiert alle
 sichtbaren Rollenzuweisungen an jedem geprüften Vorgängerscope, nicht nur die
-Zuweisungen des erwarteten Principals. Eine zurückgebliebene Zuweisung derselben
-Broker-Rolle an die Runtime-UAMI oder an eine frühere Function-Systemidentität
-blockiert den Lauf. Sie wird weder automatisch gelöscht noch zurückgerollt;
+Zuweisungen des erwarteten Principals. Eine zurückgebliebene Zuweisung an eine
+frühere Function-Systemidentität blockiert den Lauf. Sie wird weder automatisch
+gelöscht noch zurückgerollt;
 vor einer Neuzuweisung nach Identitätsrotation erfordert ihre Entfernung eine
 separat owner-freigegebene und evidenzgebundene Bereinigung.
-Die bestehende User-Assigned Identity der Function bleibt getrennt für Graph,
-Host-Storage und Application Insights gebunden; sie erhält keine Lease-Rolle.
+Die bestehende Runtime-UAMI der Function bleibt getrennt für Graph, Host-Storage
+und Application Insights gebunden. Ein separater vollständiger Effective-RBAC-
+Readback muss für sie unabhängig von Rollenname, direkter oder gruppenbasierter
+Zuweisung und Vererbung exakt null effektive Coordination-Storage-DataActions
+belegen.
 
 ## Owner-Gate und Evidence
 
@@ -312,10 +320,13 @@ autorisiert nie ein Deployment. Es gilt strikt
 Ein
 getrennter Readback nach dem Deployment muss dessen exakte Resource-ID, Region,
 effektive Tags und die vollständige Storage-/Netzwerkkonfiguration bestätigen:
-öffentlicher Netzwerkzugriff aktiviert, Default `Deny`, Bypass `None`, keine
-IP- oder VNet-Regel, genau eine tenantgebundene Resource-Access-Regel für die
-gebundene Function-Ressourceninstanz, keine Shared Keys
-oder öffentlichen Blobs, TLS 1.2 und ausschließlich HTTPS. Der Blob-Service muss
+öffentlicher Netzwerkzugriff deaktiviert, Default `Deny`, Bypass `None`, keine
+IP-, VNet- oder Resource-Access-Regel, genau ein Blob Private Endpoint im
+owner-gebundenen Private-Endpoint-Subnetz, eine Zone Group für
+`privatelink.blob.core.windows.net` und genau ein Link zum owner-gebundenen
+VNet. Der Function-Readback muss das davon getrennte owner-gebundene Flex-
+Integrationssubnetz bestätigen. Shared Keys und öffentliche Blobs bleiben
+deaktiviert; TLS 1.2 und ausschließlich HTTPS sind Pflicht. Der Blob-Service muss
 Versionierung sowie Blob- und Container-Löschaufbewahrung deaktiviert haben. Der
 Lease-Container muss `publicAccess=None` und exakt die gebundenen Metadaten für
 Schema, synthetische Klassifikation, Lock-Pfad, Blob-Typ, Bootstrap,
@@ -331,10 +342,14 @@ Zukunftsdrift blockieren. Nach dem Deployment muss der vollständige effektive R
 beim zum Owner-Tenant passenden Tenant-Root beginnen und
 eine autoritative, geordnete Management-Group-Abstammung der Subscription
 belegen. Er umfasst Tenant-Root, Management-Group-Kette, Subscription, Resource Group, Storage-Konto,
-Blob-Service und Container genau die gebundene Provisioner-Identität sowie alle
+Blob-Service und Container die gebundene System-Identity, die Provisioner-
+Identität und die angehängte Runtime-UAMI sowie alle
 transitiven Entra-Gruppen, Rolle, DataActions, Bedingung und Scope zeigen. Jede
 breitere direkte, gruppenbasierte oder geerbte Data-Plane-Zuweisung sowie jede
-effektive Control-Plane-Zuweisung blockiert Bootstrap und Lease-Acquire.
+effektive Control-Plane-Zuweisung blockiert Bootstrap und Lease-Acquire. Für die
+Runtime-UAMI sind unabhängig vom Rollennamen exakt null effektive Coordination-
+Storage-DataActions zulässig. Der Infrastruktur-Safety-Nachweis verwendet exakt
+`nac.azure-bff-performance-infrastructure-safety-evidence/v7`.
 Ein vom Aufrufer abweichend gewählter Azure-Scope blockiert vor Netzwerk; das
 Bicep-Template bricht zusätzlich ab, wenn tatsächlicher Tenant, Subscription
 oder Resource Group von den gebundenen Parameterwerten abweichen.

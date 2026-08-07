@@ -40,7 +40,6 @@ TICKET_CERTIFICATE_SHA256 = "6" * 64
 LOCATION = "germanywestcentral"
 RESOURCE_GROUP = "rg-nac-bff-test"
 COORDINATION_NAME = "stnacperflease001"
-OUTBOUND_IP_ADDRESSES = ["8.8.8.8"]
 RUNTIME_UAMI_PRINCIPAL_ID = "aaaaaaaa-2222-4333-8444-555555555555"
 RESOURCE_GROUP_SCOPE = f"/subscriptions/{SUBSCRIPTION_ID}/resourceGroups/{RESOURCE_GROUP}"
 COORDINATION_ID = (
@@ -57,6 +56,28 @@ WORM_ID = (
 )
 FUNCTION_APP_ID = (
     f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Web/sites/fn-nac-bff-test"
+)
+VIRTUAL_NETWORK_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/virtualNetworks/"
+    "vnet-nac-bff-test"
+)
+FUNCTION_INTEGRATION_SUBNET_ID = (
+    f"{VIRTUAL_NETWORK_ID}/subnets/snet-nac-bff-flex"
+)
+PRIVATE_ENDPOINT_SUBNET_ID = (
+    f"{VIRTUAL_NETWORK_ID}/subnets/snet-nac-bff-private-endpoints"
+)
+PRIVATE_ENDPOINT_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateEndpoints/"
+    "pe-nac-bff-performance-coordination-blob"
+)
+PRIVATE_DNS_ZONE_ID = (
+    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/privateDnsZones/"
+    "privatelink.blob.core.windows.net"
+)
+PRIVATE_DNS_ZONE_GROUP_ID = f"{PRIVATE_ENDPOINT_ID}/privateDnsZoneGroups/default"
+PRIVATE_DNS_VNET_LINK_ID = (
+    f"{PRIVATE_DNS_ZONE_ID}/virtualNetworkLinks/vnet-nac-bff-test"
 )
 ROOT_MG = f"/providers/Microsoft.Management/managementGroups/{TENANT_ID}"
 CHILD_MG = "/providers/Microsoft.Management/managementGroups/nac-test-platform"
@@ -127,6 +148,11 @@ def _infrastructure_parameters() -> dict[str, object]:
         "storageAccountName": COORDINATION_NAME,
         "brokerCallerServicePrincipalId": CALLER_PRINCIPAL_ID,
         "brokerFunctionAppResourceId": FUNCTION_APP_ID,
+        "brokerVirtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+        "brokerFunctionIntegrationSubnetResourceId": (
+            FUNCTION_INTEGRATION_SUBNET_ID
+        ),
+        "brokerPrivateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
         "brokerFunctionPackageSha256": PACKAGE_SHA256,
         "brokerTicketVerificationCertificateSha256": TICKET_CERTIFICATE_SHA256,
         "targetBindingSha256": TARGET_BINDING,
@@ -157,6 +183,11 @@ def _coordination_resources() -> dict[str, str]:
         "lease_container_resource_id": CONTAINER_SCOPE,
         "broker_lease_data_role_definition_id": ROLE_DEFINITION_ID,
         "broker_lease_role_assignment_id": ROLE_ASSIGNMENT_ID,
+        "coordination_blob_private_endpoint_resource_id": PRIVATE_ENDPOINT_ID,
+        "coordination_blob_private_dns_zone_resource_id": PRIVATE_DNS_ZONE_ID,
+        "coordination_blob_private_dns_vnet_link_resource_id": (
+            PRIVATE_DNS_VNET_LINK_ID
+        ),
     }
 
 
@@ -183,12 +214,10 @@ def _storage(name: str, resource_id: str) -> dict[str, object]:
                 "bypass": "None",
                 "defaultAction": "Deny",
                 "ipRules": [],
-                "resourceAccessRules": [
-                    {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
-                ],
+                "resourceAccessRules": [],
                 "virtualNetworkRules": [],
             },
-            "publicNetworkAccess": "Enabled",
+            "publicNetworkAccess": "Disabled",
             "supportsHttpsTrafficOnly": True,
         },
     }
@@ -213,6 +242,59 @@ def _function_app() -> dict[str, object]:
         "properties": {
             "state": "Running",
             "httpsOnly": True,
+            "virtualNetworkSubnetId": FUNCTION_INTEGRATION_SUBNET_ID,
+        },
+    }
+
+
+def _private_endpoint() -> dict[str, object]:
+    return {
+        "id": PRIVATE_ENDPOINT_ID,
+        "name": "pe-nac-bff-performance-coordination-blob",
+        "type": "Microsoft.Network/privateEndpoints",
+        "location": LOCATION,
+        "properties": {
+            "subnet": {"id": PRIVATE_ENDPOINT_SUBNET_ID},
+            "privateLinkServiceConnections": [{
+                "name": "coordination-blob",
+                "properties": {
+                    "privateLinkServiceId": COORDINATION_ID,
+                    "groupIds": ["blob"],
+                    "privateLinkServiceConnectionState": {
+                        "status": "Approved",
+                    },
+                },
+            }],
+            "provisioningState": "Succeeded",
+        },
+    }
+
+
+def _private_dns_zone_group() -> dict[str, object]:
+    return {
+        "id": PRIVATE_DNS_ZONE_GROUP_ID,
+        "name": "default",
+        "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+        "properties": {
+            "privateDnsZoneConfigs": [{
+                "name": "blob",
+                "properties": {"privateDnsZoneId": PRIVATE_DNS_ZONE_ID},
+            }],
+            "provisioningState": "Succeeded",
+        },
+    }
+
+
+def _private_dns_vnet_link() -> dict[str, object]:
+    return {
+        "id": PRIVATE_DNS_VNET_LINK_ID,
+        "name": "vnet-nac-bff-test",
+        "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+        "location": "global",
+        "properties": {
+            "virtualNetwork": {"id": VIRTUAL_NETWORK_ID},
+            "registrationEnabled": False,
+            "provisioningState": "Succeeded",
         },
     }
 
@@ -238,7 +320,7 @@ def _lease_container() -> dict[str, object]:
         "properties": {
             "publicAccess": "None",
             "metadata": {
-                "nac_schema_version": "nac.azure-bff-performance-coordination/v2",
+                "nac_schema_version": "nac.azure-bff-performance-coordination/v3",
                 "data_classification": "synthetic-only",
                 "lease_blob_path": f"locks/{TARGET_BINDING}.lock",
                 "lease_blob_type": "BlockBlob",
@@ -310,7 +392,19 @@ def _deployment() -> dict[str, object]:
                 "brokerPrincipalIdBinding": {
                     "type": "String",
                     "value": BROKER_PRINCIPAL_ID,
-                }
+                },
+                "coordinationBlobPrivateEndpointResourceId": {
+                    "type": "String",
+                    "value": PRIVATE_ENDPOINT_ID,
+                },
+                "coordinationBlobPrivateDnsZoneResourceId": {
+                    "type": "String",
+                    "value": PRIVATE_DNS_ZONE_ID,
+                },
+                "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId": {
+                    "type": "String",
+                    "value": PRIVATE_DNS_VNET_LINK_ID,
+                },
             },
         },
     }
@@ -358,6 +452,15 @@ def _responses() -> dict[str, object]:
         f"https://management.azure.com{ROLE_ASSIGNMENT_ID}?api-version=2022-04-01": (
             _role_assignment()
         ),
+        f"https://management.azure.com{PRIVATE_ENDPOINT_ID}?api-version=2024-05-01": (
+            _private_endpoint()
+        ),
+        f"https://management.azure.com{PRIVATE_DNS_ZONE_GROUP_ID}?api-version=2024-05-01": (
+            _private_dns_zone_group()
+        ),
+        f"https://management.azure.com{PRIVATE_DNS_VNET_LINK_ID}?api-version=2024-06-01": (
+            _private_dns_vnet_link()
+        ),
         (
             f"https://management.azure.com{ROOT_MG}?api-version=2021-04-01"
             "&$expand=children&$recurse=true"
@@ -378,6 +481,11 @@ def _responses() -> dict[str, object]:
         (
             f"https://graph.microsoft.com/v1.0/servicePrincipals/"
             f"{CALLER_PRINCIPAL_ID}/transitiveMemberOf/"
+            "microsoft.graph.group?$select=id"
+        ): {"value": []},
+        (
+            f"https://graph.microsoft.com/v1.0/servicePrincipals/"
+            f"{RUNTIME_UAMI_PRINCIPAL_ID}/transitiveMemberOf/"
             "microsoft.graph.group?$select=id"
         ): {"value": []},
     }
@@ -525,6 +633,33 @@ def _build_arguments(directory: Path) -> dict[str, object]:
                 observation_kind="coordination-broker-function-app",
                 resource_id=FUNCTION_APP_ID,
             ),
+            "broker_virtual_network_resource_id": VIRTUAL_NETWORK_ID,
+            "broker_function_integration_subnet_resource_id": (
+                FUNCTION_INTEGRATION_SUBNET_ID
+            ),
+            "broker_private_endpoint_subnet_resource_id": (
+                PRIVATE_ENDPOINT_SUBNET_ID
+            ),
+            "coordination_blob_private_endpoint_resource_id": PRIVATE_ENDPOINT_ID,
+            "coordination_blob_private_dns_zone_resource_id": PRIVATE_DNS_ZONE_ID,
+            "coordination_blob_private_dns_vnet_link_resource_id": (
+                PRIVATE_DNS_VNET_LINK_ID
+            ),
+            "coordination_blob_private_endpoint_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="coordination-blob-private-endpoint",
+                resource_id=PRIVATE_ENDPOINT_ID,
+            ),
+            "coordination_blob_private_dns_zone_group_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="coordination-blob-private-dns-zone-group",
+                resource_id=PRIVATE_DNS_ZONE_GROUP_ID,
+            ),
+            "coordination_blob_private_dns_vnet_link_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="coordination-blob-private-dns-vnet-link",
+                resource_id=PRIVATE_DNS_VNET_LINK_ID,
+            ),
             "broker_function_package_sha256": PACKAGE_SHA256,
             "broker_ticket_verification_certificate_sha256": (
                 TICKET_CERTIFICATE_SHA256
@@ -554,6 +689,12 @@ def _build_arguments(directory: Path) -> dict[str, object]:
             "broker_caller_effective_rbac_readback_envelope": post(
                 adapter.read_effective_rbac,
                 principal_id=CALLER_PRINCIPAL_ID,
+                target_resource_id=CONTAINER_SCOPE,
+                ancestor_scopes=_ancestor_scopes(),
+            ),
+            "runtime_uami_effective_rbac_readback_envelope": post(
+                adapter.read_effective_rbac,
+                principal_id=RUNTIME_UAMI_PRINCIPAL_ID,
                 target_resource_id=CONTAINER_SCOPE,
                 ancestor_scopes=_ancestor_scopes(),
             ),
@@ -618,6 +759,9 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         self.assertEqual(
             evidence["broker_caller_service_principal_id"], CALLER_PRINCIPAL_ID
         )
+        self.assertEqual(
+            evidence["runtime_uami_principal_id"], RUNTIME_UAMI_PRINCIPAL_ID
+        )
         self.assertEqual(evidence["broker_function_app_resource_id"], FUNCTION_APP_ID)
         self.assertEqual(evidence["broker_function_package_sha256"], PACKAGE_SHA256)
         self.assertEqual(
@@ -625,12 +769,82 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             TICKET_CERTIFICATE_SHA256,
         )
         self.assertEqual(
-            evidence["broker_resource_access_rule_sha256"],
+            evidence["broker_private_network_boundary_sha256"],
             _json_sha256(
-                {"resourceId": FUNCTION_APP_ID, "tenantId": TENANT_ID}
+                {
+                    "virtualNetworkResourceId": VIRTUAL_NETWORK_ID,
+                    "functionIntegrationSubnetResourceId": (
+                        FUNCTION_INTEGRATION_SUBNET_ID
+                    ),
+                    "privateEndpointSubnetResourceId": PRIVATE_ENDPOINT_SUBNET_ID,
+                }
             ),
         )
+        self.assertEqual(
+            evidence["schema_version"],
+            "nac.azure-bff-performance-infrastructure-safety-evidence/v7",
+        )
+        self.assertEqual(
+            evidence["broker_virtual_network_resource_id"], VIRTUAL_NETWORK_ID
+        )
+        self.assertEqual(
+            evidence["broker_function_integration_subnet_resource_id"],
+            FUNCTION_INTEGRATION_SUBNET_ID,
+        )
+        self.assertEqual(
+            evidence["broker_private_endpoint_subnet_resource_id"],
+            PRIVATE_ENDPOINT_SUBNET_ID,
+        )
+        self.assertEqual(
+            evidence["coordination_blob_private_endpoint_resource_id"],
+            PRIVATE_ENDPOINT_ID,
+        )
+        self.assertEqual(
+            evidence["coordination_blob_private_dns_zone_resource_id"],
+            PRIVATE_DNS_ZONE_ID,
+        )
+        self.assertEqual(
+            evidence["coordination_blob_private_dns_vnet_link_resource_id"],
+            PRIVATE_DNS_VNET_LINK_ID,
+        )
+        deployment_payload = evidence["readback_transcript"][
+            "deployment_receipt"
+        ]["payload"]
+        self.assertEqual(
+            deployment_payload["broker_private_network_boundary_sha256"],
+            evidence["broker_private_network_boundary_sha256"],
+        )
+        self.assertEqual(
+            deployment_payload[
+                "coordination_blob_private_endpoint_resource_id"
+            ],
+            PRIVATE_ENDPOINT_ID,
+        )
+        self.assertEqual(
+            deployment_payload[
+                "coordination_blob_private_dns_zone_resource_id"
+            ],
+            PRIVATE_DNS_ZONE_ID,
+        )
+        self.assertEqual(
+            deployment_payload[
+                "coordination_blob_private_dns_vnet_link_resource_id"
+            ],
+            PRIVATE_DNS_VNET_LINK_ID,
+        )
         self.assertEqual(evidence["broker_effective_assignment_count"], 1)
+        self.assertEqual(
+            evidence["runtime_uami_effective_storage_data_action_count"], 0
+        )
+        self.assertIn(
+            "runtime_uami_effective_rbac", evidence["readback_transcript"]
+        )
+        for readback in (
+            "coordination_blob_private_endpoint",
+            "coordination_blob_private_dns_zone_group",
+            "coordination_blob_private_dns_vnet_link",
+        ):
+            self.assertIn(readback, evidence["readback_transcript"])
         self.assertEqual(
             evidence["broker_data_actions"], sorted(BROKER_ALLOWED_DATA_ACTIONS)
         )
@@ -749,22 +963,112 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         with self.assertRaises(AzurePerformanceInfrastructureSafetyError):
             self._verify(arguments)
 
-    def test_rejects_mismatched_resource_instance_rule(self) -> None:
+    def test_rejects_wrong_function_integration_subnet(self) -> None:
         responses = _responses()
-        storage_url = (
-            f"https://management.azure.com{COORDINATION_ID}"
-            "?api-version=2023-05-01"
+        function_url = (
+            f"https://management.azure.com{FUNCTION_APP_ID}"
+            "?api-version=2023-12-01"
         )
-        responses[storage_url]["properties"]["networkAcls"][
-            "resourceAccessRules"
-        ][0]["resourceId"] = FUNCTION_APP_ID + "-other"
+        responses[function_url]["properties"]["virtualNetworkSubnetId"] = (
+            PRIVATE_ENDPOINT_SUBNET_ID
+        )
         with tempfile.TemporaryDirectory() as value, patch(
             __name__ + "._responses", return_value=responses
         ):
             arguments = _build_arguments(Path(value))
         with self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
-            "COORDINATION_STORAGE_CONFIGURATION_MISMATCH",
+            "BROKER_FUNCTION_APP_READBACK_INVALID",
+        ):
+            self._verify(arguments)
+
+    def test_rejects_wrong_private_endpoint_binding(self) -> None:
+        endpoint_url = (
+            f"https://management.azure.com{PRIVATE_ENDPOINT_ID}"
+            "?api-version=2024-05-01"
+        )
+        variants = (
+            (
+                "subnet",
+                ("properties", "subnet", "id"),
+                FUNCTION_INTEGRATION_SUBNET_ID,
+            ),
+            (
+                "service",
+                (
+                    "properties",
+                    "privateLinkServiceConnections",
+                    0,
+                    "properties",
+                    "privateLinkServiceId",
+                ),
+                BFF_ID,
+            ),
+            (
+                "status",
+                (
+                    "properties",
+                    "privateLinkServiceConnections",
+                    0,
+                    "properties",
+                    "privateLinkServiceConnectionState",
+                    "status",
+                ),
+                "Pending",
+            ),
+        )
+        for label, path, replacement in variants:
+            with self.subTest(label=label):
+                responses = _responses()
+                target = responses[endpoint_url]
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = replacement
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "COORDINATION_BLOB_PRIVATE_ENDPOINT_READBACK_INVALID",
+                ):
+                    self._verify(arguments)
+
+    def test_rejects_wrong_private_dns_zone(self) -> None:
+        responses = _responses()
+        zone_group_url = (
+            f"https://management.azure.com{PRIVATE_DNS_ZONE_GROUP_ID}"
+            "?api-version=2024-05-01"
+        )
+        responses[zone_group_url]["properties"]["privateDnsZoneConfigs"][0][
+            "properties"
+        ]["privateDnsZoneId"] = PRIVATE_DNS_ZONE_ID + "-other"
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "COORDINATION_BLOB_PRIVATE_DNS_ZONE_GROUP_READBACK_INVALID",
+        ):
+            self._verify(arguments)
+
+    def test_rejects_wrong_private_dns_vnet_link(self) -> None:
+        responses = _responses()
+        vnet_link_url = (
+            f"https://management.azure.com{PRIVATE_DNS_VNET_LINK_ID}"
+            "?api-version=2024-06-01"
+        )
+        responses[vnet_link_url]["properties"]["virtualNetwork"]["id"] = (
+            VIRTUAL_NETWORK_ID + "-other"
+        )
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "COORDINATION_BLOB_PRIVATE_DNS_VNET_LINK_READBACK_INVALID",
         ):
             self._verify(arguments)
 
@@ -812,6 +1116,57 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
             "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT",
+        ):
+            self._verify(arguments)
+
+    def test_runtime_uami_different_storage_data_role_is_rejected(self) -> None:
+        responses = _responses()
+        storage_blob_data_reader_role_id = (
+            f"/subscriptions/{SUBSCRIPTION_ID}/providers/Microsoft.Authorization/"
+            "roleDefinitions/2a2b9908-6ea1-4ae2-8e65-a410df84e7d1"
+        )
+        runtime_uami_assignment = deepcopy(_role_assignment())
+        runtime_uami_assignment["id"] = ROLE_ASSIGNMENT_ID.rsplit("/", 1)[0] + (
+            "/88888888-2222-4333-8444-555555555555"
+        )
+        runtime_uami_assignment["properties"]["principalId"] = (
+            RUNTIME_UAMI_PRINCIPAL_ID
+        )
+        runtime_uami_assignment["properties"]["roleDefinitionId"] = (
+            storage_blob_data_reader_role_id
+        )
+        runtime_uami_assignment["properties"]["condition"] = None
+        runtime_uami_assignment["properties"]["conditionVersion"] = None
+        responses[
+            f"https://management.azure.com{storage_blob_data_reader_role_id}"
+            "?api-version=2022-04-01"
+        ] = {
+            "id": storage_blob_data_reader_role_id,
+            "properties": {
+                "permissions": [{
+                    "actions": [],
+                    "notActions": [],
+                    "dataActions": [
+                        "Microsoft.Storage/storageAccounts/blobServices/"
+                        "containers/blobs/read"
+                    ],
+                    "notDataActions": [],
+                }]
+            },
+        }
+        container_url = (
+            f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+            "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+            "&$filter=atScope()"
+        )
+        responses[container_url]["value"].append(runtime_uami_assignment)
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT",
         ):
             self._verify(arguments)
 
@@ -978,6 +1333,24 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             self.assertEqual(
                 successful["coordination_resources"]["lease_blob_path"],
                 f"locks/{TARGET_BINDING}.lock",
+            )
+            self.assertEqual(
+                successful["coordination_resources"][
+                    "coordination_blob_private_endpoint_resource_id"
+                ],
+                PRIVATE_ENDPOINT_ID,
+            )
+            self.assertEqual(
+                successful["coordination_resources"][
+                    "coordination_blob_private_dns_zone_resource_id"
+                ],
+                PRIVATE_DNS_ZONE_ID,
+            )
+            self.assertEqual(
+                successful["coordination_resources"][
+                    "coordination_blob_private_dns_vnet_link_resource_id"
+                ],
+                PRIVATE_DNS_VNET_LINK_ID,
             )
             self.assertEqual(
                 stat.S_IMODE((store.directory / store._NAME_FILE).stat().st_mode),

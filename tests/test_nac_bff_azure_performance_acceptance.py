@@ -100,6 +100,21 @@ INFRASTRUCTURE_PARAMETERS = {
         "resourceGroups/rg-nac-bff-test/providers/Microsoft.Web/sites/"
         "func-nac-bff-test"
     ),
+    "brokerVirtualNetworkResourceId": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/"
+        "virtualNetworks/vnet-nac-bff-test"
+    ),
+    "brokerFunctionIntegrationSubnetResourceId": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/"
+        "virtualNetworks/vnet-nac-bff-test/subnets/snet-flex-integration"
+    ),
+    "brokerPrivateEndpointSubnetResourceId": (
+        "/subscriptions/37cd9645-6cb9-4278-88ee-e80377cd951c/"
+        "resourceGroups/rg-nac-bff-test/providers/Microsoft.Network/"
+        "virtualNetworks/vnet-nac-bff-test/subnets/snet-private-endpoints"
+    ),
     "brokerFunctionPackageSha256": "e" * 64,
     "brokerTicketVerificationCertificateSha256": "f" * 64,
     "targetBindingSha256": "0" * 64,
@@ -198,10 +213,17 @@ def _bound_safety_evidence(target_binding_sha256: str) -> dict[str, object]:
             "brokerTicketVerificationCertificateSha256"
         ],
         "tags_sha256": performance._sha256_json(parameters["tags"]),
-        "broker_resource_access_rule_sha256": performance._sha256_json(
+        "broker_private_network_boundary_sha256": performance._sha256_json(
             {
-                "resourceId": parameters["brokerFunctionAppResourceId"],
-                "tenantId": parameters["tenantId"],
+                "virtualNetworkResourceId": parameters[
+                    "brokerVirtualNetworkResourceId"
+                ],
+                "functionIntegrationSubnetResourceId": parameters[
+                    "brokerFunctionIntegrationSubnetResourceId"
+                ],
+                "privateEndpointSubnetResourceId": parameters[
+                    "brokerPrivateEndpointSubnetResourceId"
+                ],
             }
         ),
         "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[
@@ -1993,12 +2015,17 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             "tags_sha256": performance._sha256_json(
                 INFRASTRUCTURE_PARAMETERS["tags"]
             ),
-            "broker_resource_access_rule_sha256": performance._sha256_json(
+            "broker_private_network_boundary_sha256": performance._sha256_json(
                 {
-                    "resourceId": INFRASTRUCTURE_PARAMETERS[
-                        "brokerFunctionAppResourceId"
+                    "virtualNetworkResourceId": INFRASTRUCTURE_PARAMETERS[
+                        "brokerVirtualNetworkResourceId"
                     ],
-                    "tenantId": INFRASTRUCTURE_PARAMETERS["tenantId"],
+                    "functionIntegrationSubnetResourceId": INFRASTRUCTURE_PARAMETERS[
+                        "brokerFunctionIntegrationSubnetResourceId"
+                    ],
+                    "privateEndpointSubnetResourceId": INFRASTRUCTURE_PARAMETERS[
+                        "brokerPrivateEndpointSubnetResourceId"
+                    ],
                 }
             ),
             "toolchain_attestations_sha256": INFRASTRUCTURE_APPROVAL[

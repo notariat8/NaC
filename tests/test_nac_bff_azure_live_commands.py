@@ -2537,6 +2537,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             ACTIVATION_HASH,
             CLIENT_ID,
             COMMIT,
+            CURRENT_AZURE_TEMPLATE_HASH,
             PRINCIPAL_ID,
             SYSTEM_PRINCIPAL_ID,
             TREE,
@@ -2546,6 +2547,10 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             _load_expectation,
             _operations,
             _prepared,
+        )
+        from nac_bff.azure_interruption_baseline import (
+            EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+            LEGACY_AZURE_TEMPLATE_HASH,
         )
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -2566,6 +2571,19 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             operations = _operations()
             deployment = _deployment(expectation)
             identity = _identity_binding()
+            self.assertEqual(
+                expectation["deployment_type_counts"],
+                EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+            )
+            self.assertEqual(
+                expectation["azure_template_hash"],
+                CURRENT_AZURE_TEMPLATE_HASH,
+            )
+            self.assertEqual(len(operations), 12)
+            self.assertEqual(
+                deployment["template_hash"], LEGACY_AZURE_TEMPLATE_HASH
+            )
+            self.assertEqual(deployment["mode"], "Incremental")
             raw_inventory = [
                 {
                     "id": item["id"],
@@ -2597,7 +2615,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 "properties": {
                     "provisioningState": "Succeeded",
                     "mode": "Incremental",
-                    "templateHash": expectation["azure_template_hash"],
+                    "templateHash": deployment["template_hash"],
                     "parameters": parameters,
                     "outputs": {
                         "functionAppResourceId": {
@@ -2906,6 +2924,22 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             )
             self.assertNotEqual(
                 result["deployment"]["bff_api_audience"], CLIENT_ID
+            )
+            self.assertEqual(
+                result["deployment"]["template_hash"],
+                LEGACY_AZURE_TEMPLATE_HASH,
+            )
+            self.assertEqual(result["deployment"]["mode"], "Incremental")
+            self.assertEqual(
+                set(result["deployment"]["outputs"]),
+                {
+                    "function_app_resource_id",
+                    "function_app_host_name",
+                    "function_app_system_assigned_principal_id",
+                    "managed_identity_resource_id",
+                    "managed_identity_client_id",
+                    "managed_identity_principal_id",
+                },
             )
             self.assertTrue(result["live_resource_state"]["security_properties_exact"])
 

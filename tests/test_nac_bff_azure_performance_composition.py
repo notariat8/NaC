@@ -36,6 +36,13 @@ def _coordination_resources() -> dict[str, str]:
     container = (
         f"{storage}/blobServices/default/containers/nac-bff-performance-leases"
     )
+    private_endpoint = (
+        f"{base}/providers/Microsoft.Network/privateEndpoints/pep-stcoord"
+    )
+    private_dns_zone = (
+        f"{base}/providers/Microsoft.Network/privateDnsZones/"
+        "privatelink.blob.core.windows.net"
+    )
     return {
         "broker_principal_id": "11111111-2222-4333-8444-555555555555",
         "coordination_storage_account_resource_id": storage,
@@ -45,6 +52,11 @@ def _coordination_resources() -> dict[str, str]:
         ),
         "broker_lease_role_assignment_id": (
             f"{container}/providers/Microsoft.Authorization/roleAssignments/broker"
+        ),
+        "coordination_blob_private_endpoint_resource_id": private_endpoint,
+        "coordination_blob_private_dns_zone_resource_id": private_dns_zone,
+        "coordination_blob_private_dns_vnet_link_resource_id": (
+            f"{private_dns_zone}/virtualNetworkLinks/link-stcoord"
         ),
     }
 
@@ -61,6 +73,14 @@ class _TraceReadback:
 
     def execute_read(self, *, observation_kind: str, **_kwargs: object) -> object:
         self.trace.append(f"provider:get:{observation_kind}")
+        if observation_kind == "coordination-broker-function-app":
+            return {
+                "payload": {
+                    "user_assigned_principal_ids": [
+                        "aaaaaaaa-2222-4333-8444-555555555555"
+                    ]
+                }
+            }
         return {"kind": observation_kind}
 
     def read_management_group_ancestry(self, **_kwargs: object) -> object:
@@ -144,6 +164,18 @@ def _trace_infrastructure_path(
         "wormStorageAccountResourceId": "worm",
         "brokerCallerServicePrincipalId": "caller",
         "brokerFunctionAppResourceId": "function",
+        "brokerVirtualNetworkResourceId": (
+            "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Network/"
+            "virtualNetworks/vnet-nac-bff-test"
+        ),
+        "brokerFunctionIntegrationSubnetResourceId": (
+            "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Network/"
+            "virtualNetworks/vnet-nac-bff-test/subnets/snet-flex-integration"
+        ),
+        "brokerPrivateEndpointSubnetResourceId": (
+            "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Network/"
+            "virtualNetworks/vnet-nac-bff-test/subnets/snet-private-endpoints"
+        ),
         "brokerFunctionPackageSha256": "b" * 64,
         "brokerTicketVerificationCertificateSha256": "c" * 64,
         "targetBindingSha256": "a" * 64,
@@ -288,6 +320,10 @@ class AzurePerformanceCompositionReadinessTests(unittest.TestCase):
             trace,
         )
         self.assertIn("provider:get:effective-rbac:caller", trace)
+        self.assertIn(
+            "provider:get:effective-rbac:aaaaaaaa-2222-4333-8444-555555555555",
+            trace,
+        )
 
     def test_complete_restart_precedes_and_selects_read_only_runtime_activation(self) -> None:
         source = inspect.getsource(

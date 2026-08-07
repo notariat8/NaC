@@ -48,6 +48,9 @@ from .azure_performance_lease_broker import (
     lease_broker_policy_sha256,
 )
 from .azure_performance_monitor import monitor_policy, monitor_policy_sha256
+from .azure_performance_infrastructure_safety import (
+    private_network_boundary_sha256,
+)
 from .entra_access_token import EntraAccessTokenValidator
 from .test_environment import ALLOWED_MATTER_ID, ALLOWED_PURPOSE
 from .workbench_projection import (
@@ -1220,13 +1223,16 @@ class BoundPerformanceAuthorizationVerifier:
                 "brokerTicketVerificationCertificateSha256"
             ),
             "tags_sha256": _sha256_json(parameters.get("tags", {})),
-            "broker_resource_access_rule_sha256": _sha256_json(
-                {
-                    "resourceId": parameters.get(
-                        "brokerFunctionAppResourceId"
-                    ),
-                    "tenantId": parameters.get("tenantId"),
-                }
+            "broker_private_network_boundary_sha256": private_network_boundary_sha256(
+                virtual_network_resource_id=parameters.get(
+                    "brokerVirtualNetworkResourceId"
+                ),
+                function_integration_subnet_resource_id=parameters.get(
+                    "brokerFunctionIntegrationSubnetResourceId"
+                ),
+                private_endpoint_subnet_resource_id=parameters.get(
+                    "brokerPrivateEndpointSubnetResourceId"
+                ),
             ),
             "toolchain_attestations_sha256": self._infrastructure_approval[
                 "toolchain_attestations_sha256"
