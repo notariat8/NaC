@@ -98,6 +98,10 @@ EXPECTED_TOP_LEVEL_TYPES = {
     "microsoft.web/sites",
     "microsoft.insights/actiongroups",
 }
+CURRENT_TOP_LEVEL_TYPES = {
+    *EXPECTED_TOP_LEVEL_TYPES,
+    "microsoft.network/virtualnetworks",
+}
 LEGACY_AZURE_TEMPLATE_HASH = "16486527106386001034"
 LEGACY_DEPLOYMENT_TYPE_COUNTS = {
     "microsoft.authorization/roleassignments": 2,
@@ -487,7 +491,9 @@ def exact_baseline_matches(
         }
     ):
         return False
-    return _inventory_matches(inventory, deployment, identity_binding)
+    return _inventory_matches(
+        inventory, deployment, identity_binding, expectation
+    )
 
 
 def _template_outputs_match(
@@ -513,7 +519,7 @@ def _observed_type_counts(
         LEGACY_DEPLOYMENT_TYPE_COUNTS,
         EXPECTED_DEPLOYMENT_TYPE_COUNTS,
     ):
-        return LEGACY_DEPLOYMENT_TYPE_COUNTS
+        return desired_type_counts
     return None
 
 
@@ -564,6 +570,20 @@ def _operation_targets_match(
         "microsoft.web/sites": {site_id},
         "microsoft.web/sites/config": {f"{site_id}/config/appsettings"},
     }
+    virtual_network = by_type.get("microsoft.network/virtualnetworks")
+    if virtual_network is not None:
+        virtual_network_id = str(virtual_network.get("id", "")).lower()
+        if not virtual_network_id:
+            return False
+        expected.update(
+            {
+                "microsoft.network/virtualnetworks": {virtual_network_id},
+                "microsoft.network/virtualnetworks/subnets": {
+                    f"{virtual_network_id}/subnets/snet-flex-integration",
+                    f"{virtual_network_id}/subnets/snet-private-endpoints",
+                },
+            }
+        )
     actual: dict[str, set[str]] = {}
     role_assignment_parents: set[str] = set()
     for operation in operations:
@@ -594,14 +614,13 @@ def _deployment_matches(deployment: object, expectation: dict[str, Any]) -> bool
     }:
         return False
     desired_type_counts = expectation.get("deployment_type_counts")
-    if desired_type_counts == LEGACY_DEPLOYMENT_TYPE_COUNTS:
-        observed_template_hash = expectation.get("azure_template_hash")
-    elif (
-        desired_type_counts == EXPECTED_DEPLOYMENT_TYPE_COUNTS
-        and expectation.get("azure_template_hash") != LEGACY_AZURE_TEMPLATE_HASH
+    observed_template_hash = expectation.get("azure_template_hash")
+    if (
+        desired_type_counts
+        not in (LEGACY_DEPLOYMENT_TYPE_COUNTS, EXPECTED_DEPLOYMENT_TYPE_COUNTS)
+        or not isinstance(observed_template_hash, str)
+        or not observed_template_hash.isdigit()
     ):
-        observed_template_hash = LEGACY_AZURE_TEMPLATE_HASH
-    else:
         return False
     return bool(
         deployment.get("name") == expectation["deployment_name"]
@@ -620,8 +639,18 @@ def _inventory_matches(
     inventory: object,
     deployment: dict[str, Any],
     identity_binding: object,
+    expectation: dict[str, Any],
 ) -> bool:
-    if not isinstance(inventory, list) or len(inventory) != 7:
+    current = (
+        expectation.get("deployment_type_counts")
+        == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    )
+    expected_top_level_types = (
+        CURRENT_TOP_LEVEL_TYPES if current else EXPECTED_TOP_LEVEL_TYPES
+    )
+    if not isinstance(inventory, list) or len(inventory) != len(
+        expected_top_level_types
+    ):
         return False
     by_type: dict[str, dict[str, Any]] = {}
     keys = {
@@ -637,7 +666,7 @@ def _inventory_matches(
         ):
             return False
         by_type[item.get("type")] = item
-    if set(by_type) != EXPECTED_TOP_LEVEL_TYPES:
+    if set(by_type) != expected_top_level_types:
         return False
     identity = by_type["microsoft.managedidentity/userassignedidentities"]
     name = identity.get("name")
@@ -649,6 +678,15 @@ def _inventory_matches(
         return False
     names = {
         "microsoft.managedidentity/userassignedidentities": name,
+        **(
+            {
+                "microsoft.network/virtualnetworks": (
+                    f"vnet-nac-bff-test-{token}"
+                )
+            }
+            if current
+            else {}
+        ),
         "microsoft.storage/storageaccounts": f"stnacbff{token}",
         "microsoft.operationalinsights/workspaces": f"log-nac-bff-test-{token}",
         "microsoft.insights/components": f"appi-nac-bff-test-{token}",
@@ -705,15 +743,24 @@ def _inventory_matches(
     outputs = deployment.get("outputs")
     if not isinstance(outputs, dict):
         return False
-    outputs_match = bool(
-        set(outputs) == {
+    expected_output_names = {
             "function_app_resource_id",
             "function_app_host_name",
             "function_app_system_assigned_principal_id",
             "managed_identity_resource_id",
             "managed_identity_client_id",
             "managed_identity_principal_id",
-        }
+    }
+    if current:
+        expected_output_names.update(
+            {
+                "virtual_network_resource_id",
+                "function_integration_subnet_resource_id",
+                "private_endpoint_subnet_resource_id",
+            }
+        )
+    outputs_match = bool(
+        set(outputs) == expected_output_names
         and str(outputs["function_app_resource_id"]).lower()
         == str(by_type["microsoft.web/sites"]["id"]).lower()
         and outputs["function_app_host_name"]
@@ -728,6 +775,29 @@ def _inventory_matches(
         )
         and _UUID_RE.fullmatch(
             str(outputs["managed_identity_principal_id"])
+        )
+        and (
+            not current
+            or (
+                str(outputs["virtual_network_resource_id"]).lower()
+                == str(
+                    by_type["microsoft.network/virtualnetworks"]["id"]
+                ).lower()
+                and str(
+                    outputs["function_integration_subnet_resource_id"]
+                ).lower()
+                == (
+                    f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                    "/subnets/snet-flex-integration"
+                ).lower()
+                and str(
+                    outputs["private_endpoint_subnet_resource_id"]
+                ).lower()
+                == (
+                    f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                    "/subnets/snet-private-endpoints"
+                ).lower()
+            )
         )
     )
     return bool(

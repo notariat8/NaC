@@ -269,7 +269,7 @@ def _deployment_parameters_with_arm_metadata(
 def _deployment_payload(
     outputs: dict,
     *,
-    template_hash: str = "12117878019922581049",
+    template_hash: str = "8487493885361062053",
     correlation_id: str = DEPLOYMENT_CORRELATION_ID,
     provisioning_state: str = "Succeeded",
 ) -> dict:
@@ -343,6 +343,14 @@ def _azure_resources() -> list[dict]:
             **details,
         }
         for resource_type, name, details in specifications
+    ]
+
+
+def _legacy_azure_resources() -> list[dict]:
+    return [
+        item
+        for item in _azure_resources()
+        if item["type"].casefold() != "microsoft.network/virtualnetworks"
     ]
 
 
@@ -1920,7 +1928,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
         )
         bicep.parent.mkdir(parents=True)
-        bicep.write_text('{"$schema":"test","metadata":{"_generator":{"templateHash":"12117878019922581049"}},"resources":[]}\n')
+        bicep.write_text('{"$schema":"test","metadata":{"_generator":{"templateHash":"8487493885361062053"}},"resources":[]}\n')
         config = self.repo_root / "spfx/nac-bpmn-viewer/config/package-solution.json"
         config.parent.mkdir(parents=True)
         config.write_text("{}\n")
@@ -2521,6 +2529,64 @@ class AzureBffCompositionTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "PASSED", result)
         self.assertTrue(self.port._deployment_preexisting)
+
+    def test_prewrite_accepts_exact_legacy_baseline_for_incremental_upgrade(
+        self,
+    ) -> None:
+        self.azure.resources = _legacy_azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            template_hash="16486527106386001034",
+        )
+
+        with (
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_uami_sites_selected",
+                return_value={"status": "absent", "assignment_count": 0},
+            ),
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_site_read_permission",
+                return_value={"status": "absent", "permission_count": 0},
+            ),
+        ):
+            result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED", result)
+        self.assertTrue(self.port._deployment_preexisting)
+
+    def test_prewrite_rejects_legacy_inventory_with_current_deployment(
+        self,
+    ) -> None:
+        self.azure.resources = _legacy_azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            template_hash="8487493885361062053",
+        )
+
+        result = self._prewrite()
+
+        self.assertIn(
+            result["code"],
+            {
+                "AZURE_DEPLOYMENT_INPUT_DRIFT",
+                "AZURE_RESOURCE_INVENTORY_DEPLOYMENT_DRIFT",
+            },
+        )
+
+    def test_prewrite_rejects_current_inventory_with_legacy_deployment(
+        self,
+    ) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            template_hash="16486527106386001034",
+        )
+
+        result = self._prewrite()
+
+        self.assertEqual(
+            result["code"], "AZURE_RESOURCE_INVENTORY_DEPLOYMENT_DRIFT"
+        )
 
     def test_prewrite_rejects_foreign_arm_parameter_type(self) -> None:
         self.azure.resources = _azure_resources()
@@ -4009,7 +4075,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             result = self.port.execute_step(STEPS[11], self.context)
 
         self.assertEqual(result["status"], "PASSED")
-        self.assertEqual(result["verified_count"], 28)
+        self.assertEqual(result["verified_count"], 31)
         self.assertRegex(result["resource_reference_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(
             self.port._function_deployment_input_sha256,

@@ -104,6 +104,7 @@ var validatedStorageAccountName = !empty(validatedDeploymentScope) && toLower(co
   ? storageAccountName
   : fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.')
 var isolationSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedStorageAccountName)
+var brokerNetworkSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedBrokerVirtualNetworkResourceId)
 var brokerLeaseDataRoleDefinitionGuid = guid(
   subscription().id,
   resourceGroup().id,
@@ -188,7 +189,7 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
 
 resource privateDnsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
   parent: privateDnsZone
-  name: 'link-nac-bff-${isolationSuffix}'
+  name: 'link-nac-bff-${brokerNetworkSuffix}'
   location: 'global'
   tags: resourceTags
   properties: {

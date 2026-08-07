@@ -349,7 +349,7 @@ breitere direkte, gruppenbasierte oder geerbte Data-Plane-Zuweisung sowie jede
 effektive Control-Plane-Zuweisung blockiert Bootstrap und Lease-Acquire. Für die
 Runtime-UAMI sind unabhängig vom Rollennamen exakt null effektive Coordination-
 Storage-DataActions zulässig. Der Infrastruktur-Safety-Nachweis verwendet exakt
-`nac.azure-bff-performance-infrastructure-safety-evidence/v7`.
+`nac.azure-bff-performance-infrastructure-safety-evidence/v8`.
 Ein vom Aufrufer abweichend gewählter Azure-Scope blockiert vor Netzwerk; das
 Bicep-Template bricht zusätzlich ab, wenn tatsächlicher Tenant, Subscription
 oder Resource Group von den gebundenen Parameterwerten abweichen.

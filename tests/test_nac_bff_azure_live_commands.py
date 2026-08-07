@@ -308,6 +308,72 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             azure_live_commands._security_projection_matches(drifted, expected)
         )
 
+    def test_performance_network_readback_rejects_security_drift(self) -> None:
+        virtual_network_id = (
+            "/subscriptions/11111111-1111-1111-1111-111111111111"
+            "/resourceGroups/rg-nac-test"
+            "/providers/Microsoft.Network/virtualNetworks/vnet-nac-test"
+        )
+        virtual_network = {
+            "addressSpace": {"addressPrefixes": ["10.42.0.0/24"]},
+            "subnets": [
+                {"id": f"{virtual_network_id}/subnets/snet-flex-integration"},
+                {"id": f"{virtual_network_id}/subnets/snet-private-endpoints"},
+            ],
+            "provisioningState": "Succeeded",
+        }
+        subnet = {
+            "addressPrefix": "10.42.0.0/27",
+            "delegations": [{
+                "properties": {"serviceName": "Microsoft.App/environments"}
+            }],
+            "privateEndpointNetworkPolicies": "Enabled",
+            "privateLinkServiceNetworkPolicies": "Enabled",
+            "provisioningState": "Succeeded",
+        }
+
+        self.assertTrue(
+            azure_live_commands._virtual_network_state_matches(
+                virtual_network, virtual_network_id
+            )
+        )
+        self.assertTrue(
+            azure_live_commands._subnet_state_matches(
+                subnet,
+                address_prefix="10.42.0.0/27",
+                delegation_services=["Microsoft.App/environments"],
+                private_endpoint_network_policies="Enabled",
+            )
+        )
+        for field, value in (
+            ("networkSecurityGroup", {"id": "unexpected"}),
+            ("routeTable", {"id": "unexpected"}),
+            ("natGateway", {"id": "unexpected"}),
+            ("serviceEndpoints", [{"service": "Microsoft.Storage"}]),
+            ("serviceEndpointPolicies", [{"id": "unexpected"}]),
+        ):
+            with self.subTest(field=field):
+                drifted = copy.deepcopy(subnet)
+                drifted[field] = value
+                self.assertFalse(
+                    azure_live_commands._subnet_state_matches(
+                        drifted,
+                        address_prefix="10.42.0.0/27",
+                        delegation_services=["Microsoft.App/environments"],
+                        private_endpoint_network_policies="Enabled",
+                    )
+                )
+
+        drifted_vnet = copy.deepcopy(virtual_network)
+        drifted_vnet["subnets"].append({
+            "id": f"{virtual_network_id}/subnets/unexpected"
+        })
+        self.assertFalse(
+            azure_live_commands._virtual_network_state_matches(
+                drifted_vnet, virtual_network_id
+            )
+        )
+
     def test_sealed_bootstrap_disables_all_azure_cli_extension_sources(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         for binding in (
@@ -2532,12 +2598,19 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(run.call_args.kwargs["bound_artifacts"], bindings)
 
 
+    def test_legacy_nonempty_interruption_observation_remains_reconcilable(self) -> None:
+        self._assert_nonempty_interruption_observation(current=False)
+
     def test_nonempty_interruption_observation_uses_dynamic_audience_and_app_settings_rest(self) -> None:
+        self._assert_nonempty_interruption_observation(current=True)
+
+    def _assert_nonempty_interruption_observation(self, *, current: bool) -> None:
         from tests.test_nac_bff_azure_interruption_baseline import (
             ACTIVATION_HASH,
             CLIENT_ID,
             COMMIT,
             CURRENT_AZURE_TEMPLATE_HASH,
+            LEGACY_AZURE_TEMPLATE_HASH,
             PRINCIPAL_ID,
             SYSTEM_PRINCIPAL_ID,
             TREE,
@@ -2550,12 +2623,12 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         )
         from nac_bff.azure_interruption_baseline import (
             EXPECTED_DEPLOYMENT_TYPE_COUNTS,
-            LEGACY_AZURE_TEMPLATE_HASH,
+            LEGACY_DEPLOYMENT_TYPE_COUNTS,
         )
 
         with tempfile.TemporaryDirectory() as temporary:
             run_dir = Path(temporary)
-            _prepared(run_dir)
+            _prepared(run_dir, legacy=not current)
             request = SimpleNamespace(
                 expected_activation_hash=ACTIVATION_HASH,
                 approved_commit=COMMIT,
@@ -2566,22 +2639,35 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             )
             self.assertIsNone(error)
             assert expectation is not None
-            inventory = _inventory()
+            inventory = _inventory(current=current)
             by_type = {item["type"]: item for item in inventory}
-            operations = _operations()
+            operations = _operations(current=current)
             deployment = _deployment(expectation)
             identity = _identity_binding()
             self.assertEqual(
                 expectation["deployment_type_counts"],
-                EXPECTED_DEPLOYMENT_TYPE_COUNTS,
+                (
+                    EXPECTED_DEPLOYMENT_TYPE_COUNTS
+                    if current
+                    else LEGACY_DEPLOYMENT_TYPE_COUNTS
+                ),
             )
             self.assertEqual(
                 expectation["azure_template_hash"],
-                CURRENT_AZURE_TEMPLATE_HASH,
+                (
+                    CURRENT_AZURE_TEMPLATE_HASH
+                    if current
+                    else LEGACY_AZURE_TEMPLATE_HASH
+                ),
             )
-            self.assertEqual(len(operations), 12)
+            self.assertEqual(len(operations), 15 if current else 12)
             self.assertEqual(
-                deployment["template_hash"], LEGACY_AZURE_TEMPLATE_HASH
+                deployment["template_hash"],
+                (
+                    CURRENT_AZURE_TEMPLATE_HASH
+                    if current
+                    else LEGACY_AZURE_TEMPLATE_HASH
+                ),
             )
             self.assertEqual(deployment["mode"], "Incremental")
             raw_inventory = [
@@ -2630,6 +2716,30 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                             "type": "String",
                             "value": SYSTEM_PRINCIPAL_ID,
                         },
+                        **(
+                            {
+                                "virtualNetworkResourceId": {
+                                    "type": "String",
+                                    "value": deployment["outputs"][
+                                        "virtual_network_resource_id"
+                                    ],
+                                },
+                                "functionIntegrationSubnetResourceId": {
+                                    "type": "String",
+                                    "value": deployment["outputs"][
+                                        "function_integration_subnet_resource_id"
+                                    ],
+                                },
+                                "privateEndpointSubnetResourceId": {
+                                    "type": "String",
+                                    "value": deployment["outputs"][
+                                        "private_endpoint_subnet_resource_id"
+                                    ],
+                                },
+                            }
+                            if current
+                            else {}
+                        ),
                         "managedIdentityResourceId": {
                             "type": "String",
                             "value": deployment["outputs"]["managed_identity_resource_id"],
@@ -2691,6 +2801,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             component = by_type["microsoft.insights/components"]
             plan = by_type["microsoft.web/serverfarms"]
             connection = "InstrumentationKey=synthetic"
+            virtual_network = by_type.get("microsoft.network/virtualnetworks")
             properties = {
                 "microsoft.managedidentity/userassignedidentities": {
                     "clientId": CLIENT_ID,
@@ -2698,6 +2809,33 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                     "tenantId": managed["tenant_id"],
                     "providerMetadata": "allowed",
                 },
+                **(
+                    {
+                        "microsoft.network/virtualnetworks": {
+                            "addressSpace": {
+                                "addressPrefixes": ["10.42.0.0/24"]
+                            },
+                            "subnets": [
+                                {
+                                    "id": (
+                                        f"{virtual_network['id']}"
+                                        "/subnets/snet-flex-integration"
+                                    )
+                                },
+                                {
+                                    "id": (
+                                        f"{virtual_network['id']}"
+                                        "/subnets/snet-private-endpoints"
+                                    )
+                                },
+                            ],
+                            "provisioningState": "Succeeded",
+                        },
+                        "microsoft.network/virtualnetworks/subnets": None,
+                    }
+                    if current and virtual_network is not None
+                    else {}
+                ),
                 "microsoft.storage/storageaccounts": {
                     "accessTier": "Hot",
                     "allowBlobPublicAccess": False,
@@ -2821,7 +2959,34 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                         ),
                     }
                 else:
-                    detail_properties = properties[resource_type]
+                    if resource_type == "microsoft.network/virtualnetworks/subnets":
+                        is_integration = operation["id"].endswith(
+                            "/subnets/snet-flex-integration"
+                        )
+                        detail_properties = {
+                            "addressPrefix": (
+                                "10.42.0.0/27"
+                                if is_integration
+                                else "10.42.0.32/27"
+                            ),
+                            "delegations": (
+                                [{
+                                    "name": "flex-consumption",
+                                    "properties": {
+                                        "serviceName": "Microsoft.App/environments"
+                                    },
+                                }]
+                                if is_integration
+                                else []
+                            ),
+                            "privateEndpointNetworkPolicies": (
+                                "Enabled" if is_integration else "Disabled"
+                            ),
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "provisioningState": "Succeeded",
+                        }
+                    else:
+                        detail_properties = properties[resource_type]
                 details.append({
                     "id": operation["id"],
                     "type": resource_type,
@@ -2927,19 +3092,33 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             )
             self.assertEqual(
                 result["deployment"]["template_hash"],
-                LEGACY_AZURE_TEMPLATE_HASH,
+                (
+                    CURRENT_AZURE_TEMPLATE_HASH
+                    if current
+                    else LEGACY_AZURE_TEMPLATE_HASH
+                ),
             )
             self.assertEqual(result["deployment"]["mode"], "Incremental")
             self.assertEqual(
                 set(result["deployment"]["outputs"]),
-                {
+                ({
+                    "function_app_resource_id",
+                    "function_app_host_name",
+                    "function_app_system_assigned_principal_id",
+                    "virtual_network_resource_id",
+                    "function_integration_subnet_resource_id",
+                    "private_endpoint_subnet_resource_id",
+                    "managed_identity_resource_id",
+                    "managed_identity_client_id",
+                    "managed_identity_principal_id",
+                } if current else {
                     "function_app_resource_id",
                     "function_app_host_name",
                     "function_app_system_assigned_principal_id",
                     "managed_identity_resource_id",
                     "managed_identity_client_id",
                     "managed_identity_principal_id",
-                },
+                }),
             )
             self.assertTrue(result["live_resource_state"]["security_properties_exact"])
 

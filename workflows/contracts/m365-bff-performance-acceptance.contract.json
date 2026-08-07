@@ -642,7 +642,7 @@
     "live_readback_must_validate_safe_before_lease_acquire": true,
     "closing_clean_git_snapshot_required_after_all_gate_measurements": true,
     "closing_git_snapshot_commit_and_tree_carried_to_lease_boundary": true,
-    "infrastructure_safety_evidence_schema_exact": "nac.azure-bff-performance-infrastructure-safety-evidence/v7",
+    "infrastructure_safety_evidence_schema_exact": "nac.azure-bff-performance-infrastructure-safety-evidence/v8",
     "infrastructure_safety_evidence_sha256_required": true
   },
   "live_action_boundary": {

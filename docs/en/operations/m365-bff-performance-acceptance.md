@@ -324,7 +324,7 @@ all transitive Entra groups, role, DataActions, condition, and scope; any
 broader direct, group-based, or inherited data-plane assignment, and every
 effective control-plane assignment, blocks bootstrap and lease acquire. The
 infrastructure safety evidence uses exactly
-`nac.azure-bff-performance-infrastructure-safety-evidence/v7`. A
+`nac.azure-bff-performance-infrastructure-safety-evidence/v8`. A
 caller-selected Azure scope mismatch blocks before network access, and the
 Bicep template independently fails when its actual tenant, subscription, or
 resource group differs from those bound parameter values.

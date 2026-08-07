@@ -257,6 +257,50 @@ def _function_app() -> dict[str, object]:
     }
 
 
+def _virtual_network() -> dict[str, object]:
+    return {
+        "id": VIRTUAL_NETWORK_ID,
+        "name": "vnet-nac-bff-test",
+        "type": "Microsoft.Network/virtualNetworks",
+        "location": LOCATION,
+        "properties": {
+            "addressSpace": {"addressPrefixes": ["10.42.0.0/24"]},
+            "subnets": [
+                {"id": FUNCTION_INTEGRATION_SUBNET_ID},
+                {"id": PRIVATE_ENDPOINT_SUBNET_ID},
+            ],
+            "provisioningState": "Succeeded",
+        },
+    }
+
+
+def _subnet(
+    resource_id: str,
+    *,
+    address_prefix: str,
+    delegation_service_names: list[str],
+    private_endpoint_network_policies: str,
+) -> dict[str, object]:
+    return {
+        "id": resource_id,
+        "name": resource_id.rsplit("/", 1)[-1],
+        "type": "Microsoft.Network/virtualNetworks/subnets",
+        "properties": {
+            "addressPrefix": address_prefix,
+            "delegations": [
+                {
+                    "name": f"delegation-{index}",
+                    "properties": {"serviceName": service_name},
+                }
+                for index, service_name in enumerate(delegation_service_names)
+            ],
+            "privateEndpointNetworkPolicies": private_endpoint_network_policies,
+            "privateLinkServiceNetworkPolicies": "Enabled",
+            "provisioningState": "Succeeded",
+        },
+    }
+
+
 def _private_endpoint() -> dict[str, object]:
     return {
         "id": PRIVATE_ENDPOINT_ID,
@@ -443,6 +487,27 @@ def _responses() -> dict[str, object]:
         ),
         f"https://management.azure.com{FUNCTION_APP_ID}?api-version=2023-12-01": (
             _function_app()
+        ),
+        f"https://management.azure.com{VIRTUAL_NETWORK_ID}?api-version=2024-05-01": (
+            _virtual_network()
+        ),
+        (
+            f"https://management.azure.com{FUNCTION_INTEGRATION_SUBNET_ID}"
+            "?api-version=2024-05-01"
+        ): _subnet(
+            FUNCTION_INTEGRATION_SUBNET_ID,
+            address_prefix="10.42.0.0/27",
+            delegation_service_names=["Microsoft.App/environments"],
+            private_endpoint_network_policies="Enabled",
+        ),
+        (
+            f"https://management.azure.com{PRIVATE_ENDPOINT_SUBNET_ID}"
+            "?api-version=2024-05-01"
+        ): _subnet(
+            PRIVATE_ENDPOINT_SUBNET_ID,
+            address_prefix="10.42.0.32/27",
+            delegation_service_names=[],
+            private_endpoint_network_policies="Disabled",
         ),
         f"https://management.azure.com{COORDINATION_ID}?api-version=2023-05-01": (
             _storage(COORDINATION_NAME, COORDINATION_ID)
@@ -645,11 +710,26 @@ def _build_arguments(directory: Path) -> dict[str, object]:
                 resource_id=FUNCTION_APP_ID,
             ),
             "broker_virtual_network_resource_id": VIRTUAL_NETWORK_ID,
+            "broker_virtual_network_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="broker-virtual-network",
+                resource_id=VIRTUAL_NETWORK_ID,
+            ),
             "broker_function_integration_subnet_resource_id": (
                 FUNCTION_INTEGRATION_SUBNET_ID
             ),
+            "broker_function_integration_subnet_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="broker-function-integration-subnet",
+                resource_id=FUNCTION_INTEGRATION_SUBNET_ID,
+            ),
             "broker_private_endpoint_subnet_resource_id": (
                 PRIVATE_ENDPOINT_SUBNET_ID
+            ),
+            "broker_private_endpoint_subnet_readback_envelope": post(
+                adapter.execute_read,
+                observation_kind="broker-private-endpoint-subnet",
+                resource_id=PRIVATE_ENDPOINT_SUBNET_ID,
             ),
             "coordination_blob_private_endpoint_resource_id": PRIVATE_ENDPOINT_ID,
             "coordination_blob_private_dns_zone_resource_id": PRIVATE_DNS_ZONE_ID,
@@ -793,7 +873,7 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         )
         self.assertEqual(
             evidence["schema_version"],
-            "nac.azure-bff-performance-infrastructure-safety-evidence/v7",
+            "nac.azure-bff-performance-infrastructure-safety-evidence/v8",
         )
         self.assertEqual(
             evidence["broker_virtual_network_resource_id"], VIRTUAL_NETWORK_ID
@@ -992,6 +1072,50 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             "BROKER_FUNCTION_APP_READBACK_INVALID",
         ):
             self._verify(arguments)
+
+    def test_rejects_virtual_network_or_subnet_configuration_drift(self) -> None:
+        vnet_url = (
+            f"https://management.azure.com{VIRTUAL_NETWORK_ID}"
+            "?api-version=2024-05-01"
+        )
+        function_subnet_url = (
+            f"https://management.azure.com{FUNCTION_INTEGRATION_SUBNET_ID}"
+            "?api-version=2024-05-01"
+        )
+        private_endpoint_subnet_url = (
+            f"https://management.azure.com{PRIVATE_ENDPOINT_SUBNET_ID}"
+            "?api-version=2024-05-01"
+        )
+        variants = (
+            (vnet_url, ("properties", "addressSpace", "addressPrefixes"), ["10.43.0.0/24"]),
+            (function_subnet_url, ("properties", "addressPrefix"), "10.42.0.64/27"),
+            (
+                function_subnet_url,
+                ("properties", "networkSecurityGroup"),
+                {"id": f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Network/networkSecurityGroups/other"},
+            ),
+            (
+                private_endpoint_subnet_url,
+                ("properties", "privateEndpointNetworkPolicies"),
+                "Enabled",
+            ),
+        )
+        for url, path, replacement in variants:
+            with self.subTest(path=path):
+                responses = _responses()
+                target = responses[url]
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = replacement
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    "BROKER_(VIRTUAL_NETWORK|SUBNET)_READBACK_INVALID",
+                ):
+                    self._verify(arguments)
 
     def test_rejects_wrong_private_endpoint_binding(self) -> None:
         endpoint_url = (
@@ -1245,6 +1369,81 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
                             "notActions": [],
                             "dataActions": data_actions,
                             "notDataActions": not_data_actions,
+                        }]
+                    },
+                }
+                container_url = (
+                    f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+                    "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    "&$filter=atScope()"
+                )
+                responses[container_url]["value"].append(assignment)
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    expected_error,
+                ):
+                    self._verify(arguments)
+
+    def test_caller_and_runtime_control_plane_actions_are_rejected(self) -> None:
+        cases = (
+            (
+                "caller_global_control",
+                CALLER_PRINCIPAL_ID,
+                ["*"],
+                [],
+                "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+            (
+                "runtime_storage_control",
+                RUNTIME_UAMI_PRINCIPAL_ID,
+                ["Microsoft.Storage/storageAccounts/write"],
+                [],
+                "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+            (
+                "runtime_subtracted_control",
+                RUNTIME_UAMI_PRINCIPAL_ID,
+                ["*"],
+                ["Microsoft.Storage/*"],
+                "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+        )
+        for index, (
+            label,
+            principal_id,
+            actions,
+            not_actions,
+            expected_error,
+        ) in enumerate(cases, start=11):
+            with self.subTest(label=label):
+                responses = _responses()
+                role_definition_id = (
+                    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+                    f"roleDefinitions/77777777-2222-4333-8444-{index:012d}"
+                )
+                assignment = deepcopy(_role_assignment())
+                assignment["id"] = ROLE_ASSIGNMENT_ID.rsplit("/", 1)[0] + (
+                    f"/44444444-2222-4333-8444-{index:012d}"
+                )
+                assignment["properties"]["principalId"] = principal_id
+                assignment["properties"]["roleDefinitionId"] = role_definition_id
+                assignment["properties"]["condition"] = None
+                assignment["properties"]["conditionVersion"] = None
+                responses[
+                    f"https://management.azure.com{role_definition_id}"
+                    "?api-version=2022-04-01"
+                ] = {
+                    "id": role_definition_id,
+                    "properties": {
+                        "permissions": [{
+                            "actions": actions,
+                            "notActions": not_actions,
+                            "dataActions": [],
+                            "notDataActions": [],
                         }]
                     },
                 }

@@ -992,12 +992,24 @@ def _infrastructure_verification_arguments(
         "broker_virtual_network_resource_id": parameters[
             "brokerVirtualNetworkResourceId"
         ],
+        "broker_virtual_network_readback_envelope": readback.execute_read(
+            observation_kind="broker-virtual-network",
+            resource_id=parameters["brokerVirtualNetworkResourceId"],
+        ),
         "broker_function_integration_subnet_resource_id": parameters[
             "brokerFunctionIntegrationSubnetResourceId"
         ],
+        "broker_function_integration_subnet_readback_envelope": readback.execute_read(
+            observation_kind="broker-function-integration-subnet",
+            resource_id=parameters["brokerFunctionIntegrationSubnetResourceId"],
+        ),
         "broker_private_endpoint_subnet_resource_id": parameters[
             "brokerPrivateEndpointSubnetResourceId"
         ],
+        "broker_private_endpoint_subnet_readback_envelope": readback.execute_read(
+            observation_kind="broker-private-endpoint-subnet",
+            resource_id=parameters["brokerPrivateEndpointSubnetResourceId"],
+        ),
         "coordination_blob_private_endpoint_resource_id": (
             coordination.coordination_blob_private_endpoint_resource_id
         ),

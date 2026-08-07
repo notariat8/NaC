@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from contextlib import nullcontext
 import inspect
 import json
@@ -18,6 +19,7 @@ from nac_bff.azure_performance_lease_broker import RECEIPT_VERSION
 from nac_bff.azure_performance_lease_broker_client import (
     BrokeredAzureBlobLeaseAdapter,
     BrokeredAzureBlobLeaseError,
+    _submitted_ticket_fingerprint,
 )
 
 
@@ -59,7 +61,44 @@ class _Opener:
         return self.response
 
 
-def _receipt(operation: str, outcome: str, *, retry: str = "NONE") -> bytes:
+def _ticket(operation: str) -> dict:
+    return {
+        "key_id": "test-key",
+        "payload": {
+            "actions": [operation],
+            "actor_id": "33333333-3333-4333-8333-333333333333",
+            "audience": "api://nac-test",
+            "blob_path": f"locks/{TARGET}.lock",
+            "commit_sha": "a" * 40,
+            "expires_at": 2,
+            "function_package_sha256": "b" * 64,
+            "issued_at": 1,
+            "issuer": "nac-test",
+            "nonce": "c" * 43,
+            "owner_binding_sha256": "d" * 64,
+            "owner_subject": "33333333-3333-4333-8333-333333333333",
+            "plan_sha256": "e" * 64,
+            "role": "Performance.Lease",
+            "scope": "nac.performance.lease",
+            "storage_binding": "test-storage",
+            "target_binding_sha256": TARGET,
+            "tenant_id": "22222222-2222-4222-8222-222222222222",
+            "tree_sha": "f" * 40,
+            "version": "nac.azure-performance-lease-activation-ticket/v1",
+        },
+        "signature": base64.urlsafe_b64encode(b"s" * 32)
+        .rstrip(b"=")
+        .decode("ascii"),
+    }
+
+
+def _receipt(
+    operation: str,
+    outcome: str,
+    *,
+    retry: str = "NONE",
+    ticket_fingerprint: str | None = None,
+) -> bytes:
     return json.dumps(
         {
             "binding_fingerprint": BROKER_BINDING,
@@ -67,7 +106,10 @@ def _receipt(operation: str, outcome: str, *, retry: str = "NONE") -> bytes:
             "outcome": outcome,
             "retry": retry,
             "schema_version": RECEIPT_VERSION,
-            "ticket_fingerprint": "4" * 64,
+            "ticket_fingerprint": (
+                ticket_fingerprint
+                or _submitted_ticket_fingerprint(_ticket(operation))
+            ),
         },
         separators=(",", ":"),
         sort_keys=True,
@@ -83,7 +125,7 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
 
         def ticket(operation: str):
             self.ticket_calls.append(operation)
-            return {"operation": operation, "signed": True}
+            return _ticket(operation)
 
         def token():
             self.token_calls += 1
@@ -156,6 +198,21 @@ class BrokeredAzureBlobLeaseAdapterTests(unittest.TestCase):
                     self.adapter.acquire(LOCAL_ID, self.capability)
                 self.assertNotIn("provider", str(error.exception))
                 self.assertNotIn("secret", str(error.exception))
+
+    def test_receipt_for_different_ticket_fails_closed(self) -> None:
+        self.opener.response = _Response(
+            _receipt(
+                "acquire",
+                "ACQUIRED",
+                ticket_fingerprint="9" * 64,
+            )
+        )
+
+        with self.assertRaisesRegex(
+            BrokeredAzureBlobLeaseError,
+            "^BROKERED_LEASE_TICKET_MISMATCH$",
+        ):
+            self.adapter.acquire(LOCAL_ID, self.capability)
 
     def test_execution_fence_rejects_concurrent_local_runs(self) -> None:
         entered = threading.Event()

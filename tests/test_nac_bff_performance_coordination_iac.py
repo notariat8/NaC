@@ -132,6 +132,8 @@ class NaCBffPerformanceCoordinationIacTests(unittest.TestCase):
             "var privateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'",
             "resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01'",
             "resource privateDnsVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01'",
+            "var brokerNetworkSuffix = uniqueString(subscription().tenantId, resourceGroup().id, validatedBrokerVirtualNetworkResourceId)",
+            "name: 'link-nac-bff-${brokerNetworkSuffix}'",
             "id: validatedBrokerVirtualNetworkResourceId",
             "registrationEnabled: false",
             "resource coordinationBlobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01'",

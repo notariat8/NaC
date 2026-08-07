@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "17848115375701160485"
+      "templateHash": "9835329599425180423"
     },
     "description": "Dedicated Azure Blob coordination boundary for one NaC BFF performance run."
   },
@@ -147,6 +147,7 @@
     "coordinationStorageAccountResourceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
     "validatedStorageAccountName": "[if(and(and(and(and(and(and(not(empty(variables('validatedDeploymentScope'))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedBffStorageAccountResourceId'))))), not(equals(toLower(variables('coordinationStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(variables('validatedBffStorageAccountResourceId')), toLower(variables('validatedWormStorageAccountResourceId'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('bffStorageAccountName'))))), not(equals(toLower(parameters('storageAccountName')), toLower(variables('wormStorageAccountName'))))), not(equals(toLower(variables('bffStorageAccountName')), toLower(variables('wormStorageAccountName'))))), parameters('storageAccountName'), fail('Performance coordination, BFF, and WORM storage accounts must be pairwise distinct.'))]",
     "isolationSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedStorageAccountName'))]",
+    "brokerNetworkSuffix": "[uniqueString(subscription().tenantId, resourceGroup().id, variables('validatedBrokerVirtualNetworkResourceId'))]",
     "brokerLeaseDataRoleDefinitionGuid": "[guid(subscription().id, resourceGroup().id, variables('validatedStorageAccountName'), variables('containerName'), 'nac-bff-performance-lease-broker-read-write-v1')]",
     "blobReadDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read",
     "blobWriteDataAction": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
@@ -208,7 +209,7 @@
     {
       "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
       "apiVersion": "2024-06-01",
-      "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('isolationSuffix')))]",
+      "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('brokerNetworkSuffix')))]",
       "location": "global",
       "tags": "[variables('resourceTags')]",
       "properties": {
@@ -454,7 +455,7 @@
     },
     "coordinationBlobPrivateDnsVirtualNetworkLinkResourceId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('isolationSuffix')))]"
+      "value": "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', variables('privateDnsZoneName'), format('link-nac-bff-{0}', variables('brokerNetworkSuffix')))]"
     },
     "brokerFunctionPackageSha256Binding": {
       "type": "string",

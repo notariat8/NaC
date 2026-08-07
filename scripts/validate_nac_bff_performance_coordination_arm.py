@@ -454,6 +454,7 @@ EXPECTED_VARIABLE_KEYS = {
     "coordinationStorageAccountResourceId",
     "validatedStorageAccountName",
     "isolationSuffix",
+    "brokerNetworkSuffix",
     "brokerLeaseDataRoleDefinitionGuid",
     "blobReadDataAction",
     "blobWriteDataAction",
@@ -845,7 +846,7 @@ def _validate_private_dns_vnet_link(
         "apiVersion": "2024-06-01",
         "name": (
             "[format('{0}/{1}', variables('privateDnsZoneName'), "
-            "format('link-nac-bff-{0}', variables('isolationSuffix')))]"
+            "format('link-nac-bff-{0}', variables('brokerNetworkSuffix')))]"
         ),
         "location": "global",
         "tags": "[variables('resourceTags')]",
@@ -1224,7 +1225,7 @@ def _validate_outputs(outputs: Mapping[str, Any], errors: list[str]) -> None:
             "value": (
                 "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', "
                 "variables('privateDnsZoneName'), format('link-nac-bff-{0}', "
-                "variables('isolationSuffix')))]"
+                "variables('brokerNetworkSuffix')))]"
             ),
         },
         "brokerFunctionPackageSha256Binding": {

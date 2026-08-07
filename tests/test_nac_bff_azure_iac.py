@@ -32,8 +32,9 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         )
         required = (
             "az bicep install --version v0.45.6",
-            "az bicep build --file deploy/runtime/azure/nac-bff/infra/main.bicep --stdout",
-            "az bicep build-params --file deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --stdout",
+            'test "$("$HOME/.azure/bin/bicep" --version)" = "Bicep CLI version 0.45.6 (6c73ad60eb)"',
+            '"$HOME/.azure/bin/bicep" build deploy/runtime/azure/nac-bff/infra/main.bicep --stdout',
+            '"$HOME/.azure/bin/bicep" build-params deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --outfile /tmp/nac-bff-main-params.json',
             "cmp /tmp/nac-bff-main.json deploy/runtime/azure/nac-bff/infra/compiled/main.json",
             "cmp /tmp/nac-bff-main-params.json deploy/runtime/azure/nac-bff/infra/compiled/main.example.json",
         )

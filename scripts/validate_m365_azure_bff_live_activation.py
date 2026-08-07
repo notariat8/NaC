@@ -537,7 +537,7 @@ AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "property_drift_behavior": "stop_before_first_write",
 }
 SMART_DETECTION_PREWRITE_AST_SHA256 = (
-    "e93de690c423333f0ca41a12906cb02f43974999f33f7db3ca80dfeb9bb982ac"
+    "f770b76a0c4644a873d2de55b6b5f8d434cddc0fbd5c70c787f8b747fb1e5149"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
     "8d2f765f943902aed1e7e016c72412a2265f22f125c213db55827cbe334c2aa9"
@@ -1253,9 +1253,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "INTERRUPTION_BASELINE_BINDING_MISMATCH",
     ),
     INTERRUPTION_BASELINE_TEST_PATH: (
-        "test_current_expectation_reconciles_exact_legacy_predecessor",
+        "test_current_expectation_reconciles_exact_current_baseline",
         "test_historical_legacy_prepared_run_remains_reconcilable",
-        "test_current_deployment_cannot_be_projected_as_legacy_observation",
+        "test_current_deployment_cannot_use_legacy_observation",
         "test_prepared_template_output_set_must_match_baseline_generation",
         "test_inventory_deployment_and_operation_drift_are_rejected",
         "test_self_consistent_manifest_with_false_git_provenance_is_rejected",
@@ -3613,7 +3613,7 @@ def _validate_smart_detection_composition_structure(
             isinstance(node, ast.Return)
             for node in ast.walk(inspect_method)
         )
-        != 4
+        != 5
         or _has_constant_false_control(inspect_method)
     ):
         errors.append(

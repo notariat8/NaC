@@ -171,16 +171,21 @@ def _resource_id(resource_type: str, name: str) -> str:
     )
 
 
-def _inventory() -> list[dict]:
-    specifications = (
+def _inventory(*, current: bool = True) -> list[dict]:
+    specifications = [
         ("Microsoft.ManagedIdentity/userAssignedIdentities", f"id-nac-bff-test-{RESOURCE_SUFFIX}", None),
+        *(
+            [("Microsoft.Network/virtualNetworks", f"vnet-nac-bff-test-{RESOURCE_SUFFIX}", None)]
+            if current
+            else []
+        ),
         ("Microsoft.Storage/storageAccounts", f"stnacbff{RESOURCE_SUFFIX}", "StorageV2"),
         ("Microsoft.OperationalInsights/workspaces", f"log-nac-bff-test-{RESOURCE_SUFFIX}", None),
         ("Microsoft.Insights/components", f"appi-nac-bff-test-{RESOURCE_SUFFIX}", "web"),
         ("Microsoft.Web/serverfarms", f"plan-nac-bff-test-{RESOURCE_SUFFIX}", "functionapp"),
         ("Microsoft.Web/sites", FUNCTION_APP, "functionapp,linux"),
         ("Microsoft.Insights/ActionGroups", "Application Insights Smart Detection", None),
-    )
+    ]
     rows = []
     for resource_type, name, kind in specifications:
         smart = resource_type.lower() == "microsoft.insights/actiongroups"
@@ -236,19 +241,15 @@ def _inventory() -> list[dict]:
 
 
 def _deployment(expectation: dict) -> dict:
-    inventory = _inventory()
+    current = expectation["deployment_type_counts"] == EXPECTED_DEPLOYMENT_TYPE_COUNTS
+    inventory = _inventory(current=current)
     by_type = {row["type"]: row for row in inventory}
     return {
         "name": DEPLOYMENT_NAME,
         "resource_group": RESOURCE_GROUP,
         "provisioning_state": "Succeeded",
         "mode": "Incremental",
-        "template_hash": (
-            expectation["azure_template_hash"]
-            if expectation["deployment_type_counts"]
-            == LEGACY_DEPLOYMENT_TYPE_COUNTS
-            else LEGACY_AZURE_TEMPLATE_HASH
-        ),
+        "template_hash": expectation["azure_template_hash"],
         "parameters_sha256": expectation["deployment_parameters_sha256"],
         "bff_api_audience": expectation["bff_api_audience"],
         "outputs": {
@@ -260,6 +261,23 @@ def _deployment(expectation: dict) -> dict:
             ]["id"],
             "managed_identity_client_id": CLIENT_ID,
             "managed_identity_principal_id": PRINCIPAL_ID,
+            **(
+                {
+                    "virtual_network_resource_id": by_type[
+                        "microsoft.network/virtualnetworks"
+                    ]["id"],
+                    "function_integration_subnet_resource_id": (
+                        f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                        "/subnets/snet-flex-integration"
+                    ),
+                    "private_endpoint_subnet_resource_id": (
+                        f"{by_type['microsoft.network/virtualnetworks']['id']}"
+                        "/subnets/snet-private-endpoints"
+                    ),
+                }
+                if current
+                else {}
+            ),
         },
     }
 
@@ -291,8 +309,8 @@ def _identity_binding() -> dict:
     }
 
 
-def _operations() -> list[dict]:
-    by_type = {row["type"]: row for row in _inventory()}
+def _operations(*, current: bool = True) -> list[dict]:
+    by_type = {row["type"]: row for row in _inventory(current=current)}
     identity_id = by_type[
         "microsoft.managedidentity/userassignedidentities"
     ]["id"].lower()
@@ -315,6 +333,23 @@ def _operations() -> list[dict]:
         ("microsoft.authorization/roleassignments", f"{storage_id}/providers/microsoft.authorization/roleassignments/33333333-3333-4333-8333-333333333333"),
         ("microsoft.authorization/roleassignments", f"{component_id}/providers/microsoft.authorization/roleassignments/44444444-4444-4444-8444-444444444444"),
     ]
+    if current:
+        virtual_network_id = by_type[
+            "microsoft.network/virtualnetworks"
+        ]["id"].lower()
+        targets.extend(
+            [
+                ("microsoft.network/virtualnetworks", virtual_network_id),
+                (
+                    "microsoft.network/virtualnetworks/subnets",
+                    f"{virtual_network_id}/subnets/snet-flex-integration",
+                ),
+                (
+                    "microsoft.network/virtualnetworks/subnets",
+                    f"{virtual_network_id}/subnets/snet-private-endpoints",
+                ),
+            ]
+        )
     return sorted(
         [
             {
@@ -328,11 +363,11 @@ def _operations() -> list[dict]:
     )
 
 
-def _live_resource_state() -> dict:
+def _live_resource_state(*, current: bool = True) -> dict:
     targets = sorted(
         (
             {"id": item["id"].lower(), "type": item["type"]}
-            for item in _operations()
+            for item in _operations(current=current)
         ),
         key=lambda item: (item["type"], item["id"]),
     )
@@ -341,12 +376,14 @@ def _live_resource_state() -> dict:
         resource_graph_visible_targets,
     )
 
-    graph_targets = resource_graph_visible_targets(_inventory(), _operations())
+    graph_targets = resource_graph_visible_targets(
+        _inventory(current=current), _operations(current=current)
+    )
     assert graph_targets is not None
 
     return {
         "schema_version": "nac.azure-interruption-live-resource-state/v1",
-        "resource_count": 12,
+        "resource_count": 15 if current else 12,
         "resource_targets_sha256": compact_sha256_json(targets),
         "resource_graph_count": len(graph_targets),
         "resource_graph_targets_sha256": compact_sha256_json(graph_targets),
@@ -364,7 +401,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
 
         self.assertIsNotNone(targets)
         assert targets is not None
-        self.assertEqual(len(targets), 9)
+        self.assertEqual(len(targets), 10)
         expected = sorted(
             [
                 {"id": item["id"].lower(), "type": item["type"].lower()}
@@ -414,7 +451,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertIsNone(expectation)
 
-    def test_current_expectation_reconciles_exact_legacy_predecessor(self):
+    def test_current_expectation_reconciles_exact_current_baseline(self):
         from nac_bff.azure_activation_composition import (
             _deployment_name,
             _sha256_json as activation_sha256_json,
@@ -458,7 +495,7 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         self.assertEqual(sum(expectation["deployment_type_counts"].values()), 15)
         self.assertEqual(expectation["azure_template_hash"], CURRENT_AZURE_TEMPLATE_HASH)
         deployment = _deployment(expectation)
-        self.assertEqual(deployment["template_hash"], LEGACY_AZURE_TEMPLATE_HASH)
+        self.assertEqual(deployment["template_hash"], CURRENT_AZURE_TEMPLATE_HASH)
         self.assertEqual(deployment["mode"], "Incremental")
         self.assertEqual(set(deployment["outputs"]), {
             "function_app_resource_id",
@@ -467,6 +504,9 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
             "managed_identity_resource_id",
             "managed_identity_client_id",
             "managed_identity_principal_id",
+            "virtual_network_resource_id",
+            "function_integration_subnet_resource_id",
+            "private_endpoint_subnet_resource_id",
         })
         from nac_bff.azure_activation_runner import _sha256_json
         from nac_bff.azure_interruption_contract import newline_sha256_json
@@ -502,32 +542,29 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         )
         self.assertTrue(
             exact_baseline_matches(
-                _inventory(),
+                _inventory(current=False),
                 _deployment(expectation),
-                _operations(),
+                _operations(current=False),
                 _identity_binding(),
-                _live_resource_state(),
+                _live_resource_state(current=False),
                 expectation,
             )
         )
 
-    def test_current_deployment_cannot_be_projected_as_legacy_observation(self):
+    def test_current_deployment_cannot_use_legacy_observation(self):
         _prepared(self.run_dir)
         expectation, error = _load_expectation(
             self.run_dir, self.state, self.request
         )
         self.assertIsNone(error)
         assert expectation is not None
-        deployment = _deployment(expectation)
-        deployment["template_hash"] = expectation["azure_template_hash"]
-
         self.assertFalse(
             exact_baseline_matches(
-                _inventory(),
-                deployment,
-                _operations(),
+                _inventory(current=False),
+                _deployment(expectation),
+                _operations(current=False),
                 _identity_binding(),
-                _live_resource_state(),
+                _live_resource_state(current=False),
                 expectation,
             )
         )

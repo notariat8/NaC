@@ -122,6 +122,7 @@ from .live_synthetic_workspace import (
 _LIVE_CONTRACT = Path("workflows/contracts/m365-azure-bff-live-activation.contract.json")
 _BICEP_TEMPLATE = Path("deploy/runtime/azure/nac-bff/infra/compiled/main.json")
 _APPROVED_FAILED_BASELINE_TEMPLATE_HASHES = ("14963684813925800234",)
+_LEGACY_SUCCESSFUL_BASELINE_TEMPLATE_HASH = "16486527106386001034"
 _ARM_DEPLOYMENT_PARAMETER_TYPES = {
     "location": "String",
     "environmentName": "String",
@@ -1427,7 +1428,7 @@ class AzureBffLiveExecutionPort:
                 inventory[repeated_companion_indexes[0]]
             )
             inventory[repeated_companion_indexes[0]] = companion_detail
-        _validate_azure_resource_inventory(inventory)
+        inventory_generation = _validate_azure_resource_inventory(inventory)
 
         deployment = self._azure.run(
             [
@@ -1470,13 +1471,28 @@ class AzureBffLiveExecutionPort:
                 properties["correlationId"]
             ).lower()
             return 1
-        self._validate_deployment_readback(data, require_current_binding=False)
+        self._validate_deployment_readback(
+            data,
+            require_current_binding=False,
+            allow_legacy_baseline=True,
+        )
+        deployment_template_hash = str(data["properties"]["templateHash"])
+        expected_inventory_generation = (
+            "legacy"
+            if deployment_template_hash
+            == _LEGACY_SUCCESSFUL_BASELINE_TEMPLATE_HASH
+            else "current"
+        )
+        if inventory_generation != expected_inventory_generation:
+            raise ActivationStepError("AZURE_RESOURCE_INVENTORY_DEPLOYMENT_DRIFT")
         self._deployment_preexisting = True
         self._preexisting_deployment_correlation_id = str(
             data["properties"]["correlationId"]
         ).lower()
         # Evidence counts stable invariants, never provider-specific child resources.
-        return 12 if require_deployment else 1
+        if require_deployment:
+            return 12 if inventory_generation == "legacy" else 15
+        return 1
 
     def _bind_deployment_outputs(self, deployment: Mapping[str, Any]) -> None:
         outputs = deployment.get("properties", {}).get("outputs")
@@ -1494,6 +1510,7 @@ class AzureBffLiveExecutionPort:
         deployment: Mapping[str, Any],
         *,
         require_current_binding: bool,
+        allow_legacy_baseline: bool = False,
     ) -> dict[str, Any]:
         properties = deployment.get("properties")
         if not isinstance(properties, dict):
@@ -1505,10 +1522,25 @@ class AzureBffLiveExecutionPort:
         ):
             raise ActivationStepError("AZURE_DEPLOYMENT_READBACK_INVALID")
         self._bind_deployment_outputs(deployment)
-        if (
-            self._bicep_template_hash is not None
-            and str(template_hash) != self._bicep_template_hash
-        ):
+        current_template_hash = self._bicep_template_hash
+        if current_template_hash is None and allow_legacy_baseline:
+            current_template_hash = _arm_template_hash(
+                self._repo_root
+                / "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+            )
+        accepted_template_hashes = {
+            value
+            for value in (
+                current_template_hash,
+                (
+                    _LEGACY_SUCCESSFUL_BASELINE_TEMPLATE_HASH
+                    if allow_legacy_baseline
+                    else None
+                ),
+            )
+            if value is not None
+        }
+        if accepted_template_hashes and str(template_hash) not in accepted_template_hashes:
             raise ActivationStepError("AZURE_DEPLOYMENT_INPUT_DRIFT")
         if require_current_binding:
             if self._api is None:
@@ -2609,7 +2641,7 @@ class AzureBffLiveExecutionPort:
             "healthz": 1,
         }
         expected_components = {
-            "azure": 12,
+            "azure": 15,
             "entra_api": 2,
             "graph_permissions": 2,
             "m365_lane": 7,
@@ -3537,7 +3569,7 @@ def _write_new_json(path: Path, value: Mapping[str, Any]) -> None:
         raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED") from None
 
 
-def _validate_azure_resource_inventory(value: list[object]) -> None:
+def _validate_azure_resource_inventory(value: list[object]) -> str:
     required = {
         "microsoft.managedidentity/userassignedidentities": {
             "pattern": re.compile(r"^id-nac-bff-test-[a-z0-9]+$"),
@@ -3646,8 +3678,15 @@ def _validate_azure_resource_inventory(value: list[object]) -> None:
             _validate_smart_detection_action_group(item)
         elif resource_type not in optional_types:
             raise ActivationStepError("AZURE_RESOURCE_INVENTORY_UNEXPECTED")
-    if value and any(counts[kind] != 1 for kind in required):
+    base_required = set(required) - {"microsoft.network/virtualnetworks"}
+    if value and any(counts[kind] != 1 for kind in base_required):
         raise ActivationStepError("AZURE_RESOURCE_INVENTORY_INCOMPLETE")
+    virtual_network_count = counts["microsoft.network/virtualnetworks"]
+    if virtual_network_count not in {0, 1}:
+        raise ActivationStepError("AZURE_RESOURCE_INVENTORY_INCOMPLETE")
+    if not value:
+        return "empty"
+    return "current" if virtual_network_count == 1 else "legacy"
 
 
 def _is_smart_detection_action_group_summary(value: object) -> bool:

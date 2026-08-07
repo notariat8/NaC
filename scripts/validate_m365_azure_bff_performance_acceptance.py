@@ -2131,7 +2131,7 @@ def main() -> int:
         "Succeeded",
         "original observed < started <= completed < current reconciliation observed",
         "nac.azure-bff-performance-coordination/v3",
-        "nac.azure-bff-performance-infrastructure-safety-evidence/v7",
+        "nac.azure-bff-performance-infrastructure-safety-evidence/v8",
         "privatelink.blob.core.windows.net",
     )
     for path in (DOC_DE, DOC_EN):

@@ -53,7 +53,7 @@ NETWORK_API_VERSION = "2024-05-01"
 PRIVATE_DNS_API_VERSION = "2024-06-01"
 MANAGEMENT_GROUP_API_VERSION = "2021-04-01"
 INFRASTRUCTURE_SAFETY_EVIDENCE_SCHEMA = (
-    "nac.azure-bff-performance-infrastructure-safety-evidence/v7"
+    "nac.azure-bff-performance-infrastructure-safety-evidence/v8"
 )
 ORIGINAL_NAME_AVAILABILITY_RECEIPT_SCHEMA = (
     "nac.azure-bff-performance-original-name-availability-receipt/v1"
@@ -213,6 +213,9 @@ _READBACK_TRANSCRIPT_KEYS = frozenset(
         "bff_storage",
         "worm_storage",
         "broker_function_app",
+        "broker_virtual_network",
+        "broker_function_integration_subnet",
+        "broker_private_endpoint_subnet",
         "coordination_name",
         "deployment_receipt",
         "coordination_storage",
@@ -241,6 +244,18 @@ _SEALED_READ_SPECS = {
     "coordination-broker-function-app": (
         WEB_API_VERSION,
         "azure-resource-manager/function-apps-get",
+    ),
+    "broker-virtual-network": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/virtual-networks-get",
+    ),
+    "broker-function-integration-subnet": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/subnets-get",
+    ),
+    "broker-private-endpoint-subnet": (
+        NETWORK_API_VERSION,
+        "azure-resource-manager/subnets-get",
     ),
     "coordination-storage-account-configuration": (
         STORAGE_API_VERSION,
@@ -1085,6 +1100,13 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             payload = {"resource_id": response.get("id")}
         elif observation_kind == "coordination-broker-function-app":
             payload = _broker_function_app_payload(response)
+        elif observation_kind == "broker-virtual-network":
+            payload = _virtual_network_payload(response)
+        elif observation_kind in {
+            "broker-function-integration-subnet",
+            "broker-private-endpoint-subnet",
+        }:
+            payload = _subnet_payload(response)
         elif observation_kind in {
             "coordination-broker-role-definition",
             "coordination-broker-role-assignment",
@@ -1867,6 +1889,95 @@ def _broker_function_app_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _virtual_network_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    address_space = (
+        properties.get("addressSpace") if isinstance(properties, Mapping) else None
+    )
+    subnets = properties.get("subnets") if isinstance(properties, Mapping) else None
+    if (
+        not isinstance(properties, Mapping)
+        or not isinstance(address_space, Mapping)
+        or not isinstance(address_space.get("addressPrefixes"), list)
+        or not isinstance(subnets, list)
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    subnet_ids: list[str] = []
+    for subnet in subnets:
+        if not isinstance(subnet, Mapping) or not isinstance(subnet.get("id"), str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        subnet_ids.append(subnet["id"])
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "location": response.get("location"),
+        "address_prefixes": sorted(address_space["addressPrefixes"]),
+        "subnet_resource_ids": sorted(subnet_ids, key=str.casefold),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
+def _subnet_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    properties = response.get("properties")
+    delegations = properties.get("delegations") if isinstance(properties, Mapping) else None
+    if not isinstance(properties, Mapping) or not isinstance(delegations, list):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    delegation_service_names: list[str] = []
+    for delegation in delegations:
+        delegation_properties = (
+            delegation.get("properties") if isinstance(delegation, Mapping) else None
+        )
+        service_name = (
+            delegation_properties.get("serviceName")
+            if isinstance(delegation_properties, Mapping)
+            else None
+        )
+        if not isinstance(service_name, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        delegation_service_names.append(service_name)
+
+    def resource_id(name: str) -> Any:
+        value = properties.get(name)
+        return value.get("id") if isinstance(value, Mapping) else None
+
+    service_endpoints = properties.get("serviceEndpoints", [])
+    service_endpoint_policies = properties.get("serviceEndpointPolicies", [])
+    if not isinstance(service_endpoints, list) or not isinstance(
+        service_endpoint_policies, list
+    ):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    endpoint_names = []
+    for endpoint in service_endpoints:
+        service = endpoint.get("service") if isinstance(endpoint, Mapping) else None
+        if not isinstance(service, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        endpoint_names.append(service)
+    policy_ids = []
+    for policy in service_endpoint_policies:
+        policy_id = policy.get("id") if isinstance(policy, Mapping) else None
+        if not isinstance(policy_id, str):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        policy_ids.append(policy_id)
+    return {
+        "resource_id": response.get("id"),
+        "resource_type": response.get("type"),
+        "address_prefix": properties.get("addressPrefix"),
+        "delegation_service_names": sorted(delegation_service_names),
+        "private_endpoint_network_policies": properties.get(
+            "privateEndpointNetworkPolicies"
+        ),
+        "private_link_service_network_policies": properties.get(
+            "privateLinkServiceNetworkPolicies"
+        ),
+        "network_security_group_resource_id": resource_id("networkSecurityGroup"),
+        "route_table_resource_id": resource_id("routeTable"),
+        "nat_gateway_resource_id": resource_id("natGateway"),
+        "service_endpoint_service_names": sorted(endpoint_names),
+        "service_endpoint_policy_resource_ids": sorted(policy_ids, key=str.casefold),
+        "provisioning_state": properties.get("provisioningState"),
+    }
+
+
 def _private_endpoint_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     properties = response.get("properties")
     if not isinstance(properties, Mapping):
@@ -2422,8 +2533,11 @@ def verify_azure_performance_infrastructure_safety(
     broker_function_app_resource_id: str,
     broker_function_app_readback_envelope: Mapping[str, Any],
     broker_virtual_network_resource_id: str,
+    broker_virtual_network_readback_envelope: Mapping[str, Any],
     broker_function_integration_subnet_resource_id: str,
+    broker_function_integration_subnet_readback_envelope: Mapping[str, Any],
     broker_private_endpoint_subnet_resource_id: str,
+    broker_private_endpoint_subnet_readback_envelope: Mapping[str, Any],
     coordination_blob_private_endpoint_resource_id: str,
     coordination_blob_private_dns_zone_resource_id: str,
     coordination_blob_private_dns_vnet_link_resource_id: str,
@@ -2459,6 +2573,9 @@ def verify_azure_performance_infrastructure_safety(
         bff_storage_readback_envelope,
         worm_storage_readback_envelope,
         broker_function_app_readback_envelope,
+        broker_virtual_network_readback_envelope,
+        broker_function_integration_subnet_readback_envelope,
+        broker_private_endpoint_subnet_readback_envelope,
         broker_role_definition,
         broker_role_assignment,
         subscription_ancestry_readback_envelope,
@@ -2505,11 +2622,20 @@ def verify_azure_performance_infrastructure_safety(
             broker_function_app_readback_envelope
         ),
         broker_virtual_network_resource_id=broker_virtual_network_resource_id,
+        broker_virtual_network_readback_envelope=(
+            broker_virtual_network_readback_envelope
+        ),
         broker_function_integration_subnet_resource_id=(
             broker_function_integration_subnet_resource_id
         ),
+        broker_function_integration_subnet_readback_envelope=(
+            broker_function_integration_subnet_readback_envelope
+        ),
         broker_private_endpoint_subnet_resource_id=(
             broker_private_endpoint_subnet_resource_id
+        ),
+        broker_private_endpoint_subnet_readback_envelope=(
+            broker_private_endpoint_subnet_readback_envelope
         ),
         coordination_blob_private_endpoint_resource_id=(
             coordination_blob_private_endpoint_resource_id
@@ -2580,8 +2706,11 @@ def _verify_azure_performance_infrastructure_safety(
     broker_function_app_resource_id: str,
     broker_function_app_readback_envelope: Mapping[str, Any],
     broker_virtual_network_resource_id: str,
+    broker_virtual_network_readback_envelope: Mapping[str, Any],
     broker_function_integration_subnet_resource_id: str,
+    broker_function_integration_subnet_readback_envelope: Mapping[str, Any],
     broker_private_endpoint_subnet_resource_id: str,
+    broker_private_endpoint_subnet_readback_envelope: Mapping[str, Any],
     coordination_blob_private_endpoint_resource_id: str,
     coordination_blob_private_dns_zone_resource_id: str,
     coordination_blob_private_dns_vnet_link_resource_id: str,
@@ -2710,6 +2839,37 @@ def _verify_azure_performance_infrastructure_safety(
         expected_resource_id=broker_function_app,
         expected_broker_principal_id=broker_principal,
         expected_virtual_network_subnet_id=broker_function_integration_subnet,
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    virtual_network_observed_at = _verify_virtual_network_readback(
+        broker_virtual_network_readback_envelope,
+        expected_resource_id=broker_virtual_network,
+        expected_location=location,
+        expected_subnet_resource_ids={
+            broker_function_integration_subnet,
+            broker_private_endpoint_subnet,
+        },
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    function_subnet_observed_at = _verify_subnet_readback(
+        broker_function_integration_subnet_readback_envelope,
+        observation_kind="broker-function-integration-subnet",
+        expected_resource_id=broker_function_integration_subnet,
+        expected_address_prefix="10.42.0.0/27",
+        expected_delegation_service_names=["Microsoft.App/environments"],
+        expected_private_endpoint_network_policies="Enabled",
+        verified_at=verified_at,
+        session=readback_session,
+    )
+    private_endpoint_subnet_observed_at = _verify_subnet_readback(
+        broker_private_endpoint_subnet_readback_envelope,
+        observation_kind="broker-private-endpoint-subnet",
+        expected_resource_id=broker_private_endpoint_subnet,
+        expected_address_prefix="10.42.0.32/27",
+        expected_delegation_service_names=[],
+        expected_private_endpoint_network_policies="Disabled",
         verified_at=verified_at,
         session=readback_session,
     )
@@ -2958,6 +3118,9 @@ def _verify_azure_performance_infrastructure_safety(
         "bff_storage": _envelope_observed_at(bff_storage_readback_envelope),
         "worm_storage": _envelope_observed_at(worm_storage_readback_envelope),
         "broker_function_app": function_app_readback["observed_at"],
+        "broker_virtual_network": virtual_network_observed_at,
+        "broker_function_integration_subnet": function_subnet_observed_at,
+        "broker_private_endpoint_subnet": private_endpoint_subnet_observed_at,
         "coordination_storage": coordination_observed_at,
         "blob_service": blob_service_observed_at,
         "lease_container": lease_container_observed_at,
@@ -2985,6 +3148,13 @@ def _verify_azure_performance_infrastructure_safety(
         "bff_storage": dict(bff_storage_readback_envelope),
         "worm_storage": dict(worm_storage_readback_envelope),
         "broker_function_app": dict(broker_function_app_readback_envelope),
+        "broker_virtual_network": dict(broker_virtual_network_readback_envelope),
+        "broker_function_integration_subnet": dict(
+            broker_function_integration_subnet_readback_envelope
+        ),
+        "broker_private_endpoint_subnet": dict(
+            broker_private_endpoint_subnet_readback_envelope
+        ),
         "coordination_name": dict(coordination_name_readback_envelope),
         "deployment_receipt": dict(deployment_receipt_envelope),
         "coordination_storage": dict(coordination_storage_readback_envelope),
@@ -3186,11 +3356,20 @@ def validate_infrastructure_safety_evidence(
             broker_virtual_network_resource_id=deployment_inputs[
                 "brokerVirtualNetworkResourceId"
             ],
+            broker_virtual_network_readback_envelope=transcript[
+                "broker_virtual_network"
+            ],
             broker_function_integration_subnet_resource_id=deployment_inputs[
                 "brokerFunctionIntegrationSubnetResourceId"
             ],
+            broker_function_integration_subnet_readback_envelope=transcript[
+                "broker_function_integration_subnet"
+            ],
             broker_private_endpoint_subnet_resource_id=deployment_inputs[
                 "brokerPrivateEndpointSubnetResourceId"
+            ],
+            broker_private_endpoint_subnet_readback_envelope=transcript[
+                "broker_private_endpoint_subnet"
             ],
             coordination_blob_private_endpoint_resource_id=result[
                 "coordination_blob_private_endpoint_resource_id"
@@ -3464,6 +3643,123 @@ def _verify_broker_function_app_readback(
         "runtime_uami_principal_id": runtime_uami_principal_id,
         "observed_at": _envelope_observed_at(value),
     }
+
+
+def _verify_virtual_network_readback(
+    value: Mapping[str, Any],
+    *,
+    expected_resource_id: str,
+    expected_location: str,
+    expected_subnet_resource_ids: set[str],
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "BROKER_VIRTUAL_NETWORK_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != "broker-virtual-network"
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source")
+        != "azure-resource-manager/virtual-networks-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload)
+        != {
+            "resource_id",
+            "resource_type",
+            "location",
+            "address_prefixes",
+            "subnet_resource_ids",
+            "provisioning_state",
+        }
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Network/virtualNetworks"
+        or payload.get("location") != expected_location
+        or payload.get("address_prefixes") != ["10.42.0.0/24"]
+        or not isinstance(payload.get("subnet_resource_ids"), list)
+        or {
+            str(item).casefold()
+            for item in payload["subnet_resource_ids"]
+        }
+        != {item.casefold() for item in expected_subnet_resource_ids}
+        or len(payload["subnet_resource_ids"]) != 2
+        or payload.get("provisioning_state") != "Succeeded"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
+
+
+def _verify_subnet_readback(
+    value: Mapping[str, Any],
+    *,
+    observation_kind: str,
+    expected_resource_id: str,
+    expected_address_prefix: str,
+    expected_delegation_service_names: list[str],
+    expected_private_endpoint_network_policies: str,
+    verified_at: datetime,
+    session: AzurePerformanceInfrastructureReadbackSession,
+) -> datetime:
+    prefix = "BROKER_SUBNET_READBACK"
+    _verify_envelope_shape_and_digest(
+        value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
+    )
+    payload = value.get("payload")
+    if (
+        value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
+        or value.get("observation_kind") != observation_kind
+        or value.get("api_version") != NETWORK_API_VERSION
+        or value.get("observation_source") != "azure-resource-manager/subnets-get"
+        or not _valid_provenance_binding(
+            value,
+            verified_at=verified_at,
+            maximum_age=_POSTDEPLOY_MAX_AGE,
+            session=session,
+        )
+        or not isinstance(payload, Mapping)
+        or set(payload)
+        != {
+            "resource_id",
+            "resource_type",
+            "address_prefix",
+            "delegation_service_names",
+            "private_endpoint_network_policies",
+            "private_link_service_network_policies",
+            "network_security_group_resource_id",
+            "route_table_resource_id",
+            "nat_gateway_resource_id",
+            "service_endpoint_service_names",
+            "service_endpoint_policy_resource_ids",
+            "provisioning_state",
+        }
+        or str(payload.get("resource_id", "")).casefold()
+        != expected_resource_id.casefold()
+        or payload.get("resource_type") != "Microsoft.Network/virtualNetworks/subnets"
+        or payload.get("address_prefix") != expected_address_prefix
+        or payload.get("delegation_service_names")
+        != expected_delegation_service_names
+        or payload.get("private_endpoint_network_policies")
+        != expected_private_endpoint_network_policies
+        or payload.get("private_link_service_network_policies") != "Enabled"
+        or payload.get("network_security_group_resource_id") is not None
+        or payload.get("route_table_resource_id") is not None
+        or payload.get("nat_gateway_resource_id") is not None
+        or payload.get("service_endpoint_service_names") != []
+        or payload.get("service_endpoint_policy_resource_ids") != []
+        or payload.get("provisioning_state") != "Succeeded"
+    ):
+        _fail(f"{prefix}_INVALID")
+    return _envelope_observed_at(value)
 
 
 def _verify_private_endpoint_readback(
@@ -4992,11 +5288,15 @@ def _verify_no_effective_storage_data_actions(
         data_actions = _expanded_permission_actions(
             value, properties, field_name="dataActions"
         )
+        control_actions = _expanded_permission_actions(
+            value, properties, field_name="actions"
+        )
         if (
             properties.get("principalType") != expected_principal_type
             or not isinstance(scope, str)
             or scope.casefold() not in ancestor_scopes
             or data_actions is None
+            or control_actions is None
         ):
             _fail("EFFECTIVE_RBAC_READBACK_INVALID")
         if (
@@ -5006,6 +5306,13 @@ def _verify_no_effective_storage_data_actions(
                 field_name="dataActions",
                 not_field_name="notDataActions",
             )
+            or _permission_set_has_unresolved_subtraction_or_wildcard(
+                value,
+                properties,
+                field_name="actions",
+                not_field_name="notActions",
+            )
+            or bool(control_actions)
             or any(
                 action.casefold().startswith("microsoft.storage/")
                 for action in data_actions
@@ -5745,6 +6052,13 @@ def _expected_operation_for_envelope(
         return {"resource_id": response.get("id")}
     if kind == "coordination-broker-function-app":
         return _broker_function_app_payload(response)
+    if kind == "broker-virtual-network":
+        return _virtual_network_payload(response)
+    if kind in {
+        "broker-function-integration-subnet",
+        "broker-private-endpoint-subnet",
+    }:
+        return _subnet_payload(response)
     if kind in {
         "coordination-broker-role-definition",
         "coordination-broker-role-assignment",
