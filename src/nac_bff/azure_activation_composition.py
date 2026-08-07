@@ -3542,6 +3542,9 @@ def _validate_azure_resource_inventory(value: list[object]) -> None:
         "microsoft.managedidentity/userassignedidentities": {
             "pattern": re.compile(r"^id-nac-bff-test-[a-z0-9]+$"),
         },
+        "microsoft.network/virtualnetworks": {
+            "pattern": re.compile(r"^vnet-nac-bff-test-[a-z0-9]+$"),
+        },
         "microsoft.storage/storageaccounts": {
             "pattern": re.compile(r"^stnacbff[a-z0-9]+$"),
             "kind": "StorageV2",

@@ -571,9 +571,12 @@
     "function_app_resource_id_system_identity_and_runtime_uami_assignment_readback_required": true,
     "runtime_uami_complete_effective_rbac_readback_required": true,
     "runtime_uami_has_zero_effective_coordination_storage_data_actions": true,
+    "effective_data_action_wildcards_and_subtractions_fail_closed": true,
     "broker_function_package_and_ticket_certificate_hashes_readback_required": true,
     "broker_function_integration_subnet_readback_must_match_owner_bound_subnet": true,
     "coordination_blob_private_endpoint_private_dns_zone_group_and_vnet_link_readback_required": true,
+    "authoritative_storage_private_endpoint_connection_set_readback_required": true,
+    "private_dns_vnet_link_collection_must_be_complete_and_exact": true,
     "local_runner_has_no_storage_token_certificate_or_data_action": true,
     "effective_tags_are_canonical_union_and_owner_bound": true,
     "postdeployment_storage_and_network_configuration_exact": {

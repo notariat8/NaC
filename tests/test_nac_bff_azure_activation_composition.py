@@ -300,6 +300,11 @@ def _azure_resources() -> list[dict]:
             {},
         ),
         (
+            "Microsoft.Network/virtualNetworks",
+            f"vnet-nac-bff-test-{token}",
+            {},
+        ),
+        (
             "Microsoft.Storage/storageAccounts",
             f"stnacbff{token}",
             {"kind": "StorageV2", "sku": {"name": "Standard_LRS"}},

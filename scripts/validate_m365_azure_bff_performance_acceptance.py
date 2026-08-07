@@ -1070,6 +1070,10 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         )
         is not True
         or infrastructure_safety.get(
+            "effective_data_action_wildcards_and_subtractions_fail_closed"
+        )
+        is not True
+        or infrastructure_safety.get(
             "broker_function_package_and_ticket_certificate_hashes_readback_required"
         )
         is not True
@@ -1079,6 +1083,14 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         is not True
         or infrastructure_safety.get(
             "coordination_blob_private_endpoint_private_dns_zone_group_and_vnet_link_readback_required"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "authoritative_storage_private_endpoint_connection_set_readback_required"
+        )
+        is not True
+        or infrastructure_safety.get(
+            "private_dns_vnet_link_collection_must_be_complete_and_exact"
         )
         is not True
         or infrastructure_safety.get(

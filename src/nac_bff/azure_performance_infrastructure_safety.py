@@ -256,7 +256,7 @@ _SEALED_READ_SPECS = {
     ),
     "coordination-blob-private-dns-vnet-link": (
         PRIVATE_DNS_API_VERSION,
-        "azure-resource-manager/private-dns-vnet-links-get",
+        "azure-resource-manager/private-dns-vnet-links-list",
     ),
     "coordination-blob-service-configuration": (
         STORAGE_API_VERSION,
@@ -1057,8 +1057,11 @@ class AzurePerformanceInfrastructureReadbackAdapter:
         normalized_resource = _require_arm_id(
             resource_id, "SEALED_AZURE_READ_RESOURCE_INVALID"
         )
+        read_resource = normalized_resource
+        if observation_kind == "coordination-blob-private-dns-vnet-link":
+            read_resource = normalized_resource.rsplit("/", 1)[0]
         url = (
-            f"https://management.azure.com{normalized_resource}"
+            f"https://management.azure.com{read_resource}"
             f"?api-version={api_version}"
         )
         argv = (
@@ -1094,7 +1097,7 @@ class AzurePerformanceInfrastructureReadbackAdapter:
         elif observation_kind == "coordination-blob-private-dns-zone-group":
             payload = _private_dns_zone_group_payload(response)
         elif observation_kind == "coordination-blob-private-dns-vnet-link":
-            payload = _private_dns_vnet_link_payload(response)
+            payload = _private_dns_vnet_link_collection_payload(response)
         elif observation_kind == "coordination-blob-service-configuration":
             payload = _blob_service_configuration_payload(response)
         elif observation_kind == "coordination-lease-container-configuration":
@@ -1121,7 +1124,7 @@ class AzurePerformanceInfrastructureReadbackAdapter:
                 environment=self._environment,
                 argv=argv,
                 api_version=api_version,
-                resource_id=normalized_resource,
+                resource_id=read_resource,
                 response_bytes=response_bytes,
             )
         )
@@ -1947,6 +1950,23 @@ def _private_dns_vnet_link_payload(response: Mapping[str, Any]) -> dict[str, Any
     }
 
 
+def _private_dns_vnet_link_collection_payload(
+    response: Mapping[str, Any],
+) -> dict[str, Any]:
+    if set(response) != {"value"} or not isinstance(response.get("value"), list):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    if any(not isinstance(item, Mapping) for item in response["value"]):
+        _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    links = [_private_dns_vnet_link_payload(item) for item in response["value"]]
+    return {
+        "pagination_complete": True,
+        "links": sorted(
+            links,
+            key=lambda item: str(item.get("resource_id", "")).casefold(),
+        ),
+    }
+
+
 def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any]:
     properties = response.get("properties")
     sku = response.get("sku")
@@ -1954,8 +1974,36 @@ def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any
     if not all(isinstance(item, Mapping) for item in (properties, sku, tags)):
         _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
     network = properties.get("networkAcls")
-    if not isinstance(network, Mapping):
+    private_endpoint_connections = properties.get("privateEndpointConnections")
+    if not isinstance(network, Mapping) or not isinstance(
+        private_endpoint_connections, list
+    ):
         _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+    redacted_connections = []
+    for item in private_endpoint_connections:
+        item_properties = item.get("properties") if isinstance(item, Mapping) else None
+        private_endpoint = (
+            item_properties.get("privateEndpoint")
+            if isinstance(item_properties, Mapping)
+            else None
+        )
+        state = (
+            item_properties.get("privateLinkServiceConnectionState")
+            if isinstance(item_properties, Mapping)
+            else None
+        )
+        if not isinstance(private_endpoint, Mapping) or not isinstance(state, Mapping):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        endpoint_id = private_endpoint.get("id")
+        if not isinstance(endpoint_id, str) or not endpoint_id.startswith("/"):
+            _fail("SEALED_AZURE_READ_RESPONSE_INVALID")
+        redacted_connections.append(
+            {
+                "private_endpoint_resource_id": endpoint_id,
+                "status": state.get("status"),
+                "provisioning_state": item_properties.get("provisioningState"),
+            }
+        )
     return {
         "id": response.get("id"),
         "name": response.get("name"),
@@ -1985,6 +2033,10 @@ def _storage_configuration_payload(response: Mapping[str, Any]) -> dict[str, Any
                 "virtualNetworkRules": network.get("virtualNetworkRules"),
             },
             "publicNetworkAccess": properties.get("publicNetworkAccess"),
+            "privateEndpointConnections": sorted(
+                redacted_connections,
+                key=lambda item: item["private_endpoint_resource_id"].casefold(),
+            ),
             "supportsHttpsTrafficOnly": properties.get("supportsHttpsTrafficOnly"),
         },
     }
@@ -2715,6 +2767,17 @@ def _verify_azure_performance_infrastructure_safety(
         verified_at=verified_at,
         session=readback_session,
     )
+    private_endpoint_connections = coordination_resource["properties"].get(
+        "privateEndpointConnections"
+    )
+    if private_endpoint_connections != [
+        {
+            "private_endpoint_resource_id": coordination_private_endpoint,
+            "status": "Approved",
+            "provisioning_state": "Succeeded",
+        }
+    ]:
+        _fail("COORDINATION_BLOB_PRIVATE_ENDPOINT_CONNECTIONS_INVALID")
     blob_service_configuration = _expected_blob_service_configuration(coordination)
     blob_service_resource, blob_service_observed_at = (
         _coordination_child_resource_readback(
@@ -3527,13 +3590,14 @@ def _verify_private_dns_vnet_link_readback(
         value, expected_keys=_provenance_envelope_keys(), error_prefix=prefix
     )
     payload = value.get("payload")
+    links = payload.get("links") if isinstance(payload, Mapping) else None
     if (
         value.get("schema_version") != PROVENANCE_READBACK_SCHEMA
         or value.get("observation_kind")
         != "coordination-blob-private-dns-vnet-link"
         or value.get("api_version") != PRIVATE_DNS_API_VERSION
         or value.get("observation_source")
-        != "azure-resource-manager/private-dns-vnet-links-get"
+        != "azure-resource-manager/private-dns-vnet-links-list"
         or not _valid_provenance_binding(
             value,
             verified_at=verified_at,
@@ -3541,7 +3605,16 @@ def _verify_private_dns_vnet_link_readback(
             session=session,
         )
         or not isinstance(payload, Mapping)
-        or set(payload)
+        or set(payload) != {"pagination_complete", "links"}
+        or payload.get("pagination_complete") is not True
+        or not isinstance(links, list)
+        or len(links) != 1
+    ):
+        _fail(f"{prefix}_INVALID")
+    link = links[0]
+    if (
+        not isinstance(link, Mapping)
+        or set(link)
         != {
             "resource_id",
             "resource_type",
@@ -3550,15 +3623,15 @@ def _verify_private_dns_vnet_link_readback(
             "registration_enabled",
             "provisioning_state",
         }
-        or str(payload.get("resource_id", "")).casefold()
+        or str(link.get("resource_id", "")).casefold()
         != expected_resource_id.casefold()
-        or payload.get("resource_type")
+        or link.get("resource_type")
         != "Microsoft.Network/privateDnsZones/virtualNetworkLinks"
-        or payload.get("location") != "global"
-        or str(payload.get("virtual_network_resource_id", "")).casefold()
+        or link.get("location") != "global"
+        or str(link.get("virtual_network_resource_id", "")).casefold()
         != expected_virtual_network_resource_id.casefold()
-        or payload.get("registration_enabled") is not False
-        or payload.get("provisioning_state") != "Succeeded"
+        or link.get("registration_enabled") is not False
+        or link.get("provisioning_state") != "Succeeded"
     ):
         _fail(f"{prefix}_INVALID")
     return _envelope_observed_at(value)
@@ -3609,7 +3682,14 @@ def _coordination_resource_readback(
         or not isinstance(payload, Mapping)
     ):
         _fail(f"{prefix}_INVALID")
-    if payload != expected_configuration:
+    measured = dict(payload)
+    measured_properties = measured.get("properties")
+    if not isinstance(measured_properties, Mapping):
+        _fail(f"{prefix}_INVALID")
+    static_properties = dict(measured_properties)
+    static_properties.pop("privateEndpointConnections", None)
+    measured["properties"] = static_properties
+    if measured != expected_configuration:
         _fail("COORDINATION_STORAGE_CONFIGURATION_MISMATCH")
     return dict(payload), _envelope_observed_at(value)
 
@@ -4919,11 +4999,55 @@ def _verify_no_effective_storage_data_actions(
             or data_actions is None
         ):
             _fail("EFFECTIVE_RBAC_READBACK_INVALID")
-        if any(
-            action.casefold().startswith("microsoft.storage/")
-            for action in data_actions
+        if (
+            _permission_set_has_unresolved_subtraction_or_wildcard(
+                value,
+                properties,
+                field_name="dataActions",
+                not_field_name="notDataActions",
+            )
+            or any(
+                action.casefold().startswith("microsoft.storage/")
+                for action in data_actions
+            )
         ):
             _fail(forbidden_storage_data_actions_error)
+
+
+def _permission_set_has_unresolved_subtraction_or_wildcard(
+    value: Mapping[str, Any],
+    properties: Mapping[str, Any],
+    *,
+    field_name: str,
+    not_field_name: str,
+) -> bool:
+    direct = _field(value, properties, field_name)
+    if direct is not None:
+        actions = _data_actions(direct)
+        if actions is None or any("*" in action for action in actions):
+            return True
+        direct_not = _field(value, properties, not_field_name)
+        return direct_not not in (None, [])
+    role = value.get("roleDefinition")
+    if not isinstance(role, Mapping):
+        return True
+    role_properties = role.get("properties", role)
+    if not isinstance(role_properties, Mapping):
+        return True
+    permissions = role_properties.get("permissions")
+    if not isinstance(permissions, list) or not permissions:
+        return True
+    for permission in permissions:
+        if not isinstance(permission, Mapping):
+            return True
+        actions = _data_actions(permission.get(field_name))
+        if (
+            actions is None
+            or any("*" in action for action in actions)
+            or permission.get(not_field_name) not in (None, [])
+        ):
+            return True
+    return False
 
 
 def _verify_effective_assignments(
@@ -5633,7 +5757,7 @@ def _expected_operation_for_envelope(
     if kind == "coordination-blob-private-dns-zone-group":
         return _private_dns_zone_group_payload(response)
     if kind == "coordination-blob-private-dns-vnet-link":
-        return _private_dns_vnet_link_payload(response)
+        return _private_dns_vnet_link_collection_payload(response)
     if kind == "coordination-blob-service-configuration":
         return _blob_service_configuration_payload(response)
     if kind == "coordination-lease-container-configuration":

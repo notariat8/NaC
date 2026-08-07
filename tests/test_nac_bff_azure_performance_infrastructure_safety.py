@@ -217,6 +217,16 @@ def _storage(name: str, resource_id: str) -> dict[str, object]:
                 "resourceAccessRules": [],
                 "virtualNetworkRules": [],
             },
+            "privateEndpointConnections": [{
+                "id": f"{resource_id}/privateEndpointConnections/coordination-blob",
+                "properties": {
+                    "privateEndpoint": {"id": PRIVATE_ENDPOINT_ID},
+                    "privateLinkServiceConnectionState": {
+                        "status": "Approved"
+                    },
+                    "provisioningState": "Succeeded",
+                },
+            }],
             "publicNetworkAccess": "Disabled",
             "supportsHttpsTrafficOnly": True,
         },
@@ -458,9 +468,10 @@ def _responses() -> dict[str, object]:
         f"https://management.azure.com{PRIVATE_DNS_ZONE_GROUP_ID}?api-version=2024-05-01": (
             _private_dns_zone_group()
         ),
-        f"https://management.azure.com{PRIVATE_DNS_VNET_LINK_ID}?api-version=2024-06-01": (
-            _private_dns_vnet_link()
-        ),
+        (
+            f"https://management.azure.com{PRIVATE_DNS_ZONE_ID}/"
+            "virtualNetworkLinks?api-version=2024-06-01"
+        ): {"value": [_private_dns_vnet_link()]},
         (
             f"https://management.azure.com{ROOT_MG}?api-version=2021-04-01"
             "&$expand=children&$recurse=true"
@@ -1056,10 +1067,10 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
     def test_rejects_wrong_private_dns_vnet_link(self) -> None:
         responses = _responses()
         vnet_link_url = (
-            f"https://management.azure.com{PRIVATE_DNS_VNET_LINK_ID}"
-            "?api-version=2024-06-01"
+            f"https://management.azure.com{PRIVATE_DNS_ZONE_ID}/"
+            "virtualNetworkLinks?api-version=2024-06-01"
         )
-        responses[vnet_link_url]["properties"]["virtualNetwork"]["id"] = (
+        responses[vnet_link_url]["value"][0]["properties"]["virtualNetwork"]["id"] = (
             VIRTUAL_NETWORK_ID + "-other"
         )
         with tempfile.TemporaryDirectory() as value, patch(
@@ -1069,6 +1080,65 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(
             AzurePerformanceInfrastructureSafetyError,
             "COORDINATION_BLOB_PRIVATE_DNS_VNET_LINK_READBACK_INVALID",
+        ):
+            self._verify(arguments)
+
+    def test_rejects_additional_private_dns_vnet_link(self) -> None:
+        responses = _responses()
+        vnet_link_url = (
+            f"https://management.azure.com{PRIVATE_DNS_ZONE_ID}/"
+            "virtualNetworkLinks?api-version=2024-06-01"
+        )
+        extra = deepcopy(_private_dns_vnet_link())
+        extra["id"] = PRIVATE_DNS_VNET_LINK_ID + "-other"
+        responses[vnet_link_url]["value"].append(extra)
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "COORDINATION_BLOB_PRIVATE_DNS_VNET_LINK_READBACK_INVALID",
+        ):
+            self._verify(arguments)
+
+    def test_rejects_paginated_private_dns_vnet_link_readback(self) -> None:
+        responses = _responses()
+        vnet_link_url = (
+            f"https://management.azure.com{PRIVATE_DNS_ZONE_ID}/"
+            "virtualNetworkLinks?api-version=2024-06-01"
+        )
+        responses[vnet_link_url]["nextLink"] = vnet_link_url + "&$skiptoken=opaque"
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            with self.assertRaisesRegex(
+                AzurePerformanceInfrastructureSafetyError,
+                "SEALED_AZURE_READ_RESPONSE_INVALID",
+            ):
+                _build_arguments(Path(value))
+
+    def test_rejects_additional_storage_private_endpoint_connection(self) -> None:
+        responses = _responses()
+        storage_url = (
+            f"https://management.azure.com{COORDINATION_ID}"
+            "?api-version=2023-05-01"
+        )
+        extra = deepcopy(
+            responses[storage_url]["properties"]["privateEndpointConnections"][0]
+        )
+        extra["id"] += "-other"
+        extra["properties"]["privateEndpoint"]["id"] += "-other"
+        responses[storage_url]["properties"]["privateEndpointConnections"].append(
+            extra
+        )
+        with tempfile.TemporaryDirectory() as value, patch(
+            __name__ + "._responses", return_value=responses
+        ):
+            arguments = _build_arguments(Path(value))
+        with self.assertRaisesRegex(
+            AzurePerformanceInfrastructureSafetyError,
+            "COORDINATION_BLOB_PRIVATE_ENDPOINT_CONNECTIONS_INVALID",
         ):
             self._verify(arguments)
 
@@ -1118,6 +1188,81 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
             "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT",
         ):
             self._verify(arguments)
+
+    def test_wildcard_or_subtracted_effective_data_actions_are_rejected(self) -> None:
+        cases = (
+            (
+                "caller_global_wildcard",
+                CALLER_PRINCIPAL_ID,
+                ["*"],
+                [],
+                "BROKER_CALLER_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+            (
+                "runtime_namespace_wildcard",
+                RUNTIME_UAMI_PRINCIPAL_ID,
+                ["Microsoft.*"],
+                [],
+                "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+            (
+                "runtime_subtracted_wildcard",
+                RUNTIME_UAMI_PRINCIPAL_ID,
+                ["*"],
+                ["Microsoft.Storage/*"],
+                "RUNTIME_UAMI_STORAGE_DATA_ACTIONS_PRESENT",
+            ),
+        )
+        for index, (
+            label,
+            principal_id,
+            data_actions,
+            not_data_actions,
+            expected_error,
+        ) in enumerate(cases, start=1):
+            with self.subTest(label=label):
+                responses = _responses()
+                role_definition_id = (
+                    f"{RESOURCE_GROUP_SCOPE}/providers/Microsoft.Authorization/"
+                    f"roleDefinitions/77777777-2222-4333-8444-{index:012d}"
+                )
+                assignment = deepcopy(_role_assignment())
+                assignment["id"] = ROLE_ASSIGNMENT_ID.rsplit("/", 1)[0] + (
+                    f"/44444444-2222-4333-8444-{index:012d}"
+                )
+                assignment["properties"]["principalId"] = principal_id
+                assignment["properties"]["roleDefinitionId"] = role_definition_id
+                assignment["properties"]["condition"] = None
+                assignment["properties"]["conditionVersion"] = None
+                responses[
+                    f"https://management.azure.com{role_definition_id}"
+                    "?api-version=2022-04-01"
+                ] = {
+                    "id": role_definition_id,
+                    "properties": {
+                        "permissions": [{
+                            "actions": [],
+                            "notActions": [],
+                            "dataActions": data_actions,
+                            "notDataActions": not_data_actions,
+                        }]
+                    },
+                }
+                container_url = (
+                    f"https://management.azure.com{CONTAINER_SCOPE}/providers/"
+                    "Microsoft.Authorization/roleAssignments?api-version=2022-04-01"
+                    "&$filter=atScope()"
+                )
+                responses[container_url]["value"].append(assignment)
+                with tempfile.TemporaryDirectory() as value, patch(
+                    __name__ + "._responses", return_value=responses
+                ):
+                    arguments = _build_arguments(Path(value))
+                with self.assertRaisesRegex(
+                    AzurePerformanceInfrastructureSafetyError,
+                    expected_error,
+                ):
+                    self._verify(arguments)
 
     def test_runtime_uami_different_storage_data_role_is_rejected(self) -> None:
         responses = _responses()

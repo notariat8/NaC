@@ -108,7 +108,7 @@
     "template": {
       "path": "deploy/runtime/azure/nac-bff/infra/main.bicep",
       "source_sha256": "ca0dcbe1cea52940e5115dd307df431cb123016892c2a9bae0d9758eb1fddc7e",
-      "compiled_sha256": "784db077a9c64046c4b7168d9dd5a876ff7eb7e4b64e97b163fffaba4704789a",
+      "compiled_sha256": "fafb4478d49f13db4c8d60ff74fdde8778663e7535f9893f1cd544b9ccc9966a",
       "compiled_path": "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
     },
     "parameters": {
