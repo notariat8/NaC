@@ -1,0 +1,36 @@
+# NaC root .gitattributes
+# Ziel: plattformrobuste Zeilenenden. Textdateien werden im Repository und im
+# Working-Tree als LF gehalten, damit byte-exakte Hash- und AST-Validatoren auf
+# Linux-CI und Windows/WSL identisch laufen. Binärdateien werden nicht normalisiert.
+# Begründung: ohne diese Datei speichert Windows/OneDrive den Working-Tree als
+# CRLF, während der Index LF hat; byte-exakte Tests (z.B. BPMN-Fixture-Hash,
+# Visual-Evidence-Hash, Azure-BFF-AST-Shape) failen lokal, obwohl die CI grün ist.
+
+# Default: Textdateien mit LF
+* text=auto eol=lf
+
+# Binärdateien: keine EOL-Normalisierung
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.bmp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.whl binary
+*.nupkg binary
+*.sppkg binary
+*.dll binary
+*.exe binary
+*.so binary
+*.bin binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# Lokale .gitattributes nicht selbst normalisieren (Schutzklausel)
+.gitattributes text eol=lf
