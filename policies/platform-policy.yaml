@@ -1,0 +1,66 @@
+version: 1
+status: mandatory
+
+# Deklariert die offiziellen Agentenplattformen für NaC und ihre
+# Pflichtpfade. AI-Regelflächen (AGENTS.md, .codex/agents/, .pi/agents/)
+# sind Spiegel dieser Policy; siehe docs/de/platform-onboarding-matrix.md
+# und docs/en/platform-onboarding-matrix.md.
+
+platforms:
+  codex:
+    mandatory_files:
+      - AGENTS.md
+      - .codex/agents/
+      - docs/de/START_HERE.md
+      - docs/en/START_HERE.md
+    agent_profile_format: toml
+    agent_profile_directory: .codex/agents
+  pi:
+    mandatory_files:
+      - .pi/agents/
+      - .pi/settings.json
+      - .pi/README.md
+    agent_profile_format: markdown_frontmatter
+    agent_profile_directory: .pi/agents
+
+shared_core:
+  - compliance_and_governance_principles
+  - review_and_approval_logic
+  - culture_and_language_policy
+  - onboarding_order_for_non_it_users
+  - notarial_scope_canonical_usecases_and_onboarding_prompts
+  - local_execution_location_for_nac
+  - plugin_and_connector_planning_model
+
+change_rule:
+  steps:
+    - "Kerninhalt aktualisieren."
+    - "Codex-Agentenpfad (.codex/agents/) aktualisieren."
+    - "pi-Subagentenpfad (.pi/agents/) aktualisieren."
+    - "Verlinkungen in README.md und docs/de/START_HERE.md prüfen."
+
+agent_profile_mapping:
+  nac_scope_mapper:
+    codex: .codex/agents/nac-scope-mapper.toml
+    pi: .pi/agents/nac-scope-mapper.md
+  nac_kg_reviewer:
+    codex: .codex/agents/nac-kg-reviewer.toml
+    pi: .pi/agents/nac-kg-reviewer.md
+  nac_bpmn_reviewer:
+    codex: .codex/agents/nac-bpmn-reviewer.toml
+    pi: .pi/agents/nac-bpmn-reviewer.md
+  nac_policy_reviewer:
+    codex: .codex/agents/nac-policy-reviewer.toml
+    pi: .pi/agents/nac-policy-reviewer.md
+  nac_docs_parity_reviewer:
+    codex: .codex/agents/nac-docs-parity-reviewer.toml
+    pi: .pi/agents/nac-docs-parity-reviewer.md
+  nac_validation_reviewer:
+    codex: .codex/agents/nac-validation-reviewer.toml
+    pi: .pi/agents/nac-validation-reviewer.md
+
+notes:
+  - "pi-Subagenten sind Markdown-Spiegel der Codex-Profile; beide sind read-only."
+  - "pi-spezifische Fähigkeiten (Plan-Modus, Parallel Review, PR-Status, autonomer Abschluss) kommen über empfohlene pi-Extensions, die Mitwirkende selbst installieren."
+  - "Project-lokale .pi/settings.json installiert keine Extensions automatisch; sie bindet nur repo-lokale Skills ein."
+  - "Extensions laufen mit vollen Systemrechten; vor Installation aus Drittsources Code prüfen."

@@ -33,8 +33,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Attribution nach [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md) und [CITATION.cff](CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](TRADEMARK.md) beachten.
 - Das Repo trennt installierbare Plugin-Artefakte in [plugins/](plugins), ausführbare Notariats-Workflows in [workflows/](workflows) und konkrete notarielle Usecases in [usecases/](usecases).
 - Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
-- Konzeptänderungen werden Codex-first synchron zwischen Policy, AGENTS.md und Codex-Agentenprofilen gepflegt.
-- Onboarding wird für den Codex-Pfad und alle aktiven Repo-Startdokumente gepflegt.
+- Konzeptänderungen werden plattformübergreifend synchron zwischen Policy, AGENTS.md, Codex-Agentenprofilen und pi-Subagenten gepflegt.
+- Onboarding wird für den Codex-Pfad, den pi-Pfad und alle aktiven Repo-Startdokumente gepflegt.
 - Progressive Disclosure gilt für Agentenkontext: [AGENTS.md](AGENTS.md) ist Router, nicht Enzyklopädie. Always-on-Regeln bleiben hier; scoped Regeln stehen in verschachtelten [AGENTS.md](AGENTS.md)-Dateien; on-demand Maps, History, Guardrails und Verification Contracts stehen im maschinenlesbaren [agent-context/index.json](agent-context/index.json); Runtime-Kontext entsteht nur aus aktueller Toolausgabe, Logs, Diffs und Evidence.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; reine Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Der verbindliche Technikstack steht in [policies/technology-policy.yaml](policies/technology-policy.yaml).
@@ -113,6 +113,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 ## Plattform-Synchronität
 
-- Bei Regel- oder Konzeptänderungen immer beide Pfade aktualisieren:
+- Bei Regel- oder Konzeptänderungen immer alle Plattformpfade aktualisieren:
   - Codex: [AGENTS.md](AGENTS.md), [.codex/agents/](.codex/agents) und die Startdokumente unter [docs/de/START_HERE.md](docs/de/START_HERE.md) sowie [docs/en/START_HERE.md](docs/en/START_HERE.md)
+  - pi: [.pi/agents/](.pi/agents) als Markdown-Spiegel der Codex-Review-Profile, [.pi/settings.json](.pi/settings.json) für repo-lokale Skills und [.pi/README.md](.pi/README.md) für den Plattformpfad; siehe [docs/de/platform-onboarding-matrix.md](docs/de/platform-onboarding-matrix.md) und [docs/en/platform-onboarding-matrix.md](docs/en/platform-onboarding-matrix.md)
 - Bei sprachabhängigen Änderungen immer alle Standardsprachen nach [policies/language-policy.yaml](policies/language-policy.yaml) aktualisieren.

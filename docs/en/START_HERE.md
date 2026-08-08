@@ -34,7 +34,8 @@ Use this document:
 
 1. Read repository rules:
    - [AGENTS.md](../../AGENTS.md), if present in the workspace.
-   - [.codex/agents/](../../.codex/agents)
+   - [.codex/agents/](../../.codex/agents) (Codex path)
+   - [.pi/agents/](../../.pi/agents) and [.pi/README.md](../../.pi/README.md) (pi path)
    - [docs/en/regelarchitektur.md](regelarchitektur.md)
 2. Read project status:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
@@ -72,7 +73,8 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 
 After `nac plugins install --mode link`, reopen Codex. The running session reads
 plugins at startup and sees repo-local plugins only after the local mirror and a
-restart.
+restart. The same applies to the pi path: restart pi or open a new session so
+repo-local skills and subagents from [.pi/](../../.pi) are loaded.
 
 ## Working Mode
 

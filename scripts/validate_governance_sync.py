@@ -22,13 +22,14 @@ POLICY_FILES = {
     "policies/sbom-policy.yaml",
     "policies/technology-policy.yaml",
     "policies/codex-command-rules-policy.json",
+    "policies/platform-policy.yaml",
 }
 
 MIRROR_FILES = {
     "AGENTS.md",
 }
 
-MIRROR_PREFIXES = (".codex/agents/",)
+MIRROR_PREFIXES = (".codex/agents/", ".pi/agents/")
 
 MANDATORY_ACCESS_POLICY_KEYS = (
     "source_of_truth:",

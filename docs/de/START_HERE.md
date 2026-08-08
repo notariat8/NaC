@@ -35,7 +35,8 @@ Dieses Dokument ist zu verwenden:
 
 1. Repo-Regeln lesen:
    - [AGENTS.md](../../AGENTS.md), sofern im Workspace vorhanden.
-   - [.codex/agents/](../../.codex/agents)
+   - [.codex/agents/](../../.codex/agents) (Codex-Pfad)
+   - [.pi/agents/](../../.pi/agents) und [.pi/README.md](../../.pi/README.md) (pi-Pfad)
    - [docs/de/regelarchitektur.md](regelarchitektur.md)
 2. Projektstatus lesen:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
@@ -74,7 +75,9 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 
 Nach `nac plugins install --mode link` Codex neu öffnen. Die laufende Session liest
 Plugins beim Start ein und sieht repo-lokale Plugins erst nach der lokalen
-Spiegelung und einem Neustart.
+Spiegelung und einem Neustart. Für den pi-Pfad gilt Entsprechendes: pi neu
+starten oder eine neue Session öffnen, damit repo-lokale Skills und Subagenten
+aus [.pi/](../../.pi) geladen werden.
 
 ## Arbeitsmodus
 
