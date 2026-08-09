@@ -12,3 +12,5 @@ out/
 *.pfx
 logs/operator-webapp.*.log
 .superpowers/
+*.egg-info/
+*.egg-info
