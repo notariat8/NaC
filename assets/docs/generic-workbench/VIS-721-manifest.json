@@ -77,7 +77,7 @@
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
-      "sha256": "eaa230176eda5889dc4d6a7715a7769bea129a061df4e88a2afd20cbcb7d21e9"
+      "sha256": "561396ee12d268cb975718b42e904cea9d4fb48eb3189fe69f71518ba733f35c"
     },
     {
       "relativePath": "workflows/verification-contracts/generic-workbench.verification.json",

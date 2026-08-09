@@ -91,7 +91,7 @@ gantt
     Microsoft-first On-Prem-Zielarchitektur       :done,    b1wb, 2026-07-11, 1d
     Durable-Workflow-Kandidatenspitze             :         b1wc, after b1wb, 42d
     M365-MVP-Testumgebung-Live-One-Shot           :done,    b1we, 2026-07-14, 1d
-    SPFx Read-only Workspace-Arbeitsfläche        :active,  b1wd, 2026-07-14, 28d
+    SPFx Read-only Workspace-Arbeitsfläche        :done,    b1wd, 2026-07-14, 28d
     SPFx Rollen-/Fristen-Cockpit                 :done,    b1wde, 2026-07-29, 1d
     Legal-Graph-Domänen-MVP planen              :active,  b1z, 2026-06-12, 14d
     Legal-Graph-Primärquellenpilot ohne Kommentarzugriff :done,   b1za, 2026-06-12, 7d

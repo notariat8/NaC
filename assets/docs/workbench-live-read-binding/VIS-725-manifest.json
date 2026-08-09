@@ -110,7 +110,7 @@
     },
     "contract": {
       "relativePath": "workflows/contracts/workbench-live-read-binding.contract.json",
-      "sha256": "6920cf9ba4717044b6154756aca1ae879cf6b1f92f24f3b10fe75bfb1b7e9929"
+      "sha256": "94ee59945739a1e79feea221bd13e86fa676b818988346c34bb5e781fe97f5a1"
     }
   },
   "visualHarness": [
