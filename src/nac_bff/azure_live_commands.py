@@ -2216,7 +2216,16 @@ def _executable_path(
         return None, "AZURE_CLI_BINARY_UNTRUSTED"
 
     attestation, attestation_code = _toolchain_attestation(path, metadata)
-    if attestation is None:
+    if attestation is None and expected_sha256 is None:
+        return None, attestation_code
+    if attestation is None and expected_sha256 is not None:
+        # Fallback: plain SHA-256 when no toolchain attestation available
+        try:
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual == expected_sha256:
+                return path, "AZURE_CLI_BINARY_TRUSTED"
+        except OSError:
+            pass
         return None, attestation_code
     if attestation.requires_expected and expected_sha256 is None:
         return None, "AZURE_CLI_BINARY_ATTESTATION_REQUIRED"
