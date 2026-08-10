@@ -4,6 +4,7 @@ from contextlib import ExitStack
 import hashlib
 import json
 import os
+import platform
 import re
 import stat
 import subprocess
@@ -132,6 +133,9 @@ class ReadyControlPlaneCommandRunner(ControlPlaneCommandRunner, Protocol):
     def check_readiness(self) -> bool: ...
 
 
+_IS_WINDOWS = os.name == "nt"
+
+
 class M365CliCommandRunner:
     """Run allowlisted M365 argv with a pinned local CLI and bounded process."""
 
@@ -209,6 +213,10 @@ class M365CliCommandRunner:
         bindings = tuple(bound_artifacts.items())
         if any(command.count(argument) != 1 for argument, _ in bindings):
             raise M365CliReadinessError("M365_CLI_ARTIFACT_BINDING_INVALID")
+        
+        if _IS_WINDOWS:
+            return self._run_win(command, bindings)
+        
         try:
             runtime_payloads = self._runtime_payloads()
             with ExitStack() as stack:
@@ -330,6 +338,44 @@ class M365CliCommandRunner:
             returncode=result.returncode,
             stdout=result.stdout,
             stderr="",
+        )
+
+    def _run_win(
+        self,
+        command: tuple[str, ...],
+        bindings: tuple[tuple[str, tuple[Path, str]], ...],
+    ) -> SubprocessCommandResult:
+        """Windows: simple subprocess without sealed node runtime."""
+        bound_command = list(command)
+        for argument, (path, expected_sha256) in bindings:
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual != expected_sha256:
+                raise M365CliReadinessError("M365_CLI_ARTIFACT_BINDING_INVALID")
+            bound_command = [
+                str(path) if token == argument else token
+                for token in bound_command
+            ]
+        process_argv = [str(self._node_binary), str(self.binary), *bound_command[1:]]
+        try:
+            result = subprocess.run(
+                process_argv,
+                cwd=self.binary.parent,
+                shell=False,
+                text=True,
+                capture_output=True,
+                check=False,
+                env=self._env,
+                timeout=self._timeout_seconds,
+            )
+        except subprocess.TimeoutExpired:
+            raise M365CliReadinessError("M365_CLI_COMMAND_TIMEOUT") from None
+        except OSError:
+            raise M365CliReadinessError("M365_CLI_COMMAND_EXECUTION_FAILED") from None
+        _safe_marker = _safe_bff_http_denial(command, result.stdout, result.stderr)
+        return SubprocessCommandResult(
+            returncode=result.returncode,
+            stdout=result.stdout if _safe_marker is None else "",
+            stderr="" if _safe_marker is None else _safe_marker,
         )
 
     def check_readiness(self) -> bool:

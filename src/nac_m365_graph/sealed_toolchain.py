@@ -2,15 +2,23 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-import fcntl
 import hashlib
 import os
+import platform
 from pathlib import Path
 import re
 import stat
 import tempfile
 from typing import Iterator, Sequence
 
+try:
+    import fcntl
+    _HAS_FCNTL = True
+except ModuleNotFoundError:
+    _HAS_FCNTL = False
+
+_IS_WINDOWS = os.name == "nt"
+_IS_LINUX = platform.system() == "Linux"
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _MAX_TOOL_BYTES = 512 * 1024 * 1024
@@ -45,8 +53,14 @@ def verified_tool_bytes(
 def sealed_toolchain(
     specifications: Sequence[tuple[Path, bool, str]],
 ) -> Iterator[SealedToolchain]:
-    """Copy verified executable bytes into sealed memfds."""
-
+    """Copy verified executable bytes into platform-appropriate isolation.
+    
+    Linux: sealed memfds via memfd_create + fcntl sealing.
+    Windows: private temp directory with restricted permissions."""
+    if _IS_WINDOWS:
+        yield from _sealed_toolchain_win(specifications)
+        return
+    # Linux path
     descriptors: list[int] = []
     try:
         for path, executable, expected_sha256 in specifications:
@@ -67,6 +81,31 @@ def sealed_toolchain(
                 os.close(descriptor)
             except OSError:
                 pass
+
+
+@contextmanager
+def _sealed_toolchain_win(
+    specifications: Sequence[tuple[Path, bool, str]],
+) -> Iterator[SealedToolchain]:
+    """Windows: copy verified binaries to private temp directory."""
+    with tempfile.TemporaryDirectory(prefix="nac-sealed-win-") as tmp:
+        root = Path(tmp)
+        os.chmod(root, 0o700)
+        paths: list[str] = []
+        for path, executable, expected_sha256 in specifications:
+            payload = _read_verified_bytes(
+                Path(path),
+                executable=executable,
+                expected_sha256=expected_sha256,
+            )
+            dest = root / Path(path).name
+            dest.write_bytes(payload)
+            dest.chmod(0o500 if executable else 0o400)
+            paths.append(str(dest))
+        yield SealedToolchain(
+            paths=tuple(paths),
+            pass_fds=(),  # Windows: no fd passing
+        )
 
 
 @contextmanager
