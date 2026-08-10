@@ -599,8 +599,8 @@
       "approval_reuse_for_different_individual_or_combined_digest_allowed": false,
       "includes_public_credential_material_only": true,
       "private_key_digest_or_content_allowed": false,
-      "runtime_executable_bytes_mode": "digest_verified_single_read_sealed_memfd",
-      "linux_memfd_and_proc_fd_required": true,
+      "runtime_executable_bytes_mode": "platform_native_verified_execution",
+      "linux_memfd_and_proc_fd_required": false,
       "node_runtime_bundle_digest_fields": [
         "m365_cli_sha256",
         "build_npm_cli_sha256"
@@ -612,10 +612,20 @@
       "runtime_module_symlinks_allowed": false,
       "runtime_path_swap_behavior": "resolved module must remain manifest-allowlisted and exact bytes are O_NOFOLLOW/fstat/SHA-256 verified before compile or evaluation",
       "azure_cli_runtime_bundle_digest_field": "azure_cli_toolchain_sha256",
-      "azure_cli_runtime_bytes_mode": "sealed_interpreter_bootstrap_manifest_plus_verified_private_readonly_mount_namespace_copy",
+      "azure_cli_runtime_bytes_mode": "platform_native_handle_verified_subprocess",
       "azure_cli_original_wrapper_execution_allowed": false,
-      "azure_cli_private_user_and_mount_namespace_required": true,
+      "azure_cli_private_user_and_mount_namespace_required": false,
       "azure_cli_namespace_unavailable_behavior": "fail_closed_before_provider_request",
+      "windows_light_runner": {
+        "enabled": true,
+        "binary_verification_mode": "handle_based_sha256_pre_subprocess",
+        "process_isolation_mode": "job_object_with_env_allowlist",
+        "lock_mode": "windows_global_mutex_with_append_only_journal",
+        "symlink_protection_mode": "path_canonicalization_admin_symlink_guard",
+        "minimum_os": "Windows 11",
+        "wsl_required": false,
+        "container_required": false
+      },
       "node_child_process_loader_mode": "fork_only_immutable_preload_bound_node_manifest_node_options_parent_pid_pinned_sealed_memfd_paths_with_execpath_and_clean_execargv_all_public_and_low_level_spawn_exec_execfile_commonjs_esm_prototype_and_process_binding_variants_rejected",
       "spfx_build_dependency_digest_mode": "post_npm_ci_plus_lock_bound_wasi_reification_full_input_tree_manifest_excluding_declared_fresh_generated_outputs_verified_before_between_and_after_direct_heft_steps",
       "runtime_manifest_asset_read_mode": "manifest_bound_sync_callback_promise_read_stream_and_open_as_blob_assets_per_read_nofollow_fstat_captured_primordials_and_callback_stream_delivery_sha256_external_alias_realpath_inode_classification_descriptor_apis_fail_closed_and_esm_loader_uses_verified_byte_read",

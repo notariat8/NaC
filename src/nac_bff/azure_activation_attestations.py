@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import sys
 from typing import Mapping
 
 from .azure_live_commands import calculate_azure_cli_toolchain_sha256
@@ -41,14 +42,36 @@ BUILD_NPM_CLI_EXECUTION_PATH = Path(
 )
 GH_CLI_EXECUTION_PATH = Path("/usr/bin/gh")
 
+_WIN_AZURE_CLI_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft SDKs\Azure\CLI2\wbin\az.cmd")
+)
+_WIN_M365_CLI_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%APPDATA%\npm\node_modules\@pnp\cli-microsoft365\dist\index.js")
+)
+_WIN_M365_NODE_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%ProgramFiles%\nodejs\node.exe")
+)
+_WIN_BUILD_PYTHON_EXECUTION_PATH = Path(sys.executable)
+_WIN_BUILD_NODE_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%ProgramFiles%\nodejs\node.exe")
+)
+_WIN_BUILD_NPM_CLI_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%ProgramFiles%\nodejs\node_modules\npm\bin\npm-cli.js")
+)
+_WIN_GH_CLI_EXECUTION_PATH = Path(
+    os.path.expandvars(r"%ProgramFiles%\GitHub CLI\gh.exe")
+)
+
+_IS_WINDOWS = os.name == "nt"
+
 _EXECUTION_PATHS = {
-    "azure_cli": AZURE_CLI_EXECUTION_PATH,
-    "m365_cli": M365_CLI_EXECUTION_PATH,
-    "m365_node": M365_NODE_EXECUTION_PATH,
-    "build_python": BUILD_PYTHON_EXECUTION_PATH,
-    "build_node": BUILD_NODE_EXECUTION_PATH,
-    "build_npm_cli": BUILD_NPM_CLI_EXECUTION_PATH,
-    "gh_cli": GH_CLI_EXECUTION_PATH,
+    "azure_cli": _WIN_AZURE_CLI_EXECUTION_PATH if _IS_WINDOWS else AZURE_CLI_EXECUTION_PATH,
+    "m365_cli": _WIN_M365_CLI_EXECUTION_PATH if _IS_WINDOWS else M365_CLI_EXECUTION_PATH,
+    "m365_node": _WIN_M365_NODE_EXECUTION_PATH if _IS_WINDOWS else M365_NODE_EXECUTION_PATH,
+    "build_python": _WIN_BUILD_PYTHON_EXECUTION_PATH if _IS_WINDOWS else BUILD_PYTHON_EXECUTION_PATH,
+    "build_node": _WIN_BUILD_NODE_EXECUTION_PATH if _IS_WINDOWS else BUILD_NODE_EXECUTION_PATH,
+    "build_npm_cli": _WIN_BUILD_NPM_CLI_EXECUTION_PATH if _IS_WINDOWS else BUILD_NPM_CLI_EXECUTION_PATH,
+    "gh_cli": _WIN_GH_CLI_EXECUTION_PATH if _IS_WINDOWS else GH_CLI_EXECUTION_PATH,
 }
 
 
@@ -133,6 +156,8 @@ def build_activation_attestation_plan(
 
 def _trusted_file_sha256(path: Path, *, executable: bool) -> str | None:
     path = Path(path)
+    if _IS_WINDOWS:
+        return _trusted_file_sha256_win(path, executable=executable)
     if not path.is_absolute() or not _trusted_parent_chain(path.parent):
         return None
     try:
@@ -178,6 +203,8 @@ def _trusted_node_runtime_digest(entrypoint: Path) -> str | None:
 
 
 def _trusted_parent_chain(path: Path) -> bool:
+    if _IS_WINDOWS:
+        return _trusted_parent_chain_win(path)
     current = path
     try:
         while current != current.parent:
@@ -194,6 +221,38 @@ def _trusted_parent_chain(path: Path) -> bool:
                     )
                 )
             ):
+                return False
+            current = current.parent
+    except OSError:
+        return False
+    return True
+
+
+def _trusted_file_sha256_win(path: Path, *, executable: bool) -> str | None:
+    """Windows-native SHA-256 verification without POSIX dependencies."""
+    try:
+        from .azure_live_commands_win import verified_sha256
+        return verified_sha256(path)
+    except ImportError:
+        # Fallback: basic hash on Windows if win module unavailable
+        if not path.is_absolute() or not path.is_file():
+            return None
+        digest = hashlib.sha256()
+        with open(path, "rb") as f:
+            while True:
+                chunk = f.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        return digest.hexdigest()
+
+
+def _trusted_parent_chain_win(path: Path) -> bool:
+    """Windows parent chain check: verify path exists and is accessible."""
+    try:
+        current = path
+        while current != current.parent:
+            if not current.exists() or not current.is_dir():
                 return False
             current = current.parent
     except OSError:
