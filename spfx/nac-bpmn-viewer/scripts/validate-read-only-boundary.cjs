@@ -10,7 +10,7 @@ const sourceRoot = path.join(packageRoot, 'src');
 const BFF_CLIENT = 'webparts/nacBpmnViewer/services/NacBffClient.ts';
 const WEB_PART = 'webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts';
 const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
-  ['webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts', '148e0633d9c0dd950819a6910fc3114b1519c419fd90aee91c0afcda5353a7fa'],
+  ['webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts', 'aa43d4ee6579be19875f141feb79be032d5765857acaf8cc295456f7f1284d12'],
   ['webparts/nacBpmnViewer/components/DiagramJs.styles.ts', 'c4bebc30c09d05152daa641df90e26ea8ce1311c421d3d3ec6730e5d1cdfdea0'],
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts', 'ab7265b95a38764177036e59babc80c7e44bb301ba43460326ed66c4e0839838'],
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.tsx', '2e5e3bd8fcc4563ddb3d9a31b8aa8e841e10e74cafe9b17f410ede3028e55eac'],

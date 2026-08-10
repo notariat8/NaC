@@ -37,7 +37,7 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
   }
 
   protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
-    this.isDarkTheme = currentTheme?.isInverted === true;
+    this.isDarkTheme = (currentTheme as any)?.isInverted === true;
     this.render();
   }
 
