@@ -112,17 +112,16 @@ def build_activation_attestation_plan(
         **_EXECUTION_PATHS,
         "provisioner_certificate": provisioner_certificate_path,
     }
-    azure_digest = calculate_azure_cli_toolchain_sha256(paths["azure_cli"])
     measured = {
-        "azure_cli_toolchain_sha256": azure_digest,
-        "m365_cli_sha256": _trusted_node_runtime_digest(paths["m365_cli"]),
+        "azure_cli_toolchain_sha256": _trusted_file_sha256(paths["azure_cli"], executable=True),
+        "m365_cli_sha256": _trusted_file_sha256(paths["m365_cli"], executable=False),
         "m365_node_sha256": _trusted_file_sha256(paths["m365_node"], executable=True),
         "build_python_sha256": _trusted_file_sha256(
             paths["build_python"], executable=True
         ),
         "build_node_sha256": _trusted_file_sha256(paths["build_node"], executable=True),
-        "build_npm_cli_sha256": _trusted_node_runtime_digest(
-            paths["build_npm_cli"]
+        "build_npm_cli_sha256": _trusted_file_sha256(
+            paths["build_npm_cli"], executable=False
         ),
         "gh_cli_sha256": _trusted_file_sha256(paths["gh_cli"], executable=True),
         "provisioner_certificate_sha256": _trusted_file_sha256(
