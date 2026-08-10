@@ -71,6 +71,8 @@ _SAFE_NONZERO_MARKERS = (
 )
 EXPECTED_M365_CLI_USER = "ofunk@funktion8.de"
 EXPECTED_M365_CLI_APP_ID = "c86dded6-9723-4b8d-91f2-e0fd70e25839"
+EXPECTED_M365_CLI_PROVISIONER_APP_ID = "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+EXPECTED_M365_CLI_PROVISIONER_USER = "NaC M365 Provisioning"
 _EXPECTED_GRAPH_RESOURCE = "https://graph.microsoft.com"
 _EXPECTED_API_RESOURCE = "api://funktion8.de/nac-bff"
 _EXPECTED_GRAPH_ME_URL = "https://graph.microsoft.com/v1.0/me?$select=id"
@@ -341,11 +343,14 @@ class M365CliCommandRunner:
         if not isinstance(payload, dict):
             return False
         return (
-            payload.get("connectedAs") == EXPECTED_M365_CLI_USER
-            and payload.get("appId") == EXPECTED_M365_CLI_APP_ID
-            and payload.get("appTenant") == EXPECTED_M365_TENANT_ID
-            and payload.get("cloudType") == "Public"
-        )
+            (
+                payload.get("connectedAs") == EXPECTED_M365_CLI_USER
+                and payload.get("appId") == EXPECTED_M365_CLI_APP_ID
+            ) or (
+                payload.get("connectedAs") == EXPECTED_M365_CLI_PROVISIONER_USER
+                and payload.get("appId") == EXPECTED_M365_CLI_PROVISIONER_APP_ID
+            )
+        ) and payload.get("appTenant") == EXPECTED_M365_TENANT_ID and payload.get("cloudType") == "Public"
 
     @classmethod
     def _resolve_binary(
