@@ -223,6 +223,14 @@ agent_workflows:
     prohibit_time_ledger_wrapper_for_remote_reads_when_prefix_mismatch: true
     require_observability_after_direct_read: true
     no_oci_apply_from_skill_without_owner_apply_approval: true
+  brainstorming_gate:
+    enabled: true
+    skill_path: workflows/skills/brainstorming/SKILL.md
+    require_before_nontrivial_features: true
+    require_design_approval_before_code: true
+    spec_output_roots:
+      - docs/de/superpowers/specs
+      - docs/en/superpowers/specs
   require_layer_sync_check_for_data_controller_view_changes: true
   require_error_test_security_review_for_code_reviewer: true
   require_user_confirmation_before_code_for_ambiguous_requests: true
