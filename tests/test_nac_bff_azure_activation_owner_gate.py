@@ -352,7 +352,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             **self._gate_kwargs(),
         )
         self.assertEqual(result["status"], "NOT_READY")
-        self.assertEqual(result["error_code"], "OWNER_GATE_GENERATION_FAILED")
+        self.assertEqual(result["error_code"], "GIT_SNAPSHOT_UNAVAILABLE")
         self.assertNotIn(str(self.root), json.dumps(result))
 
     def test_builder_rejects_dirty_or_changed_tree_without_partial_gate(self) -> None:

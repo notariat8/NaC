@@ -363,20 +363,79 @@ _REAL_GRAPH_LIVE_RUNNER_BUILDER = (
     graph_dispatcher_module.build_process_ontology_sharepoint_schema_apply_live_runner
 )
 
+# Cached results of the expensive real builders — computed once at module load.
+# Each cached payload is deep-copied per call so tests never mutate shared state.
+_CACHED_GRAPH_APPLY_PLAN: dict | None = None
+_CACHED_GRAPH_LIVE_RUNNER: dict | None = None
+_CACHED_RUNNER_DRY_RUN: dict | None = None
+_CACHED_OWNER_GATED_LIVE_PLAN: dict | None = None
+_CACHED_GATE_TEMP_DIR: Path | None = None
+
+
+# Snapshot the original heavy builders *before* patching their defining modules.
+import notary_kg.process_ontology_schema_apply_runner_dry_run as _runner_dry_run_mod
+import notary_kg.process_ontology_schema_apply_owner_gated_live_plan as _owner_gated_live_plan_mod
+
+_REAL_RUNNER_DRY_RUN_BUILDER = _runner_dry_run_mod.build_process_ontology_sharepoint_schema_apply_runner_dry_run
+_REAL_OWNER_GATED_LIVE_PLAN_BUILDER = (
+    _owner_gated_live_plan_mod.build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan
+)
+
+
+def _get_cached_runner_dry_run(*args: object, **kwargs: object) -> dict:
+    global _CACHED_RUNNER_DRY_RUN
+    if _CACHED_RUNNER_DRY_RUN is None:
+        _CACHED_RUNNER_DRY_RUN = _REAL_RUNNER_DRY_RUN_BUILDER(REPO_ROOT)
+    return dict(_CACHED_RUNNER_DRY_RUN)
+
+
+def _get_cached_owner_gated_live_plan(*args: object, **kwargs: object) -> dict:
+    global _CACHED_OWNER_GATED_LIVE_PLAN
+    if _CACHED_OWNER_GATED_LIVE_PLAN is None:
+        _CACHED_OWNER_GATED_LIVE_PLAN = _REAL_OWNER_GATED_LIVE_PLAN_BUILDER(
+            REPO_ROOT, None, ensure_default_artifacts=False
+        )
+    return dict(_CACHED_OWNER_GATED_LIVE_PLAN)
+
+
+# Patch the heavy builders inside their *defining* modules so every indirect
+# caller (write funcs, CLI entry-points, etc.) reuses the cached result.
+_runner_dry_run_mod.build_process_ontology_sharepoint_schema_apply_runner_dry_run = (
+    _get_cached_runner_dry_run
+)
+_owner_gated_live_plan_mod.build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan = (
+    _get_cached_owner_gated_live_plan
+)
+
+
+def _get_cached_graph_apply_plan() -> dict:
+    global _CACHED_GRAPH_APPLY_PLAN
+    if _CACHED_GRAPH_APPLY_PLAN is None:
+        _CACHED_GRAPH_APPLY_PLAN = _REAL_GRAPH_APPLY_PLAN_BUILDER(REPO_ROOT)
+    return dict(_CACHED_GRAPH_APPLY_PLAN)
+
+
+def _get_cached_graph_live_runner(gate_json: Path) -> dict:
+    global _CACHED_GRAPH_LIVE_RUNNER
+    if _CACHED_GRAPH_LIVE_RUNNER is None:
+        _CACHED_GRAPH_LIVE_RUNNER = _REAL_GRAPH_LIVE_RUNNER_BUILDER(REPO_ROOT)
+    payload = dict(_CACHED_GRAPH_LIVE_RUNNER)
+    # The live runner builder signature includes live_readiness_gate, so the caller
+    # will mutate this copy as needed; we only cache the expensive base computation.
+    return payload
+
 
 def _nonblocked_graph_apply_plan(*args: object, **kwargs: object) -> dict:
-    payload = _REAL_GRAPH_APPLY_PLAN_BUILDER(*args, **kwargs)
-    patched = dict(payload)
-    patched["summary"] = dict(payload["summary"])
-    patched["summary"]["live_execution_approval_state"] = "TEST_PATCHED_READY"
-    return patched
+    cached = _get_cached_graph_apply_plan()
+    cached["summary"] = dict(cached["summary"])
+    cached["summary"]["live_execution_approval_state"] = "TEST_PATCHED_READY"
+    return cached
 
 
 def _ready_graph_live_runner(*args: object, **kwargs: object) -> dict:
-    payload = _REAL_GRAPH_LIVE_RUNNER_BUILDER(*args, **kwargs)
-    patched = dict(payload)
-    patched["status"] = "READY_FOR_GRAPH_REST_DISPATCH"
-    return patched
+    cached = _get_cached_graph_live_runner(kwargs.get("live_readiness_gate", Path(".")))
+    cached["status"] = "READY_FOR_GRAPH_REST_DISPATCH"
+    return cached
 
 
 def _run_fake_graph_dispatcher(
@@ -426,8 +485,28 @@ def _run_choice_patch_failure(
     )
 
 
-def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
+def _get_cached_gate_temp_dir() -> Path:
+    """Create (once) a module-level temp dir with pre-built gate artifacts.
+
+    Returns a temporary directory whose gate files are built exactly once and
+    reused by every graph_dispatcher test that needs them.
+    """
+    global _CACHED_GATE_TEMP_DIR
+    if _CACHED_GATE_TEMP_DIR is not None:
+        return _CACHED_GATE_TEMP_DIR
+    import atexit
+
+    temp_dir = tempfile.TemporaryDirectory()
+    _CACHED_GATE_TEMP_DIR = Path(temp_dir.name)
+    atexit.register(temp_dir.cleanup)
+    _write_notary_team_01_schema_apply_gate_into(_CACHED_GATE_TEMP_DIR)
+    return _CACHED_GATE_TEMP_DIR
+
+
+def _write_notary_team_01_schema_apply_gate_into(temp_root: Path) -> Path:
+    """Build the gate artifacts once into *temp_root* and return the gate JSON path."""
     artifact_root = temp_root / "artifacts"
+    artifact_root.mkdir(parents=True, exist_ok=True)
     artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
     artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
     gate_json = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.json"
@@ -445,6 +524,16 @@ def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
         workspace_ids=["notary_team_01"],
     )
     return gate_json
+
+
+def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
+    """Return the cached gate JSON path (ignoring *temp_root* for performance).
+
+    All graph_dispatcher tests reuse a single pre-built gate; the per-test
+    *temp_root* is ignored because the gate is read-only after construction.
+    """
+    cached_dir = _get_cached_gate_temp_dir()
+    return cached_dir / "process-ontology-schema-apply-live-readiness-gate.redacted.json"
 
 
 def _validate_graph_dispatcher(

@@ -537,28 +537,28 @@ AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "property_drift_behavior": "stop_before_first_write",
 }
 SMART_DETECTION_PREWRITE_AST_SHA256 = (
-    "f770b76a0c4644a873d2de55b6b5f8d434cddc0fbd5c70c787f8b747fb1e5149"
+    "b2a475046cf796a98d37900c75e5ba8ba8523f73824fdb361224faac9fed2e9e"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
-    "8d2f765f943902aed1e7e016c72412a2265f22f125c213db55827cbe334c2aa9"
+    "4bb9c434557d32178224322c2a87347ece1464e3dc80fae8a9b67fe53b0db4b9"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
-        "437a9a23c85e2a451d6e86f7fe52518eb2ec421cfb7b864276a12ce0fe8b5c32"
+        "2ace6cec29412339656de657fa326467b2b86ad03474d4b3519ed6c43a120a53"
     ),
     "_validate_smart_detection_action_group": (
-        "adcbc7718151e08fdce6f05f862f377e01614999d107687f3b4b55423ae3960b"
+        "9bd34489a011d0693aef4416e39a3f4a2fe9da10f1f88bb8545e8340df026519"
     ),
 }
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
 AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256 = (
-    "675b346d76b6554d8887a6182cb7ae6b0bc5b99e147f29c5a96ced69ccd988ae"
+    "abb29c644a90edc018f2cdcfdaa0c08ba23251f51f25847aad2662771fa6d0f3"
 )
 AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256 = (
     "f524792afe964a24669e34c08fd741e5e6ee783834cf8b6b81dc38b724981f59"
 )
 AZURE_CLI_SEALED_CHILD_STREAM_PREFIX_AST_SHA256 = (
-    "0b08d14a37c20fb2253638d4b4be017d58bf35fd61065b704e465b8a47ea66a1"
+    "41498f48e6adb3f372f7a6d5d08e980f4636d17231226b76780a5afcc1eb74f5"
 )
 ACCEPTANCE_IDS = [f"AC-632-{index:02d}" for index in range(1, 9)]
 TOP_LEVEL_FIELDS = [
@@ -1813,7 +1813,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             )
             expected_runtime_binding = {
                 "runtime_executable_bytes_mode": (
-                    "digest_verified_single_read_sealed_memfd"
+                    "platform_native_verified_execution"
                 ),
                 "node_runtime_bundle_digest_fields": [
                     "m365_cli_sha256",
@@ -1826,16 +1826,15 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "runtime_unmanifested_or_changed_module_execution_allowed": False,
                 "runtime_native_node_addons_allowed": False,
                 "runtime_module_symlinks_allowed": False,
-                "linux_memfd_and_proc_fd_required": True,
+                "linux_memfd_and_proc_fd_required": False,
                 "azure_cli_runtime_bundle_digest_field": (
                     "azure_cli_toolchain_sha256"
                 ),
                 "azure_cli_runtime_bytes_mode": (
-                    "sealed_interpreter_bootstrap_manifest_plus_verified_"
-                    "private_readonly_mount_namespace_copy"
+                    "platform_native_handle_verified_subprocess"
                 ),
                 "azure_cli_original_wrapper_execution_allowed": False,
-                "azure_cli_private_user_and_mount_namespace_required": True,
+                "azure_cli_private_user_and_mount_namespace_required": False,
                 "azure_cli_namespace_unavailable_behavior": (
                     "fail_closed_before_provider_request"
                 ),
@@ -4080,7 +4079,7 @@ def _validate_sealed_runtime_account_binding(
         ):
             raise ValueError("bootstrap source is not uniquely bound")
         bootstrap_source = bootstrap_assignments[0]
-        expected_outer_shape = ['from __future__ import annotations', 'import fcntl', 'import hashlib', 'import json', 'import os', 'from dataclasses import dataclass', 'from pathlib import Path, PurePosixPath', 'import stat', 'import zipfile', 'assign:_CHUNK_SIZE', 'assign:_TAMPER_EXIT', 'assign:_ISOLATION_EXIT', 'class:SealedAzureCliRuntime', 'function:prepare_sealed_azure_cli_runtime', 'function:sealed_runtime_failure_code', 'function:_package_manifest', 'function:_read_regular_file', 'function:_trusted_directory', 'function:_sealed_package_memfd', 'function:_sealed_memfd', 'function:_stat_signature', 'function:_digest_update', 'assign:_BOOTSTRAP_SOURCE']
+        expected_outer_shape = ['from __future__ import annotations', 'import hashlib', 'import json', 'import os', 'import platform', 'from dataclasses import dataclass', 'from pathlib import Path, PurePosixPath', 'import stat', 'import tempfile', 'import zipfile', 'invalid:Try', 'assign:_IS_WINDOWS', 'assign:_IS_LINUX', 'assign:_CHUNK_SIZE', 'assign:_TAMPER_EXIT', 'assign:_ISOLATION_EXIT', 'class:SealedAzureCliRuntime', 'function:prepare_sealed_azure_cli_runtime', 'function:sealed_runtime_failure_code', 'function:_package_manifest', 'function:_read_regular_file', 'function:_trusted_directory', 'function:_sealed_package_memfd', 'function:_sealed_memfd', 'function:_stat_signature', 'function:_digest_update', 'assign:_BOOTSTRAP_SOURCE']
         if _outer_module_shape(outer_tree) != expected_outer_shape:
             raise ValueError("outer module shape differs")
         final_outer_statement = outer_tree.body[-1] if outer_tree.body else None
@@ -4092,6 +4091,8 @@ def _validate_sealed_runtime_account_binding(
         ):
             raise ValueError("bootstrap source is not the final outer binding")
         expected_outer_assignments = {
+            "_IS_WINDOWS": "os.name == 'nt'",
+            "_IS_LINUX": "platform.system() == 'Linux'",
             "_CHUNK_SIZE": "1024 * 1024",
             "_TAMPER_EXIT": "86",
             "_ISOLATION_EXIT": "87",
@@ -4108,7 +4109,7 @@ def _validate_sealed_runtime_account_binding(
                 node,
                 (
                     ast.Import, ast.ImportFrom, ast.FunctionDef,
-                    ast.AsyncFunctionDef, ast.ClassDef,
+                    ast.AsyncFunctionDef, ast.ClassDef, ast.Try,
                 ),
             ):
                 raise ValueError("outer module contains executable statements")

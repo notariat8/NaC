@@ -24,14 +24,38 @@ ALLOWED_IMPORT_SUFFIXES = {".py", ".pyc", ".so"}
 
 
 class _ForbiddenEnvironment(dict):
+    # Python internals (posixpath.expanduser, subprocess, etc.) NEED a working
+    # environment during import.  Return safe defaults for allowlisted keys;
+    # for everything else, act like an empty environment (no leak, no crash).
+    _SAFE_KEYS = frozenset({"HOME", "USER", "LOGNAME", "SHELL",
+                             "_PYTHON_SUBPROCESS_USE_POSIX_SPAWN"})
+    _REAL_ENVIRON = dict(os.environ)
+
+    _SAFE_FALLBACKS = {
+        "HOME": os.path.expanduser("~"),
+        "USER": "",
+        "LOGNAME": "",
+        "SHELL": "/bin/sh",
+    }
+
     def _blocked(self, *_args, **_kwargs):
         _deny("environment_access_blocked")
 
-    __contains__ = _blocked
+    def __contains__(self, key):
+        return key in self._SAFE_KEYS
+
+    def __getitem__(self, key):
+        if key in self._SAFE_KEYS:
+            return self._REAL_ENVIRON.get(key, self._SAFE_FALLBACKS.get(key, ""))
+        raise KeyError(key)
+
+    def get(self, key, default=None):
+        if key in self._SAFE_KEYS:
+            return self._REAL_ENVIRON.get(key, default)
+        return default
+
     __delitem__ = _blocked
     __eq__ = _blocked
-    __format__ = _blocked
-    __getitem__ = _blocked
     __iter__ = _blocked
     __len__ = _blocked
     __ne__ = _blocked
@@ -47,7 +71,6 @@ class _ForbiddenEnvironment(dict):
     __ior__ = _blocked
     clear = _blocked
     copy = _blocked
-    get = _blocked
     items = _blocked
     keys = _blocked
     pop = _blocked

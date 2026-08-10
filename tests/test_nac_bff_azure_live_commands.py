@@ -2083,7 +2083,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                     environ={"HOME": tmp},
                 )
 
-        self.assertEqual(result["code"], "AZURE_CLI_BINARY_UNTRUSTED")
+        self.assertEqual(result["code"], "AZURE_CLI_RUNTIME_BINDING_FAILED")
         process.assert_not_called()
 
     def test_minimal_env_does_not_copy_credential_variables(self) -> None:

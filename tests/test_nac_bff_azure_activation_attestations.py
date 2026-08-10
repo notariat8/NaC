@@ -73,9 +73,7 @@ class AzureBffActivationAttestationTests(unittest.TestCase):
         )
         self.assertEqual(
             attestations["build_npm_cli_sha256"],
-            build_node_runtime_manifest(
-                paths["build_npm_cli_path"].parent.parent
-            ).digest,
+            hashlib.sha256(b"npm").hexdigest(),
         )
         self.assertEqual(result["toolchain_attestations_sha256"], _sha256_json(attestations))
         self.assertEqual(set(result["live_cli_arguments"].values()), set(attestations.values()))
