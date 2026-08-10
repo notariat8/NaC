@@ -2235,9 +2235,16 @@ def _executable_path(
         normalized = expected_sha256.lower()
         if re.fullmatch(r"[0-9a-f]{64}", normalized) is None:
             return None, "AZURE_CLI_BINARY_ATTESTATION_INVALID"
-        if attestation.digest != normalized:
-            return None, "AZURE_CLI_BINARY_ATTESTATION_MISMATCH"
-    return path, "AZURE_CLI_BINARY_TRUSTED"
+        if attestation is not None and attestation.digest == normalized:
+            return path, "AZURE_CLI_BINARY_TRUSTED"
+        # Fallback: try plain SHA-256
+        try:
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual == normalized:
+                return path, "AZURE_CLI_BINARY_TRUSTED"
+        except OSError:
+            pass
+        return None, "AZURE_CLI_BINARY_ATTESTATION_MISMATCH"
 
 
 def _prepare_bound_runtime(
