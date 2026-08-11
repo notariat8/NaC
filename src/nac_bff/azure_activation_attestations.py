@@ -35,7 +35,7 @@ M365_CLI_EXECUTION_PATH = Path(
 M365_NODE_EXECUTION_PATH = Path(
     "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"
 )
-BUILD_PYTHON_EXECUTION_PATH = Path("/usr/bin/python3.12")
+BUILD_PYTHON_EXECUTION_PATH = Path("/usr/bin/python3.14")
 BUILD_NODE_EXECUTION_PATH = Path("/tmp/node-v22.23.1-linux-x64/bin/node")
 BUILD_NPM_CLI_EXECUTION_PATH = Path(
     "/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"
