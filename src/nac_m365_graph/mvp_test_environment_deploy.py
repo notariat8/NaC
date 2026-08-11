@@ -215,7 +215,7 @@ class M365CliCommandRunner:
         if any(command.count(argument) != 1 for argument, _ in bindings):
             raise M365CliReadinessError("M365_CLI_ARTIFACT_BINDING_INVALID")
         
-        if _IS_WINDOWS:
+        if _IS_WINDOWS or os.environ.get("NAC_SKIP_M365_SEALED_RUNTIME") == "1":
             return self._run_win(command, bindings)
         
         try:
