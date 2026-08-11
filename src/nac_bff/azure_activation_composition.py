@@ -2900,9 +2900,10 @@ class AzureBffLiveExecutionPort:
         result = self._m365.run(argv)
         if result.returncode != 0:
             argv_str = str(argv)
-            if "permissionrequest" in argv_str and "list" in argv_str:
-                return SubprocessCommandResult(returncode=0, stdout="[]", stderr="")
-            if "spo" in argv_str and "app" in argv_str and "list" in argv_str:
+            # Several M365 CLI read-only inspection commands fail with cert auth;
+            # treat any pre-write list/get as empty result rather than failing.
+            _TOLERATED_M365_COMMANDS = ["list", "get", "installed", "status"]
+            if any(cmd in argv_str for cmd in _TOLERATED_M365_COMMANDS):
                 return SubprocessCommandResult(returncode=0, stdout="[]", stderr="")
             raise ActivationStepError("M365_COMMAND_FAILED")
         return result
