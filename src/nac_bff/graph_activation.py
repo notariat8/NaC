@@ -794,7 +794,7 @@ def _validate_api_service_principal(
             _canonical_uuid(service_principal.get("appId")) == app_id
             and service_principal.get("displayName") == API_APP_DISPLAY_NAME
             and service_principal.get("servicePrincipalType") == "Application"
-            and service_principal.get("appRoles") == expected_app_roles
+            and _normalize_app_roles(service_principal.get("appRoles")) == expected_app_roles
         )
     except (TypeError, ValueError):
         valid = False
