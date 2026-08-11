@@ -121,8 +121,8 @@ def build_activation_attestation_plan(
             paths["build_python"], executable=True
         ),
         "build_node_sha256": _trusted_file_sha256(paths["build_node"], executable=True),
-        "build_npm_cli_sha256": _trusted_file_sha256(
-            paths["build_npm_cli"], executable=False
+        "build_npm_cli_sha256": _trusted_node_runtime_digest(
+            paths["build_npm_cli"]
         ),
         "gh_cli_sha256": _trusted_file_sha256(paths["gh_cli"], executable=True),
         "provisioner_certificate_sha256": _trusted_file_sha256(
