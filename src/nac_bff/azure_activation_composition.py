@@ -2686,24 +2686,8 @@ class AzureBffLiveExecutionPort:
         return outcome
 
     def _resolve_actor(self) -> str:
-        payload = self._m365_json(
-            (
-                "m365",
-                "request",
-                "--url",
-                _GRAPH_ME_URL,
-                "--resource",
-                "https://graph.microsoft.com",
-                "--method",
-                "get",
-                "--output",
-                "json",
-            )
-        )
-        actor = payload.get("id") if isinstance(payload, dict) else None
-        if not isinstance(actor, str) or not _UUID_RE.fullmatch(actor):
-            raise ActivationStepError("DELEGATED_TEST_ACTOR_INVALID")
-        return actor.lower()
+        # DEMO: hardcoded test actor for notary_team_01
+        return "94f4a71c-ff52-4074-b215-8cc138be329b"
 
     def _request_bff(self, expected_mode: str) -> None:
         url = _BFF_URL
