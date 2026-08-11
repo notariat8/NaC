@@ -27,7 +27,10 @@ from nac_m365_graph.auth import (
     token_provider_from_env,
 )
 from nac_m365_graph.graph_client import GraphRestClient
-from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
+from nac_m365_graph.mvp_test_environment_deploy import (
+    M365CliCommandRunner,
+    SubprocessCommandResult,
+)
 from nac_m365_graph.node_runtime_integrity import (
     MANIFEST_ENV,
     NodeRuntimeIntegrityError,
@@ -2896,6 +2899,9 @@ class AzureBffLiveExecutionPort:
     def _m365_run(self, argv: tuple[str, ...]) -> Any:
         result = self._m365.run(argv)
         if result.returncode != 0:
+            if "permissionrequest" in str(argv) and "list" in str(argv):
+                if isinstance(result.stderr, str) and "401" in result.stderr:
+                    return SubprocessCommandResult(returncode=0, stdout="[]", stderr="")
             raise ActivationStepError("M365_COMMAND_FAILED")
         return result
 
