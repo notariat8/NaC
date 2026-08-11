@@ -29,6 +29,7 @@ from .node_runtime_integrity import (
     MANIFEST_ENV,
     NodeRuntimeIntegrityError,
     build_node_runtime_integrity_payloads,
+    build_node_runtime_manifest,
 )
 from .sealed_toolchain import (
     SealedToolchainError,
@@ -520,7 +521,12 @@ class M365CliCommandRunner:
             ):
                 raise M365CliReadinessError(f"{label}_SHA256_INVALID")
             try:
-                actual_sha256 = _sha256_file(candidate)
+                if allow_bundle_attestation:
+                    actual_sha256 = build_node_runtime_manifest(
+                        candidate.parent.parent
+                    ).digest
+                else:
+                    actual_sha256 = _sha256_file(candidate)
             except OSError:
                 raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
             if actual_sha256 != normalized_expected:
