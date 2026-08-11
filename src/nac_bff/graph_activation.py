@@ -697,6 +697,17 @@ def _performance_lease_app_role() -> dict[str, Any]:
     }
 
 
+def _normalize_app_roles(roles: Any) -> list[dict[str, Any]] | Any:
+    """Strip origin field that Graph adds automatically."""
+    if not isinstance(roles, list):
+        return roles
+    return [
+        {k: v for k, v in role.items() if k != "origin"}
+        if isinstance(role, dict) else role
+        for role in roles
+    ]
+
+
 def _validate_api_application(
     application: dict[str, Any],
     *,
@@ -714,7 +725,7 @@ def _validate_api_application(
             application.get("displayName") == API_APP_DISPLAY_NAME
             and application.get("identifierUris") == [API_APP_URI]
             and application.get("signInAudience") == "AzureADMyOrg"
-            and application.get("appRoles") == expected_app_roles
+            and _normalize_app_roles(application.get("appRoles")) == expected_app_roles
             and application.get("requiredResourceAccess") == []
             and isinstance(api, dict)
             and api.get("requestedAccessTokenVersion")
