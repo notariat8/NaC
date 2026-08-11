@@ -1463,6 +1463,13 @@ def _run_azure_cli(
 
     if completed.returncode != 0:
         runtime_code = sealed_runtime_failure_code(completed.returncode)
+        if runtime_code is None and isinstance(completed.stderr, str) and "DeploymentNotFound" in completed.stderr:
+            return _command_result(
+                ok=False,
+                code="AZURE_RESOURCE_NOT_FOUND",
+                command=family,
+                returncode=completed.returncode,
+            )
         return _command_result(
             ok=False,
             code=runtime_code or "AZURE_CLI_COMMAND_FAILED",
@@ -1621,6 +1628,8 @@ def _run_azure_cli_win(
     except OSError:
         return _command_result(ok=False, code="AZURE_CLI_EXECUTION_FAILED", command=family)
     if result.returncode != 0:
+        if isinstance(result.stderr, str) and "DeploymentNotFound" in result.stderr:
+            return _command_result(ok=False, code="AZURE_RESOURCE_NOT_FOUND", command=family)
         return _command_result(ok=False, code="AZURE_CLI_NONZERO_EXIT", command=family)
     try:
         data = json.loads(result.stdout)
