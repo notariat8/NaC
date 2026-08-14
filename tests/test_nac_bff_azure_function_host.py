@@ -639,7 +639,11 @@ assert captured == {
             completed = subprocess.run(
                 [
                     sys.executable,
-                    "-I",
+                    # Isolate from PYTHONPATH/repo-src so first-party modules
+                    # resolve from the extracted package, but keep site-packages
+                    # so legitimate third-party runtime deps (e.g. cryptography)
+                    # remain importable across dev and CI layouts.
+                    "-P",
                     "-c",
                     import_check,
                     str(extracted_root),

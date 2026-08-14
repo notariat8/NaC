@@ -169,11 +169,6 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                     "S4C_AUDIT_BLOCKED:network_or_dns_access_blocked",
                 ),
                 (
-                    "environment",
-                    "import os; os.getenv(\"S4C_DATABASE_PATH\")",
-                    "S4C_AUDIT_BLOCKED:environment_access_blocked",
-                ),
-                (
                     "environment_copy",
                     "import os; os.environ.copy()",
                     "S4C_AUDIT_BLOCKED:environment_access_blocked",
@@ -199,18 +194,8 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                     "S4C_AUDIT_BLOCKED:environment_access_blocked",
                 ),
                 (
-                    "binary_environment",
-                    "import os; os.environb.get(b\"S4C_DATABASE_PATH\")",
-                    "S4C_AUDIT_BLOCKED:environment_access_blocked",
-                ),
-                (
                     "binary_environment_copy",
                     "import os; os.environb.copy()",
-                    "S4C_AUDIT_BLOCKED:environment_access_blocked",
-                ),
-                (
-                    "binary_environment_function",
-                    "import os; os.getenvb(b\"S4C_DATABASE_PATH\")",
                     "S4C_AUDIT_BLOCKED:environment_access_blocked",
                 ),
             )
@@ -226,6 +211,57 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                     )
                     self.assertNotEqual(completed.returncode, 0)
                     self.assertIn(expected_marker, completed.stderr)
+
+            # The import-time guard allowlists safe env keys (HOME/USER/etc.)
+            # so Python internals (posixpath.expanduser, subprocess) do not
+            # crash during import.  Reads of non-safe keys via getenv/getenvb/
+            # environb.get must therefore NOT crash; instead they return None
+            # (act like an empty environment) so no secret value ever leaks.
+            no_leak_probes = (
+                (
+                    "environment",
+                    (
+                        "import os; "
+                        "v = os.getenv(\"S4C_DATABASE_PATH\"); "
+                        "assert v is None, v; "
+                        "print(\"NO_LEAK_OK\")"
+                    ),
+                ),
+                (
+                    "binary_environment",
+                    (
+                        "import os; "
+                        "v = os.environb.get(b\"S4C_DATABASE_PATH\"); "
+                        "assert v is None, v; "
+                        "print(\"NO_LEAK_OK\")"
+                    ),
+                ),
+                (
+                    "binary_environment_function",
+                    (
+                        "import os; "
+                        "v = os.getenvb(b\"S4C_DATABASE_PATH\"); "
+                        "assert v is None, v; "
+                        "print(\"NO_LEAK_OK\")"
+                    ),
+                ),
+            )
+            for name, probe in no_leak_probes:
+                with self.subTest(name=name):
+                    completed = subprocess.run(
+                        [sys.executable, "-B", "-c", probe],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        env=environment,
+                    )
+                    self.assertEqual(
+                        completed.returncode,
+                        0,
+                        msg=completed.stderr or completed.stdout,
+                    )
+                    self.assertIn("NO_LEAK_OK", completed.stdout)
 
 
     def test_all_five_operations_use_the_offline_composition(self) -> None:

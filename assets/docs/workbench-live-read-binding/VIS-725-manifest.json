@@ -98,7 +98,7 @@
     },
     "webPart": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
-      "sha256": "148e0633d9c0dd950819a6910fc3114b1519c419fd90aee91c0afcda5353a7fa"
+      "sha256": "aa43d4ee6579be19875f141feb79be032d5765857acaf8cc295456f7f1284d12"
     },
     "parser": {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",

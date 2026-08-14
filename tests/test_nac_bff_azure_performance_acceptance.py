@@ -1959,8 +1959,17 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
     def test_bound_preflight_adds_verified_infrastructure_evidence_before_lease(
         self,
     ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self._assert_bound_preflight_adds_verified_infrastructure_evidence_before_lease(
+                Path(directory)
+            )
+
+    def _assert_bound_preflight_adds_verified_infrastructure_evidence_before_lease(
+        self,
+        repo_root: Path,
+    ) -> None:
         verifier = _test_bound_verifier(
-            repo_root=Path("."),
+            repo_root=repo_root,
             approval_verifier=_ApprovalVerifier(),
             infrastructure_approval=INFRASTRUCTURE_APPROVAL,
             toolchain_attestations={},
