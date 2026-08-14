@@ -3426,8 +3426,16 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
 def _portable_ast_dump(node: ast.AST) -> str:
     normalized = copy.deepcopy(node)
     for item in ast.walk(normalized):
+        # type_params was added to FunctionDef/ClassDef in Python 3.12.
         if hasattr(item, "type_params"):
             delattr(item, "type_params")
+        # type_comment was deprecated since 3.8 and removed from the AST in
+        # 3.14; on 3.11-3.13 it still appears as ``type_comment=None`` in
+        # ast.dump(..., include_attributes=False) for arg/Assign/For/With/
+        # FunctionDef/ClassDef nodes.  Strip it so digests stay stable across
+        # Python 3.11 (CI) and 3.14 (dev/pin-generating) interpreters.
+        if hasattr(item, "type_comment"):
+            delattr(item, "type_comment")
     return ast.dump(normalized, include_attributes=False)
 
 
@@ -3733,7 +3741,7 @@ def _validate_smart_detection_command_schema(
     schemas = _assignment_value(tree, "_COMMAND_SCHEMAS")
     schemas_sha256 = (
         hashlib.sha256(
-            ast.dump(schemas, include_attributes=False).encode("utf-8")
+            _portable_ast_dump(schemas).encode("utf-8")
         ).hexdigest()
         if schemas is not None
         else None
