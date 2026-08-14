@@ -537,17 +537,17 @@ AZURE_APPLICATION_INSIGHTS_COMPANION_POLICY = {
     "property_drift_behavior": "stop_before_first_write",
 }
 SMART_DETECTION_PREWRITE_AST_SHA256 = (
-    "b2a475046cf796a98d37900c75e5ba8ba8523f73824fdb361224faac9fed2e9e"
+    "f770b76a0c4644a873d2de55b6b5f8d434cddc0fbd5c70c787f8b747fb1e5149"
 )
 AZURE_COMMAND_SCHEMAS_AST_SHA256 = (
-    "4bb9c434557d32178224322c2a87347ece1464e3dc80fae8a9b67fe53b0db4b9"
+    "8d2f765f943902aed1e7e016c72412a2265f22f125c213db55827cbe334c2aa9"
 )
 SMART_DETECTION_FUNCTION_AST_SHA256 = {
     "_validate_smart_detection_action_group_identity": (
-        "2ace6cec29412339656de657fa326467b2b86ad03474d4b3519ed6c43a120a53"
+        "437a9a23c85e2a451d6e86f7fe52518eb2ec421cfb7b864276a12ce0fe8b5c32"
     ),
     "_validate_smart_detection_action_group": (
-        "9bd34489a011d0693aef4416e39a3f4a2fe9da10f1f88bb8545e8340df026519"
+        "adcbc7718151e08fdce6f05f862f377e01614999d107687f3b4b55423ae3960b"
     ),
 }
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
@@ -558,7 +558,7 @@ AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256 = (
     "f524792afe964a24669e34c08fd741e5e6ee783834cf8b6b81dc38b724981f59"
 )
 AZURE_CLI_SEALED_CHILD_STREAM_PREFIX_AST_SHA256 = (
-    "41498f48e6adb3f372f7a6d5d08e980f4636d17231226b76780a5afcc1eb74f5"
+    "0b08d14a37c20fb2253638d4b4be017d58bf35fd61065b704e465b8a47ea66a1"
 )
 ACCEPTANCE_IDS = [f"AC-632-{index:02d}" for index in range(1, 9)]
 TOP_LEVEL_FIELDS = [
@@ -3436,7 +3436,27 @@ def _portable_ast_dump(node: ast.AST) -> str:
         # Python 3.11 (CI) and 3.14 (dev/pin-generating) interpreters.
         if hasattr(item, "type_comment"):
             delattr(item, "type_comment")
-    return ast.dump(normalized, include_attributes=False)
+    # ast.Index wrapped Subscript.slice until Python 3.12, where the wrapper
+    # was removed.  On 3.11 ``x[0]`` parses as
+    # ``Subscript(slice=Index(value=Constant(value=0)))`` while on 3.14 it is
+    # ``Subscript(slice=Constant(value=0))``.  Unwrap Index so subscript
+    # digests match across versions (no Subscript uses Index on 3.14, so this
+    # is a no-op there).
+    for item in ast.walk(normalized):
+        if isinstance(item, ast.Subscript) and isinstance(item.slice, ast.Index):
+            item.slice = item.slice.value
+    # Python 3.14 changed ast.dump to omit empty fields by default
+    # (show_empty=False); 3.11 has no show_empty parameter and always emits
+    # them (e.g. ``keywords=[]``, ``posonlyargs=[]``, ``orelse=[]``,
+    # ``decorator_list=[]``).  Force show_empty=True where supported so both
+    # interpreters emit the same full field set.
+    dump_kwargs: dict[str, object] = {"include_attributes": False}
+    try:
+        ast.dump(normalized, show_empty=True, **dump_kwargs)
+        dump_kwargs["show_empty"] = True
+    except TypeError:
+        pass
+    return ast.dump(normalized, **dump_kwargs)
 
 
 def _assignment_value(tree: ast.AST, name: str) -> ast.AST | None:
