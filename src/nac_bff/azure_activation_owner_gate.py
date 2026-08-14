@@ -61,7 +61,14 @@ def build_activation_owner_gate(
     ),
 ) -> dict[str, Any]:
     try:
-        root = repo_root.expanduser().resolve()
+        try:
+            root = repo_root.expanduser().resolve()
+        except (OSError, RuntimeError):
+            # Path.resolve() raises RuntimeError on a symlink loop (Python
+            # 3.11) or OSError on an unreadable/broken path; treat any repo
+            # path resolution failure as an unavailable git snapshot so it is
+            # reported and redacted consistently across interpreters.
+            raise _OwnerGateError("GIT_SNAPSHOT_UNAVAILABLE")
         before = _git_snapshot(root)
         if before[2]:
             raise _OwnerGateError("SOURCE_TREE_NOT_CLEAN")
