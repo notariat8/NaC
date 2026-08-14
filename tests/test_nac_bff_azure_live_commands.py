@@ -545,7 +545,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 status = Path(f"/proc/{child_pid}/stat")
                 if not status.exists():
                     break
-                fields = status.read_text(encoding="ascii").split()
+                try:
+                    fields = status.read_text(encoding="ascii").split()
+                except OSError:
+                    # The child (or its /proc entry) vanished between the
+                    # exists() check and the read.  /proc/{pid}/stat removal
+                    # surfaces as either FileNotFoundError (ENOENT) or
+                    # ProcessLookupError (ESRCH) depending on timing; either
+                    # way the child did not survive the supervisor kill, which
+                    # is the success condition.
+                    break
                 if len(fields) >= 3 and fields[2] == "Z":
                     break
                 time.sleep(0.05)
