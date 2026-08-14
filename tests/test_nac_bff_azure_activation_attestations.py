@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -73,7 +72,9 @@ class AzureBffActivationAttestationTests(unittest.TestCase):
         )
         self.assertEqual(
             attestations["build_npm_cli_sha256"],
-            hashlib.sha256(b"npm").hexdigest(),
+            build_node_runtime_manifest(
+                paths["build_npm_cli_path"].parent.parent
+            ).digest,
         )
         self.assertEqual(result["toolchain_attestations_sha256"], _sha256_json(attestations))
         self.assertEqual(set(result["live_cli_arguments"].values()), set(attestations.values()))

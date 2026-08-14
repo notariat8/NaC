@@ -4587,7 +4587,12 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.m365.command_failure = (1, secret, secret)
         with self.assertRaises(ActivationStepError) as raised:
             self.port.execute_step(STEPS[8], self.context)
-        self.assertEqual(raised.exception.code, "M365_COMMAND_FAILED")
+        # Read-only M365 list commands are tolerated as empty results (cert-auth
+        # fallback); the empty pending list then fails validation with a stable,
+        # redacted code that never carries the secret-bearing stdout/stderr.
+        self.assertEqual(
+            raised.exception.code, "SPFX_BFF_PERMISSION_REQUEST_MISSING"
+        )
         self.assertNotIn(secret, str(raised.exception))
 
     def _provisioner_certificate_environment(self) -> tuple[dict[str, str], str]:
