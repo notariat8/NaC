@@ -269,7 +269,7 @@ _UUID_RE = re.compile(
     re.IGNORECASE,
 )
 _COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
+    r"^https://github\.com/notariat8/NaC/issues/(632|739)#issuecomment-([1-9][0-9]*)$"
 )
 _TERMINALIZATION_COMMENT_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/(?:717|719)"
