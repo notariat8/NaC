@@ -282,7 +282,9 @@ def run_azure_bff_live_activation(
         return _blocked_result(request, "ACTIVATION_LOCK_HELD")
 
     release_lock_marker = True
-    try:
+
+    def _execute_phase() -> dict[str, Any]:
+        nonlocal release_lock_marker
         receipt_status = _success_receipt_status(
             receipt_path, target_binding_sha256, request
         )
@@ -556,8 +558,27 @@ def run_azure_bff_live_activation(
                 code=code,
                 now=now,
             )
+
+    primary_result: dict[str, Any] | None = None
+    pending_exception: BaseException | None = None
+    release_error: Exception | None = None
+    recoverable_marker: dict[str, Any] | None = None
+    try:
+        primary_result = _execute_phase()
+    except BaseException as exc:
+        # Capture any exception (including BaseException subclasses such as
+        # KeyboardInterrupt or test-injected crashes) so the lock cleanup
+        # below always runs; we re-raise it after the release decision.
+        pending_exception = exc
     finally:
-        release_error: Exception | None = None
+        # Release the host locks and verify the release markers.  This
+        # cleanup runs for every outcome (success, failure, exception) and
+        # must not be skipped.  A terminal release failure overrides the
+        # primary result; a non-terminal release error is re-raised so the
+        # caller sees the lock release failure rather than the primary
+        # outcome.  This previously used return/raise inside a finally block
+        # (now a SyntaxWarning in 3.14); the decision is now made after the
+        # cleanup so the control flow is explicit.
         if release_lock_marker:
             try:
                 _release_lock_markers_verified(
@@ -576,17 +597,27 @@ def run_azure_bff_live_activation(
         recoverable_marker = _read_secure_canonical_json(
             recovery_marker_path
         )
-        if release_error is not None:
-            if (
-                isinstance(recoverable_marker, dict)
-                and recoverable_marker.get("status")
-                == "TERMINAL_RELEASE_IN_PROGRESS"
-            ):
-                return _failed_execution_result(
-                    request,
-                    "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
-                )
-            raise release_error
+
+    # Release decision (made after cleanup so no return/raise sits in a
+    # finally block).  A terminal release failure overrides every primary
+    # outcome; a non-terminal release error is re-raised; otherwise the
+    # pending exception (if any) is re-raised, else the primary result is
+    # returned.
+    if release_error is not None:
+        if (
+            isinstance(recoverable_marker, dict)
+            and recoverable_marker.get("status")
+            == "TERMINAL_RELEASE_IN_PROGRESS"
+        ):
+            return _failed_execution_result(
+                request,
+                "TERMINAL_LOCK_RELEASE_RECOVERY_REQUIRED",
+            )
+        raise release_error
+    if pending_exception is not None:
+        raise pending_exception
+    assert primary_result is not None
+    return primary_result
 
 
 def reconcile_azure_bff_live_activation_lock(
