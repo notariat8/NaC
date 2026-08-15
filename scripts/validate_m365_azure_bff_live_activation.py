@@ -3094,7 +3094,7 @@ def _validate_interruption_runtime_protocol(
         return
 
     live_pattern = (
-        r"^https://github\.com/notariat8/NaC/issues/(632|739)"
+        r"^https://github\.com/notariat8/NaC/issues/(?:632|739)"
         r"#issuecomment-[1-9][0-9]*$"
     )
     terminal_pattern = (

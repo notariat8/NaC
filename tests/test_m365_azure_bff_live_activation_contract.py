@@ -1110,7 +1110,7 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                 (
                     "import re",
                     (
-                        '_APPROVAL_REFERENCE_RE = re.compile(r"^https://github\\.com/notariat8/NaC/issues/(632|739)#issuecomment-[1-9][0-9]*$")'
+                        '_APPROVAL_REFERENCE_RE = re.compile(r"^https://github\\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-[1-9][0-9]*$")'
                     ),
                     f"_EVIDENCE_KEYS = {set(validator.TOP_LEVEL_FIELDS)!r}",
                     f"_STEP_EVIDENCE_KEYS = {set(validator.STEP_FIELDS)!r}",

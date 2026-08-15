@@ -38,7 +38,7 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _CORRELATION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,95}$")
 _APPROVAL_REFERENCE_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/(632|739)#issuecomment-[1-9][0-9]*$"
+    r"^https://github\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-[1-9][0-9]*$"
 )
 _SAFE_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{2,63}$")
 _EVENT_NAME_RE = re.compile(
