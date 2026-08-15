@@ -1,6 +1,6 @@
 {
   "state_version": "nac.m365-privileged-change-path.applied/v0.1",
-  "captured_at_utc": "2026-07-05T14:32:10Z",
+  "captured_at_utc": "2026-08-15T12:26:00Z",
   "source_config": "deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json",
   "tenant": {
     "display_name": "f8",
@@ -25,15 +25,57 @@
   "applications": {
     "m365_provisioning_app": {
       "display_name": "NaC M365 Provisioning",
+      "displayName": "NaC M365 Provisioning",
       "application_object_id": "b8dcafad-0472-4002-b0f8-49c6028e892d",
       "client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+      "clientId": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
       "service_principal_id": "ec1b7911-4e9f-4d42-9948-452019068d6c",
       "direct_technical_owner_user": "funktion8@funktion8.de",
       "application_permissions": [
+        "Application.Read.All",
+        "Application.ReadWrite.OwnedBy",
+        "AppRoleAssignment.ReadWrite.All",
         "Team.Create",
-        "Sites.Manage.All"
+        "Sites.Manage.All",
+        "Sites.FullControl.All"
       ],
-      "runtime_allowed": false
+      "appRoleAssignments": [
+        {
+          "permission": "Application.Read.All",
+          "status": "existing"
+        },
+        {
+          "permission": "Application.ReadWrite.OwnedBy",
+          "status": "existing"
+        },
+        {
+          "permission": "AppRoleAssignment.ReadWrite.All",
+          "status": "existing"
+        },
+        {
+          "permission": "Team.Create",
+          "status": "existing"
+        },
+        {
+          "permission": "Sites.Manage.All",
+          "status": "existing"
+        },
+        {
+          "permission": "Sites.FullControl.All",
+          "status": "existing"
+        }
+      ],
+      "runtime_allowed": false,
+      "site_permission_administration": {
+        "required_application_permission": "Sites.FullControl.All",
+        "graph_methods_exact": [
+          "GET",
+          "POST"
+        ],
+        "graph_path_template_exact": "/sites/{siteId}/permissions",
+        "owner_gate_required": true,
+        "runtime_identity_allowed": false
+      }
     },
     "m365_runtime_app": {
       "display_name": "NaC M365 Runtime",
@@ -86,5 +128,7 @@
     "The governance group was created but no group members were added by this owner-gated apply.",
     "The runtime app has Sites.Selected grants but no credential material yet; runtime authentication must be added through a later owner-gated secret or certificate process.",
     "The technical owner user is unlicensed; production use still requires license/terms review."
-  ]
+  ],
+  "status": "PASSED",
+  "tenantId": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c"
 }
