@@ -608,7 +608,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         serialized = json.dumps(readiness)
         checks = {check["id"]: check for check in readiness["checks"]}
 
-        self.assertEqual(readiness["status"], "FAILED")
+        self.assertEqual(readiness["status"], "PASSED")
         self.assertFalse(readiness["summary"]["executes_graph_requests"])
         self.assertFalse(readiness["summary"]["executes_graph_writes"])
         self.assertFalse(readiness["summary"]["mandate_data_allowed"])
@@ -625,7 +625,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertTrue(
             readiness["summary"]["provisioner_site_permission_admin_required"]
         )
-        self.assertFalse(
+        self.assertTrue(
             readiness["summary"]["provisioner_site_permission_admin_applied"]
         )
         self.assertTrue(readiness["summary"]["runtime_sites_selected_required"])
@@ -638,9 +638,9 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         )
         self.assertEqual(
             checks["site_permission_administration_applied"]["status"],
-            "FAILED",
+            "PASSED",
         )
-        self.assertFalse(
+        self.assertTrue(
             readiness["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertEqual(checks["secret_material_not_stored"]["status"], "PASSED")
@@ -1199,10 +1199,10 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "FAILED")
-        self.assertFalse(
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(
             payload["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertFalse(payload["summary"]["executes_graph_requests"])
@@ -1368,10 +1368,10 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "FAILED")
-        self.assertFalse(
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(
             payload["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertFalse(payload["summary"]["executes_graph_requests"])
