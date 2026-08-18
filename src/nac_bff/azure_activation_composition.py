@@ -643,6 +643,32 @@ class LocalBuildAdapter:
                     *_SPFX_BUILD_OUTPUT_DIRECTORIES,
                 ),
             )
+            # The SPFx Jest tests resolve ../../workflows/fixtures relative
+            # to the build cwd.  In the repo this works because the SPFx
+            # source lives at spfx/nac-bpmn-viewer/ and ../../workflows points
+            # to the repo root.  In the isolated build copy the workflows
+            # directory is absent, so create a symlink so the test fixtures
+            # remain resolvable without copying the entire repo.
+            workflows_target = build_root.parent.parent / "workflows"
+            if not workflows_target.exists():
+                try:
+                    workflows_target.symlink_to(
+                        (repo_root / "workflows").resolve(),
+                        target_is_directory=True,
+                    )
+                except OSError:
+                    pass
+            # shutil.copytree preserves source file permissions.  On
+            # cloud-synced workspaces (e.g. OneDrive) files may be
+            # group/other writable (mode 777), which the sealed Node
+            # runtime integrity check rejects.  Strip group/other write
+            # bits from the copied tree so the build attestation passes.
+            for entry in build_root.rglob("*"):
+                try:
+                    mode = entry.stat().st_mode
+                    entry.chmod(mode & ~stat.S_IWGRP & ~stat.S_IWOTH)
+                except OSError:
+                    pass
             source_manifest = build_node_runtime_manifest(
                 build_root,
                 excluded_top_level_directories=frozenset(
