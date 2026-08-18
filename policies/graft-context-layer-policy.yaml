@@ -1,0 +1,138 @@
+version: 1
+status: mandatory
+
+objective:
+  reduce_agent_exploration_cost: true
+  preserve_agent_context_quality: true
+  enforce_deterministic_code_graph: true
+
+schema: nac.graft-context-layer/v0.1
+
+description: |
+  Graft (https://github.com/NanoNets/Graft) ist der verbindliche
+  Context-Layer für agentische Arbeit in NaC. Er baut einen
+  deterministischen Code-Graphen (tree-sitter, kein LLM, kein Key)
+  und macht ihn Coding-Agenten über MCP-Tools verfügbar, damit
+  Agenten nicht bei jeder Aufgabe das Repo neu erkunden müssen.
+
+license:
+  graft: MIT
+  naC_integration: AGPL-3.0-or-later
+  note: |
+    Graft selbst ist MIT-lizenziert. Die NaC-Integration (Wiring,
+    .gitignore, Policy, Quality-Gate-Check) steht unter
+    AGPL-3.0-or-later nach policies/license-policy.yaml.
+    Graft wird als externe Abhängigkeit (npm) genutzt, nicht
+    als NaC-Code eingebettet.
+
+tiers:
+  tier_1_structural:
+    description: Deterministischer tree-sitter Code-Graph (kein LLM, kein Key, $0).
+    mandatory: true
+    commands:
+      - "graft build"
+      - "graft check"
+      - "graft ask"
+      - "graft grep"
+      - "graft callers"
+      - "graft skeleton"
+      - "graft map"
+    network: false
+    llm: false
+    key_required: false
+
+  tier_2_llm_summaries:
+    description: LLM-generierte Konzept-Nodes und Symbol-Summaries.
+    mandatory: false
+    commands:
+      - "graft build --deep"
+    network: true
+    llm: true
+    key_required: true
+    ai_sbom_relevant: true
+    note: |
+      Tier 2 ist optional. Wenn genutzt, muss der Provider
+      im AI-SBOM nach policies/sbom-policy.yaml und
+      docs/de/sbom-for-ai.md dokumentiert werden.
+
+agent_integration:
+  pi:
+    method: mcp_server
+    config: .pi/settings.json
+    entry: |
+      { "mcpServers": { "graft": { "command": "npx", "args": ["-y", "@nanonets/graft", "mcp"] } } }
+    tools:
+      - graft_find_code
+      - graft_file_api
+      - graft_trace_calls
+      - graft_find_all
+      - graft_repo_map
+      - graft_check_freshness
+
+  codex:
+    method: agents_md_wiring
+    command: "graft init --agents agents"
+    note: |
+      Schreibt einen marker-fenced Graft-Block in AGENTS.md.
+      Optional: MCP-Server in ~/.codex/config.toml registrieren.
+
+  claude_code:
+    method: skill_and_hooks
+    command: "graft init"
+    note: |
+      Schreibt .claude/skills/graft/SKILL.md, Statusline und Hooks.
+      Nicht für NaC verpflichtend, aber kompatibel.
+
+repo_integration:
+  gitignore:
+    entry: "graft/"
+    note: |
+      graft/ ist ein regenerierbarer lokaler Cache (wie node_modules)
+      und wird nicht committed. Jeder Mitwirkende führt graft build
+      aus um den eigenen Graphen zu erzeugen.
+
+  not_committed:
+    - "graft/"
+    - "graft/.graph/wiring.json"
+    - "graft/*.md"
+
+  committed:
+    - ".pi/settings.json (MCP-Server-Eintrag)"
+    - ".gitignore (graft/ Eintrag)"
+    - "AGENTS.md (Graft-Block, falls graft init --agents agents)"
+
+quality_gate:
+  check: "graft check"
+  description: |
+    graft check ist ein $0 deterministischer Drift-Check.
+    Er schlägt fehl (exit 1) wenn der lokale Graph vom
+    Code abweicht. Der Check ruft kein LLM auf.
+  profile: strict
+  mandatory: true
+
+startup:
+  build: "graft build"
+  description: |
+    graft build (Tier 1) wird beim Startup (startup_check.py)
+    ausgeführt um den Graphen zu erzeugen oder aufzufrischen.
+    Kein Key, kein Netzwerk.
+
+data_boundary:
+  forbid_secrets: true
+  forbid_real_matter_data: true
+  telemetry: false
+  note: |
+    Graft hat keine Telemetrie. Die einzigen Netzwerk-Calls
+    sind LLM-Requests die in Tier 2 explizit konfiguriert
+    werden. Tier 1 (Pflicht) hat kein Netzwerk.
+
+platform_synchronity:
+  - platform: pi
+    path: .pi/settings.json
+    mirror: .pi/README.md
+  - platform: codex
+    path: AGENTS.md
+    mirror: .codex/agents/
+  note: |
+    Bei Änderungen an dieser Policy müssen alle Plattformpfade
+    synchron gepflegt werden (pi, Codex, Claude Code).
