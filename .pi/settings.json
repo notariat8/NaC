@@ -1,6 +1,7 @@
 {
   "skills": [
     "workflows/skills/nac-release-memory",
-    "workflows/skills/brainstorming"
+    "workflows/skills/brainstorming",
+    "workflows/skills/graft-context"
   ]
 }

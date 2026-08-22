@@ -1,0 +1,77 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.graft_context_layer",
+  "title": "Graft Context Layer Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "policies/graft-context-layer-policy.yaml",
+      ".pi/settings.json",
+      "AGENTS.md",
+      "scripts/startup_check.py",
+      "scripts/quality_gate.py",
+      "scripts/validate_graft_context_layer.py",
+      "workflows/skills/graft-context/SKILL.md",
+      "workflows/verification-contracts/graft-context-layer.verification.json",
+      ".gitignore",
+      ".ignore"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/graft-context-layer-policy.yaml"
+    ],
+    "scoped": [
+      "workflows/skills/graft-context/SKILL.md"
+    ],
+    "on_demand": [
+      "workflows/verification-contracts/graft-context-layer.verification.json"
+    ],
+    "runtime": [
+      "fresh graft check output",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_graft_context_layer.py",
+    "graft check",
+    "python -m unittest tests.test_graft_context_layer",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Graft Tier 1 (structural, tree-sitter, no LLM, no key) is mandatory for agent work.",
+    "pi has no built-in MCP support; graft is bound via the CLI/skill, not an MCP server.",
+    "graft/ is a local regenerable cache and is never committed.",
+    "The strict quality gate runs graft check as a mandatory deterministic drift check.",
+    "No secrets, no real mandate data, no telemetry in the graft context layer."
+  ],
+  "thresholds": {
+    "max_graph_drift_files": 0,
+    "tier_1_network_calls": 0,
+    "tier_1_llm_calls": 0
+  },
+  "required_evidence": [
+    "graft_context_policy",
+    "graft_pi_skill",
+    "agents_md_graft_block",
+    "startup_graft_build",
+    "quality_gate_graft_check",
+    "graft_context_validator",
+    "graft_context_test",
+    "graft_check_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "no_secrets": true,
+    "no_mandate_data": true,
+    "graph_in_sync": true
+  },
+  "failure_behavior": {
+    "graph_drift": "block_completion",
+    "graft_not_installed": "block_completion",
+    "pi_mcp_claim_present": "block_completion",
+    "missing_wiring": "block_completion"
+  }
+}

@@ -440,6 +440,21 @@
             "tests/test_nac_bff_workbench_endpoint.py",
             "tests/test_validate_workbench_live_read_binding.py"
           ]
+        },
+        {
+          "id": "graft_context_layer",
+          "description": "Mandatory structural context layer (Tier 1, tree-sitter, no LLM, no key) for agent work; bound via CLI/skill in pi (no MCP) and via the AGENTS.md block in Codex, with graft check in the strict quality gate.",
+          "paths": [
+            "policies/graft-context-layer-policy.yaml",
+            ".pi/settings.json",
+            "AGENTS.md",
+            "workflows/skills/graft-context/SKILL.md",
+            "workflows/verification-contracts/graft-context-layer.verification.json",
+            "scripts/validate_graft_context_layer.py",
+            "scripts/startup_check.py",
+            "scripts/quality_gate.py",
+            "tests/test_graft_context_layer.py"
+          ]
         }
       ]
     },
@@ -477,6 +492,7 @@
     "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json",
     "workflows/verification-contracts/business-case-type-production-composition-s4g.verification.json",
     "workflows/verification-contracts/generic-workbench.verification.json",
-    "workflows/verification-contracts/workbench-live-read-binding.verification.json"
+    "workflows/verification-contracts/workbench-live-read-binding.verification.json",
+    "workflows/verification-contracts/graft-context-layer.verification.json"
   ]
 }

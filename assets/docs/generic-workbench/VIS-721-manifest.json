@@ -21,11 +21,11 @@
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "92a56be68828dc5ef09cd492b9afeaad6b38f76bb135b960b9b930579ecb54e5"
+      "sha256": "22ca40715d9961ee2b631945f55a780afe7a8e4c91c1e1416ee9535f8bcb3208"
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "bc7489f2ea01465c27d994951dc83f0f9f03d164bcf7f658ec7a82b1163ba76a"
+      "sha256": "859c0abf6fb31fee89f0010a40074a7513e1e2383df98ec1c6fb8d518994d198"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",

@@ -12,8 +12,10 @@ description: |
   Graft (https://github.com/NanoNets/Graft) ist der verbindliche
   Context-Layer für agentische Arbeit in NaC. Er baut einen
   deterministischen Code-Graphen (tree-sitter, kein LLM, kein Key)
-  und macht ihn Coding-Agenten über MCP-Tools verfügbar, damit
+  und macht ihn Coding-Agenten über die graft-CLI verfügbar, damit
   Agenten nicht bei jeder Aufgabe das Repo neu erkunden müssen.
+  pi hat keinen eingebauten MCP-Support; Graft wird in pi über die
+  CLI (bash-Tool) und den Skill 'graft-context' angebunden.
 
 license:
   graft: MIT
@@ -57,17 +59,23 @@ tiers:
 
 agent_integration:
   pi:
-    method: mcp_server
+    method: cli_via_bash_and_skill
     config: .pi/settings.json
-    entry: |
-      { "mcpServers": { "graft": { "command": "npx", "args": ["-y", "@nanonets/graft", "mcp"] } } }
+    skill: workflows/skills/graft-context/SKILL.md
+    note: |
+      pi hat keinen eingebauten MCP-Support (pi Settings-Schnittstelle
+      hat kein mcpServers-Feld). Graft wird in pi daher über die
+      graft-CLI im bash-Tool und den repo-lokalen Skill 'graft-context'
+      angebunden, NICHT über einen MCP-Server. .pi/settings.json bindet
+      den Skill unter 'skills' ein und enthält keinen 'mcpServers'-Schlüssel.
     tools:
-      - graft_find_code
-      - graft_file_api
-      - graft_trace_calls
-      - graft_find_all
-      - graft_repo_map
-      - graft_check_freshness
+      - graft build
+      - graft check
+      - graft ask
+      - graft grep
+      - graft callers
+      - graft skeleton
+      - graft map
 
   codex:
     method: agents_md_wiring
@@ -97,25 +105,35 @@ repo_integration:
     - "graft/*.md"
 
   committed:
-    - ".pi/settings.json (MCP-Server-Eintrag)"
+    - ".pi/settings.json (Skill-Eintrag graft-context, kein MCP)"
     - ".gitignore (graft/ Eintrag)"
     - "AGENTS.md (Graft-Block, falls graft init --agents agents)"
+    - "workflows/skills/graft-context/SKILL.md (pi-Skill)"
+    - "scripts/validate_graft_context_layer.py (Quality-Gate-Validator)"
+    - "workflows/verification-contracts/graft-context-layer.verification.json"
 
 quality_gate:
   check: "graft check"
+  validator: scripts/validate_graft_context_layer.py
   description: |
     graft check ist ein $0 deterministischer Drift-Check.
     Er schlägt fehl (exit 1) wenn der lokale Graph vom
     Code abweicht. Der Check ruft kein LLM auf.
+    Der Validator scripts/validate_graft_context_layer.py prüft zusätzlich
+    die Verdrahtung (Policy, pi-Skill, AGENTS.md-Block, Startup, Quality-Gate)
+    und laeuft im strict-Profil von scripts/quality_gate.py.
   profile: strict
   mandatory: true
 
 startup:
   build: "graft build"
+  script: scripts/startup_check.py
   description: |
     graft build (Tier 1) wird beim Startup (startup_check.py)
-    ausgeführt um den Graphen zu erzeugen oder aufzufrischen.
-    Kein Key, kein Netzwerk.
+    ausgeführt um den Graphen zu erzeugen oder aufzufrischen,
+    sobald die graft-CLI verfügbar ist. Kein Key, kein Netzwerk.
+    Fehlt die graft-CLI im Base-Profil, ist das eine Warnung, kein Fehler;
+    das strict-Quality-Gate macht graft check zur Pflicht.
 
 data_boundary:
   forbid_secrets: true

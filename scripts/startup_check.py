@@ -315,6 +315,39 @@ def check_local_plugin_mirror() -> tuple[list[str], list[str], list[str]]:
     return ok, warnings, errors
 
 
+def check_graft_context_layer() -> tuple[list[str], list[str], list[str]]:
+    """Tier-1 Graft-Graph beim Startup erzeugen oder auffrischen.
+
+    pi hat keinen MCP-Support; Graft wird über die CLI angebunden. Fehlt die
+    graft-CLI, ist das im Base-Profil eine Warnung (das strict-Quality-Gate
+    macht graft check zur Pflicht). Ist die CLI vorhanden, läuft `graft build`
+    deterministisch ohne Netzwerk und ohne Key.
+    """
+    ok: list[str] = []
+    warnings: list[str] = []
+    errors: list[str] = []
+    if not command_exists("graft"):
+        warnings.append(
+            "Empfohlener Command fehlt: graft (Tier-1 Context-Layer). "
+            "Bitte 'npm i -g @nanonets/graft' installieren, dann 'graft build' ausfuehren. "
+            "Das strict-Quality-Gate macht 'graft check' zur Pflicht."
+        )
+        return ok, warnings, errors
+    result = subprocess.run(
+        ["graft", "build"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        ok.append("graft build (Tier 1) erfolgreich: lokaler Code-Graph erzeugt.")
+    else:
+        output = "\n".join(part.strip() for part in [result.stdout, result.stderr] if part and part.strip())
+        errors.append(f"graft build fehlgeschlagen:{output}")
+    return ok, warnings, errors
+
+
 def main() -> int:
     args = parse_args()
     requirements = parse_simple_yaml(REQ_FILE)
@@ -359,6 +392,11 @@ def main() -> int:
         ok.extend(workstation_ok)
         warnings.extend(workstation_warnings)
         errors.extend(workstation_errors)
+
+    graft_ok, graft_warnings, graft_errors = check_graft_context_layer()
+    ok.extend(graft_ok)
+    warnings.extend(graft_warnings)
+    errors.extend(graft_errors)
 
     for rel_path in requirements.get("required_files", []):
         if (REPO_ROOT / rel_path).exists():

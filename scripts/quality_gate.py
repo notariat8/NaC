@@ -559,6 +559,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "Legal Graph Contracts",
                     [sys.executable, "scripts/validate_legal_graph_contracts.py"],
                 ),
+                (
+                    "graft_context_layer",
+                    "Graft Context Layer",
+                    [sys.executable, "scripts/validate_graft_context_layer.py"],
+                ),
             ]
         )
     return checks

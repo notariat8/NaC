@@ -10,6 +10,7 @@ recommended_commands:
   - node
   - npm
   - pandoc
+  - graft
 
 python:
   min_version: "3.11"

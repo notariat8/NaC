@@ -148,6 +148,12 @@ jobs:
       - name: Install package
         run: pip install -e . fastapi==0.116.1 httpx==0.28.1
 
+      - name: Install Graft context layer CLI
+        run: npm install -g @nanonets/graft
+
+      - name: Build Graft code graph (Tier 1, deterministic)
+        run: graft build
+
       - name: Download generic workbench compiled evidence
         uses: actions/download-artifact@v7
         with:

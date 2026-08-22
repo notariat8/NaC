@@ -23,6 +23,7 @@ POLICY_FILES = {
     "policies/technology-policy.yaml",
     "policies/codex-command-rules-policy.json",
     "policies/platform-policy.yaml",
+    "policies/graft-context-layer-policy.yaml",
 }
 
 MIRROR_FILES = {
