@@ -7,6 +7,7 @@ import subprocess
 from typing import Any, Callable, Mapping
 
 from .azure_activation import (
+    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES,
     activation_step_ids,
     build_azure_bff_activation_plan,
 )
@@ -166,6 +167,9 @@ def build_activation_owner_gate(
             bindings=bindings,
             permission_boundary=permission_boundary,
             step_ids=step_ids,
+            approved_update_baseline_template_hashes=(
+                SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES
+            ),
         )
         body = canonical_owner_comment_body(payload)
 

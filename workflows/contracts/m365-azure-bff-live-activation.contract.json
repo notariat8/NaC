@@ -569,6 +569,7 @@
       "approved_commit_sha",
       "approved_tree_sha",
       "provisioner_bootstrap_binding_sha256",
+      "approved_update_baseline_template_hashes",
       "target_binding_sha256",
       "permission_boundary_sha256",
       "step_sequence_sha256",

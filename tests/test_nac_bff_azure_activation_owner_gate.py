@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 from nac_bff.azure_activation import (
     PROVISIONER_CLIENT_ID,
     PROVISIONER_GRAPH_APPLICATION_ROLES,
+    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES,
     TENANT_ID,
     activation_step_ids,
 )
@@ -155,6 +156,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             bindings: dict,
             permission_boundary: dict,
             bootstrap_binding: str = PROVISIONER_BOOTSTRAP_BINDING_HASH,
+            approved_update_baseline_template_hashes: tuple[str, ...] = (),
         ) -> dict:
             return build_owner_approval_payload(
                 activation_hash=ACTIVATION_HASH,
@@ -165,6 +167,9 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 bindings=bindings,
                 permission_boundary=permission_boundary,
                 step_ids=list(activation_step_ids()),
+                approved_update_baseline_template_hashes=(
+                    approved_update_baseline_template_hashes
+                ),
             )
 
         baseline = payload(
@@ -183,6 +188,11 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             {"workspace_id": "notary_team_01"},
             {"graph": ["Sites.Selected"]},
             "8" * 64,
+        )
+        changed_update_baseline = payload(
+            {"workspace_id": "notary_team_01"},
+            {"graph": ["Sites.Selected"]},
+            approved_update_baseline_template_hashes=("15781720678765630241",),
         )
 
         self.assertNotEqual(
@@ -204,6 +214,7 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
             changed_binding,
             changed_permission,
             changed_bootstrap_binding,
+            changed_update_baseline,
         ):
             self.assertNotEqual(
                 baseline_body_hash,
@@ -248,6 +259,12 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 "provisioner_bootstrap_binding_sha256"
             ],
             binding_sha256,
+        )
+        self.assertEqual(
+            result["owner_approval_payload"][
+                "approved_update_baseline_template_hashes"
+            ],
+            list(SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES),
         )
         serialized = json.dumps(result)
         self.assertNotIn(TENANT_ID, serialized)
@@ -303,6 +320,24 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
                 bindings={"workspace_id": "notary_team_01"},
                 permission_boundary={"graph": ["Sites.Selected"]},
                 step_ids="not-a-sequence",
+            )
+
+    def test_payload_rejects_invalid_update_baseline_template_hashes(self) -> None:
+        with self.assertRaises(ValueError):
+            build_owner_approval_payload(
+                activation_hash=ACTIVATION_HASH,
+                approved_commit=COMMIT,
+                approved_tree=TREE,
+                provisioner_bootstrap_binding_sha256=(
+                    PROVISIONER_BOOTSTRAP_BINDING_HASH
+                ),
+                toolchain_attestations_sha256=TOOLCHAIN_HASH,
+                bindings={"workspace_id": "notary_team_01"},
+                permission_boundary={"graph": ["Sites.Selected"]},
+                step_ids=["read", "apply"],
+                approved_update_baseline_template_hashes=(
+                    "not-an-arm-template-hash",
+                ),
             )
 
     def test_builder_rejects_noncanonical_step_sequence(self) -> None:

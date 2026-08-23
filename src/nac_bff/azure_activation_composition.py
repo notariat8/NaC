@@ -70,6 +70,7 @@ from .azure_activation import (
     RESOURCE_GROUP,
     SITE_ID,
     SUBSCRIPTION_ID,
+    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES,
     TENANT_ID,
     WORKSPACE_ID,
     build_azure_bff_activation_plan,
@@ -456,6 +457,9 @@ class GitHubApprovalVerifier:
                 bindings=plan.get("bindings"),
                 permission_boundary=contract.get("permission_boundary"),
                 step_ids=[step.get("id") for step in plan.get("steps", [])],
+                approved_update_baseline_template_hashes=(
+                    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES
+                ),
             )
             canonical_body = canonical_owner_comment_body(expected)
         except (TypeError, ValueError):
@@ -1565,6 +1569,11 @@ class AzureBffLiveExecutionPort:
                     _LEGACY_SUCCESSFUL_BASELINE_TEMPLATE_HASH
                     if allow_legacy_baseline
                     else None
+                ),
+                *(
+                    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES
+                    if allow_legacy_baseline
+                    else ()
                 ),
             )
             if value is not None

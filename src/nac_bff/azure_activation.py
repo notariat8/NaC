@@ -68,6 +68,9 @@ PROVISIONER_GRAPH_APPLICATION_ROLES = (
     "Sites.Manage.All",
     "Sites.FullControl.All",
 )
+SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES = (
+    "15781720678765630241",
+)
 M365_CLI_OWNER_UPN = "ofunk@funktion8.de"
 API_CLIENT_ID_BINDING = {
     "resolution": "unique_by_app_id_uri",

@@ -14,6 +14,7 @@ APPROVAL_KEYS = frozenset(
         "approved_tree_sha",
         "provisioner_bootstrap_binding_sha256",
         "toolchain_attestations_sha256",
+        "approved_update_baseline_template_hashes",
         "target_binding_sha256",
         "permission_boundary_sha256",
         "step_sequence_sha256",
@@ -23,6 +24,7 @@ APPROVAL_KEYS = frozenset(
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_OBJECT_RE = re.compile(r"^[0-9a-f]{40}$")
+_ARM_TEMPLATE_HASH_RE = re.compile(r"^[0-9]+$")
 
 
 def approval_binding_sha256(value: Any) -> str:
@@ -48,6 +50,7 @@ def build_owner_approval_payload(
     bindings: Mapping[str, Any],
     permission_boundary: Mapping[str, Any],
     step_ids: Sequence[str],
+    approved_update_baseline_template_hashes: Sequence[str] = (),
 ) -> dict[str, Any]:
     _require_digest(activation_hash, "activation_hash")
     _require_git_object(approved_commit, "approved_commit")
@@ -68,6 +71,10 @@ def build_owner_approval_payload(
         isinstance(step_id, str) and step_id for step_id in step_ids
     ):
         raise ValueError("step_ids must contain non-empty strings")
+    update_baseline_template_hashes = _normalize_arm_template_hashes(
+        approved_update_baseline_template_hashes,
+        "approved_update_baseline_template_hashes",
+    )
 
     return {
         "owner-approved": True,
@@ -78,6 +85,9 @@ def build_owner_approval_payload(
             provisioner_bootstrap_binding_sha256
         ),
         "toolchain_attestations_sha256": toolchain_attestations_sha256,
+        "approved_update_baseline_template_hashes": list(
+            update_baseline_template_hashes
+        ),
         "target_binding_sha256": approval_binding_sha256(bindings),
         "permission_boundary_sha256": approval_binding_sha256(
             permission_boundary
@@ -111,3 +121,22 @@ def _require_digest(value: str, label: str) -> None:
 def _require_git_object(value: str, label: str) -> None:
     if not isinstance(value, str) or _GIT_OBJECT_RE.fullmatch(value) is None:
         raise ValueError(f"{label} must be a lowercase Git object id")
+
+
+def _normalize_arm_template_hashes(
+    value: Sequence[str],
+    label: str,
+) -> tuple[str, ...]:
+    if isinstance(value, (str, bytes)):
+        raise ValueError(f"{label} must be a sequence of ARM template hashes")
+    hashes: list[str] = []
+    for item in value:
+        if (
+            not isinstance(item, str)
+            or _ARM_TEMPLATE_HASH_RE.fullmatch(item) is None
+        ):
+            raise ValueError(f"{label} must contain ARM template hashes")
+        hashes.append(item)
+    if len(set(hashes)) != len(hashes):
+        raise ValueError(f"{label} must not contain duplicates")
+    return tuple(hashes)

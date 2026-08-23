@@ -21,6 +21,7 @@ from nac_bff.azure_activation import (
     SITE_ID,
     SITE_URL,
     SUBSCRIPTION_ID,
+    SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES,
     TEAM_ID,
     TENANT_ID,
 )
@@ -961,6 +962,9 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
                         PROVISIONER_CERTIFICATE_SHA256
                     ),
                 }
+            ),
+            "approved_update_baseline_template_hashes": list(
+                SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES
             ),
             "target_binding_sha256": _sha256_json(plan["bindings"]),
             "permission_boundary_sha256": _sha256_json(permission_boundary),
@@ -2537,6 +2541,30 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.azure.deployment = _deployment_payload(
             self.azure.deployment_outputs,
             template_hash="16486527106386001034",
+        )
+
+        with (
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_uami_sites_selected",
+                return_value={"status": "absent", "assignment_count": 0},
+            ),
+            patch(
+                "nac_bff.azure_activation_composition._graph_activation.inspect_site_read_permission",
+                return_value={"status": "absent", "permission_count": 0},
+            ),
+        ):
+            result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED", result)
+        self.assertTrue(self.port._deployment_preexisting)
+
+    def test_prewrite_accepts_approved_current_update_baseline_for_incremental_upgrade(
+        self,
+    ) -> None:
+        self.azure.resources = _azure_resources()
+        self.azure.deployment = _deployment_payload(
+            self.azure.deployment_outputs,
+            template_hash=SUCCESSFUL_UPDATE_BASELINE_TEMPLATE_HASHES[0],
         )
 
         with (
