@@ -661,7 +661,16 @@ class LocalBuildAdapter:
                         target_is_directory=True,
                     )
                 except OSError:
-                    pass
+                    try:
+                        shutil.copytree(
+                            repo_root / "workflows",
+                            workflows_target,
+                            symlinks=True,
+                        )
+                    except OSError:
+                        raise ActivationStepError(
+                            "SPFX_WORKFLOW_FIXTURES_UNAVAILABLE"
+                        ) from None
             # shutil.copytree preserves source file permissions.  On
             # cloud-synced workspaces (e.g. OneDrive) files may be
             # group/other writable (mode 777), which the sealed Node

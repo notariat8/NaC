@@ -1504,6 +1504,84 @@ class LocalActivationAdapterTests(unittest.TestCase):
             combined_commands = " ".join(" ".join(call) for call in build_calls)
             self.assertNotIn("run build", combined_commands)
 
+    def test_local_build_copies_workflow_fixtures_when_symlink_is_unavailable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            node = root / "node/bin/node"
+            npm_cli = root / "node/lib/node_modules/npm/bin/npm-cli.js"
+            node.parent.mkdir(parents=True)
+            npm_cli.parent.mkdir(parents=True)
+            node.write_bytes(b"trusted-node-test-binary")
+            npm_cli.write_bytes(b"trusted-npm-cli-test-script")
+            node.chmod(0o700)
+            workflows = root / "workflows/fixtures"
+            workflows.mkdir(parents=True)
+            (workflows / "generic-workbench-conformance.json").write_text("{}\n")
+            source = root / "spfx/nac-bpmn-viewer"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text("{}\n")
+            _write_spfx_lock_fixture(source / "package-lock.json")
+            config = source / "config/package-solution.json"
+            config.parent.mkdir(parents=True)
+            config.write_text("{}\n")
+            isolated = root / "run/prepared/spfx-build"
+            adapter = LocalBuildAdapter(
+                node_binary=node,
+                npm_cli=npm_cli,
+                node_sha256=hashlib.sha256(node.read_bytes()).hexdigest(),
+                npm_cli_sha256=build_node_runtime_manifest(
+                    npm_cli.parent.parent
+                ).digest,
+                environ={},
+            )
+
+            build_calls = []
+
+            def fake_run(_argv, *, cwd, **_kwargs):
+                build_calls.append(cwd)
+                dependencies = cwd / "node_modules"
+                heft = dependencies / "@rushstack/heft/bin/heft"
+                if not heft.exists():
+                    heft.parent.mkdir(parents=True)
+                    heft.write_bytes(b"trusted-heft-entry")
+                    (heft.parent.parent / "package.json").write_text(
+                        '{"name":"@rushstack/heft"}\n'
+                    )
+                if len(build_calls) == 2:
+                    _write_spfx_wasi_package_fixture(cwd)
+                if len(build_calls) == 5:
+                    package = cwd / "sharepoint/solution/nac-bpmn-viewer.sppkg"
+                    package.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(package, "w") as archive:
+                        archive.writestr("package/data.txt", b"package")
+                        for index, name in enumerate(
+                            (
+                                "ClientSideAssets.xml",
+                                "ClientSideAssets.xml.config.xml",
+                                "feature_ea9917ea-2860-45fb-89bd-121120178be3.xml.config.xml",
+                            ),
+                            start=1,
+                        ):
+                            archive.writestr(
+                                name,
+                                f"<Id>00000000-0000-4000-8000-{index:012d}</Id>",
+                            )
+
+            with (
+                patch.object(Path, "symlink_to", side_effect=OSError("disabled")),
+                patch.object(adapter, "_run", side_effect=fake_run),
+            ):
+                adapter.build_spfx(root, isolated)
+
+            copied_fixture = (
+                root
+                / "run/workflows/fixtures/generic-workbench-conformance.json"
+            )
+            self.assertEqual(copied_fixture.read_text(), "{}\n")
+            self.assertFalse((root / "run/workflows").is_symlink())
+
     def test_spfx_rejects_unbound_wasi_lock_before_process(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
