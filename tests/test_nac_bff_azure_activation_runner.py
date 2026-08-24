@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import fcntl
@@ -29,6 +30,7 @@ from nac_bff.azure_activation_runner import (
     _state_matches_chain,
     _write_lock_marker,
     _validate_event_chain,
+    _fsync_directory,
     reconcile_azure_bff_live_activation_lock,
     run_azure_bff_live_activation,
 )
@@ -233,6 +235,34 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             _binding_sha256_json(binding), hashlib.sha256(compact).hexdigest()
         )
         self.assertNotEqual(_binding_sha256_json(binding), _sha256_json(binding))
+
+    def test_directory_fsync_tolerates_unsupported_filesystem(self) -> None:
+        with (
+            patch("nac_bff.azure_activation_runner.os.open", return_value=7),
+            patch(
+                "nac_bff.azure_activation_runner.os.fsync",
+                side_effect=PermissionError(errno.EPERM, "not permitted"),
+            ) as fsync,
+            patch("nac_bff.azure_activation_runner.os.close") as close,
+        ):
+            _fsync_directory(Path("/mnt/windows-backed"))
+
+        fsync.assert_called_once_with(7)
+        close.assert_called_once_with(7)
+
+    def test_directory_fsync_propagates_unexpected_errors(self) -> None:
+        with (
+            patch("nac_bff.azure_activation_runner.os.open", return_value=7),
+            patch(
+                "nac_bff.azure_activation_runner.os.fsync",
+                side_effect=OSError(errno.EIO, "io error"),
+            ),
+            patch("nac_bff.azure_activation_runner.os.close") as close,
+            self.assertRaises(OSError),
+        ):
+            _fsync_directory(Path("/mnt/broken"))
+
+        close.assert_called_once_with(7)
 
     def _managed_temp(self) -> Path:
         temporary = tempfile.TemporaryDirectory()

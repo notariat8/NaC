@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -39,6 +40,16 @@ _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _CORRELATION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,95}$")
 _APPROVAL_REFERENCE_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-[1-9][0-9]*$"
+)
+_DIRECTORY_FSYNC_UNSUPPORTED_ERRNOS = frozenset(
+    value
+    for value in (
+        errno.EINVAL,
+        errno.EPERM,
+        getattr(errno, "ENOTSUP", None),
+        getattr(errno, "EOPNOTSUPP", None),
+    )
+    if value is not None
 )
 _SAFE_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{2,63}$")
 _EVENT_NAME_RE = re.compile(
@@ -2740,7 +2751,13 @@ def _unlink_and_fsync(path: Path) -> None:
 def _fsync_directory(path: Path) -> None:
     descriptor = os.open(path, os.O_RDONLY)
     try:
-        os.fsync(descriptor)
+        try:
+            os.fsync(descriptor)
+        except OSError as exc:
+            # Some mounted filesystems reject directory fsync; file contents are
+            # fsynced separately before directory durability is attempted.
+            if exc.errno not in _DIRECTORY_FSYNC_UNSUPPORTED_ERRNOS:
+                raise
     finally:
         os.close(descriptor)
 
