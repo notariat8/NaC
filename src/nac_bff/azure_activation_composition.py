@@ -653,17 +653,18 @@ class LocalBuildAdapter:
             # to the repo root.  In the isolated build copy the workflows
             # directory is absent, so create a symlink so the test fixtures
             # remain resolvable without copying the entire repo.
+            workflows_source = repo_root / "workflows"
             workflows_target = build_root.parent.parent / "workflows"
-            if not workflows_target.exists():
+            if workflows_source.exists() and not workflows_target.exists():
                 try:
                     workflows_target.symlink_to(
-                        (repo_root / "workflows").resolve(),
+                        workflows_source.resolve(),
                         target_is_directory=True,
                     )
                 except OSError:
                     try:
                         shutil.copytree(
-                            repo_root / "workflows",
+                            workflows_source,
                             workflows_target,
                             symlinks=True,
                         )
@@ -1931,22 +1932,51 @@ class AzureBffLiveExecutionPort:
         _require_digest(function_digest, function_path)
 
         spfx_build_root = (run_dir / _PREPARED_SPFX_BUILD_ROOT).resolve()
-        spfx_digest, built_package = self._build.build_spfx(
-            build_repo_root, spfx_build_root
-        )
-        if spfx_build_root not in built_package.resolve().parents:
-            raise ActivationStepError("SPFX_ISOLATED_BUILD_SCOPE_INVALID")
-        _require_digest(spfx_digest, built_package)
-        if self._approved_tree_source is not None:
-            repro_build_root = (
-                run_dir / _PREPARED_SPFX_REPRO_BUILD_ROOT
+        with tempfile.TemporaryDirectory(prefix="nac-spfx-build-") as temporary:
+            temp_spfx_build_root = (
+                Path(temporary) / _PREPARED_SPFX_BUILD_ROOT
             ).resolve()
-            repro_digest, repro_package = self._build.build_spfx(
-                build_repo_root, repro_build_root
+            spfx_digest, temp_built_package = self._build.build_spfx(
+                build_repo_root, temp_spfx_build_root
             )
-            if repro_build_root not in repro_package.resolve().parents:
+            if temp_spfx_build_root not in temp_built_package.resolve().parents:
                 raise ActivationStepError("SPFX_ISOLATED_BUILD_SCOPE_INVALID")
-            _require_digest(repro_digest, repro_package)
+            _require_digest(spfx_digest, temp_built_package)
+            built_package = (
+                spfx_build_root / PACKAGE_RELATIVE_PATH.relative_to(_SPFX_ROOT)
+            )
+            _copy_snapshot(
+                temp_built_package,
+                built_package,
+                expected_sha256=spfx_digest,
+            )
+            temp_build_config = (
+                temp_spfx_build_root
+                / PACKAGE_CONFIG_RELATIVE_PATH.relative_to(_SPFX_ROOT)
+            )
+            build_config = (
+                spfx_build_root
+                / PACKAGE_CONFIG_RELATIVE_PATH.relative_to(_SPFX_ROOT)
+            )
+            build_config_digest = _stable_file_sha256(temp_build_config)
+            _copy_snapshot(
+                temp_build_config,
+                build_config,
+                expected_sha256=build_config_digest,
+            )
+        if self._approved_tree_source is not None:
+            with tempfile.TemporaryDirectory(
+                prefix="nac-spfx-build-repro-"
+            ) as temporary:
+                repro_build_root = (
+                    Path(temporary) / _PREPARED_SPFX_REPRO_BUILD_ROOT
+                ).resolve()
+                repro_digest, repro_package = self._build.build_spfx(
+                    build_repo_root, repro_build_root
+                )
+                if repro_build_root not in repro_package.resolve().parents:
+                    raise ActivationStepError("SPFX_ISOLATED_BUILD_SCOPE_INVALID")
+                _require_digest(repro_digest, repro_package)
             if repro_digest != spfx_digest:
                 raise ActivationStepError("SPFX_REPRODUCIBILITY_FAILED")
         spfx_root = (run_dir / _PREPARED_SPFX_ROOT).resolve()
@@ -1956,10 +1986,6 @@ class AzureBffLiveExecutionPort:
             package_path,
             expected_sha256=spfx_digest,
         )
-        build_config = (
-            spfx_build_root / PACKAGE_CONFIG_RELATIVE_PATH.relative_to(_SPFX_ROOT)
-        )
-        build_config_digest = _stable_file_sha256(build_config)
         _copy_snapshot(
             build_config,
             spfx_root / PACKAGE_CONFIG_RELATIVE_PATH,
