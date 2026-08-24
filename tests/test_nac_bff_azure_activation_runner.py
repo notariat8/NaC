@@ -8,6 +8,7 @@ import fcntl
 import os
 import pwd
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -30,6 +31,7 @@ from nac_bff.azure_activation_runner import (
     _state_matches_chain,
     _write_lock_marker,
     _validate_event_chain,
+    _clean_tree,
     _fsync_directory,
     reconcile_azure_bff_live_activation_lock,
     run_azure_bff_live_activation,
@@ -263,6 +265,21 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             _fsync_directory(Path("/mnt/broken"))
 
         close.assert_called_once_with(7)
+
+    def test_clean_tree_uses_mount_tolerant_status_timeout(self) -> None:
+        with (
+            patch(
+                "nac_bff.azure_activation_runner._trusted_git_executable",
+                return_value="/usr/bin/git",
+            ),
+            patch(
+                "nac_bff.azure_activation_runner.subprocess.run",
+                return_value=SimpleNamespace(returncode=0, stdout=""),
+            ) as run,
+        ):
+            self.assertTrue(_clean_tree(Path("/repo")))
+
+        self.assertEqual(run.call_args.kwargs["timeout"], 60)
 
     def _managed_temp(self) -> Path:
         temporary = tempfile.TemporaryDirectory()

@@ -41,6 +41,7 @@ _CORRELATION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,95}$")
 _APPROVAL_REFERENCE_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-[1-9][0-9]*$"
 )
+_GIT_STATUS_TIMEOUT_SECONDS = 60
 _DIRECTORY_FSYNC_UNSUPPORTED_ERRNOS = frozenset(
     value
     for value in (
@@ -1282,7 +1283,7 @@ def _clean_tree(root: Path) -> bool:
             check=False,
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=_GIT_STATUS_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.SubprocessError):
         return False
