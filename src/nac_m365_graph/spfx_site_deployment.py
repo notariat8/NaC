@@ -69,6 +69,9 @@ _TEAMS_MANIFEST_VERSION_RE = re.compile(r"^1[.][0-9]{1,2}$")
 _ALLOWED_TEAMS_ARCHIVE_ENTRIES = frozenset(
     {"manifest.json", "color.png", "outline.png"}
 )
+_TEAMS_PREFIXED_ICON_ENTRY_RE = re.compile(
+    r"^(?P<app_id>[0-9a-fA-F-]{36})_(?P<kind>color|outline)[.]png$"
+)
 _FORBIDDEN_TEAMS_CAPABILITY_FIELDS = frozenset(
     {
         "authorization",
@@ -79,10 +82,6 @@ _FORBIDDEN_TEAMS_CAPABILITY_FIELDS = frozenset(
         "connectors",
         "activities",
         "meetingExtensionDefinition",
-        "staticTabs",
-        "configurableTabs",
-        "webApplicationInfo",
-        "validDomains",
     }
 )
 _ALLOWED_TEAMS_MANIFEST_FIELDS = frozenset(
@@ -98,8 +97,22 @@ _ALLOWED_TEAMS_MANIFEST_FIELDS = frozenset(
         "icons",
         "accentColor",
         "localizationInfo",
+        "validDomains",
+        "webApplicationInfo",
+        "configurableTabs",
+        "staticTabs",
     }
 )
+_APPROVED_TEAMS_VALID_DOMAINS = (
+    "*.login.microsoftonline.com",
+    "*.sharepoint.com",
+    "*.sharepoint-df.com",
+    "spoppe-a.akamaihd.net",
+    "spoprod-a.akamaihd.net",
+    "resourceseng.blob.core.windows.net",
+    "msft.spoppe.com",
+)
+_SHAREPOINT_APP_PRINCIPAL_ID = "00000003-0000-0ff1-ce00-000000000000"
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _MAX_TEAMS_PACKAGE_BYTES = 5 * 1024 * 1024
 _ALLOWED_COMMAND_PREFIXES = {
@@ -1607,6 +1620,108 @@ def _has_installed_teams_app(
     return len(matches) == 1
 
 
+def _teams_archive_entry_name_is_allowed(name: str) -> bool:
+    if name in _ALLOWED_TEAMS_ARCHIVE_ENTRIES:
+        return True
+    match = _TEAMS_PREFIXED_ICON_ENTRY_RE.fullmatch(name)
+    return match is not None and _GUID_RE.fullmatch(match.group("app_id")) is not None
+
+
+def _validate_teams_manifest_icons(
+    payload: Mapping[str, Any],
+    records: Mapping[str, bytes],
+    app_id: str,
+) -> None:
+    icons = payload.get("icons")
+    if icons is None:
+        if any(name != "manifest.json" for name in records):
+            raise DeploymentPlanError("downloaded Teams package has unreferenced icons")
+        return
+    if not isinstance(icons, dict) or set(icons) != {"color", "outline"}:
+        raise DeploymentPlanError("downloaded Teams manifest icons are invalid")
+    color_icon = icons.get("color")
+    outline_icon = icons.get("outline")
+    if not isinstance(color_icon, str) or not isinstance(outline_icon, str):
+        raise DeploymentPlanError("downloaded Teams manifest icons are invalid")
+    expected_icon_sets = (
+        ("color.png", "outline.png"),
+        (f"{app_id}_color.png", f"{app_id}_outline.png"),
+    )
+    if (color_icon, outline_icon) not in expected_icon_sets:
+        raise DeploymentPlanError("downloaded Teams manifest icons are invalid")
+    if set(records) != {"manifest.json", color_icon, outline_icon}:
+        raise DeploymentPlanError("downloaded Teams package has unreferenced icons")
+    for icon_name in (color_icon, outline_icon):
+        if not records.get(icon_name, b"").startswith(_PNG_SIGNATURE):
+            raise DeploymentPlanError("downloaded Teams package icon is invalid")
+
+
+def _validate_spfx_teams_manifest_bindings(
+    payload: Mapping[str, Any],
+    app_id: str,
+) -> None:
+    if "validDomains" in payload and payload.get("validDomains") != list(
+        _APPROVED_TEAMS_VALID_DOMAINS
+    ):
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+    expected_web_application_info = {
+        "id": _SHAREPOINT_APP_PRINCIPAL_ID,
+        "resource": "https://{teamSiteDomain}",
+    }
+    if (
+        "webApplicationInfo" in payload
+        and payload.get("webApplicationInfo") != expected_web_application_info
+    ):
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+    expected_configurable_tabs = [
+        {
+            "configurationUrl": (
+                "https://{teamSiteDomain}{teamSitePath}/_layouts/15/"
+                "TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/"
+                "teamshostedapp.aspx%3FopenPropertyPane=true%26teams"
+                f"%26componentId={app_id}%26forceLocale={{locale}}"
+            ),
+            "canUpdateConfiguration": True,
+            "scopes": ["team"],
+        }
+    ]
+    if (
+        "configurableTabs" in payload
+        and payload.get("configurableTabs") != expected_configurable_tabs
+    ):
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+    if "staticTabs" not in payload:
+        return
+    name = payload.get("name")
+    if not isinstance(name, dict) or not isinstance(name.get("short"), str):
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+    expected_static_tabs = [
+        {
+            "entityId": app_id,
+            "name": name["short"],
+            "contentUrl": (
+                "https://{teamSiteDomain}/_layouts/15/TeamsLogon.aspx?SPFX=true"
+                "&dest=/_layouts/15/teamshostedapp.aspx%3Fteams%26personal"
+                f"%26componentId={app_id}%26forceLocale={{locale}}"
+            ),
+            "websiteUrl": "https://products.office.com/en-us/sharepoint/collaboration",
+            "scopes": ["personal"],
+        }
+    ]
+    if payload.get("staticTabs") != expected_static_tabs:
+        raise DeploymentPlanError(
+            "downloaded Teams manifest contains unapproved fields or capabilities"
+        )
+
+
 def _read_teams_manifest_identity(path: Path) -> tuple[str, str, str]:
     try:
         package_bytes = _stable_teams_package_bytes(path)
@@ -1623,7 +1738,7 @@ def _read_teams_manifest_identity(path: Path) -> tuple[str, str, str]:
                     or "\\" in name
                     or canonical != name
                     or canonical in canonical_names
-                    or canonical not in _ALLOWED_TEAMS_ARCHIVE_ENTRIES
+                    or not _teams_archive_entry_name_is_allowed(canonical)
                     or info.is_dir()
                     or info.flag_bits & 0x1
                     or unix_mode == stat.S_IFLNK
@@ -1675,21 +1790,10 @@ def _read_teams_manifest_identity(path: Path) -> tuple[str, str, str]:
         raise DeploymentPlanError(
             "downloaded Teams manifest contains unapproved fields or capabilities"
         )
-    icons = payload.get("icons")
-    if icons is not None:
-        if (
-            not isinstance(icons, dict)
-            or set(icons) != {"color", "outline"}
-            or icons.get("color") != "color.png"
-            or icons.get("outline") != "outline.png"
-        ):
-            raise DeploymentPlanError("downloaded Teams manifest icons are invalid")
-        for icon_name in ("color.png", "outline.png"):
-            if not records.get(icon_name, b"").startswith(_PNG_SIGNATURE):
-                raise DeploymentPlanError("downloaded Teams package icon is invalid")
-    elif any(name != "manifest.json" for name in records):
-        raise DeploymentPlanError("downloaded Teams package has unreferenced icons")
-    return app_id.lower(), version, hashlib.sha256(package_bytes).hexdigest()
+    normalized_app_id = app_id.lower()
+    _validate_spfx_teams_manifest_bindings(payload, normalized_app_id)
+    _validate_teams_manifest_icons(payload, records, normalized_app_id)
+    return normalized_app_id, version, hashlib.sha256(package_bytes).hexdigest()
 
 
 def _stable_teams_package_bytes(path: Path) -> bytes:

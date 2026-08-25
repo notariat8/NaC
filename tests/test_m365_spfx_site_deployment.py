@@ -1630,6 +1630,82 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 with self.assertRaises(DeploymentPlanError):
                     deployment_module._read_teams_manifest_identity(package_path)
 
+    def test_downloaded_teams_package_accepts_sharepoint_generated_spfx_manifest(self) -> None:
+        version = "0.3.0"
+        display_name = "NaC Vorgangsansicht"
+        color_icon = f"{TEAMS_EXTERNAL_ID}_color.png"
+        outline_icon = f"{TEAMS_EXTERNAL_ID}_outline.png"
+        manifest = {
+            "$schema": (
+                "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/"
+                "MicrosoftTeams.schema.json"
+            ),
+            "manifestVersion": "1.16",
+            "version": version,
+            "id": TEAMS_EXTERNAL_ID,
+            "packageName": display_name,
+            "developer": {
+                "name": "notariat8",
+                "websiteUrl": "https://github.com/notariat8/NaC",
+                "privacyUrl": (
+                    "https://github.com/notariat8/NaC/blob/main/policies/"
+                    "data-protection-policy.yaml"
+                ),
+                "termsOfUseUrl": "https://github.com/notariat8/NaC/blob/main/LICENSE",
+                "mpnId": "Undefined-",
+            },
+            "name": {"short": display_name, "full": display_name},
+            "description": {"short": display_name, "full": display_name},
+            "icons": {"color": color_icon, "outline": outline_icon},
+            "accentColor": "#004578",
+            "validDomains": list(deployment_module._APPROVED_TEAMS_VALID_DOMAINS),
+            "webApplicationInfo": {
+                "id": deployment_module._SHAREPOINT_APP_PRINCIPAL_ID,
+                "resource": "https://{teamSiteDomain}",
+            },
+            "configurableTabs": [
+                {
+                    "configurationUrl": (
+                        "https://{teamSiteDomain}{teamSitePath}/_layouts/15/"
+                        "TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/"
+                        "teamshostedapp.aspx%3FopenPropertyPane=true%26teams"
+                        f"%26componentId={TEAMS_EXTERNAL_ID}%26forceLocale={{locale}}"
+                    ),
+                    "canUpdateConfiguration": True,
+                    "scopes": ["team"],
+                }
+            ],
+            "staticTabs": [
+                {
+                    "entityId": TEAMS_EXTERNAL_ID,
+                    "name": display_name,
+                    "contentUrl": (
+                        "https://{teamSiteDomain}/_layouts/15/TeamsLogon.aspx?SPFX=true"
+                        "&dest=/_layouts/15/teamshostedapp.aspx%3Fteams%26personal"
+                        f"%26componentId={TEAMS_EXTERNAL_ID}%26forceLocale={{locale}}"
+                    ),
+                    "websiteUrl": (
+                        "https://products.office.com/en-us/sharepoint/collaboration"
+                    ),
+                    "scopes": ["personal"],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            package_path = Path(tmp) / "teams.zip"
+            with zipfile.ZipFile(package_path, "w") as package:
+                package.writestr("manifest.json", json.dumps(manifest))
+                package.writestr(color_icon, b"\x89PNG\r\n\x1a\ncolor")
+                package.writestr(outline_icon, b"\x89PNG\r\n\x1a\noutline")
+
+            app_id, actual_version, package_sha256 = (
+                deployment_module._read_teams_manifest_identity(package_path)
+            )
+
+            self.assertEqual(app_id, TEAMS_EXTERNAL_ID)
+            self.assertEqual(actual_version, version)
+            self.assertEqual(package_sha256, deployment_module._sha256(package_path))
+
     def test_downloaded_teams_package_is_hash_bound_for_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
