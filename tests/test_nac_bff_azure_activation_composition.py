@@ -3091,6 +3091,36 @@ class AzureBffCompositionTests(unittest.TestCase):
             ["function", "spfx", "spfx"],
         )
 
+    def test_prewrite_does_not_resnapshot_final_spfx_from_prepared_build_copy(
+        self,
+    ) -> None:
+        from nac_bff import azure_activation_composition as composition
+
+        original_stable_file_bytes = composition._stable_file_bytes
+        prepared_build_root = (self.run_dir / "prepared/spfx-build").resolve()
+
+        def stable_file_bytes_without_prepared_build_resnapshot(source):
+            source = Path(source).resolve()
+            try:
+                source.relative_to(prepared_build_root)
+            except ValueError:
+                return original_stable_file_bytes(source)
+            raise AssertionError("prepared SPFx build copy must not be re-snapshotted")
+
+        with patch(
+            "nac_bff.azure_activation_composition._stable_file_bytes",
+            side_effect=stable_file_bytes_without_prepared_build_resnapshot,
+        ):
+            result = self._prewrite()
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual([call[0] for call in self.build.calls], ["function", "spfx"])
+        self.assertTrue(self.port._spfx_package_path.is_file())
+        self.assertIn(
+            "prepared/spfx/spfx/nac-bpmn-viewer/sharepoint/solution",
+            self.port._spfx_package_path.as_posix(),
+        )
+
     def test_prewrite_prepares_snapshots_and_later_deploy_rejects_mutation(self) -> None:
         self.assertEqual(self._prewrite()["status"], "PASSED")
         self.assertEqual([call[0] for call in self.build.calls], ["function", "spfx"])

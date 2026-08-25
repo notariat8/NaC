@@ -1932,6 +1932,9 @@ class AzureBffLiveExecutionPort:
         _require_digest(function_digest, function_path)
 
         spfx_build_root = (run_dir / _PREPARED_SPFX_BUILD_ROOT).resolve()
+        spfx_root = (run_dir / _PREPARED_SPFX_ROOT).resolve()
+        package_path = spfx_root / PACKAGE_RELATIVE_PATH
+        package_config_path = spfx_root / PACKAGE_CONFIG_RELATIVE_PATH
         with tempfile.TemporaryDirectory(prefix="nac-spfx-build-") as temporary:
             temp_spfx_build_root = (
                 Path(temporary) / _PREPARED_SPFX_BUILD_ROOT
@@ -1949,6 +1952,7 @@ class AzureBffLiveExecutionPort:
                 temp_built_package,
                 built_package,
                 expected_sha256=spfx_digest,
+                strict_destination=False,
             )
             temp_build_config = (
                 temp_spfx_build_root
@@ -1963,6 +1967,19 @@ class AzureBffLiveExecutionPort:
                 temp_build_config,
                 build_config,
                 expected_sha256=build_config_digest,
+                strict_destination=False,
+            )
+            _copy_snapshot(
+                temp_built_package,
+                package_path,
+                expected_sha256=spfx_digest,
+                strict_destination=False,
+            )
+            _copy_snapshot(
+                temp_build_config,
+                package_config_path,
+                expected_sha256=build_config_digest,
+                strict_destination=False,
             )
         if self._approved_tree_source is not None:
             with tempfile.TemporaryDirectory(
@@ -1979,19 +1996,8 @@ class AzureBffLiveExecutionPort:
                 _require_digest(repro_digest, repro_package)
             if repro_digest != spfx_digest:
                 raise ActivationStepError("SPFX_REPRODUCIBILITY_FAILED")
-        spfx_root = (run_dir / _PREPARED_SPFX_ROOT).resolve()
-        package_path = spfx_root / PACKAGE_RELATIVE_PATH
-        _copy_snapshot(
-            built_package,
-            package_path,
-            expected_sha256=spfx_digest,
-        )
-        _copy_snapshot(
-            build_config,
-            spfx_root / PACKAGE_CONFIG_RELATIVE_PATH,
-            expected_sha256=build_config_digest,
-        )
-        _require_digest(spfx_digest, package_path)
+        if package_path.is_symlink() or not package_path.is_file():
+            raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED")
 
         bicep_path = (run_dir / _PREPARED_BICEP).resolve()
         bicep_source = build_repo_root / _BICEP_TEMPLATE
@@ -2088,7 +2094,7 @@ class AzureBffLiveExecutionPort:
             self._function_package_sha256,
             "FUNCTION_PACKAGE_NOT_PREPARED",
         )
-        self._require_prepared(
+        self._require_prepared_content_digest(
             self._spfx_package_path,
             self._spfx_package_sha256,
             "SPFX_PACKAGE_NOT_PREPARED",
@@ -2870,7 +2876,7 @@ class AzureBffLiveExecutionPort:
             self._function_package_sha256,
             "FUNCTION_PACKAGE_NOT_PREPARED",
         )
-        self._require_prepared(
+        self._require_prepared_content_digest(
             self._spfx_package_path,
             self._spfx_package_sha256,
             "SPFX_PACKAGE_NOT_PREPARED",
@@ -2974,6 +2980,15 @@ class AzureBffLiveExecutionPort:
         if path is None or digest is None:
             raise ActivationStepError(missing_code)
         _require_digest(digest, path)
+        return path
+
+    @staticmethod
+    def _require_prepared_content_digest(
+        path: Path | None, digest: str | None, missing_code: str
+    ) -> Path:
+        if path is None or digest is None:
+            raise ActivationStepError(missing_code)
+        _require_content_digest(digest, path)
         return path
 
 
@@ -4282,6 +4297,7 @@ def _copy_snapshot(
     destination: Path,
     *,
     expected_sha256: str,
+    strict_destination: bool = True,
 ) -> None:
     if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
         raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED")
@@ -4315,13 +4331,32 @@ def _copy_snapshot(
     finally:
         if descriptor >= 0:
             os.close(descriptor)
-    _require_digest(expected_sha256, destination)
+    if strict_destination:
+        _require_digest(expected_sha256, destination)
+    else:
+        _require_content_digest(expected_sha256, destination)
 
 
 def _require_digest(expected: str, path: Path) -> None:
     if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
         raise ActivationStepError("BUILD_ARTIFACT_HASH_INVALID")
     if _stable_file_sha256(path) != expected:
+        raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
+
+
+def _require_content_digest(expected: str, path: Path) -> None:
+    if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+        raise ActivationStepError("BUILD_ARTIFACT_HASH_INVALID")
+    digest = hashlib.sha256()
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise OSError
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        raise ActivationStepError("PREPARED_ARTIFACT_SNAPSHOT_FAILED") from None
+    if digest.hexdigest() != expected:
         raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
 
 
