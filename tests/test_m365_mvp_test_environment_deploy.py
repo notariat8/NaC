@@ -647,6 +647,47 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 with self.subTest(field=field):
                     self.assertFalse(runner.check_readiness())
 
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_graph_scope_check_requires_app_catalog_read_write(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "util", "accesstoken", "get"],
+                0,
+                json.dumps({"scp": "User.Read AppCatalog.ReadWrite.All"}),
+                "",
+            )
+            self.assertTrue(runner.has_graph_scope("AppCatalog.ReadWrite.All"))
+
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "util", "accesstoken", "get"],
+                0,
+                json.dumps({"scp": "User.Read AppCatalog.Submit"}),
+                "",
+            )
+            self.assertFalse(runner.has_graph_scope("AppCatalog.ReadWrite.All"))
+
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "util", "accesstoken", "get"],
+                0,
+                "not-json",
+                "",
+            )
+            self.assertFalse(runner.has_graph_scope("AppCatalog.ReadWrite.All"))
+            self.assertFalse(runner.has_graph_scope("Sites.FullControl.All"))
+
+            run.side_effect = M365CliReadinessError("M365_CLI_COMMAND_TIMEOUT")
+            self.assertFalse(runner.has_graph_scope("AppCatalog.ReadWrite.All"))
+
     def test_m365_runner_rejects_path_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -1304,6 +1304,14 @@ class AzureBffLiveExecutionPort:
         try:
             if self._m365.check_readiness() is not True:
                 return {"status": "FAILED", "code": "M365_CLI_NOT_READY"}
+            graph_scope_check = getattr(self._m365, "has_graph_scope", None)
+            if not callable(graph_scope_check) or graph_scope_check(
+                "AppCatalog.ReadWrite.All"
+            ) is not True:
+                return {
+                    "status": "FAILED",
+                    "code": "M365_APP_CATALOG_WRITE_SCOPE_MISSING",
+                }
             target_site = self._graph.get(f"/sites/{SITE_ID}?$select=id")
         except Exception:
             return {"status": "FAILED", "code": "GRAPH_PROVISIONER_NOT_READY"}

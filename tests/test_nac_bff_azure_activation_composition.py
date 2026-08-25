@@ -678,9 +678,13 @@ class _FakeM365:
         self.allow_tampered = False
         self.bound_artifacts = []
         self.invalid_bff_payload = False
+        self.graph_scopes = {"AppCatalog.ReadWrite.All"}
 
     def check_readiness(self):
         return self.ready
+
+    def has_graph_scope(self, scope):
+        return scope in self.graph_scopes
 
     def run_bound(self, argv, bound_artifacts):
         self.bound_artifacts.append(dict(bound_artifacts))
@@ -2095,6 +2099,13 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(self.graph.calls, [])
 
         self.m365.ready = True
+        self.m365.graph_scopes = set()
+        self.assertEqual(
+            self._prewrite()["code"], "M365_APP_CATALOG_WRITE_SCOPE_MISSING"
+        )
+        self.assertEqual(self.graph.calls, [])
+
+        self.m365.graph_scopes = {"AppCatalog.ReadWrite.All"}
         self.graph.error = RuntimeError("secret bearer token")
         self.assertEqual(self._prewrite()["code"], "GRAPH_PROVISIONER_NOT_READY")
         self.graph.error = None

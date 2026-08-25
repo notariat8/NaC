@@ -76,6 +76,7 @@ EXPECTED_M365_CLI_APP_ID = "c86dded6-9723-4b8d-91f2-e0fd70e25839"
 EXPECTED_M365_CLI_PROVISIONER_APP_ID = "6845f6c3-896c-4e44-a50f-2a5086a13fac"
 EXPECTED_M365_CLI_PROVISIONER_USER = "NaC M365 Provisioning"
 _EXPECTED_GRAPH_RESOURCE = "https://graph.microsoft.com"
+_REQUIRED_APP_CATALOG_WRITE_SCOPE = "AppCatalog.ReadWrite.All"
 _EXPECTED_API_RESOURCE = "api://funktion8.de/nac-bff"
 _EXPECTED_GRAPH_ME_URL = "https://graph.microsoft.com/v1.0/me?$select=id"
 _EXPECTED_BFF_URL = (
@@ -399,6 +400,37 @@ class M365CliCommandRunner:
             )
         ) and payload.get("appTenant") == EXPECTED_M365_TENANT_ID and payload.get("cloudType") == "Public"
 
+    def has_graph_scope(self, scope: str) -> bool:
+        if scope != _REQUIRED_APP_CATALOG_WRITE_SCOPE:
+            return False
+        try:
+            result = self.run(
+                (
+                    "m365",
+                    "util",
+                    "accesstoken",
+                    "get",
+                    "--resource",
+                    _EXPECTED_GRAPH_RESOURCE,
+                    "--new",
+                    "--decoded",
+                    "--output",
+                    "json",
+                )
+            )
+        except M365CliReadinessError:
+            return False
+        if result.returncode != 0:
+            return False
+        try:
+            payload = json.loads(result.stdout)
+        except (TypeError, json.JSONDecodeError):
+            return False
+        if not isinstance(payload, dict):
+            return False
+        scopes = payload.get("scp")
+        return isinstance(scopes, str) and scope in scopes.split()
+
     @classmethod
     def _resolve_binary(
         cls,
@@ -583,6 +615,18 @@ def _validate_m365_command(argv: Sequence[str]) -> None:
             "--resource",
             _EXPECTED_API_RESOURCE,
             "--new",
+            "--output",
+            "json",
+        ),
+        (
+            "m365",
+            "util",
+            "accesstoken",
+            "get",
+            "--resource",
+            _EXPECTED_GRAPH_RESOURCE,
+            "--new",
+            "--decoded",
             "--output",
             "json",
         ),
