@@ -671,6 +671,18 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             run.return_value = subprocess.CompletedProcess(
                 [str(binary), "util", "accesstoken", "get"],
                 0,
+                (
+                    '{"typ":"JWT","alg":"RS256"}.'
+                    '{"aud":"https://graph.microsoft.com",'
+                    '"scp":"User.Read AppCatalog.ReadWrite.All"}.'
+                ),
+                "",
+            )
+            self.assertTrue(runner.has_graph_scope("AppCatalog.ReadWrite.All"))
+
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "util", "accesstoken", "get"],
+                0,
                 json.dumps({"scp": "User.Read AppCatalog.Submit"}),
                 "",
             )

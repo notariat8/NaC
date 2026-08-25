@@ -422,14 +422,37 @@ class M365CliCommandRunner:
             return False
         if result.returncode != 0:
             return False
-        try:
-            payload = json.loads(result.stdout)
-        except (TypeError, json.JSONDecodeError):
-            return False
-        if not isinstance(payload, dict):
+        payload = self._decoded_graph_token_payload(result.stdout)
+        if payload is None:
             return False
         scopes = payload.get("scp")
         return isinstance(scopes, str) and scope in scopes.split()
+
+    @staticmethod
+    def _decoded_graph_token_payload(stdout: str) -> dict[str, object] | None:
+        try:
+            payload = json.loads(stdout)
+        except (TypeError, json.JSONDecodeError):
+            pass
+        else:
+            return payload if isinstance(payload, dict) else None
+
+        if not isinstance(stdout, str):
+            return None
+        decoder = json.JSONDecoder()
+        try:
+            _header, index = decoder.raw_decode(stdout)
+            while index < len(stdout) and stdout[index].isspace():
+                index += 1
+            if index >= len(stdout) or stdout[index] != ".":
+                return None
+            index += 1
+            while index < len(stdout) and stdout[index].isspace():
+                index += 1
+            payload, _ = decoder.raw_decode(stdout, index)
+        except (TypeError, json.JSONDecodeError):
+            return None
+        return payload if isinstance(payload, dict) else None
 
     @classmethod
     def _resolve_binary(
