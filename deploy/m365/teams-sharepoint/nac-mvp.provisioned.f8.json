@@ -24,8 +24,8 @@
       "client_id": "111391d1-00d1-42cd-b7dc-36caa7b50f8b",
       "application_object_id": "663540d6-8170-47ea-b006-3dc5dad11cc6",
       "service_principal_id": "2bf613af-2c90-4cc3-bfe0-1c41ef0fd24f",
-      "certificate_thumbprint_sha1": "3A1FE34B37A3E61DDCE93E05A7F63050647A9F2F",
-      "certificate_expires_at_utc": "2027-08-31T08:23:38Z",
+      "certificate_thumbprint_sha1": "7B7F2796C15042649BC3225C5F0277DC6E1BD0DE",
+      "certificate_expires_at_utc": "2026-08-04T13:54:48Z",
       "application_permissions": [
         "Team.Create",
         "Sites.Manage.All"
