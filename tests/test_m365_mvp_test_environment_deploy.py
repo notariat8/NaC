@@ -28,6 +28,8 @@ from nac_m365_graph.mvp_test_environment_deploy import (
     M365CliReadinessError,
     DeploymentPlanError,
     SYNTHETIC_ACCESS_DECISION_SOURCE,
+    _is_bound_package_path,
+    _matches_spfx_app_add,
     run_mvp_test_environment_deploy,
     synthetic_access_decision_fixture,
     write_mvp_test_environment_deploy_artifact,
@@ -1156,6 +1158,116 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertRegex(file_path, r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer[.]sppkg$")
         self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 5)
         self.assertEqual(observed, {"basename": "nac-bpmn-viewer.sppkg", "payload": b"approved-package"})
+
+    def test_spfx_app_add_allowlist_accepts_attested_and_spfx_package_paths(self) -> None:
+        # AC-001 / AC-002 / AC-003: the sealed runner allowlist accepts both
+        # the attested package layout and the isolated BFF build output, while
+        # still rejecting traversal, wrong suffix, and relative paths.
+        spfx = "/repo/spfx/nac-bpmn-viewer/sharepoint/solution/nac-bpmn-viewer.sppkg"
+        attested = (
+            "/repo/assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg"
+        )
+
+        def add(path: str, *, overwrite: bool = False) -> tuple[str, ...]:
+            tail = (
+                "--appCatalogScope",
+                "tenant",
+                "--overwrite",
+                "--output",
+                "none",
+            ) if overwrite else (
+                "--appCatalogScope",
+                "tenant",
+                "--output",
+                "none",
+            )
+            return ("m365", "spo", "app", "add", "--filePath", path, *tail)
+
+        # AC-001: attested layout is accepted (both tail shapes).
+        self.assertTrue(_matches_spfx_app_add(add(attested)))
+        self.assertTrue(_matches_spfx_app_add(add(attested, overwrite=True)))
+        # AC-002: existing spfx layout stays accepted (no loss of coverage).
+        self.assertTrue(_matches_spfx_app_add(add(spfx)))
+        self.assertTrue(_matches_spfx_app_add(add(spfx, overwrite=True)))
+
+        # AC-001: _is_bound_package_path is True for both bound shapes and
+        # False for traversal, wrong suffix, and relative paths.
+        self.assertTrue(_is_bound_package_path(attested, "nac-bpmn-viewer.sppkg"))
+        self.assertTrue(_is_bound_package_path(spfx, "nac-bpmn-viewer.sppkg"))
+        self.assertFalse(
+            _is_bound_package_path(
+                "/repo/assets/docs/spfx-hermetic-build/../../nac-bpmn-viewer-715.sppkg",
+                "nac-bpmn-viewer.sppkg",
+            )
+        )
+        self.assertFalse(
+            _is_bound_package_path(
+                "/repo/assets/docs/spfx-hermetic-build/nac-bpmn-viewer-999.sppkg",
+                "nac-bpmn-viewer.sppkg",
+            )
+        )
+        self.assertFalse(
+            _is_bound_package_path(
+                "assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg",
+                "nac-bpmn-viewer.sppkg",
+            )
+        )
+        # The attested layout must not widen the zip/publish allowlist shapes.
+        self.assertFalse(_is_bound_package_path(attested, "nac-bpmn-viewer.zip"))
+        # A non-allowlisted command shape is still rejected.
+        self.assertFalse(
+            _matches_spfx_app_add(
+                ("m365", "spo", "app", "remove", "--filePath", attested)
+            )
+        )
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_bound_artifact_accepts_attested_package_path(self, run) -> None:
+        # AC-001 / AC-003 regression: the sealed runner accepts the attested
+        # package layout for `m365 spo app add` and exposes the artifact under
+        # its original attested file name via the sealed memfd directory.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            package = (
+                root / "assets/docs/spfx-hermetic-build/nac-bpmn-viewer-715.sppkg"
+            )
+            package.parent.mkdir(parents=True)
+            package.write_bytes(b"attested-package")
+            package_sha256 = hashlib.sha256(package.read_bytes()).hexdigest()
+            observed: dict[str, object] = {}
+
+            def inspect_provider_path(argv, **kwargs):
+                provider_path = argv[argv.index("--filePath") + 1]
+                observed["basename"] = Path(provider_path).name
+                observed["payload"] = Path(os.path.realpath(provider_path)).read_bytes()
+                return subprocess.CompletedProcess([], 0, "", "")
+
+            run.side_effect = inspect_provider_path
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            result = runner.run_bound(
+                (
+                    "m365", "spo", "app", "add", "--filePath", str(package),
+                    "--appCatalogScope", "tenant", "--output", "none",
+                ),
+                {str(package): (package, package_sha256)},
+            )
+
+        self.assertEqual(result.returncode, 0)
+        provider_argv = run.call_args.args[0]
+        self.assertNotIn(str(package), provider_argv)
+        file_path = provider_argv[provider_argv.index("--filePath") + 1]
+        self.assertRegex(file_path, r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer-715[.]sppkg$")
+        self.assertEqual(
+            observed,
+            {"basename": "nac-bpmn-viewer-715.sppkg", "payload": b"attested-package"},
+        )
 
 
 class _Plan:

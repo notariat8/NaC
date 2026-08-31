@@ -39,6 +39,7 @@ from .sealed_toolchain import (
 )
 from .spfx_site_deployment import (
     APP_CATALOG_SCOPE,
+    ATTESTED_PACKAGE_RELATIVE_PATH,
     ControlPlaneCommandRunner,
     DeploymentPlanError,
     INITIAL_PAGE_CONTENT,
@@ -889,6 +890,9 @@ def _matches_spfx_app_add(command: tuple[str, ...]) -> bool:
     prefix = ("m365", "spo", "app", "add", "--filePath")
     if len(command) not in {10, 11} or command[: len(prefix)] != prefix:
         return False
+    # The bound sppkg may be either the isolated BFF build output
+    # (PACKAGE_RELATIVE_PATH) or the reviewed attested artifact
+    # (ATTESTED_PACKAGE_RELATIVE_PATH); _is_bound_package_path accepts both.
     if not _is_bound_package_path(command[len(prefix)], "nac-bpmn-viewer.sppkg"):
         return False
     expected_tail = (
@@ -939,6 +943,8 @@ def _matches_guid_and_package_command(command: tuple[str, ...]) -> bool:
 
 def _is_bound_package_path(raw_path: str, filename: str) -> bool:
     candidate = Path(raw_path)
+    if not candidate.is_absolute() or ".." in candidate.parts:
+        return False
     expected_suffix = (
         "spfx",
         "nac-bpmn-viewer",
@@ -946,11 +952,17 @@ def _is_bound_package_path(raw_path: str, filename: str) -> bool:
         "solution",
         filename,
     )
-    return (
-        candidate.is_absolute()
-        and ".." not in candidate.parts
-        and tuple(candidate.parts[-len(expected_suffix) :]) == expected_suffix
-    )
+    if tuple(candidate.parts[-len(expected_suffix) :]) == expected_suffix:
+        return True
+    # The standalone tenant deployment is bound to the reviewed, reproducible
+    # attested package artifact (ATTESTED_PACKAGE_RELATIVE_PATH). Accept that
+    # attested layout for the bound sppkg only, so the zip/publish allowlist
+    # shapes (which pass a different filename) are not widened.
+    if filename == PACKAGE_NAME and tuple(
+        candidate.parts[-len(ATTESTED_PACKAGE_RELATIVE_PATH.parts) :]
+    ) == tuple(ATTESTED_PACKAGE_RELATIVE_PATH.parts):
+        return True
+    return False
 
 
 def _safe_bff_http_denial(

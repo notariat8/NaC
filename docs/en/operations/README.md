@@ -56,4 +56,5 @@ apply commands.
   repositories.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): target structure and migration into one
   repository.
+- [github-first-local-unblock-runbook.md](github-first-local-unblock-runbook.md): diagnosis and workarounds for local GitHub-first blockades (empty OAuth scopes, strict-gate runtime).
 - [../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md](../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md): GitHub-first work control for agentic issues, pull requests and Projects.

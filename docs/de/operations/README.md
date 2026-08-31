@@ -55,4 +55,5 @@ produktive Apply-Kommandos blockiert.
 - [repository-consolidation.md](repository-consolidation.md): migrierte, offene und stillzulegende
   Einzelrepos.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): Zielstruktur und Migration in einem Repo.
+- [github-first-local-unblock-runbook.md](github-first-local-unblock-runbook.md): Diagnose und Workarounds für lokale GitHub-first-Blockaden (leere OAuth-Scopes, Strict-Gate-Laufzeit).
 - [../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md](../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md): GitHub-first Arbeitssteuerung für agentische Issues, PRs und Projects.
