@@ -37,6 +37,7 @@ class _GraphClient:
         self.malformed_get: object | None = None
         self.malformed_post: object | None = None
         self.extra_get_key: str | None = None
+        self.live_odata_shape = False
 
     def get(self, path: str) -> dict:
         self.calls.append(("GET", path, None))
@@ -50,6 +51,13 @@ class _GraphClient:
             raise AssertionError(f"unexpected filter: {expression}")
         key, value = match.groups()
         rows = [copy.deepcopy(row) for row in self.rows[list_id] if row["fields"].get(key) == value]
+        if self.live_odata_shape:
+            for row in rows:
+                row["fields@odata.context"] = "https://graph.microsoft.com/v1.0/$metadata#fields/$entity"
+                row["fields"]["@odata.etag"] = '"metadata-only"'
+                for field, value in tuple(row["fields"].items()):
+                    if value == "":
+                        del row["fields"][field]
         payload: dict = {"value": rows}
         if self.extra_get_key:
             payload[self.extra_get_key] = SECRET
@@ -140,6 +148,18 @@ class LiveSyntheticWorkspaceManagerTests(unittest.TestCase):
             {row["fields"]["NacTaskId"] for row in self.client.list_rows("AufgabenFristen")},
             {"NAC-SYN-TASK-001", "NAC-SYN-DEADLINE-001"},
         )
+
+    def test_live_odata_metadata_and_omitted_empty_fields_are_normalized(self) -> None:
+        self.manager.ensure_seed(ACTOR, CORRELATION)
+        self.client.live_odata_shape = True
+
+        reused = self.manager.ensure_seed(ACTOR, CORRELATION)
+        deputy = self.manager.set_access_mode("deputy", ACTOR, CORRELATION)
+        restored = self.manager.restore_assigned(ACTOR, CORRELATION)
+
+        self.assertEqual(reused["created_count"], 0)
+        self.assertEqual(deputy["mode"], "deputy")
+        self.assertEqual(restored["mode"], "assigned")
 
     def test_access_modes_use_only_bounded_patches_and_restore_assigned(self) -> None:
         self.manager.ensure_seed(ACTOR, CORRELATION)

@@ -318,7 +318,12 @@ class LiveSyntheticWorkspaceManager:
         if not rows:
             return None
         row = rows[0]
-        if type(row) is not dict or set(row) - {"id", "fields", "@odata.etag"}:
+        if type(row) is not dict or set(row) - {
+            "id",
+            "fields",
+            "@odata.etag",
+            "fields@odata.context",
+        }:
             raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
         item_id = row.get("id")
         fields = row.get("fields")
@@ -326,12 +331,20 @@ class LiveSyntheticWorkspaceManager:
             type(item_id) is not str
             or _ITEM_ID_RE.fullmatch(item_id) is None
             or type(fields) is not dict
-            or set(fields) != set(target.fields)
         ):
             raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
-        if fields.get(target.key_field) != target.key_value:
+        normalized_fields = {
+            key: value for key, value in fields.items() if key != "@odata.etag"
+        }
+        if set(normalized_fields) - set(target.fields):
+            raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
+        missing_fields = set(target.fields) - set(normalized_fields)
+        if any(target.fields[key] != "" for key in missing_fields):
+            raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
+        normalized_fields.update({key: "" for key in missing_fields})
+        if normalized_fields.get(target.key_field) != target.key_value:
             raise LiveSyntheticWorkspaceError("GRAPH_FILTER_READBACK_INVALID")
-        return item_id, dict(fields)
+        return item_id, normalized_fields
 
     def _get(self, path: str) -> dict[str, Any]:
         try:
