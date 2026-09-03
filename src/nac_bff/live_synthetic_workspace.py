@@ -342,9 +342,9 @@ class LiveSyntheticWorkspaceManager:
         if set(normalized_fields) - set(target.fields):
             raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
         missing_fields = set(target.fields) - set(normalized_fields)
-        if any(target.fields[key] != "" for key in missing_fields):
+        if any(target.fields[key] not in {"", None} for key in missing_fields):
             raise LiveSyntheticWorkspaceError("GRAPH_ITEM_INVALID")
-        normalized_fields.update({key: "" for key in missing_fields})
+        normalized_fields.update({key: target.fields[key] for key in missing_fields})
         if normalized_fields.get(target.key_field) != target.key_value:
             raise LiveSyntheticWorkspaceError("GRAPH_FILTER_READBACK_INVALID")
         return item_id, normalized_fields

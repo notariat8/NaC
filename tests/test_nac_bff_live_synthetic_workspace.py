@@ -57,7 +57,7 @@ class _GraphClient:
                 row["fields@odata.context"] = "https://graph.microsoft.com/v1.0/$metadata#fields/$entity"
                 row["fields"]["@odata.etag"] = '"metadata-only"'
                 for field, value in tuple(row["fields"].items()):
-                    if value == "":
+                    if value == "" or value is None:
                         del row["fields"][field]
         payload: dict = {"value": rows}
         if self.extra_get_key:
