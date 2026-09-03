@@ -19,6 +19,7 @@ from nac_bff.live_synthetic_workspace import (  # noqa: E402
     GRAPH_BASE_URL,
     LiveSyntheticWorkspaceError,
     LiveSyntheticWorkspaceManager,
+    SYNTHETIC_LIVE_ACTOR_ID,
 )
 
 
@@ -160,6 +161,18 @@ class LiveSyntheticWorkspaceManagerTests(unittest.TestCase):
         self.assertEqual(reused["created_count"], 0)
         self.assertEqual(deputy["mode"], "deputy")
         self.assertEqual(restored["mode"], "assigned")
+
+    def test_fixed_live_actor_uses_sharepoint_person_lookup_fields(self) -> None:
+        self.manager.ensure_seed(SYNTHETIC_LIVE_ACTOR_ID, CORRELATION)
+
+        posts = [payload for method, _, payload in self.client.calls if method == "POST"]
+        matter = posts[0]["fields"]
+        grant = posts[-2]["fields"]
+        self.assertEqual(matter["FederfuehrenderNotarLookupId"], "11")
+        self.assertEqual(matter["SachbearbeitungLookupId"], "")
+        self.assertEqual(grant["FromUserLookupId"], "12")
+        self.assertEqual(grant["ToUserLookupId"], "11")
+        self.assertEqual(grant["ApprovedByLookupId"], "12")
 
     def test_access_modes_use_only_bounded_patches_and_restore_assigned(self) -> None:
         self.manager.ensure_seed(ACTOR, CORRELATION)

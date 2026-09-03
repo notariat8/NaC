@@ -8,6 +8,10 @@ from nac_bff.synthetic_workspace_graph import (
     read_bounded_collection,
     synthetic_list_binding,
 )
+from nac_bff.live_synthetic_workspace import (
+    SYNTHETIC_LIVE_ACTOR_ID,
+    SYNTHETIC_LIVE_ACTOR_LOOKUP_ID,
+)
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -91,14 +95,22 @@ class LiveAccessDecisionAdapter:
         ):
             return AccessDecision.deny()
 
+        live_lookup_mode = actor_id.lower() == SYNTHETIC_LIVE_ACTOR_ID
+        actor_person_id = (
+            SYNTHETIC_LIVE_ACTOR_LOOKUP_ID if live_lookup_mode else actor_id
+        )
+
+        def person_field(name: str) -> str:
+            return f"{name}LookupId" if live_lookup_mode else name
+
         cases = read_bounded_collection(
             self._client,
             binding=synthetic_list_binding("Akten"),
             fields=(
                 "NacCaseId",
                 "NotarTeam",
-                "FederfuehrenderNotar",
-                "Sachbearbeitung",
+                person_field("FederfuehrenderNotar"),
+                person_field("Sachbearbeitung"),
             ),
             filter_expression=_equals("NacCaseId", ALLOWED_MATTER_ID),
             top=2,
@@ -113,20 +125,24 @@ class LiveAccessDecisionAdapter:
         ):
             return AccessDecision.deny()
 
-        notaries = _user_ids(case.get("FederfuehrenderNotar"), allow_multiple=False)
-        clerks = _user_ids(case.get("Sachbearbeitung"), allow_multiple=True)
+        notaries = _user_ids(
+            case.get(person_field("FederfuehrenderNotar")), allow_multiple=False
+        )
+        clerks = _user_ids(
+            case.get(person_field("Sachbearbeitung")), allow_multiple=True
+        )
         if len(notaries) != 1:
             return AccessDecision.deny()
         lead_notary = next(iter(notaries))
         reference = _reference_time(self)
-        if actor_id == lead_notary:
+        if actor_person_id == lead_notary:
             return _allowed_decision(
                 mode="assigned",
                 actor_id=actor_id,
                 role="notary",
                 reference=reference,
             )
-        if actor_id in clerks:
+        if actor_person_id in clerks:
             return _allowed_decision(
                 mode="assigned",
                 actor_id=actor_id,
@@ -140,13 +156,13 @@ class LiveAccessDecisionAdapter:
             fields=(
                 "GrantId",
                 "NacCaseId",
-                "FromUser",
-                "ToUser",
+                person_field("FromUser"),
+                person_field("ToUser"),
                 "GrantedRole",
                 "Reason",
                 "ValidFrom",
                 "ValidUntil",
-                "ApprovedBy",
+                person_field("ApprovedBy"),
                 "Status",
                 "AuditCorrelationId",
             ),
@@ -154,11 +170,22 @@ class LiveAccessDecisionAdapter:
             top=8,
             max_items=8,
         )
-        matching = [grant for grant in grants if _single_user_id(grant.get("ToUser")) == actor_id]
+        matching = [
+            grant
+            for grant in grants
+            if _single_user_id(grant.get(person_field("ToUser")))
+            == actor_person_id
+        ]
         if len(matching) != 1:
             return AccessDecision.deny()
         grant = matching[0]
-        if not _valid_grant(grant, lead_notary=lead_notary, reference=reference):
+        if not _valid_grant(
+            grant,
+            lead_notary=lead_notary,
+            reference=reference,
+            from_user_field=person_field("FromUser"),
+            approved_by_field=person_field("ApprovedBy"),
+        ):
             return AccessDecision.deny()
 
         correlation_id = _text(grant.get("AuditCorrelationId"))
@@ -225,7 +252,14 @@ def _allowed_decision(
     return AccessDecision.deputy(**metadata)
 
 
-def _valid_grant(grant: Mapping[str, Any], *, lead_notary: str, reference: datetime) -> bool:
+def _valid_grant(
+    grant: Mapping[str, Any],
+    *,
+    lead_notary: str,
+    reference: datetime,
+    from_user_field: str = "FromUser",
+    approved_by_field: str = "ApprovedBy",
+) -> bool:
     try:
         valid_from = _timestamp(grant.get("ValidFrom"))
         valid_until = _timestamp(grant.get("ValidUntil"))
@@ -234,12 +268,12 @@ def _valid_grant(grant: Mapping[str, Any], *, lead_notary: str, reference: datet
     return (
         grant.get("NacCaseId") == ALLOWED_MATTER_ID
         and _text(grant.get("GrantId")) != ""
-        and _single_user_id(grant.get("FromUser")) == lead_notary
+        and _single_user_id(grant.get(from_user_field)) == lead_notary
         and _text(grant.get("GrantedRole")) in ALLOWED_DEPUTY_ROLES
         and _text(grant.get("Reason")) == ALLOWED_DEPUTY_REASON
         and valid_from < valid_until
         and valid_from <= reference < valid_until
-        and _single_user_id(grant.get("ApprovedBy")) == lead_notary
+        and _single_user_id(grant.get(approved_by_field)) == lead_notary
         and grant.get("Status") == "Aktiv"
         and _text(grant.get("AuditCorrelationId")) != ""
     )

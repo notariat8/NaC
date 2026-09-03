@@ -21,6 +21,9 @@ from nac_mvp_test_environment import (
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 SYNTHETIC_NOTARY_TEAM = "NaC-Notar-01"
 SYNTHETIC_LEAD_ACTOR = "00000000-0000-4000-8000-000000000001"
+SYNTHETIC_LIVE_ACTOR_ID = "94f4a71c-ff52-4074-b215-8cc138be329b"
+SYNTHETIC_LIVE_ACTOR_LOOKUP_ID = "11"
+SYNTHETIC_LIVE_LEAD_LOOKUP_ID = "12"
 SYNTHETIC_GRANT_ID = "NAC-SYN-BFF-GRANT-001"
 SYNTHETIC_AUDIT_EVENT_ID = "NAC-SYN-BFF-AUDIT-001"
 SYNTHETIC_AUDIT_CORRELATION_ID = "NAC-SYN-BFF-AUDIT-CORRELATION-001"
@@ -372,6 +375,13 @@ class LiveSyntheticWorkspaceManager:
 
 
 def _targets(actor: str) -> tuple[_Target, ...]:
+    live_lookup_mode = actor == SYNTHETIC_LIVE_ACTOR_ID
+    actor_value = SYNTHETIC_LIVE_ACTOR_LOOKUP_ID if live_lookup_mode else actor
+    lead_value = SYNTHETIC_LIVE_LEAD_LOOKUP_ID if live_lookup_mode else SYNTHETIC_LEAD_ACTOR
+
+    def person_field(name: str) -> str:
+        return f"{name}LookupId" if live_lookup_mode else name
+
     matter_fields = {
         "NacCaseId": MATTER_ID,
         "Aktenzeichen": "SYN-MAT-001",
@@ -408,13 +418,13 @@ def _targets(actor: str) -> tuple[_Target, ...]:
                 {
                     "GrantId": SYNTHETIC_GRANT_ID,
                     "NacCaseId": MATTER_ID,
-                    "FromUser": SYNTHETIC_LEAD_ACTOR,
-                    "ToUser": actor,
+                    person_field("FromUser"): lead_value,
+                    person_field("ToUser"): actor_value,
                     "GrantedRole": "SachbearbeitungVertretung",
                     "Reason": "Synthetische zeitbegrenzte BFF-Vertretung",
                     "ValidFrom": SYNTHETIC_VALID_FROM,
                     "ValidUntil": SYNTHETIC_VALID_UNTIL,
-                    "ApprovedBy": SYNTHETIC_LEAD_ACTOR,
+                    person_field("ApprovedBy"): lead_value,
                     "Status": "Inaktiv",
                     "AuditCorrelationId": SYNTHETIC_AUDIT_CORRELATION_ID,
                 },
@@ -441,9 +451,19 @@ def _targets(actor: str) -> tuple[_Target, ...]:
 
 
 def _matter_access_fields(mode: str, actor: str) -> dict[str, Any]:
+    if actor == SYNTHETIC_LIVE_ACTOR_ID:
+        field = "FederfuehrenderNotarLookupId"
+        clerk_field = "SachbearbeitungLookupId"
+        actor_value = SYNTHETIC_LIVE_ACTOR_LOOKUP_ID
+        lead_value = SYNTHETIC_LIVE_LEAD_LOOKUP_ID
+    else:
+        field = "FederfuehrenderNotar"
+        clerk_field = "Sachbearbeitung"
+        actor_value = actor
+        lead_value = SYNTHETIC_LEAD_ACTOR
     if mode == "assigned":
-        return {"FederfuehrenderNotar": actor, "Sachbearbeitung": ""}
-    return {"FederfuehrenderNotar": SYNTHETIC_LEAD_ACTOR, "Sachbearbeitung": ""}
+        return {field: actor_value, clerk_field: ""}
+    return {field: lead_value, clerk_field: ""}
 
 
 def _collection_path(list_name: str) -> str:

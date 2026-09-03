@@ -14,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_bff.live_access_decision import LiveAccessDecisionAdapter  # noqa: E402
+from nac_bff.live_synthetic_workspace import SYNTHETIC_LIVE_ACTOR_ID  # noqa: E402
 from nac_bff.synthetic_workspace_graph import (  # noqa: E402
     AZURE_HTTP_LIMIT_SECONDS,
     GRAPH_BASE_URL,
@@ -475,6 +476,46 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
                 self.assertIsNone(decision.reason)
                 self.assertEqual(len(client.paths), 1)
                 self.assertIn("FederfuehrenderNotar,Sachbearbeitung", client.paths[0])
+
+    def test_fixed_live_actor_uses_person_lookup_ids_for_assigned_and_deputy(self) -> None:
+        assigned_case = {
+            "NacCaseId": ALLOWED_MATTER_ID,
+            "NotarTeam": "NaC-Notar-01",
+            "FederfuehrenderNotarLookupId": "11",
+        }
+        assigned, assigned_client = self._adapter(_page(assigned_case))
+
+        assigned_decision = self._decide(assigned, SYNTHETIC_LIVE_ACTOR_ID)
+
+        self.assertIs(assigned_decision.mode, AccessMode.ASSIGNED)
+        self.assertEqual(assigned_decision.subject_id, SYNTHETIC_LIVE_ACTOR_ID)
+        self.assertIn(
+            "FederfuehrenderNotarLookupId,SachbearbeitungLookupId",
+            assigned_client.paths[0],
+        )
+
+        deputy_case = dict(assigned_case, FederfuehrenderNotarLookupId="12")
+        deputy_grant = _grant(
+            FromUser=None,
+            ToUser=None,
+            ApprovedBy=None,
+            FromUserLookupId="12",
+            ToUserLookupId="11",
+            ApprovedByLookupId="12",
+        )
+        del deputy_grant["FromUser"]
+        del deputy_grant["ToUser"]
+        del deputy_grant["ApprovedBy"]
+        deputy, _ = self._adapter(
+            _page(deputy_case),
+            _page(deputy_grant),
+            _page(_audit()),
+        )
+
+        deputy_decision = self._decide(deputy, SYNTHETIC_LIVE_ACTOR_ID)
+
+        self.assertIs(deputy_decision.mode, AccessMode.DEPUTY)
+        self.assertEqual(deputy_decision.subject_id, SYNTHETIC_LIVE_ACTOR_ID)
 
     def test_active_time_bounded_and_audited_deputy_is_allowed(self) -> None:
         adapter, client = self._adapter(

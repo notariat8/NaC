@@ -422,12 +422,17 @@ def _parse_page(
     for item in payload["value"]:
         if type(item) is not dict or not isinstance(item.get("id"), str) or not item["id"]:
             raise GraphResponseError("Microsoft Graph list item is invalid")
-        if set(item) - {"id", "fields", "@odata.etag"}:
+        if set(item) - {"id", "fields", "@odata.etag", "fields@odata.context"}:
             raise GraphResponseError("Microsoft Graph list item projection is too broad")
         item_fields = item.get("fields")
-        if type(item_fields) is not dict or set(item_fields) - allowed_fields:
+        if type(item_fields) is not dict:
             raise GraphResponseError("Microsoft Graph field projection is too broad")
-        rows.append(dict(item_fields))
+        normalized_fields = {
+            key: value for key, value in item_fields.items() if key != "@odata.etag"
+        }
+        if set(normalized_fields) - allowed_fields:
+            raise GraphResponseError("Microsoft Graph field projection is too broad")
+        rows.append(normalized_fields)
     return rows, next_link
 
 
