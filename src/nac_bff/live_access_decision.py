@@ -8,10 +8,6 @@ from nac_bff.synthetic_workspace_graph import (
     read_bounded_collection,
     synthetic_list_binding,
 )
-from nac_bff.live_synthetic_workspace import (
-    SYNTHETIC_LIVE_ACTOR_ID,
-    SYNTHETIC_LIVE_ACTOR_LOOKUP_ID,
-)
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -22,6 +18,8 @@ from nac_bff.test_environment import (
 
 
 SYNTHETIC_NOTARY_TEAM = "NaC-Notar-01"
+SYNTHETIC_LIVE_ACTOR_ID = "94f4a71c-ff52-4074-b215-8cc138be329b"
+SYNTHETIC_LIVE_ACTOR_LOOKUP_ID = "11"
 ALLOWED_DEPUTY_ROLES = frozenset({"NotarVertretung", "SachbearbeitungVertretung"})
 WORKBENCH_DEPUTY_ROLES = {
     "NotarVertretung": "deputy_notary",
