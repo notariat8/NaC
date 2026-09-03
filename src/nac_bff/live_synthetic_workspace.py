@@ -436,7 +436,7 @@ def _targets(actor: str) -> tuple[_Target, ...]:
                 {
                     "EventId": SYNTHETIC_AUDIT_EVENT_ID,
                     "Timestamp": SYNTHETIC_VALID_FROM,
-                    "Actor": SYNTHETIC_LEAD_ACTOR,
+                    person_field("Actor"): lead_value,
                     "NacCaseId": MATTER_ID,
                     "Action": "DeputyGrantApproved",
                     "ObjectType": "Vertretungsfreigabe",

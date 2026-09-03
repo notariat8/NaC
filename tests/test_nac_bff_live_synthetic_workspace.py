@@ -168,11 +168,13 @@ class LiveSyntheticWorkspaceManagerTests(unittest.TestCase):
         posts = [payload for method, _, payload in self.client.calls if method == "POST"]
         matter = posts[0]["fields"]
         grant = posts[-2]["fields"]
+        audit = posts[-1]["fields"]
         self.assertEqual(matter["FederfuehrenderNotarLookupId"], "11")
         self.assertEqual(matter["SachbearbeitungLookupId"], "")
         self.assertEqual(grant["FromUserLookupId"], "12")
         self.assertEqual(grant["ToUserLookupId"], "11")
         self.assertEqual(grant["ApprovedByLookupId"], "12")
+        self.assertEqual(audit["ActorLookupId"], "12")
 
     def test_access_modes_use_only_bounded_patches_and_restore_assigned(self) -> None:
         self.manager.ensure_seed(ACTOR, CORRELATION)
