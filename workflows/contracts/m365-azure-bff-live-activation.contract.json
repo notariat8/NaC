@@ -417,6 +417,93 @@
       "output_fields_allowlisted": true,
       "raw_ids_paths_commands_provider_payloads_or_credentials_allowed": false
     },
+    "function_deployment_reconciliation": {
+      "command": "nac m365 teams-sharepoint bff-azure-function-deployment-reconcile",
+      "leading_issue": "https://github.com/notariat8/NaC/issues/739",
+      "separate_from_finalization_and_step2_recovery_required": true,
+      "supported_terminal_failure_exact": {
+        "state": "FAILED_PARTIAL",
+        "ledger_events_exact": 18,
+        "passed_step_prefix_exact": 6,
+        "failed_step_order_exact": 7,
+        "failed_step_id_exact": "deploy_function_package",
+        "failed_step_error_exact": "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
+        "resume_enabled": false
+      },
+      "inspection_default": {
+        "owner_approved_required": false,
+        "local_mutations_exact": 0,
+        "provider_write_calls_exact": 0,
+        "azure_read_snapshot_count_exact": 2,
+        "azure_read_operations_exact": [
+          "account show",
+          "GET exact function site",
+          "GET exact function deployments",
+          "GET exact function deploymentStatus",
+          "GET exact function extensions/onedeploy"
+        ],
+        "stable_observation_hashes_must_match": true,
+        "output_status_exact": "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED"
+      },
+      "not_applied_classification_exact": {
+        "classification": "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+        "function_app_exact": "func-nac-bff-test-funktion8",
+        "site_state_exact": "Running",
+        "site_last_modified_before_failed_step_start_required": true,
+        "deployment_started_at_or_after_failed_step_count_exact": 0,
+        "deployment_status_count_exact": 0,
+        "one_deploy_status_exact": "ABSENT",
+        "raw_provider_payload_emission_allowed": false
+      },
+      "artifact_bindings_exact": [
+        "state_sha256",
+        "evidence_sha256",
+        "ledger_head_sha256",
+        "prepared_inputs_manifest_sha256",
+        "function_package_sha256",
+        "target_lock_sha256",
+        "legacy_lock_sha256",
+        "legacy_host_lock_sha256",
+        "provider_observation_sha256",
+        "failed_step_started_at_utc",
+        "reconciler_commit",
+        "reconciler_tree",
+        "reconciler_toolchain_sha256",
+        "required_owner_login"
+      ],
+      "release_quarantine": {
+        "confirmation_argument_exact": "--confirm-release-quarantine",
+        "action_exact": "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT",
+        "new_owner_approval_required": true,
+        "old_live_approval_sufficient": false,
+        "terminalization_approval_issue_exact": 739,
+        "state_and_evidence_mutations_exact": 0,
+        "provider_write_calls_exact": 0,
+        "resume_attempts_exact": 0,
+        "automatic_rollback_count_exact": 0,
+        "automatic_deletion_count_exact": 0,
+        "release_all_three_journals_required": true,
+        "append_only_released_markers_required": true,
+        "partial_lock_append_recovery_required": true,
+        "runtime_git_and_toolchain_revalidation_required": true,
+        "provider_revalidation_before_local_mutation_required": true
+      },
+      "stable_error_codes_exact": [
+        "FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED",
+        "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED",
+        "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID",
+        "FUNCTION_DEPLOYMENT_APPROVAL_INVALID",
+        "FUNCTION_DEPLOYMENT_APPROVAL_MISMATCH",
+        "FUNCTION_DEPLOYMENT_RECONCILIATION_UNSUPPORTED",
+        "FUNCTION_DEPLOYMENT_PROVIDER_OBSERVATION_DRIFT",
+        "AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN",
+        "FUNCTION_DEPLOYMENT_LOCAL_ARTIFACT_CHANGED",
+        "FUNCTION_DEPLOYMENT_LOCK_SET_CHANGED",
+        "OWNER_COMMENT_VERIFICATION_FAILED"
+      ],
+      "output_fields_allowlisted": true,
+      "raw_ids_paths_commands_provider_payloads_or_credentials_allowed": false
+    },
     "owner_gate_preparation": {
       "command": "nac m365 teams-sharepoint bff-azure-activation-owner-gate --bff-attestation-provisioner-certificate <absolute-public-certificate-path> --bff-provisioner-state <absolute-state-path> --bff-provisioner-private-key <absolute-private-key-path> --format json",
       "offline_only": true,
@@ -1465,6 +1552,15 @@
     "AC-719-04",
     "AC-719-05",
     "AC-719-06"
+  ],
+  "function_deployment_reconciliation_issue": "https://github.com/notariat8/NaC/issues/739",
+  "function_deployment_reconciliation_acceptance_ids": [
+    "AC-739-R1",
+    "AC-739-R2",
+    "AC-739-R3",
+    "AC-739-R4",
+    "AC-739-R5",
+    "AC-739-R6"
   ],
   "arm_operation_normalization_issue": "https://github.com/notariat8/NaC/issues/727",
   "arm_operation_normalization_acceptance_ids": [

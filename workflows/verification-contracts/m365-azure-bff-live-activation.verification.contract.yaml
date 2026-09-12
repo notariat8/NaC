@@ -56,6 +56,14 @@ async_baseline_reconciliation_acceptance_ids:
   - AC-719-04
   - AC-719-05
   - AC-719-06
+function_deployment_reconciliation_issue: https://github.com/notariat8/NaC/issues/739
+function_deployment_reconciliation_acceptance_ids:
+  - AC-739-R1
+  - AC-739-R2
+  - AC-739-R3
+  - AC-739-R4
+  - AC-739-R5
+  - AC-739-R6
 arm_operation_normalization_issue: https://github.com/notariat8/NaC/issues/727
 arm_operation_normalization_acceptance_ids:
   - AC-727-01
@@ -90,6 +98,7 @@ applies_when:
     - src/nac_bff/azure_activation_composition.py
     - src/nac_bff/azure_activation_runner.py
     - src/nac_bff/azure_interruption_reconciliation.py
+    - src/nac_bff/azure_function_deployment_reconciliation.py
     - src/nac_bff/azure_interruption_contract.py
     - src/nac_bff/azure_interruption_baseline.py
     - src/nac_bff/azure_live_commands.py
@@ -103,6 +112,7 @@ applies_when:
     - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
     - tests/test_nac_bff_azure_activation*.py
     - tests/test_nac_bff_azure_interruption_reconciliation.py
+    - tests/test_nac_bff_azure_function_deployment_reconciliation.py
     - tests/test_nac_bff_azure_interruption_baseline.py
     - tests/test_nac_bff_azure_activation_attestations.py
     - tests/test_nac_bff_azure_live_commands.py
@@ -128,6 +138,7 @@ required_context:
     - Issue #671 owner-gated Sites.FullControl.All boundary and offline-only stop condition
     - "Issue #717 interrupted-run reconciliation acceptance criteria and separate owner boundary"
     - "Issue #719 exact pre-existing Bicep baseline reconciliation and hash-bound owner boundary"
+    - "Issue #739 terminal step-7 function deployment reconciliation and separate owner-bound quarantine release"
   scoped:
     - workflows/contracts/AGENTS.md
     - workflows/contracts/README.md
@@ -150,7 +161,7 @@ required_context:
     - final allowlisted redacted evidence
 
 checks:
-  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_baseline tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_baseline tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --confirm-terminalize-and-release --terminalization-action TERMINALIZE_AND_RELEASE_LOCK_ONLY --interrupted-step ensure_resource_group --terminalization-approval-reference <immutable-issue-717-comment-url> --terminalization-approval-body-sha256 <64-lowercase-hex> --state-sha256 <64-lowercase-hex> --ledger-head-sha256 <64-lowercase-hex> --target-lock-sha256 <64-lowercase-hex> --legacy-lock-sha256 <64-lowercase-hex> --legacy-host-lock-sha256 <64-lowercase-hex> --provider-observation-sha256 <64-lowercase-hex> --format json
@@ -582,6 +593,71 @@ invariants:
   - Unauthorized and manipulated authenticated BFF requests return the same generic 403 ACCESS_DENIED DTO. The M365 process boundary normalizes only the exact allowlisted BFF GET plus the exact CLI 403 status message; raw nonzero stdout, stderr and response bodies are never forwarded.
   - PASSED requires all twelve ordered steps, zero unresolved ambiguity, zero duplicate creation, exact permission readback and valid allowlisted evidence.
 
+function_deployment_reconciliation_verification:
+  command_exact: nac m365 teams-sharepoint bff-azure-function-deployment-reconcile
+  leading_issue: https://github.com/notariat8/NaC/issues/739
+  supported_terminal_failure_exact:
+    state: FAILED_PARTIAL
+    ledger_events_exact: 18
+    passed_step_prefix_exact: 6
+    failed_step_order_exact: 7
+    failed_step_id_exact: deploy_function_package
+    failed_step_error_exact: AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS
+    resume_enabled: false
+  inspection:
+    owner_approved_required: false
+    local_mutations_exact: 0
+    provider_write_calls_exact: 0
+    azure_read_snapshot_count_exact: 2
+    azure_read_operations_exact:
+      - account show
+      - GET exact function site
+      - GET exact function deployments
+      - GET exact function deploymentStatus
+      - GET exact function extensions/onedeploy
+    stable_observation_hashes_must_match: true
+    output_status_exact: FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED
+  not_applied_classification_exact:
+    classification: FUNCTION_DEPLOYMENT_NOT_APPLIED
+    function_app_exact: func-nac-bff-test-funktion8
+    site_state_exact: Running
+    site_last_modified_before_failed_step_start_required: true
+    deployment_started_at_or_after_failed_step_count_exact: 0
+    deployment_status_count_exact: 0
+    one_deploy_status_exact: ABSENT
+    raw_provider_payload_emission_allowed: false
+  artifact_bindings_exact:
+    - state_sha256
+    - evidence_sha256
+    - ledger_head_sha256
+    - prepared_inputs_manifest_sha256
+    - function_package_sha256
+    - target_lock_sha256
+    - legacy_lock_sha256
+    - legacy_host_lock_sha256
+    - provider_observation_sha256
+    - failed_step_started_at_utc
+    - reconciler_commit
+    - reconciler_tree
+    - reconciler_toolchain_sha256
+    - required_owner_login
+  release_quarantine:
+    confirmation_argument_exact: --confirm-release-quarantine
+    action_exact: RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT
+    new_owner_approval_required: true
+    old_live_approval_sufficient: false
+    terminalization_approval_issue_exact: 739
+    state_and_evidence_mutations_exact: 0
+    provider_write_calls_exact: 0
+    resume_attempts_exact: 0
+    automatic_rollback_count_exact: 0
+    automatic_deletion_count_exact: 0
+    release_all_three_journals_required: true
+    append_only_released_markers_required: true
+    partial_lock_append_recovery_required: true
+    runtime_git_and_toolchain_revalidation_required: true
+    provider_revalidation_before_local_mutation_required: true
+
 thresholds:
   owner_gate_count: 1
   activation_hash_recomputations: 2
@@ -911,6 +987,7 @@ required_evidence:
   - "Redacted Issue #717 interruption inspection evidence proving the exact supported step-2 RESOURCE_GROUP_ONLY shape, a valid local ledger prefix, all three HELD journal hashes and two equal Azure observation hashes, with zero local mutation and zero provider writes."
   - "Redacted Issue #719 BICEP_BASELINE_EXACT evidence binding the prepared manifest, Bicep template, Bicep parameters and canonical expectation hashes to exactly seven top-level resources and twelve unique successful deployment targets across two equal read-only observations; duplicate ARM sub-operations are accepted only for the same normalized target and at most one targetless EvaluateDeploymentOutput metadata operation with provisioningState Succeeded and statusCode OK is allowed."
   - "Redacted Issue #729 evidence proving exact Azure Resource Graph visibility for seven inventory resources plus two authorization role assignments while all twelve deployment targets remain mandatory under direct ARM readback and security-property verification."
+  - "Redacted Issue #739 step-7 evidence proving the terminal FAILED_PARTIAL ledger and prepared Function package, two equal FUNCTION_DEPLOYMENT_NOT_APPLIED ARM observations, exact owner-bound lock hashes, and RELEASED readback on target, legacy and legacy-host journals without changing state or evidence."
   - For terminalization, a separate immutable owner snapshot binding TERMINALIZE_AND_RELEASE_LOCK_ONLY plus the resulting FAILED_PARTIAL evidence, EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE, MIDRUN_RELEASE_IN_PROGRESS and readback of RELEASED on target, legacy and legacy-host journals; no PASSED state or success receipt is permitted.
 
 host_success_receipt:
@@ -1036,6 +1113,7 @@ failure_behavior:
   resume_request: reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP
   finalization_integrity_failure: retain_lock_and_require_owner_bound_local_reconcile
   midrun_step_2_interruption: inspect_read_only_then_require_new_owner_bound_TERMINALIZE_AND_RELEASE_LOCK_ONLY_action
+  terminal_step_7_ambiguous_function_deployment: inspect_read_only_then_require_new_issue_739_owner_bound_RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT_action
   midrun_unsupported_or_ambiguous_state: retain_all_three_HELD_journals_without_resume_rollback_or_delete
   ledger_corruption_or_provider_ambiguity: remain_FAILED_PARTIAL_and_require_human_review
   evidence_unknown_field_or_secret_sentinel: reject_evidence_and_block_PASSED

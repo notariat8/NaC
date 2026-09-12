@@ -103,6 +103,7 @@ from .azure_live_commands import (
     FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
     FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
     AzureCliAdapter,
+    AzureCliFunctionDeploymentObservationPort,
     AzureCliInterruptionObservationPort,
 )
 from . import graph_activation as _graph_activation
@@ -3099,6 +3100,10 @@ _RECONCILER_TOOLCHAIN_PATHS = (
     Path("src/nac_bff/azure_live_commands.py"),
     Path("src/nac_cli/cli.py"),
 )
+_FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_PATHS = (
+    *_RECONCILER_TOOLCHAIN_PATHS,
+    Path("src/nac_bff/azure_function_deployment_reconciliation.py"),
+)
 _GIT_READ_BINARY = Path("/usr/bin/git")
 
 
@@ -3195,6 +3200,49 @@ def calculate_interruption_reconciler_toolchain_sha256(
     )
 
 
+def calculate_function_deployment_reconciler_toolchain_sha256(
+    repo_root: Path,
+    *,
+    approved_commit: str | None = None,
+    approved_tree: str | None = None,
+) -> str:
+    if (approved_commit is None) != (approved_tree is None):
+        raise ActivationStepError(
+            "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+        )
+    approved_files: Mapping[str, str] | None = None
+    if approved_commit is not None and approved_tree is not None:
+        try:
+            approved_files = GitApprovedTreeSource().inspect(
+                repo_root,
+                approved_commit=approved_commit,
+                approved_tree=approved_tree,
+            ).file_sha256
+        except ApprovedGitTreeError:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+            ) from None
+    files: list[dict[str, str]] = []
+    for relative_path in _FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_PATHS:
+        digest = _stable_worktree_file_sha256(repo_root / relative_path)
+        if digest is None:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_UNAVAILABLE"
+            )
+        if (
+            approved_files is not None
+            and approved_files.get(relative_path.as_posix()) != digest
+        ):
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_MISMATCH"
+            )
+        files.append({"path": relative_path.as_posix(), "sha256": digest})
+    return _sha256_json({
+        "schema_version": "nac-bff-function-deployment-reconciler-toolchain-v1",
+        "files": files,
+    })
+
+
 def _stable_worktree_file_sha256(path: Path) -> str | None:
     descriptor: int | None = None
     try:
@@ -3277,6 +3325,54 @@ class InterruptionRuntimeBindingVerifier:
             raise ActivationStepError("INTERRUPTION_RECONCILER_WORKTREE_DIRTY")
 
 
+class FunctionDeploymentRuntimeBindingVerifier:
+    def __init__(
+        self,
+        repo_root: Path,
+        *,
+        expected_commit: str,
+        expected_tree: str,
+        expected_toolchain_sha256: str,
+    ) -> None:
+        self._repo_root = repo_root
+        self._expected_commit = expected_commit
+        self._expected_tree = expected_tree
+        self._expected_toolchain_sha256 = expected_toolchain_sha256
+
+    def verify(self) -> None:
+        before = _read_interruption_git_snapshot(self._repo_root)
+        self._verify_snapshot(before)
+        actual = calculate_function_deployment_reconciler_toolchain_sha256(
+            self._repo_root,
+            approved_commit=self._expected_commit,
+            approved_tree=self._expected_tree,
+        )
+        after = _read_interruption_git_snapshot(self._repo_root)
+        self._verify_snapshot(after)
+        if before != after:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_SNAPSHOT_CHANGED"
+            )
+        if actual != self._expected_toolchain_sha256:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_MISMATCH"
+            )
+
+    def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
+        if snapshot.get("commit") != self._expected_commit:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_COMMIT_MISMATCH"
+            )
+        if snapshot.get("tree") != self._expected_tree:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_TREE_MISMATCH"
+            )
+        if snapshot.get("dirty") is not False:
+            raise ActivationStepError(
+                "FUNCTION_DEPLOYMENT_RECONCILER_WORKTREE_DIRTY"
+            )
+
+
 def build_interruption_reconciliation_ports(
     repo_root: Path,
     request: LiveActivationRequest,
@@ -3331,6 +3427,67 @@ def build_interruption_reconciliation_ports(
     )
     return (
         AzureCliInterruptionObservationPort(
+            azure, preflight=runtime_binding.verify
+        ),
+        owner_verifier,
+        runtime_binding.verify,
+    )
+
+
+def build_function_deployment_reconciliation_ports(
+    repo_root: Path,
+    request: LiveActivationRequest,
+    *,
+    reconciler_commit: str,
+    reconciler_tree: str,
+    reconciler_toolchain_sha256: str,
+    require_owner_verifier: bool,
+    environ: Mapping[str, str] | None = None,
+) -> tuple[
+    AzureCliFunctionDeploymentObservationPort,
+    GitHubApprovalVerifier | None,
+    Callable[[], None],
+]:
+    """Build the read-only step-7 observation and #739 approval ports."""
+
+    source = os.environ if environ is None else environ
+    values = {
+        key: value
+        for key, value in source.items()
+        if key in {
+            "AZURE_CONFIG_DIR",
+            "GH_CONFIG_DIR",
+            "HOME",
+            "LANG",
+            "LC_ALL",
+            "PATH",
+            "TMPDIR",
+        }
+        and isinstance(value, str)
+        and value
+    }
+    azure = AzureCliAdapter(
+        binary=AZURE_CLI_EXECUTION_PATH,
+        expected_binary_sha256=request.azure_cli_toolchain_sha256,
+        environ=values,
+    )
+    runtime_binding = FunctionDeploymentRuntimeBindingVerifier(
+        repo_root,
+        expected_commit=reconciler_commit,
+        expected_tree=reconciler_tree,
+        expected_toolchain_sha256=reconciler_toolchain_sha256,
+    )
+    owner_verifier = (
+        GitHubApprovalVerifier(
+            binary=GH_CLI_EXECUTION_PATH,
+            expected_binary_sha256=request.gh_cli_sha256,
+            environ=values,
+        )
+        if require_owner_verifier
+        else None
+    )
+    return (
+        AzureCliFunctionDeploymentObservationPort(
             azure, preflight=runtime_binding.verify
         ),
         owner_verifier,
@@ -4408,10 +4565,13 @@ def _sha256_file(path: Path) -> str:
 __all__ = [
     "AzureBffLiveExecutionPort",
     "CANONICAL_INTERRUPTION_OWNER_LOGIN",
+    "FunctionDeploymentRuntimeBindingVerifier",
     "InterruptionRuntimeBindingVerifier",
     "GitHubApprovalVerifier",
     "LocalBuildAdapter",
+    "build_function_deployment_reconciliation_ports",
     "build_interruption_reconciliation_ports",
+    "calculate_function_deployment_reconciler_toolchain_sha256",
     "calculate_interruption_reconciler_toolchain_sha256",
     "build_live_activation_execution_port",
 ]

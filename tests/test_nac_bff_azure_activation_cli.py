@@ -833,6 +833,223 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         terminalize.assert_not_called()
 
 
+class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
+    def _argv(self, *extra: str) -> list[str]:
+        return [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "bff-azure-function-deployment-reconcile",
+            "--expected-activation-hash",
+            HASH,
+            "--approval-reference",
+            APPROVAL_REFERENCE,
+            "--approval-body-sha256",
+            BODY_HASH,
+            "--approved-commit",
+            COMMIT,
+            "--approved-tree",
+            TREE,
+            "--azure-cli-toolchain-sha256",
+            AZURE_TOOLCHAIN_HASH,
+            "--m365-cli-sha256",
+            M365_CLI_HASH,
+            "--m365-node-sha256",
+            M365_NODE_HASH,
+            "--build-python-sha256",
+            BUILD_PYTHON_HASH,
+            "--build-node-sha256",
+            BUILD_NODE_HASH,
+            "--build-npm-cli-sha256",
+            BUILD_NPM_HASH,
+            "--gh-cli-sha256",
+            GH_CLI_HASH,
+            "--provisioner-certificate-sha256",
+            PROVISIONER_CERTIFICATE_HASH,
+            "--provisioner-bootstrap-binding-sha256",
+            PROVISIONER_BOOTSTRAP_BINDING_HASH,
+            "--reason",
+            "Original owner-approved activation.",
+            "--correlation-id",
+            "nac-bff-live-20260908-issue739-v4",
+            "--reconciler-commit",
+            COMMIT,
+            "--reconciler-tree",
+            TREE,
+            "--reconciler-toolchain-sha256",
+            "e" * 64,
+            *extra,
+        ]
+
+    def _release_args(self) -> list[str]:
+        return [
+            "--confirm-release-quarantine",
+            "--release-action",
+            "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT",
+            "--terminalization-approval-reference",
+            "https://github.com/notariat8/NaC/issues/739#issuecomment-987654",
+            "--terminalization-approval-body-sha256",
+            "0" * 64,
+            "--state-sha256",
+            "1" * 64,
+            "--evidence-sha256",
+            "2" * 64,
+            "--ledger-head-sha256",
+            "3" * 64,
+            "--target-lock-sha256",
+            "4" * 64,
+            "--legacy-lock-sha256",
+            "5" * 64,
+            "--legacy-host-lock-sha256",
+            "6" * 64,
+            "--provider-observation-sha256",
+            "7" * 64,
+            "--failed-step",
+            "deploy_function_package",
+            "--failed-step-started-at-utc",
+            "2026-09-08T13:09:48.120231Z",
+            "--prepared-inputs-manifest-sha256",
+            "8" * 64,
+            "--function-package-sha256",
+            "9" * 64,
+        ]
+
+    def _fake_modules(self):
+        observation = object()
+        verifier = object()
+        runtime_revalidate = Mock()
+        factory = Mock(
+            return_value=(observation, verifier, runtime_revalidate)
+        )
+        inspect = Mock(return_value={
+            "schema_version": (
+                "nac.m365-azure-bff-function-deployment-reconciliation/v0.1"
+            ),
+            "status": "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED",
+            "error": {
+                "code": "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED"
+            },
+            "writes_started": True,
+            "failed_step": "deploy_function_package",
+            "provider_observation": {
+                "classification": "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+                "status": "STABLE",
+                "read_count": 2,
+                "sha256": "7" * 64,
+                "secret": "drop-me",
+            },
+            "resume_enabled": False,
+            "provider_write_count": 0,
+            "automatic_rollback_count": 0,
+            "automatic_deletion_count": 0,
+        })
+        release = Mock(return_value={
+            "schema_version": (
+                "nac.m365-azure-bff-function-deployment-reconciliation/v0.1"
+            ),
+            "status": "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASED",
+            "error": {"code": "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASED"},
+            "writes_started": True,
+            "failed_step": "deploy_function_package",
+            "reconciliation": {
+                "status": "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASED",
+                "state_preserved": True,
+                "provider_write_count": 0,
+                "marker_sha256": "a" * 64,
+                "secret": "drop-me",
+            },
+            "resume_enabled": False,
+            "provider_write_count": 0,
+            "automatic_rollback_count": 0,
+            "automatic_deletion_count": 0,
+        })
+        composition = types.ModuleType("nac_bff.azure_activation_composition")
+        composition.CANONICAL_INTERRUPTION_OWNER_LOGIN = "ofunk"
+        composition.build_function_deployment_reconciliation_ports = factory
+        reconciliation = types.ModuleType(
+            "nac_bff.azure_function_deployment_reconciliation"
+        )
+        reconciliation.FunctionDeploymentReconcilerBinding = (
+            lambda **kwargs: types.SimpleNamespace(**kwargs)
+        )
+        reconciliation.FunctionDeploymentReleaseApproval = (
+            lambda **kwargs: types.SimpleNamespace(**kwargs)
+        )
+        reconciliation.inspect_azure_bff_function_deployment_failure = inspect
+        reconciliation.release_azure_bff_function_deployment_quarantine = release
+        runner = types.ModuleType("nac_bff.azure_activation_runner")
+        runner.DEFAULT_OUTPUT_ROOT = Path("out/default")
+        runner.LiveActivationRequest = _FakeRequest
+        return {
+            "nac_bff.azure_activation_composition": composition,
+            "nac_bff.azure_function_deployment_reconciliation": reconciliation,
+            "nac_bff.azure_activation_runner": runner,
+        }, factory, inspect, release, observation, verifier, runtime_revalidate
+
+    def test_inspection_is_owner_free_and_forwards_read_only_port(self) -> None:
+        modules, factory, inspect, release, observation, _, _ = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv("--format", "json"))
+
+        self.assertEqual(rc, 0)
+        self.assertFalse(factory.call_args.kwargs["require_owner_verifier"])
+        self.assertIs(inspect.call_args.kwargs["observation_port"], observation)
+        self.assertFalse(inspect.call_args.kwargs["request"].owner_approved)
+        release.assert_not_called()
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(
+            payload["provider_observation"]["classification"],
+            "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+        )
+        self.assertNotIn("drop-me", stdout.getvalue())
+
+    def test_release_requires_confirmation_and_exact_issue739_binding(self) -> None:
+        modules, factory, inspect, release, *_ = self._fake_modules()
+        args = self._release_args()
+        args.remove("--confirm-release-quarantine")
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv(*args, "--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            "FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED",
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        release.assert_not_called()
+
+    def test_release_forwards_every_hash_binding(self) -> None:
+        modules, factory, inspect, release, observation, verifier, runtime = (
+            self._fake_modules()
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(
+                self._argv(*self._release_args(), "--format", "json")
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertTrue(factory.call_args.kwargs["require_owner_verifier"])
+        inspect.assert_not_called()
+        kwargs = release.call_args.kwargs
+        self.assertIs(kwargs["observation_port"], observation)
+        self.assertIs(kwargs["owner_comment_verifier"], verifier)
+        self.assertIs(kwargs["pre_mutation_revalidate"], runtime)
+        approval = kwargs["approval"]
+        self.assertEqual(approval.evidence_sha256, "2" * 64)
+        self.assertEqual(approval.function_package_sha256, "9" * 64)
+        self.assertEqual(
+            approval.owner_approval_reference,
+            "https://github.com/notariat8/NaC/issues/739#issuecomment-987654",
+        )
+        self.assertNotIn("drop-me", stdout.getvalue())
+
+
 class AzureBffLiveActivationRecoveryCliTests(unittest.TestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [

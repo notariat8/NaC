@@ -760,6 +760,7 @@ def build_parser() -> argparse.ArgumentParser:
             "bff-azure-activation-attestations",
             "bff-azure-activation-owner-gate",
             "bff-azure-activate-live",
+            "bff-azure-function-deployment-reconcile",
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
@@ -7957,6 +7958,13 @@ def main(argv: list[str] | None = None) -> int:
         return _run_bff_azure_activation_interruption_command(
             effective_argv, interruption_index
         )
+    function_deployment_index = (
+        _bff_azure_function_deployment_command_index(effective_argv)
+    )
+    if function_deployment_index is not None:
+        return _run_bff_azure_function_deployment_command(
+            effective_argv, function_deployment_index
+        )
     recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if recovery_index is not None:
         return _run_bff_azure_activation_recovery_command(
@@ -8381,6 +8389,20 @@ def _bff_azure_activation_recovery_command_index(argv: list[str]) -> int | None:
     return None
 
 
+def _bff_azure_function_deployment_command_index(
+    argv: list[str],
+) -> int | None:
+    command = (
+        "m365",
+        "teams-sharepoint",
+        "bff-azure-function-deployment-reconcile",
+    )
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
 def _add_bff_azure_owner_binding_arguments(
     parser: argparse.ArgumentParser, *, include_owner_gate: bool = True
 ) -> None:
@@ -8391,7 +8413,10 @@ def _add_bff_azure_owner_binding_arguments(
     parser.add_argument(
         "--approval-reference",
         required=True,
-        help="Original immutable live approval reference from issue #632.",
+        help=(
+            "Original immutable live approval reference from issue #632 "
+            "or #739."
+        ),
     )
     parser.add_argument("--approval-body-sha256", required=True)
     parser.add_argument("--approved-commit", required=True)
@@ -8678,6 +8703,190 @@ def _run_bff_azure_activation_interruption_command(
     ) else 2
 
 
+def _run_bff_azure_function_deployment_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog=(
+            "nac m365 teams-sharepoint "
+            "bff-azure-function-deployment-reconcile"
+        ),
+        description=(
+            "Beweist einen nicht angewendeten Azure-Function-Deploy read-only "
+            "und gibt dessen Quarantaene nur mit exakter #739-Freigabe frei."
+        ),
+    )
+    _add_bff_azure_owner_binding_arguments(
+        parser, include_owner_gate=False
+    )
+    parser.add_argument("--reconciler-commit", required=True)
+    parser.add_argument("--reconciler-tree", required=True)
+    parser.add_argument("--reconciler-toolchain-sha256", required=True)
+    parser.add_argument("--confirm-release-quarantine", action="store_true")
+    parser.add_argument("--release-action")
+    parser.add_argument("--terminalization-approval-reference")
+    parser.add_argument("--terminalization-approval-body-sha256")
+    parser.add_argument("--state-sha256")
+    parser.add_argument("--evidence-sha256")
+    parser.add_argument("--ledger-head-sha256")
+    parser.add_argument("--target-lock-sha256")
+    parser.add_argument("--legacy-lock-sha256")
+    parser.add_argument("--legacy-host-lock-sha256")
+    parser.add_argument("--provider-observation-sha256")
+    parser.add_argument("--failed-step")
+    parser.add_argument("--failed-step-started-at-utc")
+    parser.add_argument("--prepared-inputs-manifest-sha256")
+    parser.add_argument("--function-package-sha256")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    approval_fields = (
+        "release_action",
+        "terminalization_approval_reference",
+        "terminalization_approval_body_sha256",
+        "state_sha256",
+        "evidence_sha256",
+        "ledger_head_sha256",
+        "target_lock_sha256",
+        "legacy_lock_sha256",
+        "legacy_host_lock_sha256",
+        "provider_observation_sha256",
+        "failed_step",
+        "failed_step_started_at_utc",
+        "prepared_inputs_manifest_sha256",
+        "function_package_sha256",
+    )
+    supplied = any(getattr(args, field) is not None for field in approval_fields)
+    if supplied and not args.confirm_release_quarantine:
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED", args.format
+        )
+    if args.confirm_release_quarantine and any(
+        getattr(args, field) is None for field in approval_fields
+    ):
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED", args.format
+        )
+    if args.confirm_release_quarantine and (
+        args.release_action
+        != "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT"
+        or args.failed_step != "deploy_function_package"
+        or re.fullmatch(
+            r"https://github\.com/notariat8/NaC/issues/739"
+            r"#issuecomment-[1-9][0-9]*",
+            args.terminalization_approval_reference,
+        )
+        is None
+    ):
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID", args.format
+        )
+    try:
+        from nac_bff.azure_activation_composition import (
+            CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            build_function_deployment_reconciliation_ports,
+        )
+        from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
+        from nac_bff.azure_function_deployment_reconciliation import (
+            FunctionDeploymentReconcilerBinding,
+            FunctionDeploymentReleaseApproval,
+            inspect_azure_bff_function_deployment_failure,
+            release_azure_bff_function_deployment_quarantine,
+        )
+    except Exception:
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_RUNTIME_UNAVAILABLE", args.format
+        )
+    try:
+        repo_root = resolve_repo_root(args.repo_root)
+        request = _live_activation_request_from_args(args)
+        binding = FunctionDeploymentReconcilerBinding(
+            approved_commit=args.reconciler_commit,
+            approved_tree=args.reconciler_tree,
+            toolchain_sha256=args.reconciler_toolchain_sha256,
+            required_owner_login=CANONICAL_INTERRUPTION_OWNER_LOGIN,
+        )
+        observation_port, owner_verifier, runtime_revalidate = (
+            build_function_deployment_reconciliation_ports(
+                repo_root,
+                request,
+                reconciler_commit=args.reconciler_commit,
+                reconciler_tree=args.reconciler_tree,
+                reconciler_toolchain_sha256=(
+                    args.reconciler_toolchain_sha256
+                ),
+                require_owner_verifier=args.confirm_release_quarantine,
+                environ=dict(os.environ),
+            )
+        )
+        if args.confirm_release_quarantine:
+            if owner_verifier is None:
+                return _emit_bff_azure_interruption_error(
+                    "FUNCTION_DEPLOYMENT_OWNER_VERIFIER_UNAVAILABLE",
+                    args.format,
+                )
+            approval = FunctionDeploymentReleaseApproval(
+                owner_approved=True,
+                action=args.release_action,
+                owner_approval_reference=(
+                    args.terminalization_approval_reference
+                ),
+                approval_body_sha256=(
+                    args.terminalization_approval_body_sha256
+                ),
+                activation_hash=args.expected_activation_hash,
+                state_sha256=args.state_sha256,
+                evidence_sha256=args.evidence_sha256,
+                ledger_head_sha256=args.ledger_head_sha256,
+                target_lock_sha256=args.target_lock_sha256,
+                legacy_lock_sha256=args.legacy_lock_sha256,
+                legacy_host_lock_sha256=args.legacy_host_lock_sha256,
+                provider_observation_sha256=(
+                    args.provider_observation_sha256
+                ),
+                failed_step=args.failed_step,
+                failed_step_started_at_utc=(
+                    args.failed_step_started_at_utc
+                ),
+                prepared_inputs_manifest_sha256=(
+                    args.prepared_inputs_manifest_sha256
+                ),
+                function_package_sha256=args.function_package_sha256,
+                reconciler_commit=args.reconciler_commit,
+                reconciler_tree=args.reconciler_tree,
+                reconciler_toolchain_sha256=(
+                    args.reconciler_toolchain_sha256
+                ),
+                required_owner_login=CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            )
+            result = release_azure_bff_function_deployment_quarantine(
+                repo_root=repo_root,
+                request=request,
+                reconciler_binding=binding,
+                observation_port=observation_port,
+                owner_comment_verifier=owner_verifier,
+                approval=approval,
+                pre_mutation_revalidate=runtime_revalidate,
+                output_root=DEFAULT_OUTPUT_ROOT,
+            )
+        else:
+            result = inspect_azure_bff_function_deployment_failure(
+                repo_root=repo_root,
+                request=request,
+                reconciler_binding=binding,
+                observation_port=observation_port,
+                output_root=DEFAULT_OUTPUT_ROOT,
+            )
+    except Exception:
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_EXECUTION_FAILED", args.format
+        )
+    _print_bff_azure_interruption_result(result, args.format)
+    return 0 if result.get("status") in {
+        "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED",
+        "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASED",
+    } else 2
+
+
 def _run_bff_azure_activation_recovery_command(
     argv: list[str], command_index: int
 ) -> int:
@@ -8874,7 +9083,9 @@ def _redact_bff_azure_interruption_result(
         "status",
         "writes_started",
         "running_step",
+        "failed_step",
         "resume_enabled",
+        "provider_write_count",
         "automatic_rollback_count",
         "automatic_deletion_count",
     )
@@ -8885,6 +9096,7 @@ def _redact_bff_azure_interruption_result(
             isinstance(result.get(key), (str, bool))
             or (
                 key in {
+                    "provider_write_count",
                     "automatic_rollback_count",
                     "automatic_deletion_count",
                 }
@@ -8900,10 +9112,13 @@ def _redact_bff_azure_interruption_result(
     if isinstance(provider, dict):
         safe_provider = {
             key: provider[key]
-            for key in ("status", "read_count", "sha256")
+            for key in ("classification", "status", "read_count", "sha256")
             if isinstance(provider.get(key), (str, int))
         }
-        if set(safe_provider) == {"status", "read_count", "sha256"}:
+        if frozenset(safe_provider) in {
+            frozenset({"status", "read_count", "sha256"}),
+            frozenset({"classification", "status", "read_count", "sha256"}),
+        }:
             redacted["provider_observation"] = safe_provider
 
     bindings = result.get("approval_bindings")
@@ -8922,11 +9137,33 @@ def _redact_bff_azure_interruption_result(
         "reconciler_toolchain_sha256",
         "required_owner_login",
     }
-    if isinstance(bindings, dict) and set(bindings) == binding_keys and all(
+    function_binding_keys = {
+        "action",
+        "activation_hash",
+        "state_sha256",
+        "evidence_sha256",
+        "ledger_head_sha256",
+        "target_lock_sha256",
+        "legacy_lock_sha256",
+        "legacy_host_lock_sha256",
+        "provider_observation_sha256",
+        "failed_step",
+        "failed_step_started_at_utc",
+        "prepared_inputs_manifest_sha256",
+        "function_package_sha256",
+        "reconciler_commit",
+        "reconciler_tree",
+        "reconciler_toolchain_sha256",
+        "required_owner_login",
+    }
+    actual_binding_keys = (
+        frozenset(bindings) if isinstance(bindings, dict) else frozenset()
+    )
+    if actual_binding_keys in {frozenset(binding_keys), frozenset(function_binding_keys)} and all(
         isinstance(value, str) for value in bindings.values()
     ):
         redacted["approval_bindings"] = {
-            key: bindings[key] for key in sorted(binding_keys)
+            key: bindings[key] for key in sorted(actual_binding_keys)
         }
 
     owner_comment = result.get("owner_comment")
@@ -8935,7 +9172,10 @@ def _redact_bff_azure_interruption_result(
         and set(owner_comment) == {"body", "body_sha256"}
         and isinstance(owner_comment.get("body"), str)
         and owner_comment["body"].startswith(
-            "NAC_BFF_INTERRUPTION_RECONCILIATION_APPROVAL\n"
+            (
+                "NAC_BFF_INTERRUPTION_RECONCILIATION_APPROVAL\n",
+                "NAC_BFF_FUNCTION_DEPLOYMENT_RECONCILIATION_APPROVAL\n",
+            )
         )
         and isinstance(owner_comment.get("body_sha256"), str)
         and sha256(owner_comment["body"].encode("utf-8")).hexdigest()
@@ -8953,8 +9193,10 @@ def _redact_bff_azure_interruption_result(
                 "state_sha256",
                 "evidence_sha256",
                 "marker_sha256",
+                "state_preserved",
+                "provider_write_count",
             )
-            if isinstance(reconciliation.get(key), (str, bool))
+            if isinstance(reconciliation.get(key), (str, bool, int))
         }
         if "status" in safe_reconciliation:
             redacted["reconciliation"] = safe_reconciliation

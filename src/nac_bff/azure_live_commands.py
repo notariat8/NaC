@@ -12,6 +12,7 @@ import re
 import stat
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
 _IS_WINDOWS = os.name == "nt"
@@ -154,6 +155,27 @@ _APP_SETTINGS_URL = (
     f"/resourceGroups/{RESOURCE_GROUP}/providers/Microsoft.Web/sites/"
     f"{FUNCTION_APP}/config/appsettings/list?api-version=2024-04-01"
 )
+_FUNCTION_SITE_BASE_URL = (
+    f"https://management.azure.com/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+    f"/resourceGroups/{RESOURCE_GROUP}/providers/Microsoft.Web/sites/"
+    f"{FUNCTION_APP}"
+)
+_FUNCTION_SITE_URL = f"{_FUNCTION_SITE_BASE_URL}?api-version=2025-05-01"
+_FUNCTION_DEPLOYMENTS_URL = (
+    f"{_FUNCTION_SITE_BASE_URL}/deployments?api-version=2025-05-01"
+)
+_FUNCTION_ONEDEPLOY_URL = (
+    f"{_FUNCTION_SITE_BASE_URL}/extensions/onedeploy?api-version=2025-05-01"
+)
+_FUNCTION_DEPLOYMENT_STATUS_URL = (
+    f"{_FUNCTION_SITE_BASE_URL}/deploymentStatus?api-version=2025-05-01"
+)
+_FUNCTION_DEPLOYMENT_READ_URLS = frozenset({
+    _FUNCTION_SITE_URL,
+    _FUNCTION_DEPLOYMENTS_URL,
+    _FUNCTION_ONEDEPLOY_URL,
+    _FUNCTION_DEPLOYMENT_STATUS_URL,
+})
 _UUID_RE = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z",
     re.IGNORECASE,
@@ -584,6 +606,190 @@ class AzureCliInterruptionObservationPort:
         if result.get("ok") is not True or type(value) is not expected_type:
             raise ValueError("AZURE_INTERRUPTION_READ_FAILED")
         return value
+
+
+class AzureCliFunctionDeploymentObservationPort:
+    """Expose only the ARM reads required for failed step-7 reconciliation."""
+
+    def __init__(
+        self, azure: AzureCliAdapter, *, preflight: Callable[[], None]
+    ) -> None:
+        self._azure = azure
+        self._preflight = preflight
+
+    def observe_function_deployment(
+        self,
+        *,
+        tenant_id: str,
+        subscription_id: str,
+        resource_group: str,
+        function_app: str,
+        step_started_at_utc: str,
+    ) -> dict[str, Any]:
+        if (
+            tenant_id != EXPECTED_TENANT_ID
+            or subscription_id != EXPECTED_SUBSCRIPTION_ID
+            or resource_group != RESOURCE_GROUP
+            or function_app != FUNCTION_APP
+        ):
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_TARGET_MISMATCH")
+        step_started = _parse_azure_timestamp(step_started_at_utc)
+        if step_started is None:
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_TIME_INVALID")
+
+        account = self._read(("account", "show"), dict)
+        if (
+            account.get("environmentName") != EXPECTED_CLOUD_NAME
+            or account.get("tenantId") != tenant_id
+            or account.get("id") != subscription_id
+            or account.get("state") != "Enabled"
+        ):
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_ACCOUNT_MISMATCH")
+
+        site = self._read_rest(_FUNCTION_SITE_URL)
+        expected_id = (
+            f"/subscriptions/{subscription_id}/resourceGroups/{resource_group}"
+            f"/providers/Microsoft.Web/sites/{function_app}"
+        )
+        properties = site.get("properties")
+        if (
+            not isinstance(site.get("id"), str)
+            or site["id"].lower() != expected_id.lower()
+            or site.get("name") != function_app
+            or str(site.get("type", "")).lower() != "microsoft.web/sites"
+            or not isinstance(properties, dict)
+            or properties.get("state") != "Running"
+        ):
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_SITE_INVALID")
+        last_modified = _parse_azure_timestamp(
+            properties.get("lastModifiedTimeUtc")
+        )
+        if last_modified is None:
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_SITE_INVALID")
+
+        deployments_payload = self._read_rest(_FUNCTION_DEPLOYMENTS_URL)
+        deployments = _function_deployment_items(deployments_payload)
+        deployment_starts: list[datetime] = []
+        for item in deployments:
+            item_properties = item.get("properties")
+            if not isinstance(item_properties, dict):
+                raise ValueError(
+                    "AZURE_FUNCTION_RECONCILIATION_DEPLOYMENTS_INVALID"
+                )
+            started = _parse_azure_timestamp(
+                item_properties.get("start_time")
+                or item_properties.get("startTime")
+            )
+            if started is None:
+                raise ValueError(
+                    "AZURE_FUNCTION_RECONCILIATION_DEPLOYMENTS_INVALID"
+                )
+            deployment_starts.append(started)
+
+        deployment_statuses = _function_deployment_items(
+            self._read_rest(_FUNCTION_DEPLOYMENT_STATUS_URL)
+        )
+        one_deploy_absent = self._read_onedeploy_absence()
+        deployment_after_step = any(
+            started >= step_started for started in deployment_starts
+        )
+        not_applied = bool(
+            last_modified < step_started
+            and not deployment_after_step
+            and not deployment_statuses
+            and one_deploy_absent
+        )
+        if not not_applied:
+            raise ValueError(
+                "AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN"
+            )
+
+        latest = max(deployment_starts) if deployment_starts else None
+        return {
+            "tenant_id": tenant_id,
+            "subscription_id": subscription_id,
+            "resource_group": resource_group,
+            "function_app": function_app,
+            "classification": "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+            "step_started_at_utc": _canonical_utc(step_started),
+            "site": {
+                "state": "Running",
+                "last_modified_at_utc": _canonical_utc(last_modified),
+            },
+            "arm_deployments": {
+                "count": len(deployments),
+                "latest_started_at_utc": (
+                    _canonical_utc(latest) if latest is not None else None
+                ),
+                "started_at_or_after_step_count": 0,
+            },
+            "deployment_status_count": 0,
+            "one_deploy": "ABSENT",
+        }
+
+    def _read_rest(self, url: str) -> dict[str, Any]:
+        return self._read(
+            ("rest", "--method", "get", "--url", url), dict
+        )
+
+    def _read_onedeploy_absence(self) -> bool:
+        self._preflight()
+        result = self._azure.run(
+            ("rest", "--method", "get", "--url", _FUNCTION_ONEDEPLOY_URL)
+        )
+        if not isinstance(result, dict):
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_READ_FAILED")
+        if result.get("ok") is False and result.get("code") == (
+            "AZURE_RESOURCE_NOT_FOUND"
+        ):
+            return True
+        if result.get("ok") is True:
+            raise ValueError("AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN")
+        raise ValueError("AZURE_FUNCTION_RECONCILIATION_READ_FAILED")
+
+    def _read(self, argv: tuple[str, ...], expected_type: type) -> Any:
+        allowed_rest = bool(
+            argv[:4] == ("rest", "--method", "get", "--url")
+            and len(argv) == 5
+            and argv[4] in _FUNCTION_DEPLOYMENT_READ_URLS
+        )
+        if argv != ("account", "show") and not allowed_rest:
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_READ_FORBIDDEN")
+        self._preflight()
+        result = self._azure.run(argv)
+        if not isinstance(result, dict):
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_READ_FAILED")
+        value = result.get("data")
+        if result.get("ok") is not True or type(value) is not expected_type:
+            raise ValueError("AZURE_FUNCTION_RECONCILIATION_READ_FAILED")
+        return value
+
+
+def _function_deployment_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    if set(payload) != {"value"} or not isinstance(payload.get("value"), list):
+        raise ValueError("AZURE_FUNCTION_RECONCILIATION_DEPLOYMENTS_INVALID")
+    items = payload["value"]
+    if any(not isinstance(item, dict) for item in items):
+        raise ValueError("AZURE_FUNCTION_RECONCILIATION_DEPLOYMENTS_INVALID")
+    return items
+
+
+def _parse_azure_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _canonical_utc(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat(timespec="microseconds").replace(
+        "+00:00", "Z"
+    )
 
 
 def _interruption_inventory_projection(
@@ -1463,7 +1669,22 @@ def _run_azure_cli(
 
     if completed.returncode != 0:
         runtime_code = sealed_runtime_failure_code(completed.returncode)
-        if runtime_code is None and isinstance(completed.stderr, str) and "DeploymentNotFound" in completed.stderr:
+        not_found = bool(
+            isinstance(completed.stderr, str)
+            and (
+                "DeploymentNotFound" in completed.stderr
+                or (
+                    family == ("rest",)
+                    and tuple(azure_argv)
+                    == (
+                        "rest", "--method", "get", "--url",
+                        _FUNCTION_ONEDEPLOY_URL,
+                    )
+                    and "Not Found" in completed.stderr
+                )
+            )
+        )
+        if runtime_code is None and not_found:
             return _command_result(
                 ok=False,
                 code="AZURE_RESOURCE_NOT_FOUND",
@@ -1874,6 +2095,13 @@ def _rest_options_valid(options: dict[str, tuple[str, ...]]) -> bool:
         },
     ):
         return True
+    if (
+        set(options) == {"--method", "--url"}
+        and options["--method"] == ("get",)
+        and len(options["--url"]) == 1
+        and options["--url"][0] in _FUNCTION_DEPLOYMENT_READ_URLS
+    ):
+        return True
     return (
         set(options) == {"--method", "--url"}
         and options["--method"] == ("get",)
@@ -1884,7 +2112,11 @@ def _rest_options_valid(options: dict[str, tuple[str, ...]]) -> bool:
 
 def _rest_url(values: tuple[str, ...]) -> bool:
     return len(values) == 1 and (
-        values[0] in {_RESOURCE_GRAPH_URL, _APP_SETTINGS_URL}
+        values[0] in {
+            _RESOURCE_GRAPH_URL,
+            _APP_SETTINGS_URL,
+            *_FUNCTION_DEPLOYMENT_READ_URLS,
+        }
         or is_metrics_url(values[0])
     )
 

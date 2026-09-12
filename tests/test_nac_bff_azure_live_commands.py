@@ -30,6 +30,7 @@ from nac_bff.azure_live_commands import (
     FUNCTION_DEPLOYMENT_CLI_TIMEOUT_SECONDS,
     FUNCTION_DEPLOYMENT_PROCESS_TIMEOUT_SECONDS,
     AzureCliAdapter,
+    AzureCliFunctionDeploymentObservationPort,
     AzureCliInterruptionObservationPort,
     build_azure_cli_env,
     calculate_azure_cli_toolchain_sha256,
@@ -160,6 +161,158 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     )[2],
                     "AZURE_CLI_COMMAND_BLOCKED",
                 )
+
+    def test_function_reconciliation_rest_reads_are_exactly_bounded(self) -> None:
+        for url in azure_live_commands._FUNCTION_DEPLOYMENT_READ_URLS:
+            command = ["rest", "--method", "get", "--url", url]
+            validated, family, code = azure_live_commands._validated_command(
+                command
+            )
+            self.assertEqual(validated, command)
+            self.assertEqual(family, ("rest",))
+            self.assertEqual(code, "AZURE_CLI_OK")
+            for drifted in (
+                ["rest", "--method", "post", "--url", url],
+                ["rest", "--method", "get", "--url", f"{url}&extra=1"],
+                [
+                    "rest", "--method", "get", "--url",
+                    url.replace(
+                        "func-nac-bff-test-funktion8", "foreign-function"
+                    ),
+                ],
+            ):
+                self.assertEqual(
+                    azure_live_commands._validated_command(drifted)[2],
+                    "AZURE_CLI_COMMAND_BLOCKED",
+                )
+
+    def test_function_reconciliation_observation_projects_not_applied(self) -> None:
+        calls: list[tuple[str, ...]] = []
+        preflight = Mock()
+
+        class FakeAzure:
+            def run(self, argv):
+                command = tuple(argv)
+                calls.append(command)
+                if command == ("account", "show"):
+                    return {
+                        "ok": True,
+                        "code": "AZURE_CLI_OK",
+                        "data": {
+                            "environmentName": EXPECTED_CLOUD_NAME,
+                            "tenantId": EXPECTED_TENANT_ID,
+                            "id": EXPECTED_SUBSCRIPTION_ID,
+                            "state": "Enabled",
+                        },
+                    }
+                url = command[-1]
+                if url == azure_live_commands._FUNCTION_SITE_URL:
+                    data = {
+                        "id": (
+                            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+                            "/resourceGroups/rg-nac-bff-test/providers/"
+                            "Microsoft.Web/sites/func-nac-bff-test-funktion8"
+                        ),
+                        "name": "func-nac-bff-test-funktion8",
+                        "type": "Microsoft.Web/sites",
+                        "properties": {
+                            "state": "Running",
+                            "lastModifiedTimeUtc": "2026-09-08T13:09:13.9633333Z",
+                        },
+                    }
+                elif url == azure_live_commands._FUNCTION_DEPLOYMENTS_URL:
+                    data = {
+                        "value": [
+                            {
+                                "properties": {
+                                    "start_time": "2026-09-03T06:55:00Z"
+                                }
+                            }
+                        ]
+                    }
+                elif url == azure_live_commands._FUNCTION_DEPLOYMENT_STATUS_URL:
+                    data = {"value": []}
+                elif url == azure_live_commands._FUNCTION_ONEDEPLOY_URL:
+                    return {
+                        "ok": False,
+                        "code": "AZURE_RESOURCE_NOT_FOUND",
+                    }
+                else:
+                    raise AssertionError(command)
+                return {"ok": True, "code": "AZURE_CLI_OK", "data": data}
+
+        result = AzureCliFunctionDeploymentObservationPort(
+            FakeAzure(), preflight=preflight
+        ).observe_function_deployment(
+            tenant_id=EXPECTED_TENANT_ID,
+            subscription_id=EXPECTED_SUBSCRIPTION_ID,
+            resource_group="rg-nac-bff-test",
+            function_app="func-nac-bff-test-funktion8",
+            step_started_at_utc="2026-09-08T13:09:48.120231Z",
+        )
+
+        self.assertEqual(
+            result["classification"], "FUNCTION_DEPLOYMENT_NOT_APPLIED"
+        )
+        self.assertEqual(result["deployment_status_count"], 0)
+        self.assertEqual(result["one_deploy"], "ABSENT")
+        self.assertEqual(len(calls), 5)
+        self.assertEqual(preflight.call_count, 5)
+
+    def test_function_reconciliation_observation_rejects_applied_signal(self) -> None:
+        class FakeAzure:
+            def run(self, argv):
+                command = tuple(argv)
+                if command == ("account", "show"):
+                    data = {
+                        "environmentName": EXPECTED_CLOUD_NAME,
+                        "tenantId": EXPECTED_TENANT_ID,
+                        "id": EXPECTED_SUBSCRIPTION_ID,
+                        "state": "Enabled",
+                    }
+                    return {"ok": True, "code": "AZURE_CLI_OK", "data": data}
+                url = command[-1]
+                if url == azure_live_commands._FUNCTION_SITE_URL:
+                    data = {
+                        "id": (
+                            f"/subscriptions/{EXPECTED_SUBSCRIPTION_ID}"
+                            "/resourceGroups/rg-nac-bff-test/providers/"
+                            "Microsoft.Web/sites/func-nac-bff-test-funktion8"
+                        ),
+                        "name": "func-nac-bff-test-funktion8",
+                        "type": "Microsoft.Web/sites",
+                        "properties": {
+                            "state": "Running",
+                            "lastModifiedTimeUtc": "2026-09-08T13:09:49Z",
+                        },
+                    }
+                    return {"ok": True, "code": "AZURE_CLI_OK", "data": data}
+                if url == azure_live_commands._FUNCTION_DEPLOYMENTS_URL:
+                    return {
+                        "ok": True,
+                        "code": "AZURE_CLI_OK",
+                        "data": {"value": []},
+                    }
+                if url == azure_live_commands._FUNCTION_DEPLOYMENT_STATUS_URL:
+                    return {
+                        "ok": True,
+                        "code": "AZURE_CLI_OK",
+                        "data": {"value": []},
+                    }
+                return {"ok": False, "code": "AZURE_RESOURCE_NOT_FOUND"}
+
+        with self.assertRaisesRegex(
+            ValueError, "AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN"
+        ):
+            AzureCliFunctionDeploymentObservationPort(
+                FakeAzure(), preflight=lambda: None
+            ).observe_function_deployment(
+                tenant_id=EXPECTED_TENANT_ID,
+                subscription_id=EXPECTED_SUBSCRIPTION_ID,
+                resource_group="rg-nac-bff-test",
+                function_app="func-nac-bff-test-funktion8",
+                step_started_at_utc="2026-09-08T13:09:48.120231Z",
+            )
 
     def test_generic_adapter_rejects_monitor_url_before_process_resolution(self) -> None:
         url = build_metrics_url(

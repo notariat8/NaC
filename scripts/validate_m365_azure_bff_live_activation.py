@@ -36,6 +36,9 @@ COMPOSITION_PATH = Path("src/nac_bff/azure_activation_composition.py")
 INTERRUPTION_RECONCILIATION_PATH = Path(
     "src/nac_bff/azure_interruption_reconciliation.py"
 )
+FUNCTION_DEPLOYMENT_RECONCILIATION_PATH = Path(
+    "src/nac_bff/azure_function_deployment_reconciliation.py"
+)
 APPROVED_GIT_TREE_PATH = Path("src/nac_bff/approved_git_tree.py")
 INTERRUPTION_BASELINE_PATH = Path(
     "src/nac_bff/azure_interruption_baseline.py"
@@ -48,6 +51,9 @@ INTERRUPTION_CONTRACT_PATH = Path(
 )
 INTERRUPTION_RECONCILIATION_TEST_PATH = Path(
     "tests/test_nac_bff_azure_interruption_reconciliation.py"
+)
+FUNCTION_DEPLOYMENT_RECONCILIATION_TEST_PATH = Path(
+    "tests/test_nac_bff_azure_function_deployment_reconciliation.py"
 )
 INTERRUPTION_BASELINE_TEST_PATH = Path(
     "tests/test_nac_bff_azure_interruption_baseline.py"
@@ -118,6 +124,12 @@ ASYNC_BASELINE_RECONCILIATION_ISSUE = (
 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS = [
     f"AC-719-{index:02d}" for index in range(1, 7)
 ]
+FUNCTION_DEPLOYMENT_RECONCILIATION_ISSUE = (
+    "https://github.com/notariat8/NaC/issues/739"
+)
+FUNCTION_DEPLOYMENT_RECONCILIATION_ACCEPTANCE_IDS = [
+    f"AC-739-R{index}" for index in range(1, 7)
+]
 ARM_OPERATION_NORMALIZATION_ISSUE = (
     "https://github.com/notariat8/NaC/issues/727"
 )
@@ -134,6 +146,33 @@ INTERRUPTION_COMMAND = (
     "nac m365 teams-sharepoint "
     "bff-azure-activation-interruption-reconcile"
 )
+FUNCTION_DEPLOYMENT_RECONCILIATION_COMMAND = (
+    "nac m365 teams-sharepoint "
+    "bff-azure-function-deployment-reconcile"
+)
+FUNCTION_DEPLOYMENT_READ_OPERATIONS = [
+    "account show",
+    "GET exact function site",
+    "GET exact function deployments",
+    "GET exact function deploymentStatus",
+    "GET exact function extensions/onedeploy",
+]
+FUNCTION_DEPLOYMENT_ARTIFACT_BINDINGS = [
+    "state_sha256",
+    "evidence_sha256",
+    "ledger_head_sha256",
+    "prepared_inputs_manifest_sha256",
+    "function_package_sha256",
+    "target_lock_sha256",
+    "legacy_lock_sha256",
+    "legacy_host_lock_sha256",
+    "provider_observation_sha256",
+    "failed_step_started_at_utc",
+    "reconciler_commit",
+    "reconciler_tree",
+    "reconciler_toolchain_sha256",
+    "required_owner_login",
+]
 INTERRUPTION_READ_OPERATIONS = [
     "account show", "provider show", "group exists", "group show",
     "resource list",
@@ -1231,6 +1270,23 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_repair_partial_release_append",
         "_initial_lock_bytes",
     ),
+    FUNCTION_DEPLOYMENT_RECONCILIATION_PATH: (
+        "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT",
+        "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+        "issues/739",
+        "inspect_azure_bff_function_deployment_failure",
+        "release_azure_bff_function_deployment_quarantine",
+        "_stable_observation",
+        "_repair_partial_release",
+        "provider_write_count",
+    ),
+    FUNCTION_DEPLOYMENT_RECONCILIATION_TEST_PATH: (
+        "test_inspection_is_local_read_only_and_double_reads",
+        "test_drift_or_applied_signal_keeps_every_lock_held",
+        "test_exact_approval_releases_locks_without_changing_failed_run",
+        "test_wrong_owner_or_hash_never_releases_a_lock",
+        "test_crash_after_lock_append_is_recovered_idempotently",
+    ),
     INTERRUPTION_CONTRACT_PATH: (
         "RESOURCE_GROUP_ONLY",
         "BICEP_BASELINE_EXACT",
@@ -1295,6 +1351,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "AZURE_CLI_SUBSCRIPTION_STATE_INVALID",
         '("identity", "show")',
         '("functionapp", "identity", "show")',
+        "AzureCliFunctionDeploymentObservationPort",
+        "_FUNCTION_DEPLOYMENT_READ_URLS",
+        "AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN",
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
         '"status": status_code', '"error": {"code": code}',
@@ -1312,12 +1371,16 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "--confirm-terminalize-and-release",
         "TERMINALIZE_AND_RELEASE_LOCK_ONLY",
         "EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE",
+        "bff-azure-function-deployment-reconcile",
+        "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT",
     ),
     EN_CLI_DOC_PATH: (
         "bff-azure-activation-interruption-reconcile",
         "--confirm-terminalize-and-release",
         "TERMINALIZE_AND_RELEASE_LOCK_ONLY",
         "EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE",
+        "bff-azure-function-deployment-reconcile",
+        "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT",
     ),
     DE_PLAN_DOC_PATH: (
         "#717", "AC-717-01", "AC-717-08",
@@ -1690,6 +1753,12 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             ),
             "async_baseline_reconciliation_acceptance_ids": (
                 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
+            ),
+            "function_deployment_reconciliation_issue": (
+                FUNCTION_DEPLOYMENT_RECONCILIATION_ISSUE
+            ),
+            "function_deployment_reconciliation_acceptance_ids": (
+                FUNCTION_DEPLOYMENT_RECONCILIATION_ACCEPTANCE_IDS
             ),
             "arm_operation_normalization_issue": (
                 ARM_OPERATION_NORMALIZATION_ISSUE
@@ -2518,6 +2587,103 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             errors,
         )
 
+    function_reconciliation = domain.get("runner_interface", {}).get(
+        "function_deployment_reconciliation"
+    )
+    if not isinstance(function_reconciliation, dict):
+        errors.append("domain function deployment reconciliation must be an object")
+    else:
+        _require_values(
+            function_reconciliation,
+            {
+                "command": FUNCTION_DEPLOYMENT_RECONCILIATION_COMMAND,
+                "leading_issue": FUNCTION_DEPLOYMENT_RECONCILIATION_ISSUE,
+                "separate_from_finalization_and_step2_recovery_required": True,
+                "artifact_bindings_exact": FUNCTION_DEPLOYMENT_ARTIFACT_BINDINGS,
+                "output_fields_allowlisted": True,
+                "raw_ids_paths_commands_provider_payloads_or_credentials_allowed": False,
+            },
+            "domain function deployment reconciliation",
+            errors,
+        )
+        failure = function_reconciliation.get("supported_terminal_failure_exact", {})
+        _require_values(
+            failure,
+            {
+                "state": "FAILED_PARTIAL",
+                "ledger_events_exact": 18,
+                "passed_step_prefix_exact": 6,
+                "failed_step_order_exact": 7,
+                "failed_step_id_exact": "deploy_function_package",
+                "failed_step_error_exact": (
+                    "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
+                ),
+                "resume_enabled": False,
+            },
+            "domain function deployment terminal failure",
+            errors,
+        )
+        inspection = function_reconciliation.get("inspection_default", {})
+        _require_values(
+            inspection,
+            {
+                "owner_approved_required": False,
+                "local_mutations_exact": 0,
+                "provider_write_calls_exact": 0,
+                "azure_read_snapshot_count_exact": 2,
+                "azure_read_operations_exact": FUNCTION_DEPLOYMENT_READ_OPERATIONS,
+                "stable_observation_hashes_must_match": True,
+                "output_status_exact": (
+                    "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED"
+                ),
+            },
+            "domain function deployment inspection",
+            errors,
+        )
+        classification = function_reconciliation.get(
+            "not_applied_classification_exact", {}
+        )
+        _require_values(
+            classification,
+            {
+                "classification": "FUNCTION_DEPLOYMENT_NOT_APPLIED",
+                "function_app_exact": "func-nac-bff-test-funktion8",
+                "site_state_exact": "Running",
+                "site_last_modified_before_failed_step_start_required": True,
+                "deployment_started_at_or_after_failed_step_count_exact": 0,
+                "deployment_status_count_exact": 0,
+                "one_deploy_status_exact": "ABSENT",
+                "raw_provider_payload_emission_allowed": False,
+            },
+            "domain function deployment classification",
+            errors,
+        )
+        release = function_reconciliation.get("release_quarantine", {})
+        _require_values(
+            release,
+            {
+                "confirmation_argument_exact": "--confirm-release-quarantine",
+                "action_exact": (
+                    "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT"
+                ),
+                "new_owner_approval_required": True,
+                "old_live_approval_sufficient": False,
+                "terminalization_approval_issue_exact": 739,
+                "state_and_evidence_mutations_exact": 0,
+                "provider_write_calls_exact": 0,
+                "resume_attempts_exact": 0,
+                "automatic_rollback_count_exact": 0,
+                "automatic_deletion_count_exact": 0,
+                "release_all_three_journals_required": True,
+                "append_only_released_markers_required": True,
+                "partial_lock_append_recovery_required": True,
+                "runtime_git_and_toolchain_revalidation_required": True,
+                "provider_revalidation_before_local_mutation_required": True,
+            },
+            "domain function deployment release",
+            errors,
+        )
+
     resume = domain.get("execution", {}).get("resume", {})
     if resume.get("mvp_enabled") is not False or resume.get("request_behavior") != (
         "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP"
@@ -2580,6 +2746,13 @@ def _validate_verification_commands(value: Any, errors: list[str]) -> None:
         for tokens in parsed
     ):
         errors.append("verification unittest command omits interruption reconciliation")
+    if not any(
+        "tests.test_nac_bff_azure_function_deployment_reconciliation" in tokens
+        for tokens in parsed
+    ):
+        errors.append(
+            "verification unittest command omits function deployment reconciliation"
+        )
     prefix = [
         "python3", "scripts/nac.py", "m365", "teams-sharepoint",
         "bff-azure-activation-interruption-reconcile",
@@ -2627,6 +2800,12 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             ),
             "async_baseline_reconciliation_acceptance_ids": (
                 ASYNC_BASELINE_RECONCILIATION_ACCEPTANCE_IDS
+            ),
+            "function_deployment_reconciliation_issue": (
+                FUNCTION_DEPLOYMENT_RECONCILIATION_ISSUE
+            ),
+            "function_deployment_reconciliation_acceptance_ids": (
+                FUNCTION_DEPLOYMENT_RECONCILIATION_ACCEPTANCE_IDS
             ),
             "arm_operation_normalization_issue": (
                 ARM_OPERATION_NORMALIZATION_ISSUE
@@ -2755,6 +2934,65 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             != "EXTERNAL_PROCESS_INTERRUPTED_AFTER_WRITE"
         ):
             errors.append("verification interruption terminal state differs")
+
+    function_reconciliation = verification.get(
+        "function_deployment_reconciliation_verification"
+    )
+    if not isinstance(function_reconciliation, dict):
+        errors.append(
+            "verification function deployment reconciliation must be a mapping"
+        )
+    else:
+        _require_values(
+            function_reconciliation,
+            {
+                "command_exact": FUNCTION_DEPLOYMENT_RECONCILIATION_COMMAND,
+                "leading_issue": FUNCTION_DEPLOYMENT_RECONCILIATION_ISSUE,
+                "supported_terminal_failure_exact": {
+                    "state": "FAILED_PARTIAL",
+                    "ledger_events_exact": 18,
+                    "passed_step_prefix_exact": 6,
+                    "failed_step_order_exact": 7,
+                    "failed_step_id_exact": "deploy_function_package",
+                    "failed_step_error_exact": (
+                        "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
+                    ),
+                    "resume_enabled": False,
+                },
+                "artifact_bindings_exact": (
+                    FUNCTION_DEPLOYMENT_ARTIFACT_BINDINGS
+                ),
+            },
+            "verification function deployment reconciliation",
+            errors,
+        )
+        inspection = function_reconciliation.get("inspection", {})
+        if (
+            inspection.get("owner_approved_required") is not False
+            or inspection.get("local_mutations_exact") != 0
+            or inspection.get("provider_write_calls_exact") != 0
+            or inspection.get("azure_read_snapshot_count_exact") != 2
+            or inspection.get("azure_read_operations_exact")
+            != FUNCTION_DEPLOYMENT_READ_OPERATIONS
+            or inspection.get("output_status_exact")
+            != "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED"
+        ):
+            errors.append(
+                "verification function deployment inspection differs"
+            )
+        release = function_reconciliation.get("release_quarantine", {})
+        if (
+            release.get("confirmation_argument_exact")
+            != "--confirm-release-quarantine"
+            or release.get("action_exact")
+            != "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT"
+            or release.get("terminalization_approval_issue_exact") != 739
+            or release.get("state_and_evidence_mutations_exact") != 0
+            or release.get("provider_write_calls_exact") != 0
+            or release.get("release_all_three_journals_required") is not True
+            or release.get("partial_lock_append_recovery_required") is not True
+        ):
+            errors.append("verification function deployment release differs")
 
     if verification.get("thresholds") != THRESHOLDS:
         errors.append("verification thresholds must equal the exact Issue #632, #717 and #719 thresholds")
