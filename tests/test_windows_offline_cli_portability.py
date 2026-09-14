@@ -154,17 +154,28 @@ atexit.register(write_import_trace)
         self.assertNotIn("pwd", imported_modules)
 
     def test_portable_modules_import_without_posix_backend(self) -> None:
-        import nac_cli.cli  # noqa: F401
-        import nac_m365_graph.business_case_type_production_adapters  # noqa: F401
-        from nac_bff import azure_activation_contract
-        from nac_bff import azure_activation_facade
+        probe = """
+import sys
+import nac_cli.cli
+import nac_m365_graph.business_case_type_production_adapters
+from nac_bff import azure_activation_contract, azure_activation_facade
 
-        self.assertNotIn("nac_bff.azure_activation_runner", sys.modules)
-        self.assertEqual(
-            azure_activation_contract.PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
-            PLATFORM_ERROR_CODE,
+assert "nac_bff.azure_activation_runner" not in sys.modules
+assert azure_activation_contract.PLATFORM_SECURITY_BACKEND_UNAVAILABLE == "PLATFORM_SECURITY_BACKEND_UNAVAILABLE"
+assert callable(azure_activation_facade.platform_blocked_payload)
+"""
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = str(SRC_ROOT)
+        result = subprocess.run(
+            [sys.executable, "-c", probe],
+            cwd=REPO_ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
-        self.assertTrue(callable(azure_activation_facade.platform_blocked_payload))
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_platform_payload_is_exact_and_redacted(self) -> None:
         from nac_bff.azure_activation_facade import platform_blocked_payload

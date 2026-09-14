@@ -18,6 +18,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_cli import cli as nac_cli  # noqa: E402
+from nac_bff.azure_activation_contract import LiveActivationRequest  # noqa: E402
 
 
 HASH = "a" * 64
@@ -388,7 +389,7 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
         self.assertIs(kwargs["execution_port"], factory.return_value)
         self.assertEqual(
             kwargs["request"],
-            _FakeRequest(
+            LiveActivationRequest(
                 expected_activation_hash=HASH,
                 owner_approval_reference=APPROVAL_REFERENCE,
                 approval_body_sha256=BODY_HASH,
