@@ -1,6 +1,12 @@
 # Windows Light Runner – Design-Spec
 
-Status: Design freigegeben, Implementierung ausstehend
+> **Abgelöst:** Diese historische Windows-Live-Konzeption ist für den aktuellen
+> Lieferumfang durch [Issue #744](https://github.com/notariat8/NaC/issues/744)
+> und die [Windows-Offline-CLI-Spec](2026-09-14-windows-offline-cli-portability-design.md)
+> abgelöst. Windows ist aktuell ausschließlich offline unterstützt; Live-
+> Aktivierung, Recovery und Reconciliation bleiben geblockt.
+
+Status: Abgelöst durch Issue #744 und die Windows-Offline-CLI-Spec
 Letzte Änderung: 2026-08-09
 Führendes Issue: (wird mit Implementierung verlinkt)
 

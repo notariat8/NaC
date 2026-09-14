@@ -3180,6 +3180,15 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.append("--owner-approved")
         if args.format == "json":
             script_args.append("--json")
+        if args.teams_sharepoint_command in {
+            "validate",
+            "plan",
+            "bpmn-viewer-plan",
+        }:
+            return _run_python_script_main(
+                repo_root / "scripts" / "provision_teams_sharepoint_graph.py",
+                script_args,
+            )
         child_env = _m365_teams_sharepoint_child_env(repo_root, args)
         if args.teams_sharepoint_command == "mcp-stdio":
             result = subprocess.run(
@@ -3207,6 +3216,26 @@ def command_m365(args: argparse.Namespace) -> int:
         return result.returncode
 
     raise AssertionError(f"Unknown Microsoft 365 command: {args.m365_command}")
+
+
+def _run_python_script_main(script_path: Path, arguments: list[str]) -> int:
+    """Run a portable offline compatibility script without a child process."""
+
+    module_name = "_nac_portable_m365_offline_cli"
+    specification = importlib.util.spec_from_file_location(module_name, script_path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("portable offline command module is unavailable")
+    module = importlib.util.module_from_spec(specification)
+    previous_argv = sys.argv
+    try:
+        sys.argv = [str(script_path), *arguments]
+        specification.loader.exec_module(module)
+        entrypoint = getattr(module, "main", None)
+        if not callable(entrypoint):
+            raise RuntimeError("portable offline command entrypoint is unavailable")
+        return int(entrypoint())
+    finally:
+        sys.argv = previous_argv
 
 
 def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[dict[str, Any], int]:
@@ -7927,6 +7956,24 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    if any(
+        command_index(effective_argv) is not None
+        for command_index in (
+            _bff_azure_activate_live_command_index,
+            _bff_azure_activation_interruption_command_index,
+            _bff_azure_function_deployment_command_index,
+            _bff_azure_activation_recovery_command_index,
+        )
+    ):
+        from nac_bff.azure_activation_contract import (
+            platform_security_backend_available,
+        )
+
+        if not platform_security_backend_available():
+            from nac_bff.azure_activation_facade import platform_blocked_payload
+
+            print(json.dumps(platform_blocked_payload(), sort_keys=True))
+            return 2
     performance_acceptance_index = _bff_performance_acceptance_command_index(
         effective_argv
     )
@@ -8436,7 +8483,7 @@ def _add_bff_azure_owner_binding_arguments(
 
 
 def _live_activation_request_from_args(args: argparse.Namespace):
-    from nac_bff.azure_activation_runner import LiveActivationRequest
+    from nac_bff.azure_activation_contract import LiveActivationRequest
 
     return LiveActivationRequest(
         expected_activation_hash=args.expected_activation_hash,
@@ -8589,6 +8636,8 @@ def _run_bff_azure_activation_interruption_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
+        )
+        from nac_bff.azure_activation_facade import (
             build_interruption_reconciliation_ports,
         )
         from nac_bff.azure_interruption_reconciliation import (
@@ -8783,6 +8832,8 @@ def _run_bff_azure_function_deployment_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
+        )
+        from nac_bff.azure_activation_facade import (
             build_function_deployment_reconciliation_ports,
         )
         from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
@@ -8905,7 +8956,7 @@ def _run_bff_azure_activation_recovery_command(
         return _emit_bff_azure_activation_error("OWNER_GATE_CLOSED", output_format)
     args = parser.parse_args(command_argv)
     try:
-        from nac_bff.azure_activation_runner import (
+        from nac_bff.azure_activation_facade import (
             reconcile_azure_bff_live_activation_lock,
         )
 
@@ -8968,14 +9019,15 @@ def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) ->
         return 2
 
     try:
-        from nac_bff.azure_activation_composition import build_live_activation_execution_port
+        from nac_bff.azure_activation_facade import (
+            build_live_activation_execution_port,
+            run_azure_bff_live_activation,
+        )
         from nac_bff.azure_activation_provisioner_bootstrap import (
             build_activation_provisioner_bootstrap,
         )
         from nac_bff.azure_activation_runner import (
             DEFAULT_OUTPUT_ROOT,
-            LiveActivationRequest,
-            run_azure_bff_live_activation,
         )
     except Exception:
         return _emit_bff_azure_activation_error(

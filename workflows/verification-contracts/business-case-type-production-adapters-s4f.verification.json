@@ -6,6 +6,7 @@
   "appliesWhen": {
     "paths": [
       "src/nac_m365_graph/business_case_type_production_adapters.py",
+      "src/nac_bff/azure_activation_contract.py",
       "src/nac_runtime/sqlite_evidence_staging_outbox.py",
       "src/nac_cli/cli.py",
       "scripts/validate_business_case_type_production_adapters.py",
@@ -13,6 +14,7 @@
       "tests/test_sqlite_evidence_staging_outbox.py",
       "tests/test_business_case_type_production_adapters_contract.py",
       "tests/test_business_case_type_production_adapters_cli.py",
+      "tests/test_windows_offline_cli_portability.py",
       "workflows/contracts/business-case-type-production-adapters-s4f.contract.json",
       "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json"
     ]
@@ -41,6 +43,7 @@
     "Local SQLite staging survives restart, binds routing columns to hash-bound event content and exposes no completion, promotion, acknowledgement or cleanup authority.",
     "PostgreSQL promotion/ack/retention/local cleanup, broker, signature anchor, identity readback, synced-directory detection, WORM transport and irreversible lock remain blockers.",
     "Output makes no production-readiness, runtime-composition or live-authorization claim.",
+    "Windows imports the adapters offline but blocks sealed GitHub execution with PLATFORM_SECURITY_BACKEND_UNAVAILABLE before credential, state, lock, subprocess, network, tenant or provider access.",
     "Independent base...head review has no unresolved P1 or P2 findings."
   ],
   "invariants": [

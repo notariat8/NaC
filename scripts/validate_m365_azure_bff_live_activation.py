@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -591,7 +592,7 @@ SMART_DETECTION_FUNCTION_AST_SHA256 = {
 }
 SAFETY_REWORK_ACCEPTANCE_IDS = [f"AC-{index:03d}" for index in range(1, 7)]
 AZURE_CLI_SEALED_RUNTIME_SOURCE_SHA256 = (
-    "abb29c644a90edc018f2cdcfdaa0c08ba23251f51f25847aad2662771fa6d0f3"
+    "448d94cccd41516bd8b0f99e14b938182540dac0d793fb9a0f90337750fbbfd3"
 )
 AZURE_CLI_SEALED_BOOTSTRAP_SOURCE_SHA256 = (
     "f524792afe964a24669e34c08fd741e5e6ee783834cf8b6b81dc38b724981f59"
@@ -1547,6 +1548,11 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_m365_azure_bff_live_activation_negative_paths",
 )
 
+WINDOWS_BEHAVIOR_TEST_MODULES = (
+    "tests.test_windows_offline_cli_portability",
+    "tests.test_spfx_bff_catalog_readback_regression",
+)
+
 
 def main() -> int:
     errors = validate(REPO_ROOT)
@@ -1576,8 +1582,13 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     current = env.get("PYTHONPATH")
     env["PYTHONPATH"] = src if not current else os.pathsep.join((src, current))
     try:
+        modules = (
+            WINDOWS_BEHAVIOR_TEST_MODULES
+            if os.name == "nt"
+            else BEHAVIOR_TEST_MODULES
+        )
         completed = subprocess.run(
-            [sys.executable, "-m", "unittest", *BEHAVIOR_TEST_MODULES],
+            [sys.executable, "-m", "unittest", *modules],
             cwd=repo_root,
             env=env,
             check=False,
@@ -1597,6 +1608,315 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     return []
 
 
+def _validate_windows_portability(
+    repo_root: Path, errors: list[str]
+) -> None:
+    required_paths = (
+        Path("src/nac_bff/azure_activation_contract.py"),
+        Path("src/nac_bff/azure_activation_facade.py"),
+        Path("tests/test_windows_offline_cli_portability.py"),
+        Path(".github/workflows/windows-portability.yml"),
+    )
+    for relative_path in required_paths:
+        if not (repo_root / relative_path).is_file():
+            errors.append(f"Windows portability source missing: {relative_path}")
+
+    workflow_path = repo_root / ".github/workflows/windows-portability.yml"
+    try:
+        workflow_text = workflow_path.read_text(encoding="utf-8")
+        workflow = yaml.safe_load(workflow_text)
+    except (OSError, yaml.YAMLError):
+        errors.append("Windows portability workflow is unreadable")
+        return
+    jobs = workflow.get("jobs") if isinstance(workflow, dict) else None
+    job = jobs.get("windows-offline-cli") if isinstance(jobs, dict) else None
+    steps = job.get("steps") if isinstance(job, dict) else None
+    run_commands = [
+        step.get("run")
+        for step in steps or []
+        if isinstance(step, dict) and isinstance(step.get("run"), str)
+    ]
+    exact_test_command = (
+        "python -m unittest tests.test_windows_offline_cli_portability "
+        "tests.test_spfx_bff_catalog_readback_regression"
+    )
+    if not isinstance(workflow, dict) or workflow.get("name") != "NaC Windows Portability":
+        errors.append("Windows portability workflow name differs")
+    for trigger in ("push", "pull_request", "workflow_dispatch"):
+        if not re.search(rf"(?m)^  {re.escape(trigger)}:\s*$", workflow_text):
+            errors.append(f"Windows portability workflow trigger missing: {trigger}")
+    if not isinstance(job, dict) or job.get("runs-on") != "windows-latest":
+        errors.append("Windows portability runner differs")
+    if exact_test_command not in run_commands:
+        errors.append("Windows portability exact test command missing")
+    if 'python-version: "3.11"' not in workflow_text:
+        errors.append("Windows portability Python 3.11 pin missing")
+    if "uses: actions/checkout@v7" not in workflow_text:
+        errors.append("Windows portability checkout pin differs")
+    if "uses: actions/setup-python@v6" not in workflow_text:
+        errors.append("Windows portability setup-python pin differs")
+    if not re.search(r"(?m)^permissions:\s*\n  contents: read\s*$", workflow_text):
+        errors.append("Windows portability read-only permissions missing")
+    if "persist-credentials: false" not in workflow_text:
+        errors.append("Windows portability checkout credentials must not persist")
+    forbidden_markers = (
+        "continue-on-error",
+        "secrets.",
+        "secrets[",
+        "azure/login",
+        "m365 login",
+        "az login",
+        "bff-azure-activate-live",
+        "bff-azure-activation-recovery",
+        "bff-azure-activation-interruption-reconcile",
+        "bff-azure-function-deployment-reconcile",
+    )
+    for marker in forbidden_markers:
+        if marker in workflow_text:
+            errors.append(f"Windows portability workflow contains forbidden marker: {marker}")
+    if re.search(r"\bsecrets\s*(?:\.|\[)", workflow_text, flags=re.IGNORECASE):
+        errors.append("Windows portability workflow contains forbidden secret expression")
+    if re.search(r"(?m)^\s+paths(?:-ignore)?:", workflow_text):
+        errors.append("Windows portability workflow must not use path filters")
+
+    test_path = repo_root / "tests/test_windows_offline_cli_portability.py"
+    try:
+        test_text = test_path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    try:
+        test_tree = ast.parse(test_text)
+    except SyntaxError:
+        errors.append("Windows portability tests are not valid Python")
+        return
+    test_functions = {
+        node.name: ast.get_source_segment(test_text, node) or ""
+        for node in ast.walk(test_tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    live_commands: set[str] = set()
+    for node in test_tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "LIVE_COMMANDS" for target in node.targets):
+            continue
+        if isinstance(node.value, (ast.Tuple, ast.List)):
+            live_commands = {
+                element.value
+                for element in node.value.elts
+                if isinstance(element, ast.Constant) and isinstance(element.value, str)
+            }
+    required_live_commands = {
+        "bff-azure-activate-live",
+        "bff-azure-activation-recovery",
+        "bff-azure-activation-interruption-reconcile",
+        "bff-azure-function-deployment-reconcile",
+    }
+    for command in sorted(required_live_commands - live_commands):
+        errors.append(f"Windows portability exact live command missing: {command}")
+    required_test_markers = (
+        "bff-azure-activate-live",
+        "bff-azure-activation-recovery",
+        "bff-azure-activation-interruption-reconcile",
+        "bff-azure-function-deployment-reconcile",
+        "run_azure_bff_live_activation",
+        "reconcile_azure_bff_live_activation_lock",
+        "build_live_activation_execution_port",
+        "build_interruption_reconciliation_ports",
+        "build_function_deployment_reconciliation_ports",
+        '"credential"',
+        '"state"',
+        '"lock"',
+        '"subprocess"',
+        '"network"',
+        '"tenant"',
+        '"provider"',
+    )
+    for marker in required_test_markers:
+        if marker not in test_text:
+            errors.append(f"Windows portability test marker missing: {marker}")
+
+    required_child_tests = (
+        "test_help_smokes_run_with_isolated_synthetic_environment",
+        "test_offline_m365_commands_use_only_synthetic_repo_artifacts",
+        "test_live_child_ignores_forged_platform_hints_before_all_side_effects",
+    )
+    for function_name in required_child_tests:
+        function_source = test_functions.get(function_name, "")
+        if not function_source:
+            errors.append(f"Windows portability child test missing: {function_name}")
+            continue
+        for marker in (
+            "_guarded_child_environment",
+            "subprocess.run",
+            "_assert_child_import_trace_is_offline",
+        ):
+            if marker not in function_source:
+                errors.append(
+                    f"Windows portability child test lacks enforced guard: "
+                    f"{function_name}:{marker}"
+                )
+
+    guard_source = test_functions.get("_install_child_guards", "")
+    for marker in (
+        "builtins.open = guarded_open",
+        "io.open = guarded_open",
+        "os.open = guarded_os_open",
+        "builtins.__import__ = guarded_import",
+        "subprocess.run = blocked",
+        "subprocess.Popen = blocked",
+        "socket.create_connection = blocked",
+        "urllib.request.urlopen = blocked",
+        "atexit.register(write_import_trace)",
+        "nac_bff.azure_activation_runner",
+        "nac_bff.azure_activation_composition",
+    ):
+        if marker not in guard_source:
+            errors.append(f"Windows portability child guard missing: {marker}")
+
+    embedded_guard_source = next(
+        (
+            node.value
+            for node in ast.walk(test_tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and "def blocked(*args, **kwargs):" in node.value
+            and "atexit.register(write_import_trace)" in node.value
+        ),
+        None,
+    )
+    if embedded_guard_source is None:
+        errors.append("Windows portability embedded child guard program missing")
+    else:
+        try:
+            embedded_guard_tree = ast.parse(embedded_guard_source)
+        except SyntaxError:
+            errors.append("Windows portability embedded child guard program is invalid")
+        else:
+            embedded_functions = {
+                node.name: node
+                for node in ast.walk(embedded_guard_tree)
+                if isinstance(node, ast.FunctionDef)
+            }
+            blocked_node = embedded_functions.get("blocked")
+            blocked_body = blocked_node.body if blocked_node is not None else []
+            blocked_raise = blocked_body[0] if len(blocked_body) == 1 else None
+            blocked_exception = (
+                blocked_raise.exc if isinstance(blocked_raise, ast.Raise) else None
+            )
+            if not (
+                isinstance(blocked_exception, ast.Call)
+                and isinstance(blocked_exception.func, ast.Name)
+                and blocked_exception.func.id == "AssertionError"
+                and len(blocked_exception.args) == 1
+                and isinstance(blocked_exception.args[0], ast.Constant)
+                and blocked_exception.args[0].value
+                == "network-or-subprocess-access"
+                and not blocked_exception.keywords
+            ):
+                errors.append("Windows portability child blocker is not fail-closed")
+            for function_name, required_calls in {
+                "guarded_open": {"_reject_private_path", "_real_open"},
+                "guarded_os_open": {"_reject_private_path", "_real_os_open"},
+            }.items():
+                function_node = embedded_functions.get(function_name)
+                body = function_node.body if function_node is not None else []
+                direct_calls: set[str] = set()
+                if len(body) == 2:
+                    first_call = body[0].value if isinstance(body[0], ast.Expr) else None
+                    second_call = body[1].value if isinstance(body[1], ast.Return) else None
+                    for call in (first_call, second_call):
+                        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name):
+                            direct_calls.add(call.func.id)
+                if direct_calls != required_calls:
+                    errors.append(
+                        f"Windows portability child file guard differs: {function_name}"
+                    )
+            import_guard_node = embedded_functions.get("guarded_import")
+            if import_guard_node is None or not any(
+                isinstance(node, ast.Raise) for node in ast.walk(import_guard_node)
+            ):
+                errors.append("Windows portability child import guard is not fail-closed")
+
+    environment_source = test_functions.get("_guarded_child_environment", "")
+    for marker in (
+        '"NAC_PLATFORM": "linux"',
+        '"NAC_OS_NAME": "posix"',
+        '"NAC_PLATFORM_SECURITY_BACKEND": "enabled"',
+        '"NAC_ALLOW_WINDOWS_LIVE": "1"',
+    ):
+        if marker not in environment_source:
+            errors.append(f"Windows portability forged platform hint missing: {marker}")
+
+    facade_test_source = test_functions.get(
+        "test_python_live_facade_blocks_all_side_effect_categories", ""
+    )
+    facade_test_node = next(
+        (
+            node
+            for node in ast.walk(test_tree)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "test_python_live_facade_blocks_all_side_effect_categories"
+        ),
+        None,
+    )
+    facade_edges: set[str] = set()
+    if facade_test_node is not None:
+        for node in ast.walk(facade_test_node):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "edges" for target in node.targets):
+                continue
+            if isinstance(node.value, (ast.Tuple, ast.List)):
+                facade_edges = {
+                    element.attr
+                    for element in node.value.elts
+                    if isinstance(element, ast.Attribute)
+                }
+    required_facade_edges = {
+        "run_azure_bff_live_activation",
+        "reconcile_azure_bff_live_activation_lock",
+        "build_live_activation_execution_port",
+        "build_interruption_reconciliation_ports",
+        "build_function_deployment_reconciliation_ports",
+    }
+    for edge in sorted(required_facade_edges - facade_edges):
+        errors.append(f"Windows portability exact facade edge missing: {edge}")
+    for marker in (
+        "for guard in guards.values()",
+        "fake_runner.run_azure_bff_live_activation = touch_all_side_effects",
+        "fake_runner.reconcile_azure_bff_live_activation_lock = touch_all_side_effects",
+        "fake_composition.build_live_activation_execution_port = touch_all_side_effects",
+        "fake_composition.build_interruption_reconciliation_ports = touch_all_side_effects",
+        "fake_composition.build_function_deployment_reconciliation_ports = touch_all_side_effects",
+        "guard.assert_not_called()",
+    ):
+        if marker not in facade_test_source:
+            errors.append(f"Windows portability facade guard wiring missing: {marker}")
+
+    facade_path = repo_root / "src/nac_bff/azure_activation_facade.py"
+    try:
+        facade_text = facade_path.read_text(encoding="utf-8")
+        facade_tree = ast.parse(facade_text)
+    except (OSError, SyntaxError):
+        errors.append("Windows portability facade is unreadable")
+        return
+    facade_functions = {
+        node.name: ast.get_source_segment(facade_text, node) or ""
+        for node in ast.walk(facade_tree)
+        if isinstance(node, ast.FunctionDef)
+    }
+    payload_source = facade_functions.get("platform_blocked_payload", "")
+    for marker in (
+        '"schema_version": PLATFORM_BOUNDARY_SCHEMA_VERSION',
+        '"status": "BLOCKED"',
+        '"error": {"code": PLATFORM_SECURITY_BACKEND_UNAVAILABLE}',
+        '"writes_started": False',
+    ):
+        if marker not in payload_source:
+            errors.append(f"Windows portability exact blocked payload differs: {marker}")
+
+
 def validate(repo_root: Path) -> list[str]:
     errors: list[str] = []
     domain = _read_json(repo_root / DOMAIN_PATH, "domain contract", errors)
@@ -1613,6 +1933,7 @@ def validate(repo_root: Path) -> list[str]:
     _validate_interruption_runtime_protocol(repo_root, errors)
     _validate_documented_interruption_commands(repo_root, errors)
     _validate_source_and_test_markers(repo_root, errors)
+    _validate_windows_portability(repo_root, errors)
     _validate_spfx_hermetic_build_evidence(repo_root, errors)
     return errors
 
@@ -1884,7 +2205,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             )
             expected_runtime_binding = {
                 "runtime_executable_bytes_mode": (
-                    "platform_native_verified_execution"
+                    "linux_sealed_memfd_and_proc_fd_only"
                 ),
                 "node_runtime_bundle_digest_fields": [
                     "m365_cli_sha256",
@@ -1897,15 +2218,15 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "runtime_unmanifested_or_changed_module_execution_allowed": False,
                 "runtime_native_node_addons_allowed": False,
                 "runtime_module_symlinks_allowed": False,
-                "linux_memfd_and_proc_fd_required": False,
+                "linux_memfd_and_proc_fd_required": True,
                 "azure_cli_runtime_bundle_digest_field": (
                     "azure_cli_toolchain_sha256"
                 ),
                 "azure_cli_runtime_bytes_mode": (
-                    "platform_native_handle_verified_subprocess"
+                    "linux_sealed_memfd_subprocess"
                 ),
                 "azure_cli_original_wrapper_execution_allowed": False,
-                "azure_cli_private_user_and_mount_namespace_required": False,
+                "azure_cli_private_user_and_mount_namespace_required": True,
                 "azure_cli_namespace_unavailable_behavior": (
                     "fail_closed_before_provider_request"
                 ),
@@ -2068,6 +2389,19 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 errors.append(
                     "domain sealed toolchain runtime binding differs"
                 )
+            if toolchain.get("windows_light_runner") != {
+                "enabled": False,
+                "support_mode": "offline_only",
+                "live_activation": "blocked",
+                "recovery": "blocked",
+                "reconciliation": "blocked",
+                "stable_error_code": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
+                "writes_started": False,
+                "minimum_os": "Windows 11",
+                "wsl_required": False,
+                "container_required": False,
+            }:
+                errors.append("domain Windows offline-only boundary differs")
 
     function_deploy_step = next(
         (
@@ -4347,7 +4681,7 @@ def _validate_sealed_runtime_account_binding(
         ):
             raise ValueError("bootstrap source is not uniquely bound")
         bootstrap_source = bootstrap_assignments[0]
-        expected_outer_shape = ['from __future__ import annotations', 'import hashlib', 'import json', 'import os', 'import platform', 'from dataclasses import dataclass', 'from pathlib import Path, PurePosixPath', 'import stat', 'import tempfile', 'import zipfile', 'invalid:Try', 'assign:_IS_WINDOWS', 'assign:_IS_LINUX', 'assign:_CHUNK_SIZE', 'assign:_TAMPER_EXIT', 'assign:_ISOLATION_EXIT', 'class:SealedAzureCliRuntime', 'function:prepare_sealed_azure_cli_runtime', 'function:sealed_runtime_failure_code', 'function:_package_manifest', 'function:_read_regular_file', 'function:_trusted_directory', 'function:_sealed_package_memfd', 'function:_sealed_memfd', 'function:_stat_signature', 'function:_digest_update', 'assign:_BOOTSTRAP_SOURCE']
+        expected_outer_shape = ['from __future__ import annotations', 'import hashlib', 'import json', 'import os', 'from dataclasses import dataclass', 'from pathlib import Path, PurePosixPath', 'import stat', 'import sys', 'import tempfile', 'import zipfile', 'invalid:Try', 'assign:_IS_WINDOWS', 'assign:_IS_LINUX', 'assign:_CHUNK_SIZE', 'assign:_TAMPER_EXIT', 'assign:_ISOLATION_EXIT', 'class:SealedAzureCliRuntime', 'function:prepare_sealed_azure_cli_runtime', 'function:sealed_runtime_failure_code', 'function:_package_manifest', 'function:_read_regular_file', 'function:_trusted_directory', 'function:_sealed_package_memfd', 'function:_sealed_memfd', 'function:_stat_signature', 'function:_digest_update', 'assign:_BOOTSTRAP_SOURCE']
         if _outer_module_shape(outer_tree) != expected_outer_shape:
             raise ValueError("outer module shape differs")
         final_outer_statement = outer_tree.body[-1] if outer_tree.body else None
@@ -4360,7 +4694,7 @@ def _validate_sealed_runtime_account_binding(
             raise ValueError("bootstrap source is not the final outer binding")
         expected_outer_assignments = {
             "_IS_WINDOWS": "os.name == 'nt'",
-            "_IS_LINUX": "platform.system() == 'Linux'",
+            "_IS_LINUX": "os.name == 'posix' and sys.platform == 'linux'",
             "_CHUNK_SIZE": "1024 * 1024",
             "_TAMPER_EXIT": "86",
             "_ISOLATION_EXIT": "87",

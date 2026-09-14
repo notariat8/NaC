@@ -1,0 +1,29 @@
+name: NaC Windows Portability
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-offline-cli:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install NaC
+        run: python -m pip install --disable-pip-version-check -e .
+
+      - name: Verify portable offline CLI and SPFx readback
+        run: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression

@@ -118,6 +118,14 @@
     "azureCallsExact": 0,
     "tenantWritesExact": 0
   },
+  "platformBoundary": {
+    "portableImportOnWindows": true,
+    "linuxSecurityBackendRequiredForSealedExecution": true,
+    "windowsLiveExecutionAllowed": false,
+    "pathFallbackAllowed": false,
+    "stableErrorCodeExact": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
+    "blockedBeforeCredentialStateLockSubprocessNetworkTenantOrProviderAccess": true
+  },
   "outOfScopeExact": [
     "azure_blob_worm_deployment_or_lock",
     "broker_selection_or_deployment",

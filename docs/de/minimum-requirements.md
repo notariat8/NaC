@@ -1,5 +1,17 @@
 # Mindestvoraussetzungen
 
+## M365-/SPFx-Plattformgrenze
+
+| Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
+| --- | --- | --- |
+| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
+| Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
+
+Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
+nicht für Live-Ausführung freischalten.
+
 Status: verbindliche Day-0-Baseline
 Letzte inhaltliche Anpassung: 2026-05-15
 

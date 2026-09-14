@@ -125,6 +125,14 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
             "azureCallsExact": 0,
             "tenantWritesExact": 0,
         },
+        "platformBoundary": {
+            "portableImportOnWindows": True,
+            "linuxSecurityBackendRequiredForSealedExecution": True,
+            "windowsLiveExecutionAllowed": False,
+            "pathFallbackAllowed": False,
+            "stableErrorCodeExact": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
+            "blockedBeforeCredentialStateLockSubprocessNetworkTenantOrProviderAccess": True,
+        },
     }
     for section, expected in exact_sections.items():
         if contract.get(section) != expected:
@@ -206,6 +214,7 @@ def validate_verification_contract(contract: dict[str, Any]) -> list[str]:
         "identity readback",
         "irreversible lock",
         "no production-readiness",
+        "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
     ):
         if marker not in evidence:
             errors.append(f"verification.requiredEvidence:{marker}")

@@ -15,9 +15,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
-_IS_WINDOWS = os.name == "nt"
-
 from nac_bff.azure_activation import FUNCTION_APP, LOCATION, RESOURCE_GROUP
+from nac_bff.azure_activation_contract import (
+    PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
+    platform_security_backend_available,
+)
 from nac_bff.azure_interruption_contract import (
     BICEP_BASELINE_EXACT,
     RESOURCE_GROUP_ONLY,
@@ -1473,6 +1475,13 @@ def _run_azure_cli(
 ) -> dict[str, object]:
     """Internal executor; Monitor authority is not exposed by the public API."""
 
+    if not platform_security_backend_available():
+        return _command_result(
+            ok=False,
+            code=PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
+            command=None,
+        )
+
     if (
         _performance_infrastructure_rest_authority
         is _PERFORMANCE_INFRASTRUCTURE_REST_AUTHORITY
@@ -1560,15 +1569,6 @@ def _run_azure_cli(
             ok=False,
             code="AZURE_CLI_TIMEOUT_INVALID",
             command=family,
-        )
-
-    if _IS_WINDOWS:
-        return _run_azure_cli_win(
-            command, family,
-            binary=resolved_binary,
-            environ=environ,
-            timeout_seconds=timeout_seconds,
-            bound_artifacts=bound_artifacts,
         )
 
     azure_argv = [*command]
@@ -1806,57 +1806,6 @@ def check_azure_cli_readiness(
         subscription_ready=subscription_ready,
         state_ready=state_ready,
     )
-
-
-def _run_azure_cli_win(
-    argv: list[str],
-    family: tuple[str, ...],
-    *,
-    binary: Path,
-    environ: Mapping[str, str] | None,
-    timeout_seconds: float,
-    bound_artifacts: Mapping[str, tuple[Path, str]] | None = None,
-) -> dict[str, object]:
-    """Windows: direct subprocess without sealed runtime."""
-    values = dict(os.environ if environ is None else environ)
-    azure_argv = [*argv]
-    if not any(
-        token == "--subscription" or token.startswith("--subscription=")
-        for token in argv
-    ):
-        azure_argv.extend(["--subscription", EXPECTED_SUBSCRIPTION_ID])
-    azure_argv.extend(["--output", "json", "--only-show-errors"])
-    if bound_artifacts:
-        replacements = {}
-        for argument, (path, expected) in bound_artifacts.items():
-            actual = hashlib.sha256(path.read_bytes()).hexdigest()
-            if actual != expected:
-                return _command_result(ok=False, code="AZURE_CLI_ARTIFACT_MISMATCH", command=family)
-            replacements[argument] = str(path)
-        azure_argv = [replacements.get(token, token) for token in azure_argv]
-    try:
-        result = subprocess.run(
-            [str(binary)] + azure_argv,
-            shell=False,
-            text=True,
-            capture_output=True,
-            check=False,
-            env=values,
-            timeout=timeout_seconds,
-        )
-    except subprocess.TimeoutExpired:
-        return _command_result(ok=False, code="AZURE_CLI_TIMEOUT", command=family)
-    except OSError:
-        return _command_result(ok=False, code="AZURE_CLI_EXECUTION_FAILED", command=family)
-    if result.returncode != 0:
-        if isinstance(result.stderr, str) and "DeploymentNotFound" in result.stderr:
-            return _command_result(ok=False, code="AZURE_RESOURCE_NOT_FOUND", command=family)
-        return _command_result(ok=False, code="AZURE_CLI_NONZERO_EXIT", command=family)
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return _command_result(ok=False, code="AZURE_CLI_OUTPUT_INVALID", command=family)
-    return _command_result(ok=True, code="AZURE_CLI_OK", command=family, data=data)
 
 
 def _azure_cloud_config_boundary(

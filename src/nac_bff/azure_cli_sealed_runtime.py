@@ -3,10 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import platform
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import stat
+import sys
 import tempfile
 import zipfile
 
@@ -17,7 +17,7 @@ except ModuleNotFoundError:
     _HAS_FCNTL = False
 
 _IS_WINDOWS = os.name == "nt"
-_IS_LINUX = platform.system() == "Linux"
+_IS_LINUX = os.name == "posix" and sys.platform == "linux"
 
 _CHUNK_SIZE = 1024 * 1024
 _TAMPER_EXIT = 86

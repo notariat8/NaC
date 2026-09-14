@@ -64,6 +64,15 @@ function_deployment_reconciliation_acceptance_ids:
   - AC-739-R4
   - AC-739-R5
   - AC-739-R6
+windows_offline_portability_issue: https://github.com/notariat8/NaC/issues/744
+windows_offline_portability_acceptance_ids:
+  - AC-744-01
+  - AC-744-02
+  - AC-744-03
+  - AC-744-04
+  - AC-744-05
+  - AC-744-06
+  - AC-744-07
 arm_operation_normalization_issue: https://github.com/notariat8/NaC/issues/727
 arm_operation_normalization_acceptance_ids:
   - AC-727-01
@@ -95,6 +104,8 @@ applies_when:
     - src/nac_bff/azure_activation_provisioner_bootstrap.py
     - src/nac_bff/azure_activation_owner_gate.py
     - src/nac_bff/azure_activation_attestations.py
+    - src/nac_bff/azure_activation_contract.py
+    - src/nac_bff/azure_activation_facade.py
     - src/nac_bff/azure_activation_composition.py
     - src/nac_bff/azure_activation_runner.py
     - src/nac_bff/azure_interruption_reconciliation.py
@@ -102,6 +113,7 @@ applies_when:
     - src/nac_bff/azure_interruption_contract.py
     - src/nac_bff/azure_interruption_baseline.py
     - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_live_commands_win.py
     - src/nac_bff/azure_cli_sealed_runtime.py
     - src/nac_bff/graph_activation.py
     - src/nac_bff/live_synthetic_workspace.py
@@ -120,6 +132,8 @@ applies_when:
     - tests/test_nac_bff_live_synthetic_workspace.py
     - tests/test_m365_spfx_site_deployment.py
     - tests/test_m365_mvp_test_environment_deploy.py
+    - tests/test_windows_offline_cli_portability.py
+    - .github/workflows/windows-portability.yml
     - workflows/contracts/m365-azure-bff-activation-plan.contract.json
     - workflows/contracts/m365-azure-bff-live-activation.contract.json
     - workflows/contracts/teams-sharepoint-graph-data-plane.contract.json
@@ -162,6 +176,7 @@ required_context:
 
 checks:
   - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_baseline tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --format json
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-interruption-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference <immutable-issue-632-comment-url> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason <non-empty-owner-reason> --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --confirm-terminalize-and-release --terminalization-action TERMINALIZE_AND_RELEASE_LOCK_ONLY --interrupted-step ensure_resource_group --terminalization-approval-reference <immutable-issue-717-comment-url> --terminalization-approval-body-sha256 <64-lowercase-hex> --state-sha256 <64-lowercase-hex> --ledger-head-sha256 <64-lowercase-hex> --target-lock-sha256 <64-lowercase-hex> --legacy-lock-sha256 <64-lowercase-hex> --legacy-host-lock-sha256 <64-lowercase-hex> --provider-observation-sha256 <64-lowercase-hex> --format json
