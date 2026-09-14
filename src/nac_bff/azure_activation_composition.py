@@ -75,7 +75,7 @@ from .azure_activation import (
     WORKSPACE_ID,
     build_azure_bff_activation_plan,
 )
-from .azure_activation_runner import (
+from .azure_activation_contract import (
     ActivationContext,
     ActivationStepError,
     LiveActivationRequest,

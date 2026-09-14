@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import os
@@ -16,7 +15,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
+try:
+    import fcntl as _fcntl
+except ImportError:
+    _fcntl = None
+
 from notary_kg.business_case_type_mutation import canonical_hash
+from nac_bff.azure_activation_contract import (
+    PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
+    platform_security_backend_available,
+)
 
 from .auth import (
     CertificateClientCredentialsTokenProvider,
@@ -148,6 +156,10 @@ class GhCliIssueCommentPort:
         environ: Mapping[str, str] | None = None,
         runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
+        if not platform_security_backend_available():
+            raise ProductionAdapterError(
+                PLATFORM_SECURITY_BACKEND_UNAVAILABLE
+            )
         descriptor = _open_trusted_executable(binary, expected_binary_sha256)
         os.close(descriptor)
         self._binary = binary
@@ -577,7 +589,8 @@ def _open_trusted_executable(path: Path, expected_sha256: str) -> int:
         or os.name != "posix"
         or not Path("/proc/self/fd").is_dir()
         or not hasattr(os, "memfd_create")
-        or not hasattr(fcntl, "F_ADD_SEALS")
+        or _fcntl is None
+        or not hasattr(_fcntl, "F_ADD_SEALS")
     ):
         raise ValueError("github_cli_binding_invalid")
     source_descriptor: int | None = None
@@ -618,13 +631,13 @@ def _open_trusted_executable(path: Path, expected_sha256: str) -> int:
             offset += os.write(sealed_descriptor, payload[offset:])
         os.fchmod(sealed_descriptor, 0o500)
         required_seals = (
-            fcntl.F_SEAL_WRITE
-            | fcntl.F_SEAL_GROW
-            | fcntl.F_SEAL_SHRINK
-            | fcntl.F_SEAL_SEAL
+            _fcntl.F_SEAL_WRITE
+            | _fcntl.F_SEAL_GROW
+            | _fcntl.F_SEAL_SHRINK
+            | _fcntl.F_SEAL_SEAL
         )
-        fcntl.fcntl(sealed_descriptor, fcntl.F_ADD_SEALS, required_seals)
-        if fcntl.fcntl(sealed_descriptor, fcntl.F_GET_SEALS) != required_seals:
+        _fcntl.fcntl(sealed_descriptor, _fcntl.F_ADD_SEALS, required_seals)
+        if _fcntl.fcntl(sealed_descriptor, _fcntl.F_GET_SEALS) != required_seals:
             raise ValueError("github_cli_binding_invalid")
         os.lseek(sealed_descriptor, 0, os.SEEK_SET)
     except (OSError, ValueError):

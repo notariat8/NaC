@@ -14,9 +14,15 @@ import shutil
 import stat
 import subprocess
 import tempfile
-from typing import Any, Callable, Protocol
+from typing import Any, Callable
 
 from .azure_activation import build_azure_bff_activation_plan
+from .azure_activation_contract import (
+    ActivationContext,
+    ActivationExecutionPort,
+    ActivationStepError,
+    LiveActivationRequest,
+)
 
 
 SCHEMA_VERSION = "nac.m365-azure-bff-live-activation-evidence/v0.1"
@@ -133,74 +139,6 @@ _QUARANTINED_AMBIGUOUS_CODES = frozenset(
         "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
     }
 )
-
-
-class ActivationExecutionPort(Protocol):
-    def verify_prewrite(
-        self, context: "ActivationContext", request: "LiveActivationRequest"
-    ) -> dict[str, Any]: ...
-
-    def execute_step(
-        self, step_id: str, context: "ActivationContext"
-    ) -> dict[str, Any]: ...
-
-
-class ActivationStepError(RuntimeError):
-    def __init__(self, code: str) -> None:
-        safe_code = _safe_error_code(code)
-        super().__init__(safe_code)
-        self.code = safe_code
-
-
-@dataclass(frozen=True, slots=True)
-class LiveActivationRequest:
-    expected_activation_hash: str
-    approved_commit: str
-    approved_tree: str
-    owner_approval_reference: str
-    approval_body_sha256: str
-    azure_cli_toolchain_sha256: str
-    m365_cli_sha256: str
-    m365_node_sha256: str
-    build_python_sha256: str
-    build_node_sha256: str
-    build_npm_cli_sha256: str
-    gh_cli_sha256: str
-    provisioner_certificate_sha256: str
-    provisioner_bootstrap_binding_sha256: str
-    reason: str
-    correlation_id: str
-    owner_approved: bool
-    execute_live_activation: bool
-    resume: bool = False
-
-    @property
-    def toolchain_attestations(self) -> dict[str, str]:
-        return {
-            "azure_cli_toolchain_sha256": self.azure_cli_toolchain_sha256,
-            "m365_cli_sha256": self.m365_cli_sha256,
-            "m365_node_sha256": self.m365_node_sha256,
-            "build_python_sha256": self.build_python_sha256,
-            "build_node_sha256": self.build_node_sha256,
-            "build_npm_cli_sha256": self.build_npm_cli_sha256,
-            "gh_cli_sha256": self.gh_cli_sha256,
-            "provisioner_certificate_sha256": self.provisioner_certificate_sha256,
-        }
-
-    @property
-    def toolchain_attestations_sha256(self) -> str:
-        return _sha256_json(self.toolchain_attestations)
-
-
-@dataclass(frozen=True, slots=True)
-class ActivationContext:
-    repo_root: Path
-    run_dir: Path
-    correlation_reference_sha256: str
-    reason_sha256: str
-    activation_hash: str
-    approved_commit: str
-    approved_tree: str
 
 
 def run_azure_bff_live_activation(

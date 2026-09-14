@@ -10,7 +10,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_bff.azure_activation_composition import _spfx_deployment_failure_code
-from nac_bff.azure_activation_runner import ActivationStepError
+from nac_bff.azure_activation_contract import ActivationStepError
 from nac_m365_graph.spfx_site_deployment import (
     APPROVED_WEB_API_PERMISSION_REQUESTS,
     _normalize_catalog_permissions,

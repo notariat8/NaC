@@ -1,5 +1,17 @@
 # Minimum Requirements
 
+## M365/SPFx Platform Boundary
+
+| Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
+| --- | --- | --- |
+| Windows 11 with Python 3.11 | supported | blocked with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` |
+| Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
+| Other or unknown platform | where the individual offline command is portable | blocked |
+
+Platform detection uses trusted runtime properties only. CLI arguments,
+environment variables and configuration cannot enable live execution on
+Windows.
+
 Status: binding day-0 baseline
 Last content update: 2026-05-15
 

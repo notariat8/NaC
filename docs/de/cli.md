@@ -2,6 +2,19 @@
 
 Status: erste zentrale CLI umgesetzt am 2026-05-19
 
+## Plattformgrenze für M365/SPFx
+
+| Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
+| --- | --- | --- |
+| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
+| Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
+
+Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
+nicht für Live-Ausführung freischalten. Die verbindliche Ausgestaltung steht
+in der [Windows-Offline-CLI-Spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md).
+
 ## Idee
 
 Die NaC-CLI ist nicht die Produktoberfläche für das Notariat. Sie ist die

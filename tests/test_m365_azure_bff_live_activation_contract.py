@@ -56,6 +56,20 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
+    def test_windows_live_contract_weakening_fails_closed(self) -> None:
+        payload = self._domain()
+        windows = payload["consolidated_owner_gate"][
+            "toolchain_attestation_binding"
+        ]["windows_light_runner"]
+        windows["enabled"] = True
+        windows["live_activation"] = "allowed"
+        self._write_domain(payload)
+
+        self.assertIn(
+            "domain Windows offline-only boundary differs",
+            validator.validate(self.root),
+        )
+
     def test_interruption_cli_owner_gate_mutation_fails(self) -> None:
         path = self.root / validator.CLI_PATH
         source = path.read_text(encoding="utf-8")
@@ -1030,13 +1044,18 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         ) as process:
             self.assertEqual(validator._run_behavioral_tests(REPO_ROOT), [])
         argv = process.call_args.args[0]
+        expected_modules = (
+            validator.WINDOWS_BEHAVIOR_TEST_MODULES
+            if os.name == "nt"
+            else validator.BEHAVIOR_TEST_MODULES
+        )
         self.assertEqual(
             argv,
             [
                 validator.sys.executable,
                 "-m",
                 "unittest",
-                *validator.BEHAVIOR_TEST_MODULES,
+                *expected_modules,
             ],
         )
         self.assertFalse(process.call_args.kwargs["check"])
@@ -1079,6 +1098,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.VERIFICATION_PATH,
             validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
             validator.INTERRUPTION_BASELINE_TEMPLATE_PATH,
+            Path("src/nac_bff/azure_activation_contract.py"),
+            Path("src/nac_bff/azure_activation_facade.py"),
+            Path("tests/test_windows_offline_cli_portability.py"),
+            Path(".github/workflows/windows-portability.yml"),
         ):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
