@@ -1,6 +1,6 @@
 # Windows-Offline-CLI-Portabilität
 
-Status: Design freigegeben, interne Reviews bestanden, Owner-Spec-Freigabe ausstehend
+Status: Spec und Implementierungsplan vom Owner freigegeben, Implementierung läuft
 
 Datum: 14. September 2026
 Führendes Issue: [#744](https://github.com/notariat8/NaC/issues/744)
@@ -11,6 +11,7 @@ spec_id: windows-offline-cli-portability
 leading_issue: https://github.com/notariat8/NaC/issues/744
 risk_gate: Human Approval
 delivery_mode: Protected PR
+plan: docs/de/superpowers/plans/2026-09-14-windows-offline-cli-portability.md
 review_gates:
   - Security
   - Platform
@@ -26,7 +27,9 @@ acceptance_ids:
   - AC-744-07
 validation_commands:
   - python -m unittest tests.test_windows_offline_cli_portability
-  - python -m unittest tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_live_commands tests.test_business_case_type_production_adapters
+  - python -m unittest tests.test_spfx_bff_catalog_readback_regression
+  - python -m unittest tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_m365_azure_bff_live_activation_contract tests.test_spfx_bff_catalog_readback_regression
+  - python -m unittest tests.test_business_case_type_production_adapters tests.test_business_case_type_production_adapters_contract tests.test_business_case_type_production_adapters_cli tests.test_sqlite_evidence_staging_outbox
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -70,6 +73,9 @@ gestartet oder Netzwerk- beziehungsweise Providerzugriffe ausgeführt werden.
 - Portable, nebenwirkungsfreie Aktivierungsverträge und Capability-Prüfung in
   einem plattformneutral importierbaren Modul unter
   [`src/nac_bff/`](../../../../src/nac_bff/).
+- Portable Callable-Fassade für die öffentlichen Live-, Recovery- und
+  Reconciliation-Einstiege; sie blockiert zuerst und lädt das Linux-Backend
+  nur nach erfolgreicher Capability-Prüfung dynamisch.
 - Dynamisches Laden des bestehenden POSIX-Live-Backends ausschließlich hinter
   einer erfolgreich bestandenen Plattform- und Capability-Prüfung.
 - Importierbarkeit der zentralen [`nac`-CLI](../../../../src/nac_cli/cli.py)
@@ -116,6 +122,13 @@ Die Plattformentscheidung stammt ausschließlich aus vertrauenswürdiger
 Runtime-Erkennung. Request-, CLI-, Konfigurations- und Umgebungswerte dürfen
 sie weder überschreiben noch eine POSIX-Fähigkeit vortäuschen.
 
+Ein separates portables Callable-Modul, vorgesehen als
+`src/nac_bff/azure_activation_facade.py`, besitzt die in der Negativtestmatrix
+benannten öffentlichen Funktionen. Es liefert auf nicht zugelassenen
+Plattformen den gemeinsamen Fehler, ohne Runner oder Composition zu laden. Auf
+zugelassenem Linux importiert es die bestehenden Implementierungen erst nach
+der Capability-Prüfung.
+
 ### POSIX-Live-Backend
 
 Der bestehende gehärtete Live-Runner bleibt das einzige Backend für
@@ -123,6 +136,10 @@ Live-Aktivierung und Recovery. Seine Sicherheitsgarantien bleiben unverändert.
 Die Kompositionsschicht lädt ihn dynamisch und nur dann, wenn die portable
 Capability-Prüfung die aktuelle Plattform zugelassen hat. Ein Fehler beim
 Laden oder Validieren des Backends ist terminal und fail-closed.
+Die Runtime-Zulassung ist enger als der Modulname: Live ist nur auf Linux mit
+allen erforderlichen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und
+No-follow-Fähigkeiten zulässig. Andere POSIX-Systeme gelten ohne vollständigen
+Nachweis wie Windows als nicht live-fähig.
 
 ### Produktionsadapter
 
@@ -181,15 +198,18 @@ Die endliche Negativtestmatrix umfasst diese öffentlichen Kanten:
 | CLI Recovery | `m365 teams-sharepoint bff-azure-activation-recovery` |
 | CLI Reconciliation | `m365 teams-sharepoint bff-azure-activation-interruption-reconcile` |
 | CLI Reconciliation | `m365 teams-sharepoint bff-azure-function-deployment-reconcile` |
-| Python Live | `run_azure_bff_live_activation` und `build_live_activation_execution_port` |
-| Python Recovery | `reconcile_azure_bff_live_activation_lock` |
-| Python Reconciliation | `build_interruption_reconciliation_ports` und `build_function_deployment_reconciliation_ports` |
+| Python Live | `nac_bff.azure_activation_facade`: `run_azure_bff_live_activation` und `build_live_activation_execution_port` |
+| Python Recovery | `nac_bff.azure_activation_facade`: `reconcile_azure_bff_live_activation_lock` |
+| Python Reconciliation | `nac_bff.azure_activation_facade`: `build_interruption_reconciliation_ports` und `build_function_deployment_reconciliation_ports` |
 
 Jeder Fall erwartet denselben Fehlercode, `writes_started is False`, exakt
 null Aufrufe aller verbotenen Seitenkanten und ein nicht in `sys.modules`
 geladenes POSIX-Backend. Ein manipulierter Plattform- oder Capability-Hinweis
 aus Request, CLI, Konfiguration oder Umgebung ist als zusätzlicher Negativfall
 enthalten.
+Bei den vier CLI-Kanten hat diese Plattformablehnung Vorrang vor fehlenden
+Owner-Argumenten, Parser-Detailvalidierung und Approval-Prüfung. Damit ist die
+Fehlerpräzedenz auf Windows für jeden erkannten öffentlichen Befehl identisch.
 
 ### POSIX-Live
 
@@ -204,6 +224,9 @@ enthalten.
 ## Fehler- und Sicherheitsvertrag
 
 - Der öffentliche Plattformfehler ist stabil, strukturiert und redigiert.
+- Der CLI-Payload besitzt für diese Plattformablehnung exakt die Schlüssel
+  `schema_version`, `status`, `error` und `writes_started`; `status` ist
+  `BLOCKED` und `error` enthält ausschließlich `code`.
 - Der Fehler enthält keine Pfade zu Credentials, Tokens, Umgebungswerte oder
   Providerantworten.
 - `writes_started` ist für den Windows-Plattformabbruch immer `false`.
