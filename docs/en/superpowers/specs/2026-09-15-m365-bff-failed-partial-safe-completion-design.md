@@ -1,9 +1,10 @@
 # Safe Completion of the Partial M365 BFF Activation
 
-Status: Draft for owner review
+Status: Specification approved by owner; implementation plan blocked by role decision
 
 Date: 15 September 2026
 Leading issue: [#746](https://github.com/notariat8/NaC/issues/746)
+Implementation plan: [Safe Completion of the Partial M365 BFF Activation](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -11,6 +12,7 @@ spec_id: m365-bff-failed-partial-safe-completion
 leading_issue: https://github.com/notariat8/NaC/issues/746
 risk_gate: Human Approval
 delivery_mode: Protected PR
+plan: docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
 review_gates:
   - External Service
   - Human Approval
@@ -20,6 +22,8 @@ review_gates:
 affected_artifacts:
   - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
   - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
 acceptance_ids:
   - AC-746-01
   - AC-746-02
@@ -33,9 +37,12 @@ validation_commands:
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
+  - python scripts/validate_ai_sbom.py
+  - python scripts/validate_ai_sbom_export_mapping.py
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability
-  - PYTHONPATH=src python3 -m unittest tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+  - PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -44,8 +51,8 @@ validation_commands:
   - git log --oneline origin/main..HEAD
   - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
-  - gh pr checks --watch
-  - gh pr checks --json name,state,workflow,bucket
+  - gh pr checks 747 --watch
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
 ```
 
 ## Purpose and Boundary
@@ -314,6 +321,7 @@ deployment, evidence that cannot be redacted, or failed independent review.
 
 ## Review Gate
 
-After independent scope, policy, validation, and language review, the owner must
-explicitly approve this written specification. Only then is the DE/EN
-implementation plan created and added to the manifest.
+The owner approved this specification state at commit
+`012c441b74cfd1a1de61fd3d48ed09282aaba328`. The linked DE/EN implementation
+plan now goes through `plan -> review -> fix`. This approval replaces neither
+the local issue-#739 release gate nor the issue-#632 gate for a later live run.
