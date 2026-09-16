@@ -93,9 +93,12 @@ REQUIRED_PREFLIGHT_CASES = {
     "ledger_head_sha256", "target_lock_sha256", "legacy_lock_sha256",
     "legacy_host_lock_sha256", "provider_observation_sha256", "failed_step",
     "failed_step_started_at_utc", "prepared_inputs_manifest_sha256",
-    "function_package_sha256", "reconciler_commit", "reconciler_tree",
-    "reconciler_toolchain_sha256", "required_owner_login", "correlation_id",
+    "function_package_sha256", "correlation_id",
     "target", "binary", "owner_permissions", "nofollow_path", "concurrent_lock",
+}
+REQUIRED_APPROVAL_REBINDING_CASES = {
+    "reconciler_commit", "reconciler_tree", "reconciler_toolchain_sha256",
+    "required_owner_login",
 }
 REQUIRED_PROVIDER_BLOCK_CASES = {
     "deployment_applied", "missing_field", "unknown_field", "snapshot_drift",
@@ -139,6 +142,7 @@ EXPECTED_PR_FILES = {
     ".github/workflows/windows-portability.yml",
     "AGENTS.md",
     "agent-context/index.json",
+    "assets/docs/generic-workbench/VIS-721-manifest.json",
     "docs/de/role-model.md",
     "docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md",
     "docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md",
@@ -189,6 +193,7 @@ REQUIRED_NEW_TEST_METHODS = {
     "test_protected_evidence_loader_rejects_unsafe_posix_inputs",
     "test_protected_identity_resolver_requires_three_same_principal_accounts",
     "test_preflight_binding_drift_matrix_blocks_before_provider",
+    "test_reconciler_binding_changes_require_new_approval_after_bounded_reads",
     "test_double_snapshot_accepts_only_stable_not_applied",
     "test_provider_decision_block_matrix_has_zero_writes",
     "test_redaction_sentinel_matrix_never_reaches_any_sink",
@@ -698,6 +703,18 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
                 errors.append(f"identity_gate_cases.{case_id} must reject invalid requirement evidence")
     _validate_block_cases(errors, contract.get("approval_replay_cases"), REQUIRED_APPROVAL_REPLAY_CASES, "approval_replay_cases", {"expected_status": "BLOCKED", "mutation_count": 0})
     _validate_block_cases(errors, contract.get("preflight_binding_cases"), REQUIRED_PREFLIGHT_CASES, "preflight_binding_cases", {"expected_status": "BLOCKED", "provider_read_snapshot_count": 0, "total_write_count": 0})
+    _validate_block_cases(
+        errors,
+        contract.get("approval_rebinding_cases"),
+        REQUIRED_APPROVAL_REBINDING_CASES,
+        "approval_rebinding_cases",
+        {
+            "expected_status": "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED",
+            "provider_read_snapshot_count": 2,
+            "current_operation_write_count": 0,
+            "new_owner_approval_required": True,
+        },
+    )
     _validate_block_cases(errors, {key: value for key, value in (contract.get("provider_decision_cases") or {}).items() if key != "stable_not_applied"}, REQUIRED_PROVIDER_BLOCK_CASES, "provider_decision_cases", {"expected_status": "BLOCKED", "provider_write_count": 0, "tenant_write_count": 0, "credential_write_count": 0})
     _validate_block_cases(errors, contract.get("redaction_sentinel_cases"), REQUIRED_REDACTION_SINKS, "redaction_sentinel_cases", {"sentinel_reaches_sink": False, "unknown_field_status": "BLOCKED"})
     _validate_block_cases(errors, contract.get("credential_boundary_cases"), REQUIRED_CREDENTIAL_CASES, "credential_boundary_cases", {"expected_status": "BLOCKED", "credential_write_count": 0, "host_state_unchanged": True})

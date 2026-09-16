@@ -185,16 +185,18 @@ preflight_binding_cases:
   failed_step_started_at_utc: *preflight_block
   prepared_inputs_manifest_sha256: *preflight_block
   function_package_sha256: *preflight_block
-  reconciler_commit: *preflight_block
-  reconciler_tree: *preflight_block
-  reconciler_toolchain_sha256: *preflight_block
-  required_owner_login: *preflight_block
   correlation_id: *preflight_block
   target: *preflight_block
   binary: *preflight_block
   owner_permissions: *preflight_block
   nofollow_path: *preflight_block
   concurrent_lock: *preflight_block
+
+approval_rebinding_cases:
+  reconciler_commit: &approval_rebinding {expected_status: FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED, provider_read_snapshot_count: 2, current_operation_write_count: 0, new_owner_approval_required: true}
+  reconciler_tree: *approval_rebinding
+  reconciler_toolchain_sha256: *approval_rebinding
+  required_owner_login: *approval_rebinding
 
 provider_decision_cases:
   stable_not_applied: {expected_status: FUNCTION_DEPLOYMENT_NOT_APPLIED, snapshots: 2, provider_write_count: 0, tenant_write_count: 0, credential_write_count: 0}
@@ -346,6 +348,7 @@ pr_scope:
     - .github/workflows/windows-portability.yml
     - AGENTS.md
     - agent-context/index.json
+    - assets/docs/generic-workbench/VIS-721-manifest.json
     - docs/de/role-model.md
     - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
     - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md

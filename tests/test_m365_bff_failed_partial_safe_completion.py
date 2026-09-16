@@ -627,9 +627,21 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 self.assertEqual(cases[case_id]["provider_read_snapshot_count"], 0)
                 self.assertEqual(cases[case_id]["total_write_count"], 0)
 
+    def test_reconciler_binding_changes_require_new_approval_after_bounded_reads(self) -> None:
+        cases = self.contract["approval_rebinding_cases"]
+        for case_id in validator.REQUIRED_APPROVAL_REBINDING_CASES:
+            with self.subTest(case_id=case_id):
+                self.assertEqual(
+                    cases[case_id]["expected_status"],
+                    "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED",
+                )
+                self.assertEqual(cases[case_id]["provider_read_snapshot_count"], 2)
+                self.assertEqual(cases[case_id]["current_operation_write_count"], 0)
+                self.assertIs(cases[case_id]["new_owner_approval_required"], True)
+
         fixture = self._production_fixture()
         if fixture is None:
-            self.skipTest("POSIX production fixture required for runtime drift checks")
+            self.skipTest("POSIX production fixture required for approval rebinding checks")
         from tests.test_nac_bff_azure_function_deployment_reconciliation import (
             _ObservationPort,
         )
@@ -644,10 +656,25 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
         for case_id, changes in mutations.items():
             port = _ObservationPort()
             fixture.binding = replace(original, **changes)
+            tracked = (
+                fixture.run_dir / "resume-state.redacted.json",
+                fixture.run_dir / "activation.redacted.json",
+                fixture.run_dir / "prepared" / "prepared-inputs.redacted.json",
+                fixture.run_dir / "prepared" / "nac-bff-function.zip",
+                *fixture._lock_paths(),
+            )
+            before = {path: path.read_bytes() for path in tracked}
             with self.subTest(runtime_case=case_id):
                 result = fixture._inspect(port)
-                self.assertEqual(result["status"], "BLOCKED")
-                self.assertEqual(port.calls, [])
+                self.assertEqual(
+                    result["status"], "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED"
+                )
+                self.assertEqual(
+                    result["error"]["code"],
+                    "FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED",
+                )
+                self.assertEqual(len(port.calls), 2)
+                self.assertEqual(before, {path: path.read_bytes() for path in tracked})
         fixture.binding = original
 
     def test_double_snapshot_accepts_only_stable_not_applied(self) -> None:

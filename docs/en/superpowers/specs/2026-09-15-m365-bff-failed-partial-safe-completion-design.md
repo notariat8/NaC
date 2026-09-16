@@ -24,6 +24,7 @@ affected_artifacts:
   - .github/workflows/windows-portability.yml
   - agent-context/index.json
   - AGENTS.md
+  - assets/docs/generic-workbench/VIS-721-manifest.json
   - docs/de/role-model.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
   - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
