@@ -15,7 +15,6 @@
   "principals": [
     {
       "principal_id": "person:oliver-funk",
-      "display_name": "Oliver Funk",
       "technical_role_ids": [
         "prozessverantwortung"
       ],

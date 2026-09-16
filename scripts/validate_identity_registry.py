@@ -10,6 +10,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "policies" / "github-identity-registry.json"
 ACCOUNT_ID_RE = re.compile(r"^[a-z0-9-]+:[^:]+$")
 PRINCIPAL_ID_RE = re.compile(r"^person:[a-z0-9][a-z0-9-]*$")
+OWNER_SOLO_APPROVAL = "OWNER_SOLO_APPROVAL"
+BLOCKED_SINGLE_PRINCIPAL = "BLOCKED_SINGLE_PRINCIPAL"
 
 
 def validate_registry(registry: dict[str, Any]) -> list[str]:
@@ -94,6 +96,23 @@ def satisfies_four_eyes(registry: dict[str, Any], first_account_id: str, second_
     first = resolve_principal(registry, first_account_id)
     second = resolve_principal(registry, second_account_id)
     return bool(first and second and first["principal_id"] != second["principal_id"])
+
+
+def evaluate_approval_mode(
+    registry: dict[str, Any],
+    *,
+    operator_account_id: str,
+    external_two_person_required: bool = False,
+    requirement_citation: str | None = None,
+) -> dict[str, str]:
+    operator = resolve_principal(registry, operator_account_id)
+    if operator is None:
+        return {"status": "BLOCKED_IDENTITY_UNRESOLVED", "approval_mode": "none"}
+    if external_two_person_required:
+        if not isinstance(requirement_citation, str) or not requirement_citation.strip():
+            return {"status": "BLOCKED_REQUIREMENT_CITATION_MISSING", "approval_mode": "none"}
+        return {"status": BLOCKED_SINGLE_PRINCIPAL, "approval_mode": "four_eyes_required"}
+    return {"status": OWNER_SOLO_APPROVAL, "approval_mode": "solo_owner", "four_eyes_satisfied": "false"}
 
 
 def main() -> int:

@@ -30,6 +30,31 @@ class IdentityRegistryTests(unittest.TestCase):
             )
         )
 
+    def test_solo_owner_is_allowed_without_external_two_person_requirement(self) -> None:
+        result = validate_identity_registry.evaluate_approval_mode(
+            self.registry, operator_account_id="github:ofunk"
+        )
+        self.assertEqual(result["status"], "OWNER_SOLO_APPROVAL")
+        self.assertEqual(result["four_eyes_satisfied"], "false")
+
+    def test_external_two_person_requirement_blocks_single_principal(self) -> None:
+        result = validate_identity_registry.evaluate_approval_mode(
+            self.registry,
+            operator_account_id="github:ofunk-nvidia",
+            external_two_person_required=True,
+            requirement_citation="binding-policy:section-4",
+        )
+        self.assertEqual(result["status"], "BLOCKED_SINGLE_PRINCIPAL")
+
+    def test_role_label_without_citation_does_not_create_two_person_gate(self) -> None:
+        result = validate_identity_registry.evaluate_approval_mode(
+            self.registry,
+            operator_account_id="github:ofunk",
+            external_two_person_required=True,
+            requirement_citation="",
+        )
+        self.assertEqual(result["status"], "BLOCKED_REQUIREMENT_CITATION_MISSING")
+
     def test_different_principals_satisfy_four_eyes(self) -> None:
         registry = json.loads(json.dumps(self.registry))
         registry["principals"].append(

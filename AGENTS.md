@@ -78,6 +78,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Provider-qualifizierte Accounts (`<provider>:<login>`) werden in [policies/github-identity-registry.json](policies/github-identity-registry.json) auf stabile `principal_id`-Werte abgebildet. Governance-Rollen und Qualifikationen gehören ausschließlich zum Principal.
 - Vier-Augen-, Funktionstrennungs- und Approver-versus-Operator-Prüfungen vergleichen ausschließlich `principal_id`. Verschiedene Accounts desselben Principals gelten niemals als zwei Personen. Rohe Login-Strings sind keine Governance-Identitäten.
 - Account-Routing und Zugriffsrechte bleiben provider- und kontospezifisch; die gemeinsame Principal-ID erweitert keine Account-Berechtigung.
+- Im Single-Principal-Betrieb ist ohne konkret belegte externe Zwei-Personen-Pflicht `OWNER_SOLO_APPROVAL` zulässig und revisionsfest als Solo-Entscheidung zu dokumentieren, niemals als Vier-Augen-Freigabe.
+- Verlangt eine konkret zitierte gesetzliche, regulatorische, vertragliche oder verbindliche Security-Policy zwei verschiedene natürliche Personen, blockiert das Gate mit `BLOCKED_SINGLE_PRINCIPAL`. Eine Rollenbezeichnung allein ist kein solcher Beleg.
 
 ## Gemeinsame Agenten-Workflows
 
