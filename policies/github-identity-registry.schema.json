@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notariat8.de/schemas/github-identity-registry.schema.json",
+  "type": "object",
+  "required": ["version", "principals", "accounts"],
+  "properties": {
+    "version": { "const": 2 },
+    "principals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["principal_id", "technical_role_ids", "active"],
+        "properties": {
+          "principal_id": { "type": "string", "pattern": "^person:[a-z0-9][a-z0-9-]*$" },
+          "technical_role_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "active": { "type": "boolean" }
+        }
+      }
+    },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["account_id", "provider", "login", "principal_id", "active"],
+        "properties": {
+          "account_id": { "type": "string", "pattern": "^[a-z0-9-]+:[^:]+$" },
+          "provider": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "login": { "type": "string", "minLength": 1 },
+          "principal_id": { "type": "string", "pattern": "^person:[a-z0-9][a-z0-9-]*$" },
+          "active": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

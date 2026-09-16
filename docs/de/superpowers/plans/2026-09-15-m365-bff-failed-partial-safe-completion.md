@@ -438,10 +438,13 @@ dieses Plans, ist aber keine #739-Release- oder #632-Live-Freigabe. Vor der
 späteren Implementierungsabnahme muss die verbindliche GitHub-Identity-Registry
 mit den Gate-Identitäten übereinstimmen und aktive
 `prozessverantwortung` sowie `freigabeverantwortung` nachweisen. Approver und
-ausführender Operator müssen als verschiedene aktive Identitäten gebunden und
-negativ getestet werden. Der aktuelle Unterschied zwischen `ofunk` in der Spec
-und `ofunk-nvidia` in der Registry bleibt bis zu einer Owner-Entscheidung
-`BLOCKED`; weder GitHub-Association noch Spec-Freigabe ersetzen diese Rollen.
+ausführender Operator müssen aus provider-qualifizierten Accounts auf
+unterschiedliche aktive `principal_id`-Werte aufgelöst und negativ getestet
+werden. Die Accounts `github:ofunk` und `github:ofunk-nvidia` gehören zum selben
+Principal; ihre unterschiedlichen Login-Strings erfüllen die Funktionstrennung
+daher niemals. Weder GitHub-Association noch Spec-Freigabe ersetzen die
+erforderlichen Rollen. Für die Implementierungsabnahme bleibt deshalb eine
+zweite qualifizierte Person mit `freigabeverantwortung` erforderlich.
 
 ## Stop Conditions
 

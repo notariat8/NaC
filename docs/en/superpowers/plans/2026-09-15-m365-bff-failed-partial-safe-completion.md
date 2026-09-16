@@ -432,11 +432,14 @@ Specification approval at commit `012c441b...` authorizes writing and reviewing
 this plan, but it is not a #739 release or #632 live approval. Before later
 implementation acceptance, the binding GitHub identity registry must match the
 gate identities and prove active `prozessverantwortung` and
-`freigabeverantwortung`. Approver and executing operator must be bound as
-different active identities and covered by negative tests. The current
-difference between `ofunk` in the specification and `ofunk-nvidia` in the
-registry remains `BLOCKED` pending an owner decision; neither GitHub association
-nor specification approval substitutes for these roles.
+`freigabeverantwortung`. Approver and executing operator must resolve from
+provider-qualified accounts to different active `principal_id` values and be
+covered by negative tests. The accounts `github:ofunk` and
+`github:ofunk-nvidia` resolve to the same principal; their different login
+strings therefore never satisfy separation of duties. Neither GitHub association
+nor specification approval substitutes for the required roles, so
+`freigabeverantwortung` still requires a second qualified principal before
+implementation acceptance.
 
 ## Stop Conditions
 

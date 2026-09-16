@@ -73,6 +73,12 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
 - 8-Brand-Assets für `n8` und künftige `*8`-Repos stammen kanonisch aus `bild8/www-b8` und den veröffentlichten Pfaden unter `https://bild8.de/assets/8/`. Lokale Kopien sind nur für Offline-Oberflächen oder Tests zulässig und müssen mit dieser Quelle synchron bleiben.
 
+## Governance-Identität
+
+- Provider-qualifizierte Accounts (`<provider>:<login>`) werden in [policies/github-identity-registry.json](policies/github-identity-registry.json) auf stabile `principal_id`-Werte abgebildet. Governance-Rollen und Qualifikationen gehören ausschließlich zum Principal.
+- Vier-Augen-, Funktionstrennungs- und Approver-versus-Operator-Prüfungen vergleichen ausschließlich `principal_id`. Verschiedene Accounts desselben Principals gelten niemals als zwei Personen. Rohe Login-Strings sind keine Governance-Identitäten.
+- Account-Routing und Zugriffsrechte bleiben provider- und kontospezifisch; die gemeinsame Principal-ID erweitert keine Account-Berechtigung.
+
 ## Gemeinsame Agenten-Workflows
 
 - Wenn Aufgaben offen formuliert sind, aus einem Issue abgeleitet werden oder mehrere fachlich relevante Lösungswege haben, erst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestätigung einholen, bevor Code geändert wird.

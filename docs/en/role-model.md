@@ -15,6 +15,10 @@ This model ensures that:
 - Every role may self-resolve only within its approved competence.
 - Subject-critical decisions require qualified roles and, where necessary,
   four-eyes approval.
+- Accounts use provider-qualified `<provider>:<login>` IDs and resolve to stable
+  `principal_id` values. Roles and qualifications belong to the principal.
+  Four-eyes approval requires different `principal_id` values; different logins
+  of the same principal do not count as different people.
 
 Example: if a workstation gate fails, nobody has to be a notary to report it.
 A notarial approval still remains with the qualified subject-matter role.
