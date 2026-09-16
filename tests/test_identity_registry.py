@@ -13,26 +13,44 @@ class IdentityRegistryTests(unittest.TestCase):
 
     def test_repository_registry_is_valid(self) -> None:
         self.assertEqual(validate_identity_registry.validate_registry(self.registry), [])
+        self.assertEqual(
+            validate_identity_registry.validate_public_registry_privacy(self.registry), []
+        )
+
+    def test_public_registry_rejects_non_synthetic_identity(self) -> None:
+        registry = json.loads(json.dumps(self.registry))
+        registry["accounts"][0]["login"] = "production-login"
+        self.assertTrue(
+            validate_identity_registry.validate_public_registry_privacy(registry)
+        )
 
     def test_raw_login_is_not_a_governance_identity(self) -> None:
         with self.assertRaisesRegex(ValueError, "raw login"):
-            validate_identity_registry.resolve_principal(self.registry, "ofunk")
+            validate_identity_registry.resolve_principal(
+                self.registry, "owner-example-primary"
+            )
 
     def test_different_github_accounts_resolve_to_same_principal(self) -> None:
-        private = validate_identity_registry.resolve_principal(self.registry, "github:ofunk")
-        professional = validate_identity_registry.resolve_principal(self.registry, "github:ofunk-nvidia")
+        private = validate_identity_registry.resolve_principal(
+            self.registry, "github:owner-example-primary"
+        )
+        professional = validate_identity_registry.resolve_principal(
+            self.registry, "github:owner-example-secondary"
+        )
         self.assertEqual(private["principal_id"], professional["principal_id"])
 
     def test_same_principal_never_satisfies_four_eyes(self) -> None:
         self.assertFalse(
             validate_identity_registry.satisfies_four_eyes(
-                self.registry, "github:ofunk", "github:ofunk-nvidia"
+                self.registry,
+                "github:owner-example-primary",
+                "github:owner-example-secondary",
             )
         )
 
     def test_solo_owner_is_allowed_without_external_two_person_requirement(self) -> None:
         result = validate_identity_registry.evaluate_approval_mode(
-            self.registry, operator_account_id="github:ofunk"
+            self.registry, operator_account_id="github:owner-example-primary"
         )
         self.assertEqual(result["status"], "OWNER_SOLO_APPROVAL")
         self.assertEqual(result["four_eyes_satisfied"], "false")
@@ -40,7 +58,7 @@ class IdentityRegistryTests(unittest.TestCase):
     def test_external_two_person_requirement_blocks_single_principal(self) -> None:
         result = validate_identity_registry.evaluate_approval_mode(
             self.registry,
-            operator_account_id="github:ofunk-nvidia",
+            operator_account_id="github:owner-example-secondary",
             external_two_person_required=True,
             requirement_citation="binding-policy:section-4",
         )
@@ -49,7 +67,7 @@ class IdentityRegistryTests(unittest.TestCase):
     def test_role_label_without_citation_does_not_create_two_person_gate(self) -> None:
         result = validate_identity_registry.evaluate_approval_mode(
             self.registry,
-            operator_account_id="github:ofunk",
+            operator_account_id="github:owner-example-primary",
             external_two_person_required=True,
             requirement_citation="",
         )
@@ -65,7 +83,7 @@ class IdentityRegistryTests(unittest.TestCase):
         )
         self.assertTrue(
             validate_identity_registry.satisfies_four_eyes(
-                registry, "github:ofunk", "github:second-reviewer"
+                registry, "github:owner-example-primary", "github:second-reviewer"
             )
         )
 

@@ -94,6 +94,7 @@ def normalize_role(identity_registry: dict[str, Any], role: str) -> str:
 
 
 def resolve_identity(identity_registry: dict[str, Any], github_login: str) -> dict[str, Any] | None:
+    """Resolve only synthetic public examples; real mappings use a protected resolver."""
     account_id = f"github:{github_login.strip().lower()}"
     account = next(
         (entry for entry in identity_registry.get("accounts", []) if entry.get("account_id", "").lower() == account_id),
@@ -143,7 +144,10 @@ def run_start(
 
     identity = resolve_identity(identity_registry, github_login)
     if not identity:
-        print(f"GitHub Nutzer {github_login!r} ist nicht im Identity-Register.")
+        print(
+            "Die Identität ist nicht in der synthetischen öffentlichen Registry; "
+            "für reale Zuordnungen ist der geschützte externe Resolver erforderlich."
+        )
         return 1
     if not identity.get("active", False):
         print(f"GitHub Nutzer {github_login!r} ist im Identity-Register nicht aktiv.")

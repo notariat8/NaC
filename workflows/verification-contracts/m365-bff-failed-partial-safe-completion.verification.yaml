@@ -76,10 +76,25 @@ commands:
   - {id: diff_patch, platform: post_pr_remote, command: git diff origin/main...HEAD, acceptance_ids: [AC-746-01, AC-746-07, AC-746-08], remote_evidence: [complete base...head patch], scope: pr_747_expected_head, side_effect_class: github_read_only}
   - {id: diff_whitespace, platform: post_pr_remote, command: git diff --check origin/main...HEAD, acceptance_ids: [AC-746-07], remote_evidence: [complete base...head whitespace check], scope: pr_747_expected_head, side_effect_class: github_read_only}
   - {id: pr_checks_watch, platform: post_pr_remote, command: gh pr checks 747 --watch, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [Privacy and Secrets Guard / secret-scan, Privacy and Secrets Guard / privacy-lint, NaC Quality Gate / quality-gate, NaC Windows Portability / windows-offline-cli], scope: pr_747_expected_head, side_effect_class: github_read_only}
-  - {id: pr_checks_enforced, platform: post_pr_remote, command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [exact required check names and successful states], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: pr_checks_enforced, platform: post_pr_remote, command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [exact required check names and successful states], scope: pr_747_expected_head, side_effect_class: github_read_only}
 
 identity_gate:
   registry: policies/github-identity-registry.json
+  public_registry_scope: synthetic_examples_only
+  protected_identity_resolver:
+    required: true
+    schema_version: nac.protected-identity-resolver/v1
+    contract_id: issue-746-owner-account-principal-resolution
+    repository_external: true
+    platform: posix_owner_mode_backend
+    required_owner_mode: "0600"
+    nofollow_atomic_open_required: true
+    duplicate_json_keys_rejected: true
+    maximum_bytes: 131072
+    expected_sha256_required: true
+    exact_known_account_binding_count: 3
+    all_known_accounts_same_principal: true
+    account_identifiers_must_not_enter_repository_or_evidence: true
   required_owner_login_is_transport_only: true
   governance_authority_field: principal_id
   separation_key: principal_id
@@ -110,11 +125,17 @@ identity_gate:
   operator_account_required: true
   owner_solo_evidence:
     required: true
-    source: versioned_repository_identity_registry_and_live_github_owner_comment
-    versioned_identity_registry_required: true
+    source: protected_identity_resolver_and_live_github_owner_comment
+    public_registry_is_synthetic_only: true
+    protected_identity_resolver_required: true
+    protected_identity_resolver_sha256_bound_to_approval: true
     approval_reference_required: true
     approval_body_sha256_required: true
-    provider_qualified_account_required: true
+    provider_qualified_account_input_required: true
+    account_id_sha256_bound_to_approval: true
+    principal_id_sha256_bound_to_approval: true
+    identity_digest_domain_separation: nac-issue-746-<kind>-v1-null-prefix
+    raw_resolver_identity_values_in_evidence: false
     author_association: OWNER
     issue: 746
     pr: 747
@@ -352,8 +373,8 @@ ai_sbom:
   component_id: m365-bff-failed-partial-safe-completion-contract
   human_review_owner: owner_solo_approval_source_bound
   provider_boundary: read_only_contract_only
-  evidence_binding: canonical_hashes_only
-  privacy_boundary: no_credentials_or_raw_provider_runtime_data
+  evidence_binding: protected_resolver_sha256_and_canonical_hashes
+  privacy_boundary: synthetic_public_registry_real_mapping_repo_external
   release_export_enabled: false
 
 side_effect_boundary:

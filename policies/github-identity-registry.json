@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "description": "Source of truth for provider-qualified accounts, stable principals, and governance roles.",
+  "description": "Synthetic public examples for provider-qualified accounts, stable principals, and governance roles. Real mappings belong only in the protected external resolver.",
   "role_aliases": {
     "notar": "notar_fachlich",
     "notarin": "notar_fachlich",
@@ -14,7 +14,7 @@
   },
   "principals": [
     {
-      "principal_id": "person:oliver-funk",
+      "principal_id": "person:owner-example",
       "technical_role_ids": [
         "prozessverantwortung"
       ],
@@ -26,24 +26,24 @@
   ],
   "accounts": [
     {
-      "account_id": "github:ofunk",
+      "account_id": "github:owner-example-primary",
       "provider": "github",
-      "login": "ofunk",
-      "principal_id": "person:oliver-funk",
+      "login": "owner-example-primary",
+      "principal_id": "person:owner-example",
       "active": true
     },
     {
-      "account_id": "github:ofunk-nvidia",
+      "account_id": "github:owner-example-secondary",
       "provider": "github",
-      "login": "ofunk-nvidia",
-      "principal_id": "person:oliver-funk",
+      "login": "owner-example-secondary",
+      "principal_id": "person:owner-example",
       "active": true
     },
     {
-      "account_id": "nvidia-gitlab:ofunk",
+      "account_id": "nvidia-gitlab:owner-example",
       "provider": "nvidia-gitlab",
-      "login": "ofunk",
-      "principal_id": "person:oliver-funk",
+      "login": "owner-example",
+      "principal_id": "person:owner-example",
       "active": true
     }
   ]

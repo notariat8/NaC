@@ -5,6 +5,7 @@ from dataclasses import replace
 import hashlib
 import json
 import os
+import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -95,11 +96,20 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             ],
         }
         final_head = "a" * 40
+        resolver_sha256 = "d" * 64
         operator_account_id = "github:owner-example-primary"
+        operator_account_sha256 = validator.identity_binding_sha256(
+            "account-id", operator_account_id
+        )
+        operator_principal_sha256 = validator.identity_binding_sha256(
+            "principal-id", "person:owner-example"
+        )
         canonical_body = (
             "OWNER_SOLO_APPROVAL\nissue=746\npr=747\n"
-            f"head_sha={final_head}\naccount_id={operator_account_id}\n"
-            "principal_id=person:owner-example\nfour_eyes_satisfied=false"
+            f"head_sha={final_head}\naccount_id_sha256={operator_account_sha256}\n"
+            f"principal_id_sha256={operator_principal_sha256}\n"
+            f"identity_resolver_sha256={resolver_sha256}\n"
+            "four_eyes_satisfied=false"
         )
         same_principal_review = {
             "headRefOid": final_head,
@@ -111,8 +121,9 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 "issue": 746,
                 "pr": 747,
                 "head_sha": final_head,
-                "account_id": operator_account_id,
-                "principal_id": "person:owner-example",
+                "account_id_sha256": operator_account_sha256,
+                "principal_id_sha256": operator_principal_sha256,
+                "identity_resolver_sha256": resolver_sha256,
                 "approval_mode": "OWNER_SOLO_APPROVAL",
                 "four_eyes_satisfied": False,
                 "author_association": "OWNER",
@@ -231,8 +242,9 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
         for field, value in (
             ("issue", 739),
             ("pr", 746),
-            ("account_id", "github:owner-example-secondary"),
-            ("principal_id", "person:other-example"),
+            ("account_id_sha256", "0" * 64),
+            ("principal_id_sha256", "0" * 64),
+            ("identity_resolver_sha256", "0" * 64),
             ("author_association", "MEMBER"),
             ("approval_reference", "https://github.com/notariat8/NaC/issues/739#issuecomment-123456"),
             ("approval_body_sha256", "0" * 64),
@@ -332,20 +344,230 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             label="synthetic approval",
         )
         self.assertIsNone(loaded)
-        self.assertEqual(errors, ["synthetic approval must be stored outside the repository"])
+        if os.name == "nt":
+            self.assertEqual(
+                errors,
+                ["synthetic approval requires the supported POSIX ownership and mode backend"],
+            )
+        else:
+            self.assertEqual(errors, ["synthetic approval must be stored outside the repository"])
+
+    @unittest.skipIf(os.name == "nt", "POSIX protected-file invariants")
+    def test_protected_evidence_loader_rejects_unsafe_posix_inputs(self) -> None:
+        def write_payload(path: str, content: bytes, mode: int = 0o600) -> str:
+            with open(path, "wb") as handle:
+                handle.write(content)
+            os.chmod(path, mode)
+            return hashlib.sha256(content).hexdigest()
+
+        with tempfile.TemporaryDirectory() as directory:
+            valid = os.path.join(directory, "valid.json")
+            valid_bytes = b'{"safe":true}'
+            valid_digest = write_payload(valid, valid_bytes)
+
+            for mode in (0o400, 0o640, 0o700):
+                os.chmod(valid, mode)
+                loaded, errors = validator.load_protected_json(
+                    valid, valid_digest, label="synthetic approval"
+                )
+                with self.subTest(mode=oct(mode)):
+                    self.assertIsNone(loaded)
+                    self.assertEqual(
+                        errors,
+                        ["synthetic approval must be owned by the current user with mode 0600"],
+                    )
+            os.chmod(valid, 0o600)
+
+            unsafe_payloads = (
+                ("oversized.json", b"x" * 131073, "exceeds the bounded resolver size"),
+                ("duplicate.json", b'{"key":1,"key":2}', "must be UTF-8 JSON"),
+                ("non-object.json", b"[]", "must contain a JSON object"),
+                ("invalid-utf8.json", b"\xff", "must be UTF-8 JSON"),
+            )
+            for filename, content, expected in unsafe_payloads:
+                path = os.path.join(directory, filename)
+                digest = write_payload(path, content)
+                loaded, errors = validator.load_protected_json(
+                    path, digest, label="synthetic approval"
+                )
+                with self.subTest(filename=filename):
+                    self.assertIsNone(loaded)
+                    self.assertEqual(errors, [f"synthetic approval {expected}"])
+
+            leaf_link = os.path.join(directory, "leaf-link.json")
+            os.symlink(valid, leaf_link)
+            loaded, errors = validator.load_protected_json(
+                leaf_link, valid_digest, label="synthetic approval"
+            )
+            self.assertIsNone(loaded)
+            self.assertEqual(errors, ["synthetic approval secure open failed"])
+
+            real_parent = os.path.join(directory, "real-parent")
+            os.mkdir(real_parent)
+            nested = os.path.join(real_parent, "nested.json")
+            nested_digest = write_payload(nested, valid_bytes)
+            linked_parent = os.path.join(directory, "linked-parent")
+            os.symlink(real_parent, linked_parent, target_is_directory=True)
+            loaded, errors = validator.load_protected_json(
+                os.path.join(linked_parent, "nested.json"),
+                nested_digest,
+                label="synthetic approval",
+            )
+            self.assertIsNone(loaded)
+            self.assertEqual(errors, ["synthetic approval secure open failed"])
+
+            race_parent = os.path.join(directory, "race-parent")
+            attacker_parent = os.path.join(directory, "attacker-parent")
+            preserved_parent = os.path.join(directory, "preserved-parent")
+            os.mkdir(race_parent)
+            os.mkdir(attacker_parent)
+            race_file = os.path.join(race_parent, "resolver.json")
+            race_digest = write_payload(race_file, valid_bytes)
+            write_payload(
+                os.path.join(attacker_parent, "resolver.json"), b'{"attacker":true}'
+            )
+            real_open = validator.os.open
+            swapped = False
+
+            def swap_parent_before_leaf_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if path == "resolver.json" and kwargs.get("dir_fd") is not None and not swapped:
+                    os.rename(race_parent, preserved_parent)
+                    os.rename(attacker_parent, race_parent)
+                    swapped = True
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch.object(
+                validator.os, "open", side_effect=swap_parent_before_leaf_open
+            ):
+                loaded, errors = validator.load_protected_json(
+                    race_file, race_digest, label="synthetic approval"
+                )
+            self.assertEqual(errors, [])
+            self.assertEqual(loaded, {"safe": True})
+
+            with patch.object(validator.os, "open", side_effect=OSError("sentinel")):
+                loaded, errors = validator.load_protected_json(
+                    valid, valid_digest, label="synthetic approval"
+                )
+            self.assertIsNone(loaded)
+            self.assertEqual(errors, ["synthetic approval secure open failed"])
+
+    def test_protected_identity_resolver_requires_three_same_principal_accounts(self) -> None:
+        accounts = [
+            {
+                "account_id": f"{provider}:{login}",
+                "provider": provider,
+                "login": login,
+                "principal_id": "person:owner-example",
+                "active": True,
+            }
+            for provider, login in (
+                ("github", "owner-example-primary"),
+                ("github", "owner-example-secondary"),
+                ("nvidia-gitlab", "owner-example"),
+            )
+        ]
+        resolver = {
+            "schema_version": "nac.protected-identity-resolver/v1",
+            "contract_id": "issue-746-owner-account-principal-resolution",
+            "known_owner_account_count": 3,
+            "all_known_accounts_same_principal": True,
+            "registry": {
+                "version": 2,
+                "principals": [
+                    {
+                        "principal_id": "person:owner-example",
+                        "technical_role_ids": ["prozessverantwortung"],
+                        "qualifications": ["process_design"],
+                        "active": True,
+                    }
+                ],
+                "accounts": accounts,
+            },
+        }
+        operator, errors = validator.validate_protected_identity_resolver(
+            resolver, "github:owner-example-primary"
+        )
+        self.assertEqual(errors, [])
+        self.assertEqual(operator["principal_id"], "person:owner-example")
+
+        wrong_principal = copy.deepcopy(resolver)
+        wrong_principal["registry"]["principals"].append(
+            {
+                "principal_id": "person:other-example",
+                "technical_role_ids": ["prozessverantwortung"],
+                "qualifications": ["process_design"],
+                "active": True,
+            }
+        )
+        wrong_principal["registry"]["accounts"][1]["principal_id"] = (
+            "person:other-example"
+        )
+        self.assertTrue(
+            validator.validate_protected_identity_resolver(
+                wrong_principal, "github:owner-example-primary"
+            )[1]
+        )
+
+        wrong_count = copy.deepcopy(resolver)
+        wrong_count["registry"]["accounts"].pop()
+        self.assertTrue(
+            validator.validate_protected_identity_resolver(
+                wrong_count, "github:owner-example-primary"
+            )[1]
+        )
+
+        inactive_extra = copy.deepcopy(resolver)
+        inactive_extra["registry"]["accounts"].append(
+            {
+                "account_id": "github:inactive-example",
+                "provider": "github",
+                "login": "inactive-example",
+                "principal_id": "person:owner-example",
+                "active": False,
+            }
+        )
+        self.assertTrue(
+            validator.validate_protected_identity_resolver(
+                inactive_extra, "github:owner-example-primary"
+            )[1]
+        )
+
+        inactive_known = copy.deepcopy(resolver)
+        inactive_known["registry"]["accounts"][2]["active"] = False
+        self.assertTrue(
+            validator.validate_protected_identity_resolver(
+                inactive_known, "github:owner-example-primary"
+            )[1]
+        )
+
+        declared_count_drift = copy.deepcopy(resolver)
+        declared_count_drift["known_owner_account_count"] = 4
+        self.assertTrue(
+            validator.validate_protected_identity_resolver(
+                declared_count_drift, "github:owner-example-primary"
+            )[1]
+        )
 
     def test_owner_comment_loader_verifies_live_canonical_provenance(self) -> None:
         head = "a" * 40
         account_id = "github:owner-example-primary"
+        account_id_sha256 = validator.identity_binding_sha256("account-id", account_id)
         principal_id = "person:owner-example"
+        principal_id_sha256 = validator.identity_binding_sha256(
+            "principal-id", principal_id
+        )
+        resolver_sha256 = "d" * 64
         reference = "https://github.com/notariat8/NaC/issues/746#issuecomment-123456"
         body = (
             "OWNER_SOLO_APPROVAL\n"
             "issue=746\n"
             "pr=747\n"
             f"head_sha={head}\n"
-            f"account_id={account_id}\n"
-            f"principal_id={principal_id}\n"
+            f"account_id_sha256={account_id_sha256}\n"
+            f"principal_id_sha256={principal_id_sha256}\n"
+            f"identity_resolver_sha256={resolver_sha256}\n"
             "four_eyes_satisfied=false"
         )
         valid_comment = {
@@ -372,6 +594,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 expected_head=head,
                 operator_account_id=account_id,
                 operator_principal_id=principal_id,
+                identity_resolver_sha256=resolver_sha256,
             )
         self.assertEqual(errors, [])
         self.assertEqual(approval["head_sha"], head)
@@ -391,6 +614,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                     expected_head=head,
                     operator_account_id=account_id,
                     operator_principal_id=principal_id,
+                    identity_resolver_sha256=resolver_sha256,
                 )
                 self.assertIsNone(approval)
                 self.assertTrue(errors)
@@ -709,11 +933,51 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 errors = validator.verify_pr_checks(
                     expected_pr=747,
                     expected_head_ref="HEAD",
+                    protected_identity_resolver_file="C:/protected/resolver.json",
+                    protected_identity_resolver_sha256="d" * 64,
                     operator_account_id="github:owner-example-primary",
                     owner_solo_approval_reference=None,
                 )
             self.assertEqual(errors, [expected_code])
             self.assertNotIn(sentinel, "\n".join(errors))
+
+    def test_verify_pr_checks_cli_requires_and_forwards_all_identity_inputs(self) -> None:
+        required = {
+            "--protected-identity-resolver-file": "C:/protected/resolver.json",
+            "--protected-identity-resolver-sha256": "d" * 64,
+            "--operator-account-id": "github:owner-example-primary",
+            "--owner-solo-approval-reference": (
+                "https://github.com/notariat8/NaC/issues/746#issuecomment-123456"
+            ),
+        }
+        with patch.object(validator, "validate_contract", side_effect=lambda _contract: []):
+            for omitted in required:
+                argv = ["validator", "--verify-pr-checks"]
+                for option, value in required.items():
+                    if option != omitted:
+                        argv.extend((option, value))
+                with self.subTest(omitted=omitted), patch.object(sys, "argv", list(argv)), patch.object(
+                    validator, "verify_pr_checks"
+                ) as verify, patch("builtins.print"):
+                    self.assertEqual(validator.main(), 1)
+                    verify.assert_not_called()
+
+            argv = ["validator", "--verify-pr-checks"]
+            for option, value in required.items():
+                argv.extend((option, value))
+            with patch.object(sys, "argv", list(argv)), patch.object(
+                validator, "verify_pr_checks", return_value=[]
+            ) as verify, patch("builtins.print") as output:
+                result = validator.main()
+            self.assertEqual(result, 0, output.call_args_list)
+            verify.assert_called_once_with(
+                747,
+                "HEAD",
+                required["--protected-identity-resolver-file"],
+                required["--protected-identity-resolver-sha256"],
+                required["--operator-account-id"],
+                required["--owner-solo-approval-reference"],
+            )
 
     def test_ai_sbom_registers_issue746_agentic_contract_without_release_export(self) -> None:
         sbom = json.loads(validator.AI_SBOM_PATH.read_text(encoding="utf-8"))

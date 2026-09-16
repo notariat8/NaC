@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
 from typing import Any, Iterable
@@ -50,6 +51,13 @@ REQUIRED_PROVENANCE = {
     "issue739_current_trail": "latest_documented_failed_partial_trail",
     "issue743_historical_interruption": "separate_historical_interruption",
 }
+
+
+def identity_binding_sha256(kind: str, value: str) -> str:
+    """Hash a protected identity value without copying it into public evidence."""
+    return hashlib.sha256(
+        f"nac-issue-746-{kind}-v1\0{value}".encode("utf-8")
+    ).hexdigest()
 REQUIRED_GATES = {
     "SPEC_746_APPROVAL": {
         "issue": 746,
@@ -178,6 +186,8 @@ REQUIRED_NEW_TEST_METHODS = {
     "test_provenance_roles_are_distinct_and_not_runtime_state",
     "test_approval_replay_matrix_blocks_before_mutation",
     "test_registry_approval_mode_is_source_bound_before_release",
+    "test_protected_evidence_loader_rejects_unsafe_posix_inputs",
+    "test_protected_identity_resolver_requires_three_same_principal_accounts",
     "test_preflight_binding_drift_matrix_blocks_before_provider",
     "test_double_snapshot_accepts_only_stable_not_applied",
     "test_provider_decision_block_matrix_has_zero_writes",
@@ -191,6 +201,7 @@ REQUIRED_NEW_TEST_METHODS = {
     "test_owner_comment_loader_verifies_live_canonical_provenance",
     "test_unknown_tail_and_wrong_order_block_without_further_release",
     "test_remote_verifier_errors_are_stable_and_redacted",
+    "test_verify_pr_checks_cli_requires_and_forwards_all_identity_inputs",
     "test_required_remote_checks_match_exact_context_names",
     "test_ai_sbom_registers_issue746_agentic_contract_without_release_export",
 }
@@ -281,7 +292,7 @@ EXPECTED_COMMANDS = {
     "diff_patch": _command_signature("post_pr_remote", "git diff origin/main...HEAD", ["AC-746-01", "AC-746-07", "AC-746-08"], ["complete base...head patch"], "pr_747_expected_head", "github_read_only"),
     "diff_whitespace": _command_signature("post_pr_remote", "git diff --check origin/main...HEAD", ["AC-746-07"], ["complete base...head whitespace check"], "pr_747_expected_head", "github_read_only"),
     "pr_checks_watch": _command_signature("post_pr_remote", "gh pr checks 747 --watch", ["AC-746-07", "AC-746-08"], sorted(REQUIRED_REMOTE_CONTEXTS), "pr_747_expected_head", "github_read_only"),
-    "pr_checks_enforced": _command_signature("post_pr_remote", "python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>", ["AC-746-07", "AC-746-08"], ["exact required check names and successful states"], "pr_747_expected_head", "github_read_only"),
+    "pr_checks_enforced": _command_signature("post_pr_remote", "python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>", ["AC-746-07", "AC-746-08"], ["exact required check names and successful states"], "pr_747_expected_head", "github_read_only"),
 }
 
 
@@ -412,8 +423,8 @@ def _validate_ai_sbom(errors: list[str]) -> None:
         "four_eyes_satisfied": False,
         "external_two_person_requirement": "not_applicable_no_cited_source_for_issue_746",
         "provider_boundary": "read_only_contract_only",
-        "evidence_binding": "canonical_hashes_only",
-        "privacy_boundary": "no_credentials_or_raw_provider_runtime_data",
+        "evidence_binding": "protected_resolver_sha256_and_canonical_hashes",
+        "privacy_boundary": "synthetic_public_registry_real_mapping_repo_external",
         "release_export_enabled": False,
     }
     if not isinstance(entry, dict):
@@ -575,6 +586,24 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     if not isinstance(identity_gate, dict):
         errors.append("identity_gate is missing")
     else:
+        if identity_gate.get("public_registry_scope") != "synthetic_examples_only":
+            errors.append("the checked-in identity registry must remain synthetic-only")
+        if identity_gate.get("protected_identity_resolver") != {
+            "required": True,
+            "schema_version": "nac.protected-identity-resolver/v1",
+            "contract_id": "issue-746-owner-account-principal-resolution",
+            "repository_external": True,
+            "platform": "posix_owner_mode_backend",
+            "required_owner_mode": "0600",
+            "nofollow_atomic_open_required": True,
+            "duplicate_json_keys_rejected": True,
+            "maximum_bytes": 131072,
+            "expected_sha256_required": True,
+            "exact_known_account_binding_count": 3,
+            "all_known_accounts_same_principal": True,
+            "account_identifiers_must_not_enter_repository_or_evidence": True,
+        }:
+            errors.append("protected identity resolver contract must remain exact")
         if identity_gate.get("separation_key") != "principal_id":
             errors.append("four-eyes separation must use principal_id")
         if identity_gate.get("owner_solo_authority") != {
@@ -630,11 +659,17 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
             errors.append("operator account must be required for acceptance")
         if identity_gate.get("owner_solo_evidence") != {
             "required": True,
-            "source": "versioned_repository_identity_registry_and_live_github_owner_comment",
-            "versioned_identity_registry_required": True,
+            "source": "protected_identity_resolver_and_live_github_owner_comment",
+            "public_registry_is_synthetic_only": True,
+            "protected_identity_resolver_required": True,
+            "protected_identity_resolver_sha256_bound_to_approval": True,
             "approval_reference_required": True,
             "approval_body_sha256_required": True,
-            "provider_qualified_account_required": True,
+            "provider_qualified_account_input_required": True,
+            "account_id_sha256_bound_to_approval": True,
+            "principal_id_sha256_bound_to_approval": True,
+            "identity_digest_domain_separation": "nac-issue-746-<kind>-v1-null-prefix",
+            "raw_resolver_identity_values_in_evidence": False,
             "author_association": "OWNER",
             "issue": 746,
             "pr": 747,
@@ -799,7 +834,10 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("agent-context verification-contract registry is missing Issue #746")
 
     registry = json.loads(validate_identity_registry.REGISTRY_PATH.read_text(encoding="utf-8"))
-    if validate_identity_registry.validate_registry(registry):
+    if (
+        validate_identity_registry.validate_registry(registry)
+        or validate_identity_registry.validate_public_registry_privacy(registry)
+    ):
         errors.append("identity registry is invalid")
     else:
         accounts_by_principal: dict[str, list[str]] = {}
@@ -926,21 +964,36 @@ def validate_acceptance_roles(
             return ["operator principal lacks the required process qualification"]
         evidence = payload.get("ownerSoloApproval")
         head = payload.get("headRefOid")
+        identity_resolver_sha256 = (
+            evidence.get("identity_resolver_sha256")
+            if isinstance(evidence, dict)
+            else None
+        )
+        if not isinstance(identity_resolver_sha256, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", identity_resolver_sha256
+        ):
+            return ["owner-solo evidence lacks the protected identity resolver digest"]
         canonical_body = (
             "OWNER_SOLO_APPROVAL\n"
             "issue=746\n"
             "pr=747\n"
             f"head_sha={head}\n"
-            f"account_id={operator_account_id}\n"
-            f"principal_id={operator.get('principal_id')}\n"
+            f"account_id_sha256={identity_binding_sha256('account-id', operator_account_id)}\n"
+            f"principal_id_sha256={identity_binding_sha256('principal-id', str(operator.get('principal_id')))}\n"
+            f"identity_resolver_sha256={identity_resolver_sha256}\n"
             "four_eyes_satisfied=false"
         )
         expected_evidence = {
             "issue": 746,
             "pr": 747,
             "head_sha": head,
-            "account_id": operator_account_id,
-            "principal_id": operator.get("principal_id"),
+            "account_id_sha256": identity_binding_sha256(
+                "account-id", operator_account_id
+            ),
+            "principal_id_sha256": identity_binding_sha256(
+                "principal-id", str(operator.get("principal_id"))
+            ),
+            "identity_resolver_sha256": identity_resolver_sha256,
             "approval_mode": validate_identity_registry.OWNER_SOLO_APPROVAL,
             "four_eyes_satisfied": False,
             "author_association": "OWNER",
@@ -1011,33 +1064,134 @@ def load_protected_json(
     path = Path(path_value)
     if not path.is_absolute():
         return None, [f"{label} path must be absolute"]
+    if os.name == "nt":
+        return None, [f"{label} requires the supported POSIX ownership and mode backend"]
+    normalized = Path(os.path.abspath(path_value))
     try:
-        resolved = path.resolve(strict=True)
-    except OSError:
-        return None, [f"{label} file is unavailable"]
-    try:
-        resolved.relative_to(REPO_ROOT.resolve())
+        normalized.relative_to(REPO_ROOT.resolve())
         return None, [f"{label} must be stored outside the repository"]
     except ValueError:
         pass
-    if path.is_symlink() or not resolved.is_file():
-        return None, [f"{label} must be a regular non-symlink file"]
-    if os.name == "nt":
-        return None, [f"{label} requires the supported POSIX ownership and mode backend"]
-    file_stat = resolved.stat()
-    if file_stat.st_uid != os.geteuid() or file_stat.st_mode & 0o077:
-        return None, [f"{label} must be owned by the current user with mode 0600"]
-    payload_bytes = resolved.read_bytes()
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    directory = getattr(os, "O_DIRECTORY", None)
+    if nofollow is None or directory is None:
+        return None, [f"{label} requires the supported POSIX no-follow backend"]
+    directory_descriptor: int | None = None
+    descriptor: int | None = None
+    try:
+        directory_descriptor = os.open("/", os.O_RDONLY | directory | nofollow)
+        components = normalized.parts[1:]
+        if not components:
+            raise OSError("protected path must identify a leaf file")
+        for component in components[:-1]:
+            next_descriptor = os.open(
+                component,
+                os.O_RDONLY | directory | nofollow,
+                dir_fd=directory_descriptor,
+            )
+            os.close(directory_descriptor)
+            directory_descriptor = next_descriptor
+        descriptor = os.open(
+            components[-1],
+            os.O_RDONLY | nofollow,
+            dir_fd=directory_descriptor,
+        )
+    except OSError:
+        if descriptor is not None:
+            os.close(descriptor)
+            descriptor = None
+        if directory_descriptor is not None:
+            os.close(directory_descriptor)
+            directory_descriptor = None
+        return None, [f"{label} secure open failed"]
+    try:
+        file_stat = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(file_stat.st_mode)
+            or file_stat.st_uid != os.geteuid()
+            or stat.S_IMODE(file_stat.st_mode) != 0o600
+        ):
+            return None, [f"{label} must be owned by the current user with mode 0600"]
+        if file_stat.st_size > 131072:
+            return None, [f"{label} exceeds the bounded resolver size"]
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            payload_bytes = handle.read(131073)
+        if len(payload_bytes) > 131072:
+            return None, [f"{label} exceeds the bounded resolver size"]
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory_descriptor is not None:
+            os.close(directory_descriptor)
     actual_sha256 = hashlib.sha256(payload_bytes).hexdigest()
     if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or actual_sha256 != expected_sha256:
         return None, [f"{label} sha256 mismatch"]
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate key")
+            result[key] = value
+        return result
+
     try:
-        payload = json.loads(payload_bytes.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+        payload = json.loads(
+            payload_bytes.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None, [f"{label} must be UTF-8 JSON"]
     if not isinstance(payload, dict):
         return None, [f"{label} must contain a JSON object"]
     return payload, []
+
+
+def validate_protected_identity_resolver(
+    payload: dict[str, Any], operator_account_id: str
+) -> tuple[dict[str, Any] | None, list[str]]:
+    expected_keys = {
+        "schema_version",
+        "contract_id",
+        "known_owner_account_count",
+        "all_known_accounts_same_principal",
+        "registry",
+    }
+    if set(payload) != expected_keys:
+        return None, ["protected identity resolver has an invalid shape"]
+    if (
+        payload.get("schema_version") != "nac.protected-identity-resolver/v1"
+        or payload.get("contract_id")
+        != "issue-746-owner-account-principal-resolution"
+        or payload.get("known_owner_account_count") != 3
+        or payload.get("all_known_accounts_same_principal") is not True
+    ):
+        return None, ["protected identity resolver contract binding is invalid"]
+    registry = payload.get("registry")
+    if not isinstance(registry, dict) or validate_identity_registry.validate_registry(
+        registry
+    ):
+        return None, ["protected identity resolver registry is invalid"]
+    accounts = registry.get("accounts", [])
+    active_accounts = [
+        account
+        for account in accounts
+        if isinstance(account, dict) and account.get("active") is True
+    ]
+    principal_ids = {account.get("principal_id") for account in active_accounts}
+    if len(accounts) != 3 or len(active_accounts) != 3 or len(principal_ids) != 1:
+        return None, ["protected identity resolver must bind exactly three active accounts to one principal"]
+    try:
+        operator = validate_identity_registry.resolve_principal(
+            registry, operator_account_id
+        )
+    except ValueError:
+        operator = None
+    if operator is None or operator.get("principal_id") not in principal_ids:
+        return None, ["protected identity resolver does not resolve the operator"]
+    if "prozessverantwortung" not in operator.get("technical_role_ids", []):
+        return None, ["protected identity resolver principal lacks the process role"]
+    if "process_design" not in operator.get("qualifications", []):
+        return None, ["protected identity resolver principal lacks the process qualification"]
+    return operator, []
 
 
 def fetch_owner_solo_approval(
@@ -1046,7 +1200,10 @@ def fetch_owner_solo_approval(
     expected_head: str,
     operator_account_id: str,
     operator_principal_id: str,
+    identity_resolver_sha256: str,
 ) -> tuple[dict[str, Any] | None, list[str]]:
+    if not re.fullmatch(r"[0-9a-f]{64}", identity_resolver_sha256):
+        return None, ["protected identity resolver digest is invalid"]
     match = re.fullmatch(
         r"https://github\.com/notariat8/NaC/issues/746#issuecomment-([1-9][0-9]*)",
         reference or "",
@@ -1071,8 +1228,9 @@ def fetch_owner_solo_approval(
         "issue=746\n"
         "pr=747\n"
         f"head_sha={expected_head}\n"
-        f"account_id={operator_account_id}\n"
-        f"principal_id={operator_principal_id}\n"
+        f"account_id_sha256={identity_binding_sha256('account-id', operator_account_id)}\n"
+        f"principal_id_sha256={identity_binding_sha256('principal-id', operator_principal_id)}\n"
+        f"identity_resolver_sha256={identity_resolver_sha256}\n"
         "four_eyes_satisfied=false"
     )
     author = comment.get("user") if isinstance(comment, dict) else None
@@ -1089,8 +1247,13 @@ def fetch_owner_solo_approval(
         "issue": 746,
         "pr": 747,
         "head_sha": expected_head,
-        "account_id": operator_account_id,
-        "principal_id": operator_principal_id,
+        "account_id_sha256": identity_binding_sha256(
+            "account-id", operator_account_id
+        ),
+        "principal_id_sha256": identity_binding_sha256(
+            "principal-id", operator_principal_id
+        ),
+        "identity_resolver_sha256": identity_resolver_sha256,
         "approval_mode": validate_identity_registry.OWNER_SOLO_APPROVAL,
         "four_eyes_satisfied": False,
         "author_association": "OWNER",
@@ -1102,6 +1265,8 @@ def fetch_owner_solo_approval(
 def verify_pr_checks(
     expected_pr: int,
     expected_head_ref: str,
+    protected_identity_resolver_file: str | None,
+    protected_identity_resolver_sha256: str | None,
     operator_account_id: str,
     owner_solo_approval_reference: str | None,
 ) -> list[str]:
@@ -1145,23 +1310,31 @@ def verify_pr_checks(
             payload, expected_pr=expected_pr, expected_head=expected_head
         )
     )
-    registry = json.loads(IDENTITY_REGISTRY_PATH.read_text(encoding="utf-8"))
-    if validate_identity_registry.validate_registry(registry):
-        return errors + ["versioned identity registry is invalid"]
-    try:
-        operator = validate_identity_registry.resolve_principal(
-            registry, operator_account_id
+    resolver, resolver_errors = load_protected_json(
+        protected_identity_resolver_file,
+        protected_identity_resolver_sha256,
+        label="protected identity resolver",
+    )
+    errors.extend(resolver_errors)
+    operator = None
+    registry: dict[str, Any] = {}
+    if resolver is not None:
+        operator, identity_errors = validate_protected_identity_resolver(
+            resolver, operator_account_id
         )
-    except ValueError:
-        operator = None
+        errors.extend(identity_errors)
+        candidate_registry = resolver.get("registry")
+        if isinstance(candidate_registry, dict):
+            registry = candidate_registry
     if operator is None:
-        errors.append("versioned identity registry does not resolve the operator")
+        errors.append("protected identity resolver does not authorize the operator")
     else:
         approval, approval_errors = fetch_owner_solo_approval(
             owner_solo_approval_reference,
             expected_head=expected_head,
             operator_account_id=operator_account_id,
             operator_principal_id=str(operator.get("principal_id")),
+            identity_resolver_sha256=str(protected_identity_resolver_sha256),
         )
         errors.extend(approval_errors)
         if approval is not None:
@@ -1182,19 +1355,35 @@ def main() -> int:
     parser.add_argument("--verify-pr-checks", action="store_true")
     parser.add_argument("--expected-pr", type=int, default=747)
     parser.add_argument("--expected-head-from-local-git", default="HEAD")
+    parser.add_argument("--protected-identity-resolver-file")
+    parser.add_argument("--protected-identity-resolver-sha256")
     parser.add_argument("--operator-account-id")
     parser.add_argument("--owner-solo-approval-reference")
     args = parser.parse_args()
 
     errors = validate_contract(load_contract())
     if args.verify_pr_checks:
-        if not args.operator_account_id:
-            errors.append("--operator-account-id is required with --verify-pr-checks")
+        missing = [
+            option
+            for option, value in (
+                ("--protected-identity-resolver-file", args.protected_identity_resolver_file),
+                ("--protected-identity-resolver-sha256", args.protected_identity_resolver_sha256),
+                ("--operator-account-id", args.operator_account_id),
+                ("--owner-solo-approval-reference", args.owner_solo_approval_reference),
+            )
+            if not value
+        ]
+        if missing:
+            errors.append(
+                ", ".join(missing) + " required with --verify-pr-checks"
+            )
         else:
             errors.extend(
                 verify_pr_checks(
                     args.expected_pr,
                     args.expected_head_from_local_git,
+                    args.protected_identity_resolver_file,
+                    args.protected_identity_resolver_sha256,
                     args.operator_account_id,
                     args.owner_solo_approval_reference,
                 )

@@ -59,8 +59,8 @@
         "four_eyes_satisfied": false,
         "external_two_person_requirement": "not_applicable_no_cited_source_for_issue_746",
         "provider_boundary": "read_only_contract_only",
-        "evidence_binding": "canonical_hashes_only",
-        "privacy_boundary": "no_credentials_or_raw_provider_runtime_data",
+        "evidence_binding": "protected_resolver_sha256_and_canonical_hashes",
+        "privacy_boundary": "synthetic_public_registry_real_mapping_repo_external",
         "release_export_enabled": false
       }
     ],
@@ -325,7 +325,7 @@
       {
         "id": "m365-bff-failed-partial-safe-completion-boundary",
         "component_ref": "m365-bff-failed-partial-safe-completion-contract",
-        "control": "Three non-interchangeable approval gates; source-bound OWNER_SOLO_APPROVAL is never four-eyes; cited external two-person duties fail closed with BLOCKED_SINGLE_PRINCIPAL unless distinct qualified principals approve; zero provider/tenant/credential writes and redacted canonical evidence only.",
+        "control": "Three non-interchangeable approval gates; source-bound OWNER_SOLO_APPROVAL is never four-eyes; the public registry is synthetic-only; a repository-external protected resolver binds exactly three known accounts to one principal and binds its SHA-256 to the approval; cited external two-person duties fail closed with BLOCKED_SINGLE_PRINCIPAL unless distinct qualified principals approve; zero provider/tenant/credential writes and redacted canonical evidence only.",
         "status": "acceptance_blocked_pending_privacy_and_executable_boundary_evidence"
       }
     ],

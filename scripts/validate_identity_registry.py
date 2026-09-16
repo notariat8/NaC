@@ -12,6 +12,12 @@ ACCOUNT_ID_RE = re.compile(r"^[a-z0-9-]+:[^:]+$")
 PRINCIPAL_ID_RE = re.compile(r"^person:[a-z0-9][a-z0-9-]*$")
 OWNER_SOLO_APPROVAL = "OWNER_SOLO_APPROVAL"
 BLOCKED_SINGLE_PRINCIPAL = "BLOCKED_SINGLE_PRINCIPAL"
+PUBLIC_SYNTHETIC_PRINCIPAL_IDS = {"person:owner-example"}
+PUBLIC_SYNTHETIC_ACCOUNTS = {
+    ("github:owner-example-primary", "owner-example-primary"),
+    ("github:owner-example-secondary", "owner-example-secondary"),
+    ("nvidia-gitlab:owner-example", "owner-example"),
+}
 
 
 def validate_registry(registry: dict[str, Any]) -> list[str]:
@@ -71,6 +77,26 @@ def validate_registry(registry: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_public_registry_privacy(registry: dict[str, Any]) -> list[str]:
+    """Allow only the exact synthetic identity fixture in the checked-in registry."""
+    errors: list[str] = []
+    principal_ids = {
+        principal.get("principal_id")
+        for principal in registry.get("principals", [])
+        if isinstance(principal, dict)
+    }
+    if principal_ids != PUBLIC_SYNTHETIC_PRINCIPAL_IDS:
+        errors.append("public registry must use the exact synthetic principal fixture")
+    accounts = {
+        (account.get("account_id"), account.get("login"))
+        for account in registry.get("accounts", [])
+        if isinstance(account, dict)
+    }
+    if accounts != PUBLIC_SYNTHETIC_ACCOUNTS:
+        errors.append("public registry must use the exact synthetic account fixture")
+    return errors
+
+
 def resolve_account(registry: dict[str, Any], account_id: str) -> dict[str, Any] | None:
     if not ACCOUNT_ID_RE.fullmatch(account_id):
         raise ValueError("raw login is not a governance account_id")
@@ -118,6 +144,7 @@ def evaluate_approval_mode(
 def main() -> int:
     registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     errors = validate_registry(registry)
+    errors.extend(validate_public_registry_privacy(registry))
     if errors:
         print("STATUS: FAILED")
         for error in errors:

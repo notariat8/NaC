@@ -178,7 +178,7 @@ commands:
     remote_evidence: [Privacy and Secrets Guard / secret-scan, Privacy and Secrets Guard / privacy-lint, NaC Quality Gate / quality-gate, NaC Windows Portability / windows-offline-cli]
   - id: pr_checks_enforced
     platform: post_pr_remote
-    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
+    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
     acceptance_ids: [AC-746-07, AC-746-08]
     remote_evidence: [exact required check names and successful states]
 ```
@@ -365,8 +365,11 @@ ausführen; eine bloße Modul- oder Methodennennung genügt nicht.
 | `test_crash_after_true_prefix_completes_only_with_same_approval` | `after_first_append`, `after_second_append`, `changed_approval`, `unknown_tail`, `wrong_order` | AC-746-06 |
 | `test_crash_after_all_appends_returns_idempotent_release` | `after_third_append_before_return`, `same_approval_replay` | AC-746-06 |
 | `test_owner_comment_loader_verifies_live_canonical_provenance` | kanonischer final-head-gebundener Owner-Kommentar sowie Body-, Login-, Association- und URL-Drift | AC-746-02, AC-746-08 |
+| `test_protected_evidence_loader_rejects_unsafe_posix_inputs` | exakter Modus `0600`, Größenlimit, JSON-/UTF-8-Grenzen, Leaf-/Parent-Symlink-Abweisung und Parent-Austausch bei gehaltenem Verzeichnisdeskriptor | AC-746-02, AC-746-08 |
+| `test_protected_identity_resolver_requires_three_same_principal_accounts` | repository-externer Resolver, exakt drei aktive Accountbindungen, ein gemeinsamer Principal, Rolle und Qualifikation | AC-746-02, AC-746-08 |
 | `test_unknown_tail_and_wrong_order_block_without_further_release` | `unknown_tail`, `wrong_order`, byte-identische Artefakte nach blockiertem Retry | AC-746-06 |
 | `test_remote_verifier_errors_are_stable_and_redacted` | Git-/PR-Lese- und JSON-Fehler liefern nur stabile Codes ohne rohe Diagnose | AC-746-02, AC-746-07, AC-746-08 |
+| `test_verify_pr_checks_cli_requires_and_forwards_all_identity_inputs` | Resolverpfad, Resolverhash, Operator-Account und Owner-Kommentar sind gemeinsam verpflichtend und werden unverändert weitergereicht | AC-746-02, AC-746-07, AC-746-08 |
 | `test_required_remote_checks_match_exact_context_names` | `pr_747`, `local_head_source`, `wrong_local_head`, `secret_scan`, `privacy_lint`, `quality_gate`, `windows_offline_cli`, `missing`, `duplicate`, `non_success`, `skipped`, `cancelled`, `renamed` | AC-746-07, AC-746-08 |
 | `test_ai_sbom_registers_issue746_agentic_contract_without_release_export` | `human_review_owner`, `provider_boundary`, `evidence_binding`, `privacy_boundary`, `release_export_disabled` | AC-746-07, AC-746-08 |
 
@@ -421,7 +424,7 @@ git log --oneline origin/main..HEAD
 git diff origin/main...HEAD
 git diff --check origin/main...HEAD
 gh pr checks 747 --watch
-python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
+python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 Pflichtkontexte sind mindestens `Privacy and Secrets Guard / secret-scan`,
@@ -439,12 +442,14 @@ Erwartungswert übernommen werden.
 
 Die Spec-Freigabe auf Commit `012c441b...` autorisiert das Schreiben und Prüfen
 dieses Plans, ist aber keine #739-Release- oder #632-Live-Freigabe. Vor der
-späteren Implementierungsabnahme muss die verbindliche GitHub-Identity-Registry
-mit den Gate-Identitäten übereinstimmen und für Solo-Owner aktive
-`prozessverantwortung` sowie die Qualifikation `process_design` nachweisen.
-Die versionierte Registry bildet provider-qualifizierte Account-Identifier auf
-stabile Principals ab. Mehrere Accounts desselben Principals erfüllen niemals
-Vier-Augen- oder Funktionstrennung. Für Issue #746 ist keine anwendbare
+späteren Implementierungsabnahme muss ein repository-externer,
+zugriffsgeschützter Identity-Resolver die realen Gate-Identitäten auflösen und
+für Solo-Owner aktive `prozessverantwortung` sowie die Qualifikation
+`process_design` nachweisen. Die versionierte öffentliche Registry enthält nur
+unverwechselbar synthetische Beispiele. Der geschützte Resolver muss genau drei
+aktive bekannte Accountbindungen demselben Principal zuordnen; mehrere Accounts
+desselben Principals erfüllen niemals Vier-Augen- oder Funktionstrennung. Für
+Issue #746 ist keine anwendbare
 gesetzliche, regulatorische, vertragliche oder verbindliche Security-Pflicht zu
 zwei unterschiedlichen natürlichen Personen mit konkreter Quellenreferenz und
 Scope belegt. Der aktive Principal mit Owner-Rolle und -Qualifikation darf deshalb
@@ -469,12 +474,18 @@ Ob zusätzlich ein verschiedener Principal mit `freigabeverantwortung` nötig
 ist, entscheidet ausschließlich die vorgenannte quellgebundene
 Zwei-Personen-Prüfung.
 
-Die versionierte Repository-Registry ist ausschließlich für das
-final-head-gebundene Repository-/PR-Abnahme-Gate maßgeblich. Sie enthält keine
-Credentials und erweitert keine providerseitigen Accountrechte. Für eine
-spätere Issue-#739-Quarantänefreigabe oder einen Issue-#632-Live-Lauf bleibt
-eine zugriffsgeschützte, unabhängig geprüfte Provideridentitätsauflösung ein
-eigener ausstehender Nachweis; das PR-Gate ersetzt diese separaten Gates nicht.
+Der geschützte Resolver liegt außerhalb des Repositorys, muss auf POSIX dem
+ausführenden Eigentümer mit exakt Modus `0600` gehören, wird komponentenweise
+über gehaltene Verzeichnisdeskriptoren und einen no-follow geöffneten
+Dateideskriptor gelesen, auf 128 KiB begrenzt, lehnt doppelte
+JSON-Schlüssel ab und wird über seinen SHA-256 an
+den final-head-gebundenen Owner-Kommentar gebunden. Account- und Principal-ID
+werden darin ausschließlich als zweckgetrennte SHA-256-Bindungen geführt; rohe
+Resolverwerte bleiben nur im Arbeitsspeicher. Weder reale Account-Identifier
+noch Resolverinhalte dürfen in Repository, CI-Ausgabe oder Evidence gelangen.
+Für eine spätere Issue-#739-Quarantänefreigabe oder einen
+Issue-#632-Live-Lauf bleibt die Provideridentitätsauflösung ein eigener
+Nachweis; das PR-Gate ersetzt diese separaten Gates nicht.
 
 Der auf `012c441b...` freigegebene Ursprungsscope umfasst nicht die kombinierte
 Account-zu-Principal-Reparatur und die nun vollständige Artefakt-Allowlist.

@@ -74,7 +74,7 @@ validation_commands:
   - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
   - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Purpose and Boundary
@@ -371,9 +371,12 @@ or the current expanded artifact list. After all fixes, that combined scope
 requires renewed approval bound to the exact final PR head. The current local
 governance decision selects `OWNER_SOLO_APPROVAL` for Issue #746 because no
 applicable external two-person obligation with a source reference and scope is
-documented; it is not four-eyes approval. The versioned repository registry
-supports only the final-head-bound PR acceptance gate. Access-controlled,
-independently verified provider-identity resolution remains separately pending
-for every later #739 or #632 gate. Acceptance also remains `BLOCKED` by pending
+documented; it is not four-eyes approval. The versioned public registry contains
+synthetic examples only. A repository-external POSIX resolver owned by the
+executing user with exact mode `0600` must bind exactly three known accounts to the
+same principal and bind its SHA-256 to the final-head approval. Account and
+principal appear in public evidence only as purpose-separated SHA-256 bindings. This identity
+resolution remains separately required for every later #739 or #632 gate.
+Acceptance also remains `BLOCKED` by pending
 executable evidence for the credential, redaction, #739 hash, and dynamic
 error-code boundaries.

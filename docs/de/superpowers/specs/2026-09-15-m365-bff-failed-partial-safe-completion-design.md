@@ -74,7 +74,7 @@ validation_commands:
   - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
   - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Zweck und Abgrenzung
@@ -390,9 +390,13 @@ Artefaktliste. Dieser kombinierte Scope benötigt nach Abschluss der Fixes eine
 neue, exakt an den finalen PR-Head gebundene Owner-Freigabe. Die vorliegende
 lokale Governance-Entscheidung wählt für Issue #746 `OWNER_SOLO_APPROVAL`, weil
 keine anwendbare externe Zwei-Personen-Pflicht mit Quellenreferenz und Scope
-  belegt ist; sie ist keine Vier-Augen-Freigabe. Die versionierte Repository-
-  Registry trägt nur das final-head-gebundene PR-Abnahme-Gate. Eine
-  zugriffsgeschützte, unabhängig geprüfte Provideridentitätsauflösung bleibt für
-  jedes spätere #739- oder #632-Gate separat ausstehend. Die Abnahme bleibt
+  belegt ist; sie ist keine Vier-Augen-Freigabe. Die versionierte öffentliche
+Registry enthält nur synthetische Beispiele. Ein repository-externer,
+eigentümergebundener POSIX-Resolver mit exakt Modus `0600` muss genau drei bekannte
+Accounts demselben Principal zuordnen und seinen SHA-256 an die
+final-head-gebundene Freigabe binden. Account und Principal erscheinen in
+öffentlicher Evidence ausschließlich als zweckgetrennte SHA-256-Bindungen.
+Diese Identitätsauflösung bleibt für
+  jedes spätere #739- oder #632-Gate separat erforderlich. Die Abnahme bleibt
   außerdem wegen noch ausstehender ausführbarer Evidence für Credential-, Redaktions- und
 #739-Hashgrenzen sowie dynamische Fehlercodepfade ausdrücklich `BLOCKED`.
