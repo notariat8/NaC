@@ -1551,6 +1551,7 @@ BEHAVIOR_TEST_MODULES = (
 WINDOWS_BEHAVIOR_TEST_MODULES = (
     "tests.test_windows_offline_cli_portability",
     "tests.test_spfx_bff_catalog_readback_regression",
+    "tests.test_m365_bff_failed_partial_safe_completion",
 )
 
 
@@ -1615,6 +1616,7 @@ def _validate_windows_portability(
         Path("src/nac_bff/azure_activation_contract.py"),
         Path("src/nac_bff/azure_activation_facade.py"),
         Path("tests/test_windows_offline_cli_portability.py"),
+        Path("tests/test_m365_bff_failed_partial_safe_completion.py"),
         Path(".github/workflows/windows-portability.yml"),
     )
     for relative_path in required_paths:
@@ -1638,7 +1640,8 @@ def _validate_windows_portability(
     ]
     exact_test_command = (
         "python -m unittest tests.test_windows_offline_cli_portability "
-        "tests.test_spfx_bff_catalog_readback_regression"
+        "tests.test_spfx_bff_catalog_readback_regression "
+        "tests.test_m365_bff_failed_partial_safe_completion"
     )
     if not isinstance(workflow, dict) or workflow.get("name") != "NaC Windows Portability":
         errors.append("Windows portability workflow name differs")

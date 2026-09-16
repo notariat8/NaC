@@ -26,4 +26,4 @@ jobs:
         run: python -m pip install --disable-pip-version-check -e .
 
       - name: Verify portable offline CLI and SPFx readback
-        run: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression
+        run: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion

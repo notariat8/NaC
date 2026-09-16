@@ -1,6 +1,6 @@
 # Sicherer Abschluss der partiellen M365-BFF-Aktivierung – Implementierungsplan
 
-Status: Plan-Fixes vollständig; durch Owner-Rollenentscheidung blockiert
+Status: Offline-Implementierung läuft; erweiterter Governance-Scope benötigt erneute hashgebundene Freigabe; Abnahme `BLOCKED`
 
 Datum: 15. September 2026
 Spec: [Sicherer Abschluss der partiellen M365-BFF-Aktivierung](../specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md)
@@ -36,6 +36,7 @@ Credential-Schreibaktionen.
 | DE/EN-Dokumentation | Spec und Plan; CLI-Doku nur bei belegter Lücke | Operatorfolge und getrennte Freigaben verständlich halten |
 | Traceability | `nac-spec-traceability`-Manifest der DE/EN-Spec | Issue, Specs, Pläne, ACs und Validierungsbefehle verbinden |
 | AI-SBOM | `sbom/ai/nac-ai-sbom-draft.json`, `sbom/ai/nac-ai-sbom-export-mapping.json` | Den neuen agentischen Verification Contract mit Human-Review-, Provider-, Evidence- und Privacy-Grenze registrieren; kein Release-Export |
+| Account-zu-Principal-Governance | Workflow, Root-`AGENTS.md`, DE/EN-Rollenmodell, Access-/Rollen-Policies, Identity-Registry samt Schema, Onboarding, Validator und Tests | Bereits im PR enthaltene Reparatur vollständig in Scope und Traceability aufnehmen; Accountstrings dürfen keine Principal-Trennung vortäuschen |
 
 Änderungen am Produktions-Reconciler, an ARM-Allowlist, Release-Algorithmus,
 Tenant-/Provideradaptern, Credentials, Teams-UI oder Berechtigungen sind nicht
@@ -117,7 +118,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: issue746_windows_tests
     platform: windows_native
-    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
     acceptance_ids: [AC-746-02, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_posix_tests
@@ -177,7 +178,7 @@ commands:
     remote_evidence: [Privacy and Secrets Guard / secret-scan, Privacy and Secrets Guard / privacy-lint, NaC Quality Gate / quality-gate, NaC Windows Portability / windows-offline-cli]
   - id: pr_checks_enforced
     platform: post_pr_remote
-    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
     acceptance_ids: [AC-746-07, AC-746-08]
     remote_evidence: [exact required check names and successful states]
 ```
@@ -352,7 +353,7 @@ ausführen; eine bloße Modul- oder Methodennennung genügt nicht.
 | `test_contract_maps_every_acceptance_id_to_platform_command_and_evidence` | `AC-746-01` bis `AC-746-08` | alle |
 | `test_provenance_roles_are_distinct_and_not_runtime_state` | `issue620_parent`, `issue632_live_contract`, `issue739_current_trail`, `issue743_historical_interruption` | AC-746-02 |
 | `test_approval_replay_matrix_blocks_before_mutation` | `old_632_comment`, `old_739_comment`, `spec_746_comment`, `wrong_issue`, `wrong_login`, `wrong_author_association`, `changed_body`, `changed_hash`, `cross_issue_replay`, `owner_approved`, `owner_approval_reference`, `approval_body_sha256` | AC-746-02, AC-746-06, AC-746-08 |
-| `test_registry_roles_and_separation_are_required_before_release` | `missing_process_role`, `missing_approval_role`, `inactive_identity`, `login_registry_mismatch`, `missing_operator`, `same_approver_and_operator`, `association_only` | AC-746-06, AC-746-08 |
+| `test_registry_approval_mode_is_source_bound_before_release` | `missing_process_role`, `missing_approval_role`, `inactive_identity`, `login_registry_mismatch`, `missing_operator`, `association_only`, `no_external_requirement_single_principal`, `binding_external_requirement_single_principal`, `binding_external_requirement_same_principal_accounts`, `binding_external_requirement_distinct_principals`, `incomplete_requirement_assessment`, `unsupported_requirement_source_type` | AC-746-06, AC-746-08 |
 | `test_preflight_binding_drift_matrix_blocks_before_provider` | `action`, `activation_hash`, `state_sha256`, `evidence_sha256`, `ledger_head_sha256`, `target_lock_sha256`, `legacy_lock_sha256`, `legacy_host_lock_sha256`, `provider_observation_sha256`, `failed_step`, `failed_step_started_at_utc`, `prepared_inputs_manifest_sha256`, `function_package_sha256`, `reconciler_commit`, `reconciler_tree`, `reconciler_toolchain_sha256`, `required_owner_login`, `correlation_id`, `target`, `binary`, `owner_permissions`, `nofollow_path`, `concurrent_lock` | AC-746-03 |
 | `test_double_snapshot_accepts_only_stable_not_applied` | `stable_not_applied` | AC-746-04 |
 | `test_provider_decision_block_matrix_has_zero_writes` | `deployment_applied`, `missing_field`, `unknown_field`, `snapshot_drift`, `redirect`, `auth_error`, `network_block`, `timeout`, `non_redactable` | AC-746-04, AC-746-08 |
@@ -363,6 +364,9 @@ ausführen; eine bloße Modul- oder Methodennennung genügt nicht.
 | `test_crash_before_first_append_keeps_all_journals_held` | `before_first_append` | AC-746-06 |
 | `test_crash_after_true_prefix_completes_only_with_same_approval` | `after_first_append`, `after_second_append`, `changed_approval`, `unknown_tail`, `wrong_order` | AC-746-06 |
 | `test_crash_after_all_appends_returns_idempotent_release` | `after_third_append_before_return`, `same_approval_replay` | AC-746-06 |
+| `test_owner_comment_loader_verifies_live_canonical_provenance` | kanonischer final-head-gebundener Owner-Kommentar sowie Body-, Login-, Association- und URL-Drift | AC-746-02, AC-746-08 |
+| `test_unknown_tail_and_wrong_order_block_without_further_release` | `unknown_tail`, `wrong_order`, byte-identische Artefakte nach blockiertem Retry | AC-746-06 |
+| `test_remote_verifier_errors_are_stable_and_redacted` | Git-/PR-Lese- und JSON-Fehler liefern nur stabile Codes ohne rohe Diagnose | AC-746-02, AC-746-07, AC-746-08 |
 | `test_required_remote_checks_match_exact_context_names` | `pr_747`, `local_head_source`, `wrong_local_head`, `secret_scan`, `privacy_lint`, `quality_gate`, `windows_offline_cli`, `missing`, `duplicate`, `non_success`, `skipped`, `cancelled`, `renamed` | AC-746-07, AC-746-08 |
 | `test_ai_sbom_registers_issue746_agentic_contract_without_release_export` | `human_review_owner`, `provider_boundary`, `evidence_binding`, `privacy_boundary`, `release_export_disabled` | AC-746-07, AC-746-08 |
 
@@ -393,7 +397,7 @@ python scripts/validate_spec_traceability.py
 python scripts/validate_language_parity.py
 python scripts/validate_doc_links.py
 python scripts/validate_m365_bff_failed_partial_safe_completion.py
-python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
 ```
 
 Unterstützter POSIX-/Ubuntu-Pfad, ausschließlich synthetische Ports:
@@ -417,34 +421,70 @@ git log --oneline origin/main..HEAD
 git diff origin/main...HEAD
 git diff --check origin/main...HEAD
 gh pr checks 747 --watch
-python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 Pflichtkontexte sind mindestens `Privacy and Secrets Guard / secret-scan`,
 `Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`
 und für die Windows-Grenze `NaC Windows Portability / windows-offline-cli`.
 Fehlend, übersprungen, abgebrochen oder umbenannt gilt als nicht bestanden.
-Der zweite Befehl ermittelt den erwarteten SHA ausschließlich durch ein
+Der letzte Befehl ermittelt den erwarteten SHA ausschließlich durch ein
 internes read-only `git rev-parse HEAD`, liest danach PR #747 mit
-`gh pr view 747 --json number,headRefOid,statusCheckRollup` und prüft genau eine
+`gh pr view 747 --json number,headRefOid,statusCheckRollup,reviewDecision,latestReviews` und prüft genau eine
 Instanz jedes Pflichtkontexts, Erfolgsstatus sowie
 `lokaler HEAD == headRefOid`. Der SHA darf nicht aus derselben PR-Antwort als
 Erwartungswert übernommen werden.
 
-## Offene Rollenentscheidung
+## Verbindliches Abnahme-Gate
 
 Die Spec-Freigabe auf Commit `012c441b...` autorisiert das Schreiben und Prüfen
 dieses Plans, ist aber keine #739-Release- oder #632-Live-Freigabe. Vor der
 späteren Implementierungsabnahme muss die verbindliche GitHub-Identity-Registry
-mit den Gate-Identitäten übereinstimmen und aktive
-`prozessverantwortung` sowie `freigabeverantwortung` nachweisen. Approver und
-ausführender Operator müssen aus provider-qualifizierten Accounts auf
-unterschiedliche aktive `principal_id`-Werte aufgelöst und negativ getestet
-werden. Die Accounts `github:ofunk` und `github:ofunk-nvidia` gehören zum selben
-Principal; ihre unterschiedlichen Login-Strings erfüllen die Funktionstrennung
-daher niemals. Weder GitHub-Association noch Spec-Freigabe ersetzen die
-erforderlichen Rollen. Für die Implementierungsabnahme bleibt deshalb eine
-zweite qualifizierte Person mit `freigabeverantwortung` erforderlich.
+mit den Gate-Identitäten übereinstimmen und für Solo-Owner aktive
+`prozessverantwortung` sowie die Qualifikation `process_design` nachweisen.
+Die versionierte Registry bildet provider-qualifizierte Account-Identifier auf
+stabile Principals ab. Mehrere Accounts desselben Principals erfüllen niemals
+Vier-Augen- oder Funktionstrennung. Für Issue #746 ist keine anwendbare
+gesetzliche, regulatorische, vertragliche oder verbindliche Security-Pflicht zu
+zwei unterschiedlichen natürlichen Personen mit konkreter Quellenreferenz und
+Scope belegt. Der aktive Principal mit Owner-Rolle und -Qualifikation darf deshalb
+revisionsfest `OWNER_SOLO_APPROVAL` dokumentieren. Diese Entscheidung ist keine
+Vier-Augen-Freigabe. Eine Rollenbezeichnung oder GitHub-Association allein
+erzeugt keine Zwei-Personen-Pflicht.
+
+Wird eine solche externe Pflicht als anwendbar gebunden, muss sie Quellenart,
+stabile Quell-ID, konkrete Fundstelle, Version, kanonischen Digest und Scope
+tragen. Steht dann nur ein qualifizierter
+Principal zur Verfügung, gilt `BLOCKED_SINGLE_PRINCIPAL`; verschiedene Accounts
+desselben Principals ändern das Ergebnis nicht. Nur zwei aktive, passend
+qualifizierte und verschiedene Principals dürfen `FOUR_EYES_APPROVAL` erzeugen.
+Unvollständige oder unbekannte Quellenangaben blockieren als
+`BLOCKED_REQUIREMENT_ASSESSMENT_INVALID`.
+
+`required_owner_login` ist dabei ausschließlich eine hashgebundene
+Transportangabe des Providers. Sie erteilt keine Governance-Berechtigung. Für
+die Abnahme wird der provider-qualifizierte Account über die Registry auf einen
+aktiven Principal mit `prozessverantwortung` und `process_design` aufgelöst.
+Ob zusätzlich ein verschiedener Principal mit `freigabeverantwortung` nötig
+ist, entscheidet ausschließlich die vorgenannte quellgebundene
+Zwei-Personen-Prüfung.
+
+Die versionierte Repository-Registry ist ausschließlich für das
+final-head-gebundene Repository-/PR-Abnahme-Gate maßgeblich. Sie enthält keine
+Credentials und erweitert keine providerseitigen Accountrechte. Für eine
+spätere Issue-#739-Quarantänefreigabe oder einen Issue-#632-Live-Lauf bleibt
+eine zugriffsgeschützte, unabhängig geprüfte Provideridentitätsauflösung ein
+eigener ausstehender Nachweis; das PR-Gate ersetzt diese separaten Gates nicht.
+
+Der auf `012c441b...` freigegebene Ursprungsscope umfasst nicht die kombinierte
+Account-zu-Principal-Reparatur und die nun vollständige Artefakt-Allowlist.
+Dieser erweiterte Scope benötigt nach dem Implementierungscommit eine neue,
+exakt hashgebundene Owner-Freigabe.
+
+Die Credential-, Redaktions-, #739-Hash- und dynamischen Fehlercodematrizen
+sind bis zu ausführbaren Nachweisen als `pending` und nicht als bestanden zu
+behandeln. Der Offline-Vertrag darf strukturell grün sein; seine Abnahme bleibt
+`BLOCKED`.
 
 ## Stop Conditions
 

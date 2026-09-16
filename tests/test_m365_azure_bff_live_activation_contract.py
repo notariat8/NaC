@@ -1101,6 +1101,7 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             Path("src/nac_bff/azure_activation_contract.py"),
             Path("src/nac_bff/azure_activation_facade.py"),
             Path("tests/test_windows_offline_cli_portability.py"),
+            Path("tests/test_m365_bff_failed_partial_safe_completion.py"),
             Path(".github/workflows/windows-portability.yml"),
         ):
             destination = self.root / relative

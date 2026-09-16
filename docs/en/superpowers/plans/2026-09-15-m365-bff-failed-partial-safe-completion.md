@@ -1,6 +1,6 @@
 # Safe Completion of the Partial M365 BFF Activation - Implementation Plan
 
-Status: Plan fixes complete; blocked by owner role decision
+Status: Offline implementation in progress; expanded governance scope requires renewed hash-bound approval; acceptance `BLOCKED`
 
 Date: 15 September 2026
 Specification: [Safe Completion of the Partial M365 BFF Activation](../specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md)
@@ -34,6 +34,7 @@ authentication, or any tenant, provider, or credential write.
 | DE/EN documentation | specification and plan; CLI docs only if a gap is proven | Keep the operator sequence and separate approvals understandable |
 | Traceability | `nac-spec-traceability` manifest in the DE/EN specification | Connect the issue, specifications, plans, ACs, and validation commands |
 | AI SBOM | `sbom/ai/nac-ai-sbom-draft.json`, `sbom/ai/nac-ai-sbom-export-mapping.json` | Register the new agentic verification contract with its human-review, provider, evidence, and privacy boundaries; no release export |
+| Account-to-principal governance | workflow, root `AGENTS.md`, DE/EN role model, access/role policies, identity registry and schema, onboarding, validator, and tests | Bring the repair already present in the PR fully into scope and traceability; account strings must not fake principal separation |
 
 Changes to the production reconciler, ARM allowlist, release algorithm,
 tenant/provider adapters, credentials, Teams UI, or permissions are not
@@ -114,7 +115,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: issue746_windows_tests
     platform: windows_native
-    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
     acceptance_ids: [AC-746-02, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_posix_tests
@@ -174,7 +175,7 @@ commands:
     remote_evidence: [Privacy and Secrets Guard / secret-scan, Privacy and Secrets Guard / privacy-lint, NaC Quality Gate / quality-gate, NaC Windows Portability / windows-offline-cli]
   - id: pr_checks_enforced
     platform: post_pr_remote
-    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+    command: python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
     acceptance_ids: [AC-746-07, AC-746-08]
     remote_evidence: [exact required check names and successful states]
 ```
@@ -347,7 +348,7 @@ module or method name alone is insufficient.
 | `test_contract_maps_every_acceptance_id_to_platform_command_and_evidence` | `AC-746-01` through `AC-746-08` | all |
 | `test_provenance_roles_are_distinct_and_not_runtime_state` | `issue620_parent`, `issue632_live_contract`, `issue739_current_trail`, `issue743_historical_interruption` | AC-746-02 |
 | `test_approval_replay_matrix_blocks_before_mutation` | `old_632_comment`, `old_739_comment`, `spec_746_comment`, `wrong_issue`, `wrong_login`, `wrong_author_association`, `changed_body`, `changed_hash`, `cross_issue_replay`, `owner_approved`, `owner_approval_reference`, `approval_body_sha256` | AC-746-02, AC-746-06, AC-746-08 |
-| `test_registry_roles_and_separation_are_required_before_release` | `missing_process_role`, `missing_approval_role`, `inactive_identity`, `login_registry_mismatch`, `missing_operator`, `same_approver_and_operator`, `association_only` | AC-746-06, AC-746-08 |
+| `test_registry_approval_mode_is_source_bound_before_release` | `missing_process_role`, `missing_approval_role`, `inactive_identity`, `login_registry_mismatch`, `missing_operator`, `association_only`, `no_external_requirement_single_principal`, `binding_external_requirement_single_principal`, `binding_external_requirement_same_principal_accounts`, `binding_external_requirement_distinct_principals`, `incomplete_requirement_assessment`, `unsupported_requirement_source_type` | AC-746-06, AC-746-08 |
 | `test_preflight_binding_drift_matrix_blocks_before_provider` | `action`, `activation_hash`, `state_sha256`, `evidence_sha256`, `ledger_head_sha256`, `target_lock_sha256`, `legacy_lock_sha256`, `legacy_host_lock_sha256`, `provider_observation_sha256`, `failed_step`, `failed_step_started_at_utc`, `prepared_inputs_manifest_sha256`, `function_package_sha256`, `reconciler_commit`, `reconciler_tree`, `reconciler_toolchain_sha256`, `required_owner_login`, `correlation_id`, `target`, `binary`, `owner_permissions`, `nofollow_path`, `concurrent_lock` | AC-746-03 |
 | `test_double_snapshot_accepts_only_stable_not_applied` | `stable_not_applied` | AC-746-04 |
 | `test_provider_decision_block_matrix_has_zero_writes` | `deployment_applied`, `missing_field`, `unknown_field`, `snapshot_drift`, `redirect`, `auth_error`, `network_block`, `timeout`, `non_redactable` | AC-746-04, AC-746-08 |
@@ -358,6 +359,9 @@ module or method name alone is insufficient.
 | `test_crash_before_first_append_keeps_all_journals_held` | `before_first_append` | AC-746-06 |
 | `test_crash_after_true_prefix_completes_only_with_same_approval` | `after_first_append`, `after_second_append`, `changed_approval`, `unknown_tail`, `wrong_order` | AC-746-06 |
 | `test_crash_after_all_appends_returns_idempotent_release` | `after_third_append_before_return`, `same_approval_replay` | AC-746-06 |
+| `test_owner_comment_loader_verifies_live_canonical_provenance` | canonical final-head-bound owner comment plus body, login, association, and URL drift | AC-746-02, AC-746-08 |
+| `test_unknown_tail_and_wrong_order_block_without_further_release` | `unknown_tail`, `wrong_order`, byte-identical artifacts after blocked retry | AC-746-06 |
+| `test_remote_verifier_errors_are_stable_and_redacted` | Git/PR read and JSON failures return stable codes without raw diagnostics | AC-746-02, AC-746-07, AC-746-08 |
 | `test_required_remote_checks_match_exact_context_names` | `pr_747`, `local_head_source`, `wrong_local_head`, `secret_scan`, `privacy_lint`, `quality_gate`, `windows_offline_cli`, `missing`, `duplicate`, `non_success`, `skipped`, `cancelled`, `renamed` | AC-746-07, AC-746-08 |
 | `test_ai_sbom_registers_issue746_agentic_contract_without_release_export` | `human_review_owner`, `provider_boundary`, `evidence_binding`, `privacy_boundary`, `release_export_disabled` | AC-746-07, AC-746-08 |
 
@@ -388,7 +392,7 @@ python scripts/validate_spec_traceability.py
 python scripts/validate_language_parity.py
 python scripts/validate_doc_links.py
 python scripts/validate_m365_bff_failed_partial_safe_completion.py
-python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
 ```
 
 Supported POSIX/Ubuntu path using synthetic ports only:
@@ -412,34 +416,67 @@ git log --oneline origin/main..HEAD
 git diff origin/main...HEAD
 git diff --check origin/main...HEAD
 gh pr checks 747 --watch
-python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 Required contexts include at least `Privacy and Secrets Guard / secret-scan`,
 `Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`,
 and, for the Windows boundary, `NaC Windows Portability / windows-offline-cli`.
 Missing, skipped, cancelled, or renamed means not passed.
-The second command obtains the expected SHA only through an internal read-only
+The final command obtains the expected SHA only through an internal read-only
 `git rev-parse HEAD`, then reads PR #747 with
-`gh pr view 747 --json number,headRefOid,statusCheckRollup` and enforces exactly
+`gh pr view 747 --json number,headRefOid,statusCheckRollup,reviewDecision,latestReviews` and enforces exactly
 one instance of every required context, successful state, and
 `local HEAD == headRefOid`. It must not copy the expected SHA from the same PR
 response.
 
-## Open Role Decision
+## Binding Acceptance Gate
 
 Specification approval at commit `012c441b...` authorizes writing and reviewing
 this plan, but it is not a #739 release or #632 live approval. Before later
 implementation acceptance, the binding GitHub identity registry must match the
-gate identities and prove active `prozessverantwortung` and
-`freigabeverantwortung`. Approver and executing operator must resolve from
-provider-qualified accounts to different active `principal_id` values and be
-covered by negative tests. The accounts `github:ofunk` and
-`github:ofunk-nvidia` resolve to the same principal; their different login
-strings therefore never satisfy separation of duties. Neither GitHub association
-nor specification approval substitutes for the required roles, so
-`freigabeverantwortung` still requires a second qualified principal before
-implementation acceptance.
+gate identities and prove active `prozessverantwortung` plus the
+`process_design` qualification for solo-owner authority. The versioned registry
+maps provider-qualified account identifiers to stable principals. Multiple
+accounts of the same principal never satisfy four-eyes or separation of duties.
+Issue #746 has no applicable statutory, regulatory, contractual, or binding
+security obligation requiring two different natural persons with a concrete
+source reference and scope. The active principal holding the owner role and
+qualification may
+therefore record an audit-proof `OWNER_SOLO_APPROVAL`. This decision is not
+four-eyes approval. A role label or GitHub association alone does not create a
+two-person obligation.
+
+If such an external obligation is bound as applicable, it must carry a source
+type, stable source ID, concrete citation, version, canonical digest, and scope.
+When only one qualified principal is then
+available, the result is `BLOCKED_SINGLE_PRINCIPAL`; different accounts of that
+principal do not change the result. Only two active, appropriately qualified,
+distinct principals may produce `FOUR_EYES_APPROVAL`. Incomplete or unknown
+source evidence blocks as `BLOCKED_REQUIREMENT_ASSESSMENT_INVALID`.
+
+`required_owner_login` is only a hash-bound provider transport attribute. It
+grants no governance authority. For acceptance, the provider-qualified account
+is resolved through the registry to an active principal with
+`prozessverantwortung` and `process_design`. Whether an additional distinct
+principal with `freigabeverantwortung` is required is decided solely by the
+source-bound two-person assessment described above.
+
+The versioned repository registry is authoritative only for the
+final-head-bound repository/PR acceptance gate. It contains no credentials and
+grants no wider provider-side account rights. Access-controlled, independently
+verified provider-identity resolution remains separate pending evidence for any
+later issue-#739 quarantine release or issue-#632 live run; the PR gate replaces
+neither of those separate gates.
+
+The original scope approved at `012c441b...` does not cover the combined
+account-to-principal repair and the now complete artifact allowlist. This
+expanded scope requires renewed approval bound to the exact implementation
+commit.
+
+The credential, redaction, #739 hash, and dynamic error-code matrices remain
+`pending` rather than passed until executable evidence exists. The offline
+contract may be structurally valid while its acceptance remains `BLOCKED`.
 
 ## Stop Conditions
 

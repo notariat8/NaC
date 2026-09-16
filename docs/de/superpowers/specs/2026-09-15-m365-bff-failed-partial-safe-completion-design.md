@@ -1,6 +1,6 @@
 # Sicherer Abschluss der partiellen M365-BFF-Aktivierung
 
-Status: Spec vom Owner freigegeben; Implementierungsplan durch Rollenentscheidung blockiert
+Status: Ursprungsspec vom Owner freigegeben; erweiterter Governance-Scope benötigt erneute hashgebundene Freigabe; Abnahme blockiert
 
 Datum: 15. September 2026
 Führendes Issue: [#746](https://github.com/notariat8/NaC/issues/746)
@@ -20,10 +20,32 @@ review_gates:
   - Platform
   - Security
 affected_artifacts:
-  - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - .github/workflows/governance-policy-sync.yml
+  - .github/workflows/windows-portability.yml
+  - agent-context/index.json
+  - AGENTS.md
+  - docs/de/role-model.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - docs/en/role-model.md
   - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - policies/access-control-policy.yaml
+  - policies/github-identity-registry.json
+  - policies/github-identity-registry.schema.json
+  - policies/role-model-policy.yaml
+  - sbom/ai/nac-ai-sbom-draft.json
+  - sbom/ai/nac-ai-sbom-export-mapping.json
+  - scripts/onboarding_wizard.py
+  - scripts/quality_gate.py
+  - scripts/validate_identity_registry.py
+  - scripts/validate_m365_azure_bff_live_activation.py
+  - scripts/validate_m365_bff_failed_partial_safe_completion.py
+  - tests/test_identity_registry.py
+  - tests/test_m365_azure_bff_live_activation_contract.py
+  - tests/test_m365_bff_failed_partial_safe_completion.py
+  - tests/test_validate_windows_offline_cli_portability.py
+  - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
 acceptance_ids:
   - AC-746-01
   - AC-746-02
@@ -41,7 +63,7 @@ validation_commands:
   - python scripts/validate_ai_sbom_export_mapping.py
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
   - PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
   - graft build
   - graft check
@@ -52,7 +74,7 @@ validation_commands:
   - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
   - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Zweck und Abgrenzung
@@ -206,11 +228,24 @@ blockieren.
 ## Phase 3: getrennte lokale Quarantänefreigabe
 
 Die Inspection ohne neuen Owner-Gate darf keine Datei verändern. Erst ein neuer
-unveränderlicher Kommentar in Issue #739 vom exakt verifizierten Owner-Login
-`ofunk` mit zulässiger Author-Association und der exakten Aktion
-`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` autorisiert einen
-getrennt identifizierten Operator, den bestehenden Reconciler mit
-`--confirm-release-quarantine` auszuführen. Dieses Gate bindet Kommentar-Body
+unveränderlicher Kommentar in Issue #739 vom exakt verifizierten Provider-
+Login `<protected-provider-login>` aus dem zugriffsgeschützten Resolver mit
+zulässiger Author-Association und der exakten Aktion
+`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` bindet den Provider-
+Transport. Governance-Autorität entsteht erst, wenn der provider-qualifizierte
+Account durch die Registry auf einen aktiven Principal mit der Owner-Rolle
+`prozessverantwortung` und der Qualifikation `process_design` aufgelöst wird.
+Für Issue #746 ist keine anwendbare, konkret zitierte gesetzliche,
+regulatorische, vertragliche oder verbindliche Security-Pflicht zu zwei
+verschiedenen natürlichen Personen belegt. Deshalb darf derselbe aktive
+Principal die Entscheidung revisionsfest als `OWNER_SOLO_APPROVAL`
+dokumentieren; sie ist keine Vier-Augen-Freigabe. Wird später eine solche
+Pflicht mit Quellenreferenz, Version, kanonischem Digest und Scope als
+anwendbar gebunden, blockiert ein einzelner Principal mit
+`BLOCKED_SINGLE_PRINCIPAL`. Erst bei zwei aktiven, passend qualifizierten und
+verschiedenen Principals ist `FOUR_EYES_APPROVAL` zulässig. Danach darf der
+Operator den bestehenden Reconciler mit `--confirm-release-quarantine`
+ausführen. Dieses Gate bindet Kommentar-Body
 und dessen Hash sowie State-, Evidence-, Ledger-, Lock-, Provider-,
 Prepared-Input-, Function-Paket-, Commit-, Tree- und Toolchain-Hashes.
 
@@ -225,8 +260,15 @@ Freigabebindung idempotent fortgesetzt werden.
 Nach nachgewiesener Quarantänefreigabe wird aus einem neuen sauberen Commit und
 Tree auf dem unterstützten POSIX-Host ein vollständiger Offline-Owner-Gate
 erzeugt. Er bleibt an die vorhandene, vertraglich festgelegte Issue-#632-Fläche,
-den exakt verifizierten Owner-Login und die zulässige Author-Association
-gebunden. Alte #632-/#739-Kommentare sind keine Freigabe für diesen Lauf.
+den exakt verifizierten Provider-Login und die zulässige Author-Association als
+Transportnachweise gebunden. Zusätzlich werden Freigabe- und Operator-Account
+über die Registry auf aktive, passend qualifizierte Principals aufgelöst. Der
+Personenmodus folgt derselben quellgebundenen Entscheidung: ohne anwendbare
+konkret zitierte Zwei-Personen-Pflicht `OWNER_SOLO_APPROVAL`, mit einer solchen
+Pflicht und nur einem Principal `BLOCKED_SINGLE_PRINCIPAL` und bei verschiedenen
+qualifizierten Principals `FOUR_EYES_APPROVAL`. Eine Rollenbezeichnung allein
+ist kein Quellenbeleg. Alte #632-/#739-Kommentare sind keine Freigabe für diesen
+Lauf.
 
 Die spätere Live-Freigabe muss mindestens den neuen Aktivierungs-Hash, Commit,
 Tree, Ziel-, Permission-, Schrittfolgen-, Provisioner-Bootstrap- und
@@ -339,6 +381,18 @@ fehlgeschlagener unabhängiger Prüfung.
 
 Der Owner hat diesen Spec-Stand auf Commit
 `012c441b74cfd1a1de61fd3d48ed09282aaba328` freigegeben. Der verlinkte DE/EN-
-Implementierungsplan durchläuft nun `plan -> review -> fix`. Diese Freigabe
-ersetzt weder das lokale Issue-#739-Release-Gate noch das Issue-#632-Gate für
-einen späteren Live-Lauf.
+Implementierungsplan hat `plan -> review -> fix` abgeschlossen;
+`implement -> review -> fix` läuft. Diese Freigabe ersetzt weder das lokale
+Issue-#739-Release-Gate noch das Issue-#632-Gate für einen späteren Live-Lauf.
+Der auf `012c441b...` freigegebene Ursprungsscope umfasst nicht die spätere
+Account-zu-Principal-Governance-Reparatur und die aktuelle erweiterte
+Artefaktliste. Dieser kombinierte Scope benötigt nach Abschluss der Fixes eine
+neue, exakt an den finalen PR-Head gebundene Owner-Freigabe. Die vorliegende
+lokale Governance-Entscheidung wählt für Issue #746 `OWNER_SOLO_APPROVAL`, weil
+keine anwendbare externe Zwei-Personen-Pflicht mit Quellenreferenz und Scope
+  belegt ist; sie ist keine Vier-Augen-Freigabe. Die versionierte Repository-
+  Registry trägt nur das final-head-gebundene PR-Abnahme-Gate. Eine
+  zugriffsgeschützte, unabhängig geprüfte Provideridentitätsauflösung bleibt für
+  jedes spätere #739- oder #632-Gate separat ausstehend. Die Abnahme bleibt
+  außerdem wegen noch ausstehender ausführbarer Evidence für Credential-, Redaktions- und
+#739-Hashgrenzen sowie dynamische Fehlercodepfade ausdrücklich `BLOCKED`.

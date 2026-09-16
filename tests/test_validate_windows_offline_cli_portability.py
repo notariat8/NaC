@@ -23,6 +23,7 @@ class WindowsPortabilityValidatorTests(unittest.TestCase):
             "src/nac_bff/azure_activation_contract.py",
             "src/nac_bff/azure_activation_facade.py",
             "tests/test_windows_offline_cli_portability.py",
+            "tests/test_m365_bff_failed_partial_safe_completion.py",
             ".github/workflows/windows-portability.yml",
         ):
             destination = root / relative

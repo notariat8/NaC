@@ -1,6 +1,6 @@
 # Safe Completion of the Partial M365 BFF Activation
 
-Status: Specification approved by owner; implementation plan blocked by role decision
+Status: Original specification approved by owner; expanded governance scope requires renewed hash-bound approval; acceptance blocked
 
 Date: 15 September 2026
 Leading issue: [#746](https://github.com/notariat8/NaC/issues/746)
@@ -20,10 +20,32 @@ review_gates:
   - Platform
   - Security
 affected_artifacts:
-  - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - .github/workflows/governance-policy-sync.yml
+  - .github/workflows/windows-portability.yml
+  - agent-context/index.json
+  - AGENTS.md
+  - docs/de/role-model.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - docs/en/role-model.md
   - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  - policies/access-control-policy.yaml
+  - policies/github-identity-registry.json
+  - policies/github-identity-registry.schema.json
+  - policies/role-model-policy.yaml
+  - sbom/ai/nac-ai-sbom-draft.json
+  - sbom/ai/nac-ai-sbom-export-mapping.json
+  - scripts/onboarding_wizard.py
+  - scripts/quality_gate.py
+  - scripts/validate_identity_registry.py
+  - scripts/validate_m365_azure_bff_live_activation.py
+  - scripts/validate_m365_bff_failed_partial_safe_completion.py
+  - tests/test_identity_registry.py
+  - tests/test_m365_azure_bff_live_activation_contract.py
+  - tests/test_m365_bff_failed_partial_safe_completion.py
+  - tests/test_validate_windows_offline_cli_portability.py
+  - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
 acceptance_ids:
   - AC-746-01
   - AC-746-02
@@ -41,7 +63,7 @@ validation_commands:
   - python scripts/validate_ai_sbom_export_mapping.py
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
   - PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
   - graft build
   - graft check
@@ -52,7 +74,7 @@ validation_commands:
   - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
   - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD
+  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Purpose and Boundary
@@ -196,11 +218,23 @@ added to the repository; unknown or unredactable fields block.
 ## Phase 3: Separate Local Quarantine Release
 
 The inspection that requires no new owner gate may not change any file. Only a
-new immutable comment in Issue #739 by the exactly verified owner login `ofunk`,
-with an allowed author association and the exact action
-`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT`, authorizes a separately
-identified operator to invoke the existing reconciler with
-`--confirm-release-quarantine`. This gate binds the comment body and its hash,
+new immutable comment in Issue #739 by the exactly verified provider login
+`<protected-provider-login>` from the access-controlled resolver, with an
+allowed author association and the exact action
+`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT`, binds the provider
+transport. Governance authority exists only after the provider-qualified
+account resolves through the registry to an active principal with the owner
+role `prozessverantwortung` and qualification `process_design`. Issue #746 has
+no applicable, concretely cited statutory, regulatory, contractual, or binding
+security obligation requiring two different natural persons. The same active
+principal may therefore record the decision auditably as
+`OWNER_SOLO_APPROVAL`; it is not four-eyes approval. If such an obligation is
+later bound as applicable with a source reference, version, canonical digest
+and scope, one principal
+  blocks with `BLOCKED_SINGLE_PRINCIPAL`. `FOUR_EYES_APPROVAL` is allowed only
+  for two active, appropriately qualified, distinct principals. The operator may
+  then invoke the existing reconciler with `--confirm-release-quarantine`.
+This gate binds the comment body and its hash,
 as well as state, evidence, ledger, lock, provider, prepared-input,
 Function-package, commit, tree, and toolchain hashes.
 
@@ -215,8 +249,14 @@ idempotently only under the same unchanged approval binding.
 After the quarantine release is proven, a complete offline owner gate is
 generated from a new clean commit and tree on the supported POSIX host. It
 remains bound to the existing contract-defined Issue #632 surface, the exactly
-verified owner login, and an allowed author association. Old #632 or #739
-comments are not approval for this run.
+verified provider login, and an allowed author association as transport
+evidence. The approval and operator accounts must additionally resolve through
+the registry to active, appropriately qualified principals. The person-count
+mode follows the same source-bound decision: `OWNER_SOLO_APPROVAL` without an
+applicable concretely cited two-person obligation, `BLOCKED_SINGLE_PRINCIPAL`
+with such an obligation and only one principal, and `FOUR_EYES_APPROVAL` only
+between distinct qualified principals. A role label alone is not source
+evidence. Old #632 or #739 comments are not approval for this run.
 
 The later live approval must bind at least the new activation hash, commit,
 tree, target, permission, step sequence, provisioner bootstrap, and toolchain,
@@ -323,5 +363,17 @@ deployment, evidence that cannot be redacted, or failed independent review.
 
 The owner approved this specification state at commit
 `012c441b74cfd1a1de61fd3d48ed09282aaba328`. The linked DE/EN implementation
-plan now goes through `plan -> review -> fix`. This approval replaces neither
-the local issue-#739 release gate nor the issue-#632 gate for a later live run.
+plan has completed `plan -> review -> fix`; `implement -> review -> fix` is in
+progress. This approval replaces neither the local issue-#739 release gate nor
+the issue-#632 gate for a later live run. The original scope approved at
+`012c441b...` does not cover the later account-to-principal governance repair
+or the current expanded artifact list. After all fixes, that combined scope
+requires renewed approval bound to the exact final PR head. The current local
+governance decision selects `OWNER_SOLO_APPROVAL` for Issue #746 because no
+applicable external two-person obligation with a source reference and scope is
+documented; it is not four-eyes approval. The versioned repository registry
+supports only the final-head-bound PR acceptance gate. Access-controlled,
+independently verified provider-identity resolution remains separately pending
+for every later #739 or #632 gate. Acceptance also remains `BLOCKED` by pending
+executable evidence for the credential, redaction, #739 hash, and dynamic
+error-code boundaries.
