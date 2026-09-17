@@ -1,10 +1,12 @@
-# Safe Completion of the Partial M365 BFF Activation
+# Safe Windows Completion of the Partial M365 BFF Activation
 
-Status: Original specification approved by owner; expanded governance scope requires renewed hash-bound approval; acceptance blocked
+Status: design sections approved by the owner; written specification review pending; implementation and operational execution blocked
 
-Date: 15 September 2026
+Date: 17 September 2026
+
 Leading issue: [#746](https://github.com/notariat8/NaC/issues/746)
-Implementation plan: [Safe Completion of the Partial M365 BFF Activation](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
+
+Implementation plan to be revised: [Safe Completion of the Partial M365 BFF Activation](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -20,32 +22,37 @@ review_gates:
   - Platform
   - Security
 affected_artifacts:
-  - .github/workflows/governance-policy-sync.yml
   - .github/workflows/windows-portability.yml
   - agent-context/index.json
-  - AGENTS.md
-  - assets/docs/generic-workbench/VIS-721-manifest.json
-  - docs/de/role-model.md
+  - docs/de/cli.md
+  - docs/de/minimum-requirements.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/de/superpowers/specs/2026-08-09-windows-light-runner-design.md
+  - docs/de/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
   - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - docs/en/role-model.md
+  - docs/en/cli.md
+  - docs/en/minimum-requirements.md
   - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/en/superpowers/specs/2026-08-09-windows-light-runner-design.md
+  - docs/en/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
   - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - policies/access-control-policy.yaml
-  - policies/github-identity-registry.json
-  - policies/github-identity-registry.schema.json
-  - policies/role-model-policy.yaml
   - sbom/ai/nac-ai-sbom-draft.json
-  - sbom/ai/nac-ai-sbom-export-mapping.json
-  - scripts/onboarding_wizard.py
-  - scripts/quality_gate.py
-  - scripts/validate_identity_registry.py
   - scripts/validate_m365_azure_bff_live_activation.py
   - scripts/validate_m365_bff_failed_partial_safe_completion.py
-  - tests/test_identity_registry.py
+  - src/nac_bff/azure_activation_attestations.py
+  - src/nac_bff/azure_activation_contract.py
+  - src/nac_bff/azure_activation_facade.py
+  - src/nac_bff/azure_activation_runner.py
+  - src/nac_bff/azure_live_commands.py
+  - src/nac_bff/azure_live_commands_win.py
+  - src/nac_cli/cli.py
+  - src/nac_m365_graph/mvp_test_environment_deploy.py
+  - src/nac_m365_graph/sealed_toolchain.py
   - tests/test_m365_azure_bff_live_activation_contract.py
   - tests/test_m365_bff_failed_partial_safe_completion.py
-  - tests/test_validate_windows_offline_cli_portability.py
+  - tests/test_windows_offline_cli_portability.py
+  - workflows/contracts/m365-azure-bff-live-activation.contract.json
+  - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
   - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
 acceptance_ids:
   - AC-746-01
@@ -61,323 +68,414 @@ validation_commands:
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
   - python scripts/validate_ai_sbom.py
-  - python scripts/validate_ai_sbom_export_mapping.py
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
-  - PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion tests.test_m365_azure_bff_live_activation_contract
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
-  - git fetch --no-tags --prune origin main
-  - git diff --name-status origin/main...HEAD
-  - git log --oneline origin/main..HEAD
-  - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
-  - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Purpose and Boundary
 
-This specification defines the safe path from the current partial state to the
-possibility of a new, separately approved live run for the exclusively
-synthetic workspace `notary_team_01`. It does not itself authorize a provider
-write, a local lock release, a live retry, or generation of a valid live
-approval.
+This specification replaces the local POSIX prerequisite in the previous
+Issue #746 design with a complete native Windows path. Every mandatory local
+development, build, test, packaging, reconciliation, approval, and deployment-
+control step must work on the Windows 11 workstation. WSL, Docker, SBX, a Linux
+VM, or a separate Linux runner is neither a prerequisite nor a fallback.
+
+Linux remains allowed only inside the Azure target environment. The Azure
+Function may run as `functionapp,linux`, and Azure OneDeploy may materialize
+Linux-native dependencies in the bound remote build. This creates no local
+Linux dependency.
+
+The specification also defines the safe path from the documented partial state
+to a possible new, separately approved live run for the exclusively synthetic
+workspace `notary_team_01`. It does not itself authorize a provider write, the
+Issue #739 quarantine release, a live retry, or an Issue #632 live run.
 
 The visible Teams message `Kein Zugriff auf diesen Arbeitsbereich` must not be
-fixed through a UI bypass. Completion must prove the unchanged chain
+fixed through a UI bypass. Completion must prove the chain
 `Teams/SPFx -> AadHttpClient -> Entra-protected BFF -> server-side access gate
--> Microsoft Graph REST v1.0`. Until then, the message remains an expected
-fail-closed result.
+-> Microsoft Graph REST v1.0`.
 
-## Documented Provenance and Starting Hypothesis to Be Verified
+## Binding Platform Boundary
 
-GitHub surfaces are not product or runtime state. The following statements are
-historical provenance and form only the starting hypothesis. Current local and
-provider state remains `UNVERIFIED` and therefore `BLOCKED` until the bound
-local artifacts and double read-only inspection freshly pass. Four existing
-issues have distinct roles:
+```yaml
+local_development_platform: windows
+local_build_platform: windows
+local_test_platform: windows
+local_packaging_platform: windows
+local_reconciliation_platform: windows
+local_deployment_control_platform: windows
+local_live_activation_control_platform: windows
+wsl_required: false
+docker_required: false
+linux_host_required: false
+posix_runner_required: false
+azure_function_runtime:
+  linux_allowed: true
+azure_remote_build:
+  linux_allowed: true
+linux_ci:
+  allowed: true
+  required_gate: false
+  may_block_windows_delivery: false
+```
 
-- [#620](https://github.com/notariat8/NaC/issues/620) remains the parent for the
-  visible M365 MVP test environment. Its 19 July run ended at step 6
-  `grant_target_site_read` as `FAILED_PARTIAL`; its lock and ledger were closed
-  in an orderly way. This run is historical provenance only.
-- [#632](https://github.com/notariat8/NaC/issues/632) remains the governing live
-  activation contract and the contract-defined approval surface for a later new
-  live run.
-- [#739](https://github.com/notariat8/NaC/issues/739) holds the current live-run
-  documentation trail and the separate local step-7 release gate. The latest
-  documented run `nac-bff-live-20260908-issue739-v4` passed
-  steps 1 through 6 and terminated at step 7 `deploy_function_package` with
-  `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`. All three lock journals remained
-  quarantined.
-- [#743](https://github.com/notariat8/NaC/issues/743) records an older
-  interruption for which the issue reports missing secure local state. Its
-  evidence must not be mixed
-  with the current #739 run trail or used to reconstruct missing bindings.
+An optional Linux CI run may check compatibility with the permitted Azure Linux
+runtime only. It does not replace Windows evidence and must not independently
+block Windows delivery.
 
-The repository already contains the narrow
-`bff-azure-function-deployment-reconcile` inspection, which requires no new
-owner gate. It is limited to the
-exact terminal step-7 shape and accepts only two equal ARM snapshots constrained
-to the target Function with the classification
-`FUNCTION_DEPLOYMENT_NOT_APPLIED`. This specification does not broaden that
-security boundary; it places the command in a complete closure sequence.
+The [Microsoft-first, on-prem AI target architecture](../../architecture/microsoft-first-onprem-target-architecture.md)
+remains unchanged: Microsoft 365 forms the user, identity, and data edge; local
+NaC workstations and development run on Windows; Azure services may use their
+managed Linux runtime.
+
+## Provenance and Current Starting State
+
+GitHub surfaces are not product or runtime state. The following issues have
+separate roles:
+
+- [#620](https://github.com/notariat8/NaC/issues/620) is historical provenance
+  for the visible M365 MVP test environment.
+- [#632](https://github.com/notariat8/NaC/issues/632) remains the governing
+  contract and separate approval surface for a new live run.
+- [#739](https://github.com/notariat8/NaC/issues/739) contains the current
+  quarantined run trail. The documented run
+  `nac-bff-live-20260908-issue739-v4` ended at step 7
+  `deploy_function_package` with
+  `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`.
+- [#743](https://github.com/notariat8/NaC/issues/743) is a different historical
+  interruption and must not be used to reconstruct #739.
+- [#744](https://github.com/notariat8/NaC/issues/744) introduced the portable
+  Windows offline CLI and the current Linux-only live restriction. That
+  restriction remains fail-closed until the Windows implementation is
+  validated, but is no longer the target architecture.
+- [#746](https://github.com/notariat8/NaC/issues/746) governs the secure Windows
+  migration and later completion chain.
+
+Old evidence or old comments are not current approval. Local and provider state
+remains `UNVERIFIED` and therefore `BLOCKED` until the new Windows preflight and
+double read-only inspection freshly pass.
 
 ## Evaluated Approaches
 
-### A. Read-only reconciliation followed by a new run
+### A. Windows-native control path with an Azure Linux target — selected
 
-The supported POSIX host first checks every local binding, then allowed network
-reachability, and only then the exactly allowlisted read-only provider state.
-Only an unambiguous classification may advance to a separate local quarantine
-release and later to a new offline owner gate. This is the selected approach
-because it preserves old evidence and binds every mutation to a new narrow
-owner gate.
+The complete local flow is secured on Windows. The controller creates bound
+input packages and controls Azure, Entra, Graph, SharePoint, and M365 from
+Windows. The Azure Function and its remote build may use Linux. This approach
+matches the available development environment and avoids an additional
+operating platform.
 
-### B. Immediate idempotent full rerun
+### B. Separate POSIX runner — rejected
 
-A new twelve-step run could reuse existing resources. Until the current lock,
-step-7 evidence, and provider state are unambiguously reconciled, this would
-bypass the existing quarantine. The approach remains blocked.
+A Linux computer, WSL, VM, or SBX would merely preserve the previous
+implementation limitation. Credentials, working state, and evidence would have
+to cross an additional host boundary. NaC does not require this, and it
+conflicts with the binding local Windows platform.
 
-### C. Manual rebuild or cleanup
+### C. Manual cleanup or immediate rerun — rejected
 
-Manual deletion, permission changes, or redeployment could simplify the target
-state but would destroy provenance and exceed the approved no-rollback and
-no-deletion boundary. This approach is outside the design.
+Manual unlocking, deletion, permission changes, or a full rerun before
+reconciliation would bypass the #739 provenance and quarantine. This approach
+remains blocked.
 
-## Selected Orchestration Sequence
+## Windows Security Backend
 
-The labels in the following diagram are orchestration phases, not new persisted
-run states. The old run state remains `FAILED_PARTIAL` throughout.
+### Unified platform contract
+
+`PlatformSecurityBackend` encapsulates security-sensitive platform operations.
+The Windows backend is binding for local NaC development and control. A Linux
+backend may remain as an optional compatibility reference, but no local product
+path may depend on it.
+
+The existing Windows Light Runner implementation is not reactivated unchanged.
+Its concepts are reused only where they meet the following guarantees.
+
+### Files, paths, SID, and ACL
+
+Security-sensitive files are opened through Windows handles. Before use, the
+controller verifies:
+
+- an absolute, canonical path;
+- the relevant path chain for unexpected reparse points;
+- the final path through the open handle;
+- local volume, file, and size binding;
+- owner SID and DACL;
+- no write permission for unapproved principals;
+- denied write and delete sharing during measurement and use;
+- SHA-256 from the already open handle.
+
+The repository-external identity resolver is no longer bound to POSIX mode
+`0600`; it is bound to the current user SID, a restrictive Windows DACL, its
+canonical path, and its SHA-256. Real account-to-principal mappings do not enter
+Git, public logs, or comments.
+
+State, ledger, evidence, and journals are written in the same protected
+directory, flushed, and atomically replaced or extended append-only.
+
+### Complete toolchain attestation
+
+The system does not measure only a `.cmd` wrapper. It binds the complete
+executable chain:
 
 ```text
-LOCAL_PRECHECK
-  -> BLOCKED
-  -> POSIX_READY
-       -> NETWORK_BLOCKED
-       -> READ_ONLY_RECONCILIATION
-            -> BLOCKED
-            -> FUNCTION_DEPLOYMENT_NOT_APPLIED
-                 -> OWNER_GATE_REQUIRED_FOR_LOCAL_RELEASE
-                 -> LOCK_JOURNALS_RELEASED
-                      -> NEW_OFFLINE_OWNER_GATE_REQUIRED
-                      -> LIVE_RUN_SEPARATELY_APPROVED
+launcher/wrapper -> interpreter -> CLI entry point -> package/module
 ```
 
-`LOCK_JOURNALS_RELEASED` means only that the three local lock journals for the
-proven-not-applied step-7 deployment were released append-only. The old run
-remains `FAILED_PARTIAL`; state, evidence, ledger, and provider state remain
-unchanged. This status is neither `PASSED` nor a live approval.
+This applies to Azure CLI, M365 CLI, Python, Node, npm/pnpm, Heft, and Bicep.
+Hard-coded Linux paths are removed from the local contract. Any unexpected
+wrapper, interpreter, entry point, or package hash blocks before network
+access.
 
-## Phase 1: Local POSIX Preflight
+### Process boundary
 
-Before credential, network, or provider access, local validation must establish
-at least:
+Security-sensitive programs start without shell interpolation, with an
+explicit argument list, fixed working directory, minimal environment allowlist,
+and bounded output. The process is created suspended, assigned through a real
+process handle to a Windows Job Object, and resumed only afterward. The Job
+Object uses at least `KILL_ON_JOB_CLOSE`. Permitted child processes follow the
+attested CLI chain; unknown processes block.
 
-1. a supported POSIX operating system with the existing `flock`, `O_NOFOLLOW`,
-   descriptor, ownership, and permission semantics;
-2. a clean Git worktree and exact commit and tree;
-3. the exact activation, correlation, approval, and target binding of the
-   current #739 run;
-4. byte-exact state, evidence, ledger, prepared-manifest, Function ZIP, and
-   journal integrity;
-5. exact toolchain and binary bindings without symlink, path, or late-load
-   drift;
-6. no concurrent lock ownership.
+Where possible, the controller starts the bound Python or Node interpreter
+directly with the attested entry point instead of executing `.cmd` through a
+general shell. Tokens and credentials appear in neither arguments nor logs or
+evidence.
 
-Windows remains blocked for live, recovery, and provider reconciliation before
-all such access with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE`. The portable
-Windows offline CLI may provide only static validation and plan views.
+### Locking and crash detection
 
-## Phase 2: Network and Provider Reconciliation
+Every run holds:
 
-The centrally managed NVIDIA sandbox policy is an external prerequisite. Before
-a new owner gate, only the three narrowly bound targets documented in #739 are
-checked: the Function host, SCM host, and Azure CLI blob host. A local allow
-rule, wildcard bypass, or broader policy change is outside this work.
+1. a Windows named mutex restricted by DACL to the current user SID;
+2. an exclusively opened, hash-bound lock and state journal.
 
-After the read-only network check succeeds, only the existing step-7 inspection
-may run with an already established authenticated context. It must not start
-interactive authentication, create, change, or persist credential material, or
-change a permission. It reads the documented ARM endpoints for the exact target
-Function twice. Only a stable snapshot proving `FUNCTION_DEPLOYMENT_NOT_APPLIED` is
-eligible. An observed deployment, a missing field, drift between snapshots, a
-redirect, an authentication or policy error, or a provider result that cannot
-be allowlisted returns `BLOCKED`.
+The mutex handle remains open until the run ends. `WAIT_ABANDONED` is not a
+successful normal lock acquisition; it produces `RECOVERY_REQUIRED`.
+Automatic resume or a second live run is excluded.
 
-Output contains only status, stable error codes, counters, and canonical hashes.
-Strict allowlists apply to standard output, standard error, logs, temporary
-artifacts, exceptions, telemetry, shell history, and approval comments. Raw
-responses, IDs, URLs, tokens, credential values, local secret paths, personal
-data, and matter data must not be included there, transmitted to GitHub, or
-added to the repository; unknown or unredactable fields block.
+### Credential boundary
 
-## Phase 3: Separate Local Quarantine Release
+The controller uses only an already established authentication context. It
+does not copy, export, hash, or persist credentials. Login, device code,
+browser authentication, token refresh, cache creation, or configuration rewrite
+blocks reconciliation with `BLOCKED_AUTHENTICATION_REQUIRED`. Provider access
+starts only after the complete local preflight.
 
-The inspection that requires no new owner gate may not change any file. Only a
-new immutable comment in Issue #739 by the exactly verified provider login
-`<protected-provider-login>` from the access-controlled resolver, with an
-allowed author association and the exact action
-`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT`, binds the provider
-transport. Governance authority exists only after the provider-qualified
-account resolves through the registry to an active principal with the owner
-role `prozessverantwortung` and qualification `process_design`. Issue #746 has
-no applicable, concretely cited statutory, regulatory, contractual, or binding
-security obligation requiring two different natural persons. The same active
-principal may therefore record the decision auditably as
-`OWNER_SOLO_APPROVAL`; it is not four-eyes approval. If such an obligation is
-later bound as applicable with a source reference, version, canonical digest
-and scope, one principal
-  blocks with `BLOCKED_SINGLE_PRINCIPAL`. `FOUR_EYES_APPROVAL` is allowed only
-  for two active, appropriately qualified, distinct principals. The operator may
-  then invoke the existing reconciler with `--confirm-release-quarantine`.
-This gate binds the comment body and its hash,
-as well as state, evidence, ledger, lock, provider, prepared-input,
-Function-package, commit, tree, and toolchain hashes.
+### Command allowlist
 
-The only mutation is appending a `RELEASED` record to each of the three journals
-in a crash-safe, append-only manner.
-There is no Azure, Entra, Graph, SharePoint, Teams, App Catalog, or credential
-write. Unknown journal tails or any drift block. A torn append may continue
-idempotently only under the same unchanged approval binding.
+The security boundary consists of exact command schemas, bound target
+resources, arguments, artifacts, toolchain hashes, Windows ACLs, and readbacks.
+Unknown flags, other tenants, subscriptions, sites, or resources are rejected
+before process start. A local Linux sandbox is not part of the design.
 
-## Phase 4: New Live Run as Its Own Gate
+## Phased Completion Chain
 
-After the quarantine release is proven, a complete offline owner gate is
-generated from a new clean commit and tree on the supported POSIX host. It
-remains bound to the existing contract-defined Issue #632 surface, the exactly
-verified provider login, and an allowed author association as transport
-evidence. The approval and operator accounts must additionally resolve through
-the registry to active, appropriately qualified principals. The person-count
-mode follows the same source-bound decision: `OWNER_SOLO_APPROVAL` without an
-applicable concretely cited two-person obligation, `BLOCKED_SINGLE_PRINCIPAL`
-with such an obligation and only one principal, and `FOUR_EYES_APPROVAL` only
-between distinct qualified principals. A role label alone is not source
-evidence. Old #632 or #739 comments are not approval for this run.
+```text
+WINDOWS_IMPLEMENTATION_READY
+  -> ISSUE_746_OWNER_SOLO_APPROVAL
+  -> WINDOWS_PREFLIGHT_READY
+  -> READ_ONLY_RECONCILIATION
+  -> TWO_IDENTICAL_NOT_APPLIED_SNAPSHOTS
+  -> ISSUE_739_QUARANTINE_RELEASE
+  -> ISSUE_632_OFFLINE_PACKAGE
+  -> ISSUE_632_LIVE_APPROVAL
+  -> ONE_WINDOWS_CONTROLLED_LIVE_RUN
+  -> READ_ONLY_POST_VERIFY
+```
 
-The later live approval must bind at least the new activation hash, commit,
-tree, target, permission, step sequence, provisioner bootstrap, and toolchain,
-plus the unchanged no-rollback and no-deletion rule. Exactly one controlled
-live run may start only after separate owner approval. All existing stop, lock,
-evidence, redaction, and readback rules remain unchanged.
+Each phase authorizes only the next phase. A blocked run authorizes no retry.
 
-The three approvals are not interchangeable: approval of this design
-specification is neither approval of the local quarantine mutation nor approval
-of the later live run.
+### Phase 0: Windows implementation
+
+Only repository artifacts are changed first, validated locally on Windows,
+committed, pushed to PR #747, and checked by mandatory Windows CI. There is no
+provider, tenant, credential, or live access. After successful CI, the commit,
+tree, verification contract, Windows backend, toolchain, resolver, and operator
+principal are bound.
+
+### Phase 1: new Issue #746 approval
+
+A new `OWNER_SOLO_APPROVAL` binds the final implementation state because
+earlier approvals point to different commits. The approval permits only the
+Windows preflight and narrowly allowlisted read-only reconciliation. It is
+neither the #739 quarantine release nor the #632 live approval.
+
+### Phase 2: local Windows preflight
+
+Before credential, network, or provider access, the preflight verifies commit,
+tree, #739 state, evidence, ledger, three journals, prepared manifest, Function
+and SPFx packages, toolchain, SID, ACL, reparse points, target and approval
+binding, and concurrent runs. On drift, network, provider, tenant, and
+credential counters remain zero.
+
+### Phase 3: read-only provider reconciliation
+
+Using the already established authentication context, only the narrowly bound
+step-7 question is inspected. Exactly two allowlisted, redacted, canonical
+provider snapshots are produced. Only two identical snapshots classified as
+`FUNCTION_DEPLOYMENT_NOT_APPLIED` with zero write counters open the #739 gate.
+A redirect, authentication requirement, unknown field, drift, observed
+deployment, or unredactable output blocks.
+
+### Phase 4: separate #739 quarantine release
+
+A new, exactly bound Issue #739 comment authorizes only the deterministic,
+append-only addition of a `RELEASED` record to the three local journals. The
+historical run remains `FAILED_PARTIAL`; state, evidence, and ledger are not
+rewritten. A partial append may be completed idempotently only with the same
+unchanged approval.
+
+### Phase 5: new #632 offline package
+
+After journal release, Windows produces a new activation package for all twelve
+existing steps. It binds commit, tree, Windows backend, toolchain, Function,
+SPFx, and Bicep artifacts, target resources, and readbacks. Package creation is
+offline.
+
+### Phase 6: independent #632 live approval
+
+A new Issue #632 comment binds the complete package and authorizes exactly one
+live run. #746 and #739 comments cannot be reused. Any code, contract,
+toolchain, or package change invalidates the approval.
+
+### Phase 7: exactly one Windows-controlled live run
+
+The run starts on the Windows workstation. Azure may materialize the Function
+package internally as a Linux runtime. The controller repeats the prewrite
+check, executes only the twelve bound steps, validates each readback, and stops
+at the first failure. There is no automatic retry.
+
+### Phase 8: read-only final verification
+
+After the run, the Function, Entra API, `Matter.Read`, managed identity,
+`Sites.Selected`, SharePoint site permission, SPFx and App Catalog state,
+Teams-to-BFF connection, and permitted and denied synthetic access are checked
+read-only. Only then may redacted completion evidence be documented.
+
+## Governance and Identity
+
+Provider accounts resolve through the protected external resolver to stable
+principals. Different accounts of the same principal are one person and do not
+satisfy a four-eyes separation.
+
+Without a concretely cited applicable statutory, regulatory, contractual, or
+binding security obligation requiring two different natural persons,
+`OWNER_SOLO_APPROVAL` applies. If such an obligation is bound with source,
+version, digest, and scope and only one principal is available,
+`BLOCKED_SINGLE_PRINCIPAL` applies. A role label or `four_eyes` alone is not
+source evidence.
 
 ## Acceptance Criteria
 
-- **AC-746-01:** This English translation and the leading German specification
-  document the same starting state, approaches, trust boundaries, stop
+- **AC-746-01 — DE/EN parity:** The German and English specifications describe
+  the same platform boundary, starting state, security backend, phases, stop
   conditions, and separate gates.
-- **AC-746-02:** #620, #739, and #743 are connected as separate provenance
-  trails together with the governing #632 live-activation contract; neither
-  old evidence nor an old owner comment is treated as current success, current
-  state, or new approval.
-- **AC-746-03:** On a supported POSIX host, the closure path checks the exact
-  local state, ledger, all lock journals, prepared inputs, package, commit,
-  tree, toolchain, and target binding before provider access; missing or
-  conflicting bindings return `BLOCKED`.
-- **AC-746-04:** Provider inspection remains entirely read-only, target-bound,
-  observed twice, and redacted. Only `FUNCTION_DEPLOYMENT_NOT_APPLIED` allows
-  transition to the separate local release gate.
-- **AC-746-05:** Windows live, recovery, and reconciliation paths stop before
-  credential, state, network, or provider access with
-  `PLATFORM_SECURITY_BACKEND_UNAVAILABLE`; POSIX security semantics are not
-  weakened.
-- **AC-746-06:** The implementation plan created after specification approval
-  describes test-first the POSIX/Windows matrix, reconciliation decision table,
-  stable error codes, redaction, crash windows, and exact gate transitions as an
-  orchestration and operations plan that reuses the existing #739 CLI,
-  contracts, and tests. Reconciler code, ARM allowlist, and release algorithm
-  remain unchanged absent a separately evidenced defect. Negative tests cover
-  replay of old #632 or #739 comments, reuse of specification approval, wrong
-  issue, wrong login or author association, changed comment body or hash,
-  binding drift, and continuation of a partial journal append only under the
-  identical approval.
-- **AC-746-07:** Spec traceability connects the issue, DE/EN specification, the
-  later DE/EN plan, every AC ID, and concrete local and remote validation.
-- **AC-746-08:** This draft PR performs no tenant, provider, credential, or live
-  action. Local quarantine release and a new live run remain two separate,
-  hash-bound owner gates.
+- **AC-746-02 — Provenance separation:** #620, #632, #739, #743, #744, and #746
+  remain separate; old evidence and comments are neither current state nor new
+  approval.
+- **AC-746-03 — Windows preflight:** All local bindings, SID and ACL checks, and
+  reparse-point checks run on Windows before network access. Every deliberate
+  drift returns `BLOCKED` with zero side-effect counters.
+- **AC-746-04 — Double read-only reconciliation:** Exactly two bound, redacted
+  snapshots and only `FUNCTION_DEPLOYMENT_NOT_APPLIED` open the separate #739
+  gate; provider, tenant, and credential write counters remain zero.
+- **AC-746-05 — Complete Windows security backend:** Live, recovery, and
+  reconciliation are available on Windows only with proven handle, ACL,
+  reparse, toolchain, Job Object, mutex, and journal security. Merely removing
+  the existing platform block is prohibited.
+- **AC-746-06 — Replay and crash safety:** The three approvals are not
+  interchangeable; wrong issue, principal, commit, tree, contract, body, or
+  artifact binding blocks. An abandoned mutex and partial appends never cause
+  an automatic live retry.
+- **AC-746-07 — Windows validation and traceability:** Issue, DE/EN
+  specification, DE/EN plan, AC IDs, files, positive and negative tests, and
+  local and remote evidence are connected. Mandatory CI runs on Windows; Linux
+  CI remains optional and non-blocking.
+- **AC-746-08 — No premature live action:** Design, plan, and implementation PR
+  perform no quarantine release, login, provider, tenant, credential, or live
+  action. #739 and #632 remain separate hash-bound owner gates.
 
 ## Validation Model
 
-The manifest commands are not one platform-independent list to be executed
-together. The native Windows path runs only the portable offline and
-fail-closed suite. The POSIX BFF suite, activation validator, Graft, and strict
-doctor run on the supported POSIX or `ubuntu-latest` path. The later plan must
-record this assignment for every command in machine-readable form as
-`windows_native`, `posix_local`, `ubuntu_remote_ci`, or `post_pr_remote`.
+The plan created after specification approval maintains this matrix for every
+AC:
 
-The plan must also maintain an AC evidence matrix:
+`AC ID -> artifacts -> Windows positive test -> Windows negative test ->
+expected status/error code -> local command -> remote check/evidence`.
 
-`AC ID -> artifacts -> platform -> positive test -> negative test -> expected
-status/error code -> local command -> remote check/evidence`.
+Mandatory evidence includes at least:
 
-At least one Issue #746-specific validator, or an equivalently narrow mapping to
-exact existing test methods, validates provenance separation, preflight order,
-zero write counters, redaction sentinels, every blocked branch, and all three
-journal crash windows. A raw module or validator-name listing is insufficient.
-The existing M365 live-activation validator is regression evidence but alone is
-not evidence for every AC-746 criterion.
+- file-handle, file-ID, volume-ID, and hash binding;
+- SID, DACL, and reparse-point negative tests;
+- complete launcher, interpreter, and package attestation;
+- suspended process creation and Job Object assignment;
+- mutex, abandoned-mutex, and three journal crash windows;
+- replay matrix for #746, #739, and #632;
+- credential, redaction, and unknown-field sentinels;
+- two identical read-only snapshots with zero write counters;
+- Windows SPFx build and Windows Function input package;
+- Windows-native CLI, Graft, and strict-doctor checks;
+- spec traceability, DE/EN parity, governance sync, privacy, and secret scan.
 
-AC-746-01 additionally requires an independent semantic DE/EN review or a
-shared normalized machine-readable state and gate table; the general language
-parity validator alone is insufficient. AC-746-02 requires a redacted,
-hash-bound provenance reference to the immutable GitHub comments or equivalent
-owner-free read-only GitHub evidence; issue surfaces themselves explicitly
-remain non-product state.
+Before a later merge, the complete file list, commit list, and `base...head`
+diff are reviewed. At minimum, `Privacy and Secrets Guard / secret-scan`,
+`Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`,
+and the mandatory Windows gate must pass. PR #747 remains a draft pending
+separate merge approval.
 
-Before merge, the complete file list, commit list, and `base...head` diff are
-reviewed. At minimum, `Privacy and Secrets Guard / secret-scan`, `Privacy and
-Secrets Guard / privacy-lint`, and `NaC Quality Gate / quality-gate` must pass
-remotely under those exact names. Missing, skipped, cancelled, or differently
-named substitute checks block; the later `post_pr_remote` evidence evaluates
-the structured check listing deterministically. Until the plan, implementation,
-and this evidence exist, AC-746-01 through AC-746-08 remain open; the current
-draft makes no acceptance claim.
+## Risks and Mitigations
+
+| Risk | Mitigation |
+| --- | --- |
+| Replacement between hash verification and process start | Keep handle open, deny write/delete sharing, bind file/volume ID, and verify process image |
+| Manipulated wrapper or interpreter | Complete launcher/interpreter/package attestation |
+| Reparse-point or junction redirection | Verify the relevant path chain and final handle path |
+| Overly broad ACL | Block before credential, network, and provider access |
+| Unexpected CLI child processes | Attested process structure and Windows Job Object |
+| Credential-cache mutation | Adapter boundary and before/after checks; block when write freedom cannot be proven |
+| Crash with abandoned mutex | `RECOVERY_REQUIRED`, no automatic run |
+| Windows/Azure Linux package drift | Deterministic Windows input package and bound Azure remote build |
+| Linux CI accidentally becomes mandatory | Machine-readable `required_gate: false` and `may_block_windows_delivery: false` |
 
 ## Stop Conditions
 
-The sequence stops without mutation on an unsupported platform, dirty worktree,
-missing or changed run binding, state, ledger, or lock integrity failure,
-toolchain or binary drift, network-policy block, credential error, unknown
-provider response, snapshot drift, an observed or not safely excluded
-deployment, evidence that cannot be redacted, or failed independent review.
+The sequence stops fail-closed on a dirty worktree, missing or changed binding,
+state, ledger, or journal failure, disallowed SID or ACL, reparse point,
+toolchain drift, concurrent or abandoned lock, network block, authentication
+requirement, credential mutation, unknown provider response, snapshot drift,
+observed or not safely excluded deployment, unredactable output, or failed
+mandatory gate.
+
+A blocked run authorizes no retry.
 
 ## Non-Goals
 
-- no live retry or provider write in this PR;
-- no resume, rollback, deletion, or manual unlock;
-- no new or broader permission;
-- no local bypass of central network policy;
-- no Teams UI change that suppresses a legitimate denial;
-- no claim that the Function App executes the new package;
-- no production data or extension to another workspace.
+- no migration of the Azure Function from Linux to Windows;
+- no removal of Azure OneDeploy remote build;
+- no WSL, Docker, SBX, local Linux VM, or separate POSIX runner;
+- no general local sandbox product;
+- no general tenant administration;
+- no new or broader Azure, Entra, Graph, SharePoint, Teams, or App Catalog
+  permission;
+- no change to the twelve functional activation steps;
+- no UI bypass of a legitimate access denial;
+- no rewriting of historical evidence;
+- no automatic resume, rollback, deletion, unlock, or retry;
+- no merge or force-push of PR #747;
+- no storage of real identity mappings, tokens, credentials, personal tenant
+  data, or matter data in the repository or public logs.
 
 ## Review Gate
 
-The owner approved this specification state at commit
-`012c441b74cfd1a1de61fd3d48ed09282aaba328`. The linked DE/EN implementation
-plan has completed `plan -> review -> fix`; `implement -> review -> fix` is in
-progress. This approval replaces neither the local issue-#739 release gate nor
-the issue-#632 gate for a later live run. The original scope approved at
-`012c441b...` does not cover the later account-to-principal governance repair
-or the current expanded artifact list. After all fixes, that combined scope
-requires renewed approval bound to the exact final PR head. The current local
-governance decision selects `OWNER_SOLO_APPROVAL` for Issue #746 because no
-applicable external two-person obligation with a source reference and scope is
-documented; it is not four-eyes approval. The versioned public registry contains
-synthetic examples only. A repository-external POSIX resolver owned by the
-executing user with exact mode `0600` must bind exactly three known accounts to the
-same principal and bind its SHA-256 to the final-head approval. Account and
-principal appear in public evidence only as purpose-separated SHA-256 bindings. This identity
-resolution remains separately required for every later #739 or #632 gate.
-Acceptance also remains `BLOCKED` by pending
-executable evidence for the credential, redaction, #739 hash, and dynamic
-error-code boundaries.
+The owner approved the four design sections: platform boundary, Windows
+security backend, completion chain, and scope and acceptance criteria. This
+written DE/EN specification must still be reviewed and approved separately
+before the implementation plan is revised or code changes begin.
+
+Specification approval replaces neither the later final-head-bound Issue #746
+`OWNER_SOLO_APPROVAL`, the Issue #739 quarantine release, nor the Issue #632
+live approval. Until the complete Windows backend is implemented, the existing
+runtime block remains fail-closed.

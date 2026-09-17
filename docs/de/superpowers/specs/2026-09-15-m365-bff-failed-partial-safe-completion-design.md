@@ -1,10 +1,12 @@
-# Sicherer Abschluss der partiellen M365-BFF-Aktivierung
+# Sicherer Windows-Abschluss der partiellen M365-BFF-Aktivierung
 
-Status: Ursprungsspec vom Owner freigegeben; erweiterter Governance-Scope benötigt erneute hashgebundene Freigabe; Abnahme blockiert
+Status: Designabschnitte vom Owner freigegeben; schriftliche Spec-Prüfung ausstehend; Implementierung und operative Ausführung blockiert
 
-Datum: 15. September 2026
+Datum: 17. September 2026
+
 Führendes Issue: [#746](https://github.com/notariat8/NaC/issues/746)
-Implementierungsplan: [Sicherer Abschluss der partiellen M365-BFF-Aktivierung](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
+
+Zu überarbeitender Implementierungsplan: [Sicherer Abschluss der partiellen M365-BFF-Aktivierung](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -20,32 +22,37 @@ review_gates:
   - Platform
   - Security
 affected_artifacts:
-  - .github/workflows/governance-policy-sync.yml
   - .github/workflows/windows-portability.yml
   - agent-context/index.json
-  - AGENTS.md
-  - assets/docs/generic-workbench/VIS-721-manifest.json
-  - docs/de/role-model.md
+  - docs/de/cli.md
+  - docs/de/minimum-requirements.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/de/superpowers/specs/2026-08-09-windows-light-runner-design.md
+  - docs/de/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
   - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - docs/en/role-model.md
+  - docs/en/cli.md
+  - docs/en/minimum-requirements.md
   - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  - docs/en/superpowers/specs/2026-08-09-windows-light-runner-design.md
+  - docs/en/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
   - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-  - policies/access-control-policy.yaml
-  - policies/github-identity-registry.json
-  - policies/github-identity-registry.schema.json
-  - policies/role-model-policy.yaml
   - sbom/ai/nac-ai-sbom-draft.json
-  - sbom/ai/nac-ai-sbom-export-mapping.json
-  - scripts/onboarding_wizard.py
-  - scripts/quality_gate.py
-  - scripts/validate_identity_registry.py
   - scripts/validate_m365_azure_bff_live_activation.py
   - scripts/validate_m365_bff_failed_partial_safe_completion.py
-  - tests/test_identity_registry.py
+  - src/nac_bff/azure_activation_attestations.py
+  - src/nac_bff/azure_activation_contract.py
+  - src/nac_bff/azure_activation_facade.py
+  - src/nac_bff/azure_activation_runner.py
+  - src/nac_bff/azure_live_commands.py
+  - src/nac_bff/azure_live_commands_win.py
+  - src/nac_cli/cli.py
+  - src/nac_m365_graph/mvp_test_environment_deploy.py
+  - src/nac_m365_graph/sealed_toolchain.py
   - tests/test_m365_azure_bff_live_activation_contract.py
   - tests/test_m365_bff_failed_partial_safe_completion.py
-  - tests/test_validate_windows_offline_cli_portability.py
+  - tests/test_windows_offline_cli_portability.py
+  - workflows/contracts/m365-azure-bff-live-activation.contract.json
+  - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
   - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
 acceptance_ids:
   - AC-746-01
@@ -61,343 +68,426 @@ validation_commands:
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
   - python scripts/validate_ai_sbom.py
-  - python scripts/validate_ai_sbom_export_mapping.py
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
-  - PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli
+  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion tests.test_m365_azure_bff_live_activation_contract
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
-  - git fetch --no-tags --prune origin main
-  - git diff --name-status origin/main...HEAD
-  - git log --oneline origin/main..HEAD
-  - git diff origin/main...HEAD
   - git diff --check origin/main...HEAD
-  - gh pr checks 747 --watch
-  - python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>
 ```
 
 ## Zweck und Abgrenzung
 
-Diese Spec beschreibt den sicheren Weg vom aktuellen partiellen Zustand zur
-Möglichkeit eines neuen, separat freizugebenden Live-Laufs für den ausschließlich
+Diese Spec ersetzt die lokale POSIX-Voraussetzung des bisherigen Issue-#746-
+Designs durch einen vollständigen nativen Windows-Pfad. Alle verpflichtenden
+lokalen Entwicklungs-, Build-, Test-, Paketierungs-, Reconciliation-,
+Freigabe- und Deployment-Steuerungsschritte müssen auf dem Windows-11-
+Arbeitsplatz funktionieren. WSL, Docker, SBX, eine Linux-VM oder ein separater
+Linux-Runner sind weder Voraussetzung noch Fallback.
+
+Linux bleibt ausschließlich innerhalb der Azure-Zielumgebung zulässig. Die
+Azure Function darf als `functionapp,linux` laufen, und Azure OneDeploy darf
+Linux-native Abhängigkeiten im gebundenen Remote Build materialisieren. Daraus
+entsteht keine lokale Linux-Abhängigkeit.
+
+Die Spec beschreibt außerdem den sicheren Weg vom dokumentierten partiellen
+Zustand zu einem möglichen neuen, separat freizugebenden Live-Lauf für den rein
 synthetischen Workspace `notary_team_01`. Sie autorisiert selbst weder einen
-Provider-Write noch eine lokale Lock-Freigabe, einen Live-Retry oder die
-Erzeugung einer gültigen Live-Freigabe.
+Provider-Write noch die Issue-#739-Quarantänefreigabe, einen Live-Retry oder
+einen Issue-#632-Live-Lauf.
 
 Die sichtbare Teams-Meldung `Kein Zugriff auf diesen Arbeitsbereich` wird nicht
-durch eine UI-Umgehung behoben. Der Abschluss muss die unveränderte Kette
+durch eine UI-Umgehung behoben. Der Abschluss muss die Kette
 `Teams/SPFx -> AadHttpClient -> Entra-geschützter BFF -> serverseitiges
-Zugriffsgate -> Microsoft Graph REST v1.0` nachweisen. Bis dahin bleibt die
-Meldung ein erwartbares fail-closed Ergebnis.
+Zugriffsgate -> Microsoft Graph REST v1.0` nachweisen.
 
-## Dokumentierte Provenienz und zu verifizierende Ausgangshypothese
+## Verbindliche Plattformgrenze
 
-GitHub-Flächen sind kein Produkt- oder Runtimezustand. Die folgenden Angaben
-sind historische Provenienz und bilden nur die Ausgangshypothese. Der aktuelle
-lokale und providerseitige Zustand bleibt `UNVERIFIED` und damit `BLOCKED`, bis
-die gebundenen lokalen Artefakte und die doppelte read-only Inspection frisch
-bestanden sind. Vier bestehende Issues haben unterschiedliche Rollen:
+```yaml
+local_development_platform: windows
+local_build_platform: windows
+local_test_platform: windows
+local_packaging_platform: windows
+local_reconciliation_platform: windows
+local_deployment_control_platform: windows
+local_live_activation_control_platform: windows
+wsl_required: false
+docker_required: false
+linux_host_required: false
+posix_runner_required: false
+azure_function_runtime:
+  linux_allowed: true
+azure_remote_build:
+  linux_allowed: true
+linux_ci:
+  allowed: true
+  required_gate: false
+  may_block_windows_delivery: false
+```
 
-- [#620](https://github.com/notariat8/NaC/issues/620) bleibt der Parent für die
-  sichtbare M365-MVP-Testumgebung. Sein Lauf vom 19. Juli endete an Schritt 6
-  `grant_target_site_read` als `FAILED_PARTIAL`; Lock und Ledger wurden damals
-  geordnet abgeschlossen. Dieser Lauf ist nur historische Provenienz.
+Ein optionaler Linux-CI-Lauf darf nur die Kompatibilität mit der erlaubten
+Azure-Linux-Runtime prüfen. Er ersetzt keinen Windows-Nachweis und darf die
+Windows-Lieferung nicht allein blockieren.
+
+Die [Microsoft-first, On-Prem-AI Zielarchitektur](../../architecture/microsoft-first-onprem-target-architecture.md)
+bleibt unverändert: Microsoft 365 bildet die Benutzer-, Identitäts- und
+Datenkante; lokale NaC-Arbeitsplätze und die Entwicklung laufen unter Windows;
+Azure-Dienste dürfen ihre verwaltete Linux-Runtime verwenden.
+
+## Provenienz und aktueller Ausgangszustand
+
+GitHub-Flächen sind kein Produkt- oder Runtimezustand. Die folgenden Issues
+haben getrennte Rollen:
+
+- [#620](https://github.com/notariat8/NaC/issues/620) ist historische Provenienz
+  der sichtbaren M365-MVP-Testumgebung.
 - [#632](https://github.com/notariat8/NaC/issues/632) bleibt der maßgebliche
-  Live-Aktivierungsvertrag und die vertraglich festgelegte Freigabefläche für
-  einen späteren neuen Live-Lauf.
+  Vertrag und die separate Freigabefläche für einen neuen Live-Lauf.
 - [#739](https://github.com/notariat8/NaC/issues/739) enthält die aktuelle
-  dokumentierte Live-Laufspur und das getrennte lokale Schritt-7-Release-Gate.
-  Der jüngste dokumentierte Lauf
-  `nac-bff-live-20260908-issue739-v4` bestand die Schritte 1 bis 6 und endete an
-  Schritt 7 `deploy_function_package` mit
-  `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`. Die drei Lock-Journale blieben
-  quarantänisiert.
-- [#743](https://github.com/notariat8/NaC/issues/743) dokumentiert einen älteren
-  Unterbrechungsfall, für den laut Issue der sichere lokale Zustand fehlte.
-  Seine Evidence darf
-  nicht mit der aktuellen #739-Laufspur vermischt oder zur Rekonstruktion
-  fehlender Bindungen verwendet werden.
+  quarantänisierte Laufspur. Der dokumentierte Lauf
+  `nac-bff-live-20260908-issue739-v4` endete an Schritt 7
+  `deploy_function_package` mit
+  `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`.
+- [#743](https://github.com/notariat8/NaC/issues/743) ist eine andere historische
+  Unterbrechung und darf nicht zur Rekonstruktion von #739 verwendet werden.
+- [#744](https://github.com/notariat8/NaC/issues/744) führte die portable
+  Windows-Offline-CLI und die derzeitige Linux-only-Live-Sperre ein. Die
+  Sperre bleibt bis zur validierten Windows-Implementierung fail-closed aktiv,
+  ist aber keine Zielarchitektur mehr.
+- [#746](https://github.com/notariat8/NaC/issues/746) führt die sichere
+  Windows-Migration und die spätere Abschlusskette.
 
-Der Repo-Stand enthält mit `bff-azure-function-deployment-reconcile` bereits
-die enge Inspection ohne neuen Owner-Gate. Sie ist auf exakt den
-terminalen Schritt-7-Fall begrenzt und akzeptiert nur zwei gleiche, fest auf die
-Ziel-Function begrenzte ARM-Snapshots mit der Klassifikation
-`FUNCTION_DEPLOYMENT_NOT_APPLIED`. Diese Spec erweitert deren
-Sicherheitswirkung nicht, sondern ordnet sie in eine vollständige
-Abschlusssequenz ein.
+Alte Evidence oder alte Kommentare sind keine aktuelle Freigabe. Der lokale
+und providerseitige Zustand bleibt `UNVERIFIED` und damit `BLOCKED`, bis der
+neue Windows-Preflight und die doppelte read-only Inspection frisch bestehen.
 
 ## Bewertete Lösungswege
 
-### A. Read-only Reconciliation und anschließend neuer Lauf
+### A. Windows-nativer Kontrollpfad mit Azure-Linux-Ziel – gewählt
 
-Der unterstützte POSIX-Host prüft zuerst alle lokalen Bindungen, dann die
-zulässige Netzwerkreichweite und erst danach die exakt allowlisteten
-read-only Providerzustände. Nur eine eindeutige Klassifikation darf zu einer
-separaten lokalen Quarantänefreigabe und später zu einem neuen Offline-Owner-
-Gate führen. Das ist der gewählte Weg, weil er alte Evidence erhält und jede
-Mutation an einen neuen, engen Owner-Gate bindet.
+Der vollständige lokale Ablauf wird unter Windows abgesichert. Der Controller
+erzeugt gebundene Eingabepakete und steuert Azure, Entra, Graph, SharePoint und
+M365 von Windows aus. Die Azure Function und ihr Remote Build dürfen Linux
+verwenden. Dieser Weg entspricht der real verfügbaren Entwicklungsumgebung und
+vermeidet eine zusätzliche Betriebsplattform.
 
-### B. Unmittelbarer idempotenter Voll-Rerun
+### B. Separater POSIX-Runner – verworfen
 
-Ein neuer zwölfstufiger Lauf könnte vorhandene Ressourcen wiederverwenden.
-Solange der aktuelle Lock, die Schritt-7-Evidence und der Providerzustand nicht
-eindeutig reconciled sind, würde dies jedoch die bestehende Quarantäne umgehen.
-Der Weg bleibt gesperrt.
+Ein Linux-Rechner, WSL, eine VM oder SBX würde lediglich die bisherige
+Implementierungsbeschränkung konservieren. Credentials, Arbeitszustand und
+Evidence müssten über eine zusätzliche Hostgrenze transportiert werden. Das ist
+für NaC fachlich nicht erforderlich und widerspricht der verbindlichen lokalen
+Windows-Plattform.
 
-### C. Manueller Neuaufbau oder Cleanup
+### C. Manueller Cleanup oder unmittelbarer Rerun – verworfen
 
-Eine manuelle Löschung, Berechtigungsänderung oder erneute Bereitstellung könnte
-den Zielzustand vereinfachen, zerstörte aber Provenienz und verließe den
-freigegebenen Nicht-Rollback-/Nicht-Lösch-Rahmen. Dieser Weg ist nicht Teil des
-Designs.
+Manuelles Unlock, Löschen, Berechtigungsänderungen oder ein Voll-Rerun vor der
+Reconciliation würden die #739-Provenienz und ihre Quarantäne umgehen. Dieser
+Weg bleibt gesperrt.
 
-## Gewählte Orchestrierungsfolge
+## Windows-Sicherheitsbackend
 
-Die Bezeichnungen im folgenden Diagramm sind Orchestrierungsphasen, keine neuen
-persistierten Run-States. Der alte Run-State bleibt durchgehend
-`FAILED_PARTIAL`.
+### Einheitlicher Plattformvertrag
+
+`PlatformSecurityBackend` kapselt sicherheitsrelevante Plattformoperationen.
+Das Windows-Backend ist für lokale NaC-Entwicklung und -Steuerung verbindlich.
+Ein Linux-Backend darf als optionale Kompatibilitätsreferenz bestehen, aber kein
+lokaler Produktpfad darf davon abhängen.
+
+Die bestehende Windows-Light-Runner-Implementierung wird nicht unverändert
+reaktiviert. Ihre Grundideen werden nur übernommen, wenn sie die folgenden
+Garantien erfüllen.
+
+### Dateien, Pfade, SID und ACL
+
+Sicherheitsrelevante Dateien werden über Windows-Handles geöffnet. Der
+Controller prüft vor ihrer Verwendung:
+
+- absoluten und kanonischen Pfad;
+- die relevante Pfadkette auf unerwartete Reparse Points;
+- den finalen Pfad über das geöffnete Handle;
+- lokale Volume-, Datei- und Größenbindung;
+- Eigentümer-SID und DACL;
+- fehlende Schreibrechte für nicht zugelassene Principals;
+- verweigertes Write- und Delete-Sharing während Messung und Verwendung;
+- SHA-256 aus dem bereits geöffneten Handle.
+
+Der repository-externe Identity Resolver wird nicht mehr an POSIX-Modus `0600`,
+sondern an die aktuelle Benutzer-SID, eine restriktive Windows-DACL, seinen
+kanonischen Pfad und seinen SHA-256 gebunden. Reale Account-Principal-
+Zuordnungen gelangen weder in Git noch in öffentliche Logs oder Kommentare.
+
+State, Ledger, Evidence und Journale werden in demselben geschützten Verzeichnis
+geschrieben, geflusht und atomar ersetzt beziehungsweise append-only ergänzt.
+
+### Vollständige Toolchain-Attestation
+
+Nicht nur ein `.cmd`-Wrapper wird gemessen. Gebunden wird die gesamte
+ausführbare Kette:
 
 ```text
-LOCAL_PRECHECK
-  -> BLOCKED
-  -> POSIX_READY
-       -> NETWORK_BLOCKED
-       -> READ_ONLY_RECONCILIATION
-            -> BLOCKED
-            -> FUNCTION_DEPLOYMENT_NOT_APPLIED
-                 -> OWNER_GATE_REQUIRED_FOR_LOCAL_RELEASE
-                 -> LOCK_JOURNALS_RELEASED
-                      -> NEW_OFFLINE_OWNER_GATE_REQUIRED
-                      -> LIVE_RUN_SEPARATELY_APPROVED
+Launcher/Wrapper -> Interpreter -> CLI-Einstiegspunkt -> Paket/Modul
 ```
 
-`LOCK_JOURNALS_RELEASED` bedeutet ausschließlich, dass die drei lokalen
-Lock-Journale für den nachweislich nicht angewandten Schritt-7-Deploy append-only
-freigegeben wurden. Der alte Lauf bleibt `FAILED_PARTIAL`; State, Evidence,
-Ledger und Providerzustand bleiben unverändert. Dieser Status ist weder
-`PASSED` noch eine Live-Freigabe.
+Dies gilt für Azure CLI, M365 CLI, Python, Node, npm/pnpm, Heft und Bicep.
+Fest verdrahtete Linux-Pfade werden aus dem lokalen Vertrag entfernt. Jeder
+unerwartete Wrapper, Interpreter, Einstiegspunkt oder Paket-Hash blockiert vor
+Netzwerkzugriff.
 
-## Phase 1: lokaler POSIX-Preflight
+### Prozessgrenze
 
-Vor Credential-, Netzwerk- oder Providerzugriff muss die lokale Prüfung
-mindestens bestätigen:
+Sicherheitskritische Programme starten ohne Shell-Interpolation, mit expliziter
+Argumentliste, festem Arbeitsverzeichnis, minimaler Environment-Allowlist und
+begrenzter Ausgabe. Der Prozess wird suspendiert erzeugt, mit einem echten
+Prozesshandle einem Windows Job Object zugeordnet und erst danach fortgesetzt.
+Das Job Object verwendet mindestens `KILL_ON_JOB_CLOSE`. Zulässige
+Kindprozesse folgen der attestierten CLI-Kette; unbekannte Prozesse blockieren.
 
-1. unterstütztes POSIX-Betriebssystem mit den bestehenden `flock`-,
-   `O_NOFOLLOW`-, Descriptor-, Eigentümer- und Berechtigungssemantiken;
-2. sauberer Git-Arbeitsbaum sowie exakter Commit und Tree;
-3. exakte Aktivierungs-, Korrelations-, Approval- und Zielbindung des aktuellen
-   #739-Laufs;
-4. bytegenaue State-, Evidence-, Ledger-, Prepared-Manifest-, Function-ZIP- und
-   Journalintegrität;
-5. exakte Toolchain- und Binary-Bindings ohne Symlink-, Pfad- oder
-   Nachlade-Drift;
-6. keine konkurrierende Lock-Eigentümerschaft.
+Wo möglich startet der Controller den gebundenen Python- oder Node-Interpreter
+direkt mit dem attestierten Einstiegspunkt, statt `.cmd` über eine allgemeine
+Shell auszuführen. Tokens und Credentials erscheinen weder in Argumenten noch
+in Logs oder Evidence.
 
-Windows bleibt für Live, Recovery und Provider-Reconciliation vor jedem dieser
-Zugriffe mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` gesperrt. Die portable
-Windows-Offline-CLI darf ausschließlich statische Validierung und Planansicht
-bereitstellen.
+### Locking und Crash-Erkennung
 
-## Phase 2: Netzwerk- und Provider-Reconciliation
+Jeder Lauf besitzt:
 
-Die zentral verwaltete NVIDIA-Sandbox-Policy ist eine externe Vorbedingung. Vor
-einem neuen Owner-Gate werden ausschließlich die drei in #739 dokumentierten,
-eng gebundenen Hostziele geprüft: Function-Host, SCM-Host und Azure-CLI-
-Blob-Host. Eine lokale Allow-Regel, ein Wildcard-Ausweichen oder eine breitere
-Policyänderung ist nicht Bestandteil dieser Arbeit.
+1. einen per DACL auf die aktuelle Benutzer-SID begrenzten Windows Named Mutex;
+2. ein exklusiv geöffnetes, hashgebundenes Lock-/State-Journal.
 
-Nach erfolgreichem Read-only-Netzwerkcheck darf ausschließlich die bestehende
-Schritt-7-Inspection mit einem bereits hergestellten authentifizierten Kontext
-laufen. Sie darf keine interaktive Authentifizierung starten, Credential-
-Material anlegen, ändern oder persistieren und keine Berechtigung verändern.
-Sie liest die dokumentierten ARM-Endpunkte für die exakte Ziel-Function zweimal.
-Zulässig ist nur ein stabiler Snapshot, der
-`FUNCTION_DEPLOYMENT_NOT_APPLIED` beweist. Ein beobachtetes Deployment, ein
-fehlendes Feld, Drift zwischen den Snapshots, eine Umleitung, ein Auth- oder
-Policyfehler oder ein nicht allowlistbares Providerergebnis liefert `BLOCKED`.
+Das Mutex-Handle bleibt bis zum Laufende erhalten. `WAIT_ABANDONED` ist kein
+erfolgreicher normaler Lock-Erwerb, sondern führt zu `RECOVERY_REQUIRED`.
+Automatisches Resume oder ein zweiter Live-Lauf ist ausgeschlossen.
 
-Die Ausgabe enthält nur Status, stabile Fehlercodes, Zähler und kanonische
-Hashes. Strikte Allowlists gelten für Standardausgabe, Fehlerausgabe, Logs,
-temporäre Artefakte, Exceptions, Telemetrie, Shell-Historie und Approval-
-Kommentare. Rohantworten, IDs, URLs, Tokens, Credentialwerte, lokale
-Secretpfade, personenbezogene Daten und Mandatsdaten werden weder dorthin noch
-in GitHub oder das Repo übernommen; unbekannte oder nicht redigierbare Felder
-blockieren.
+### Credential-Grenze
 
-## Phase 3: getrennte lokale Quarantänefreigabe
+Der Controller nutzt ausschließlich einen bereits vorhandenen
+Authentifizierungskontext. Er kopiert, exportiert, hasht oder persistiert keine
+Credentials. Login, Device Code, Browserauthentifizierung, Token-Refresh,
+Cache-Neuanlage oder Konfigurationsrewrite blockieren die Reconciliation mit
+`BLOCKED_AUTHENTICATION_REQUIRED`. Providerzugriff beginnt erst nach dem
+vollständigen lokalen Preflight.
 
-Die Inspection ohne neuen Owner-Gate darf keine Datei verändern. Erst ein neuer
-unveränderlicher Kommentar in Issue #739 vom exakt verifizierten Provider-
-Login `<protected-provider-login>` aus dem zugriffsgeschützten Resolver mit
-zulässiger Author-Association und der exakten Aktion
-`RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` bindet den Provider-
-Transport. Governance-Autorität entsteht erst, wenn der provider-qualifizierte
-Account durch die Registry auf einen aktiven Principal mit der Owner-Rolle
-`prozessverantwortung` und der Qualifikation `process_design` aufgelöst wird.
-Für Issue #746 ist keine anwendbare, konkret zitierte gesetzliche,
-regulatorische, vertragliche oder verbindliche Security-Pflicht zu zwei
-verschiedenen natürlichen Personen belegt. Deshalb darf derselbe aktive
-Principal die Entscheidung revisionsfest als `OWNER_SOLO_APPROVAL`
-dokumentieren; sie ist keine Vier-Augen-Freigabe. Wird später eine solche
-Pflicht mit Quellenreferenz, Version, kanonischem Digest und Scope als
-anwendbar gebunden, blockiert ein einzelner Principal mit
-`BLOCKED_SINGLE_PRINCIPAL`. Erst bei zwei aktiven, passend qualifizierten und
-verschiedenen Principals ist `FOUR_EYES_APPROVAL` zulässig. Danach darf der
-Operator den bestehenden Reconciler mit `--confirm-release-quarantine`
-ausführen. Dieses Gate bindet Kommentar-Body
-und dessen Hash sowie State-, Evidence-, Ledger-, Lock-, Provider-,
-Prepared-Input-, Function-Paket-, Commit-, Tree- und Toolchain-Hashes.
+### Command-Allowlist
 
-Die einzige Mutation ist das crash-sichere, append-only Anhängen eines
-`RELEASED`-Datensatzes an jedes der drei Journale. Es gibt keinen Azure-, Entra-, Graph-, SharePoint-, Teams-,
-App-Catalog- oder Credential-Write. Unbekannte Journal-Tails oder jede Drift
-blockieren. Ein gerissener Append darf nur mit derselben unveränderten
-Freigabebindung idempotent fortgesetzt werden.
+Die Sicherheitsgrenze entsteht aus exakten Command-Schemata, gebundenen
+Zielressourcen, Argumenten, Artefakten, Toolchain-Hashes, Windows-ACLs und
+Readbacks. Unbekannte Flags, andere Tenants, Subscriptions, Sites oder
+Ressourcen werden vor Prozessstart abgewiesen. Eine lokale Linux-Sandbox ist
+nicht Bestandteil des Designs.
 
-## Phase 4: neuer Live-Lauf als eigener Gate
+## Phasenweise Abschlusskette
 
-Nach nachgewiesener Quarantänefreigabe wird aus einem neuen sauberen Commit und
-Tree auf dem unterstützten POSIX-Host ein vollständiger Offline-Owner-Gate
-erzeugt. Er bleibt an die vorhandene, vertraglich festgelegte Issue-#632-Fläche,
-den exakt verifizierten Provider-Login und die zulässige Author-Association als
-Transportnachweise gebunden. Zusätzlich werden Freigabe- und Operator-Account
-über die Registry auf aktive, passend qualifizierte Principals aufgelöst. Der
-Personenmodus folgt derselben quellgebundenen Entscheidung: ohne anwendbare
-konkret zitierte Zwei-Personen-Pflicht `OWNER_SOLO_APPROVAL`, mit einer solchen
-Pflicht und nur einem Principal `BLOCKED_SINGLE_PRINCIPAL` und bei verschiedenen
-qualifizierten Principals `FOUR_EYES_APPROVAL`. Eine Rollenbezeichnung allein
-ist kein Quellenbeleg. Alte #632-/#739-Kommentare sind keine Freigabe für diesen
-Lauf.
+```text
+WINDOWS_IMPLEMENTATION_READY
+  -> ISSUE_746_OWNER_SOLO_APPROVAL
+  -> WINDOWS_PREFLIGHT_READY
+  -> READ_ONLY_RECONCILIATION
+  -> TWO_IDENTICAL_NOT_APPLIED_SNAPSHOTS
+  -> ISSUE_739_QUARANTINE_RELEASE
+  -> ISSUE_632_OFFLINE_PACKAGE
+  -> ISSUE_632_LIVE_APPROVAL
+  -> ONE_WINDOWS_CONTROLLED_LIVE_RUN
+  -> READ_ONLY_POST_VERIFY
+```
 
-Die spätere Live-Freigabe muss mindestens den neuen Aktivierungs-Hash, Commit,
-Tree, Ziel-, Permission-, Schrittfolgen-, Provisioner-Bootstrap- und
-Toolchain-Binding sowie die unveränderte Nicht-Rollback-/Nicht-Lösch-Regel
-enthalten. Erst nach separater Owner-Zustimmung darf genau ein kontrollierter
-Live-Lauf starten. Alle bestehenden Stop-, Lock-, Evidence-, Redaktions- und
-Readback-Regeln bleiben unverändert.
+Jede Phase autorisiert nur die nächste. Ein blockierter Lauf autorisiert keinen
+Retry.
 
-Die drei Zustimmungen sind nicht austauschbar: Die Freigabe dieser Design-Spec
-ist weder die Freigabe der lokalen Quarantänemutation noch die Freigabe des
-späteren Live-Laufs.
+### Phase 0: Windows-Implementierung
+
+Zunächst werden ausschließlich Repository-Artefakte geändert, lokal unter
+Windows validiert, committed, zu PR #747 gepusht und durch verpflichtende
+Windows-CI geprüft. Es gibt keinen Provider-, Tenant-, Credential- oder
+Live-Zugriff. Nach erfolgreicher CI werden Commit, Tree, Verification Contract,
+Windows-Backend, Toolchain, Resolver und Operator-Principal gebunden.
+
+### Phase 1: neue Issue-#746-Freigabe
+
+Eine neue `OWNER_SOLO_APPROVAL` bindet den finalen Implementierungsstand, weil
+frühere Freigaben auf andere Commits zeigen. Die Freigabe erlaubt nur den
+Windows-Preflight und die eng allowlistete read-only Reconciliation. Sie ist
+weder die #739-Quarantänefreigabe noch die #632-Live-Freigabe.
+
+### Phase 2: lokaler Windows-Preflight
+
+Vor Credential-, Netzwerk- oder Providerzugriff prüft der Preflight Commit,
+Tree, #739-State, Evidence, Ledger, drei Journale, Prepared Manifest,
+Function- und SPFx-Pakete, Toolchain, SID, ACL, Reparse Points, Ziel- und
+Approval-Bindung sowie konkurrierende Läufe. Bei Drift bleiben Netzwerk-,
+Provider-, Tenant- und Credentialzähler null.
+
+### Phase 3: read-only Provider-Reconciliation
+
+Mit dem bereits vorhandenen Authentifizierungskontext wird ausschließlich die
+eng gebundene Schritt-7-Frage geprüft. Exakt zwei allowlistete, redigierte und
+kanonische Provider-Snapshots werden erzeugt. Nur zwei identische Snapshots mit
+`FUNCTION_DEPLOYMENT_NOT_APPLIED` und Null-Schreibzählern öffnen das #739-Gate.
+Redirect, Authentifizierungsbedarf, unbekannte Felder, Drift, ein beobachtetes
+Deployment oder nicht redigierbare Ausgabe blockieren.
+
+### Phase 4: getrennte #739-Quarantänefreigabe
+
+Ein neuer, exakt gebundener Issue-#739-Kommentar autorisiert ausschließlich das
+deterministische append-only Anhängen eines `RELEASED`-Datensatzes an die drei
+lokalen Journale. Der historische Lauf bleibt `FAILED_PARTIAL`; State, Evidence
+und Ledger werden nicht umgeschrieben. Ein partieller Append darf nur mit
+derselben unveränderten Freigabe idempotent abgeschlossen werden.
+
+### Phase 5: neues #632-Offline-Paket
+
+Nach der Journalfreigabe wird unter Windows ein neues Aktivierungspaket für
+alle zwölf bestehenden Schritte erzeugt. Es bindet Commit, Tree, Windows-
+Backend, Toolchain, Function-, SPFx- und Bicep-Artefakte, Zielressourcen und
+Readbacks. Die Paketerzeugung ist offline.
+
+### Phase 6: eigenständige #632-Live-Freigabe
+
+Ein neuer Issue-#632-Kommentar bindet das vollständige Paket und autorisiert
+genau einen Live-Lauf. #746- und #739-Kommentare sind nicht wiederverwendbar.
+Jede Änderung an Code, Vertrag, Toolchain oder Paket macht die Freigabe
+ungültig.
+
+### Phase 7: genau ein Windows-gesteuerter Live-Lauf
+
+Der Lauf startet auf dem Windows-Arbeitsplatz. Azure darf das Function-Paket
+intern als Linux-Runtime materialisieren. Der Controller wiederholt den
+Prewrite-Check, führt ausschließlich die zwölf gebundenen Schritte aus, prüft
+jeden Readback und stoppt beim ersten Fehler. Es gibt keinen automatischen
+Retry.
+
+### Phase 8: read-only Abschlussverifikation
+
+Nach dem Lauf werden Function, Entra-API, `Matter.Read`, Managed Identity,
+`Sites.Selected`, SharePoint-Site-Recht, SPFx-/App-Catalog-Zustand, Teams-BFF-
+Verbindung sowie erlaubte und verweigerte synthetische Zugriffe read-only
+geprüft. Erst danach darf redigierte Abschluss-Evidence dokumentiert werden.
+
+## Governance und Identität
+
+Provider-Accounts werden über den geschützten externen Resolver auf stabile
+Principals abgebildet. Verschiedene Accounts desselben Principals sind eine
+Person und erfüllen keine Vier-Augen-Trennung.
+
+Ohne konkret zitierte anwendbare gesetzliche, regulatorische, vertragliche oder
+verbindliche Security-Pflicht zu zwei verschiedenen natürlichen Personen gilt
+`OWNER_SOLO_APPROVAL`. Ist eine solche Pflicht mit Quelle, Version, Digest und
+Scope gebunden und nur ein Principal verfügbar, gilt
+`BLOCKED_SINGLE_PRINCIPAL`. Eine Rollenbezeichnung oder `four_eyes` allein ist
+kein Quellenbeleg.
 
 ## Akzeptanzkriterien
 
-- **AC-746-01:** Diese deutsche führende Spec und ihre englische Übersetzung
-  dokumentieren denselben Ausgangszustand, dieselben Varianten, Trust
-  Boundaries, Stop Conditions und getrennten Gates.
-- **AC-746-02:** #620, #739 und #743 werden als getrennte Provenienzspuren
-  zusammen mit dem maßgeblichen #632-Live-Aktivierungsvertrag verbunden; weder
-  alte Evidence noch ein alter Owner-Kommentar werden als aktueller Erfolg,
-  aktueller State oder neue Freigabe behandelt.
-- **AC-746-03:** Der Abschlussweg prüft auf einem unterstützten POSIX-Host vor
-  Providerzugriff den exakten lokalen State, Ledger, alle Lock-Journale,
-  Prepared Inputs, Paket, Commit, Tree, Toolchain und Zielbindung; fehlende oder
-  widersprüchliche Bindungen liefern `BLOCKED`.
-- **AC-746-04:** Die Provider-Inspection bleibt vollständig read-only,
-  zielgebunden, doppelt erhoben und redigiert. Ausschließlich
-  `FUNCTION_DEPLOYMENT_NOT_APPLIED` erlaubt den Übergang zum getrennten lokalen
-  Release-Gate.
-- **AC-746-05:** Windows-Live-, Recovery- und Reconciliation-Pfade stoppen vor
-  Credential-, State-, Netzwerk- oder Providerzugriff mit
-  `PLATFORM_SECURITY_BACKEND_UNAVAILABLE`; POSIX-Sicherheitssemantiken werden
-  nicht abgeschwächt.
-- **AC-746-06:** Der nach Spec-Freigabe zu erstellende Implementierungsplan
-  beschreibt test-first die POSIX-/Windows-Matrix, Reconciliation-
-  Entscheidungstabelle, stabile Fehlercodes, Redaktion, Crash-Fenster und
-  exakte Gate-Übergänge als Orchestrierungs-/Operationsplan unter
-  Wiederverwendung der bestehenden #739-CLI, Verträge und Tests. Reconciler-
-  Code, ARM-Allowlist und Release-Algorithmus bleiben ohne separat belegten
-  Defekt unverändert. Negativtests decken Replay alter #632- oder #739-
-  Kommentare, Wiederverwendung der Spec-Freigabe, falsches Issue, falschen
-  Login oder Author-Association, veränderten Kommentar-Body oder Hash,
-  Binding-Drift sowie die ausschließlich unter identischer Freigabe zulässige
-  Fortsetzung eines partiellen Journal-Appends ab.
-- **AC-746-07:** Spec-Traceability verbindet Issue, DE/EN-Spec, den späteren
-  DE/EN-Plan, alle AC-IDs und konkrete lokale sowie Remote-Validierung.
-- **AC-746-08:** Dieser Draft-PR führt keine Tenant-, Provider-, Credential- oder
-  Live-Aktion aus. Lokale Quarantänefreigabe und neuer Live-Lauf bleiben zwei
-  separate, hashgebundene Owner-Gates.
+- **AC-746-01 – DE/EN-Parität:** Deutsche und englische Spec beschreiben
+  identisch Plattformgrenze, Ausgangszustand, Security Backend, Phasen, Stop
+  Conditions und getrennte Gates.
+- **AC-746-02 – Provenienztrennung:** #620, #632, #739, #743, #744 und #746
+  bleiben getrennt; alte Evidence und Kommentare sind weder aktueller State
+  noch neue Freigabe.
+- **AC-746-03 – Windows-Preflight:** Alle lokalen Bindungen, SID-/ACL- und
+  Reparse-Point-Prüfungen laufen auf Windows vor jedem Netzwerkzugriff. Jede
+  absichtliche Drift liefert `BLOCKED` bei Null-Seiteneffektzählern.
+- **AC-746-04 – Doppelte read-only Reconciliation:** Genau zwei gebundene,
+  redigierte Snapshots und ausschließlich
+  `FUNCTION_DEPLOYMENT_NOT_APPLIED` öffnen das separate #739-Gate; Provider-,
+  Tenant- und Credential-Schreibzähler bleiben null.
+- **AC-746-05 – Vollständiges Windows-Sicherheitsbackend:** Live, Recovery und
+  Reconciliation sind auf Windows nur bei nachgewiesener Handle-, ACL-,
+  Reparse-, Toolchain-, Job-Object-, Mutex- und Journal-Sicherheit verfügbar.
+  Das bloße Entfernen der bisherigen Plattform-Sperre ist unzulässig.
+- **AC-746-06 – Replay- und Crash-Sicherheit:** Die drei Freigaben sind nicht
+  austauschbar; falsche Issue-, Principal-, Commit-, Tree-, Contract-, Body-
+  oder Artefaktbindung blockiert. Abandoned Mutex und Teil-Appends führen nie
+  zu einem automatischen Live-Retry.
+- **AC-746-07 – Windows-Validierung und Traceability:** Issue, DE/EN-Spec,
+  DE/EN-Plan, AC-IDs, Dateien, positive und negative Tests sowie lokale und
+  Remote-Evidence sind verbunden. Verpflichtende CI läuft auf Windows; Linux-
+  CI bleibt optional und nicht blockierend.
+- **AC-746-08 – Keine vorgezogene Live-Aktion:** Design, Plan und
+  Implementierungs-PR führen keine Quarantänefreigabe, Anmeldung, Provider-,
+  Tenant-, Credential- oder Live-Aktion aus. #739 und #632 bleiben separate,
+  hashgebundene Owner-Gates.
 
 ## Validierungsmodell
 
-Die Manifestbefehle sind keine plattformunabhängig gemeinsam auszuführende
-Liste. Der native Windows-Pfad führt ausschließlich die portable Offline- und
-Fail-closed-Suite aus. Die POSIX-BFF-Suite, der Aktivierungsvalidator, Graft und
-der strikte Doctor laufen auf dem unterstützten POSIX- beziehungsweise
-`ubuntu-latest`-Pfad. Der spätere Plan muss diese Zuordnung für jeden Befehl als
-`windows_native`, `posix_local`, `ubuntu_remote_ci` oder `post_pr_remote`
-maschinenlesbar festhalten.
+Der nach Spec-Freigabe zu erstellende Plan führt für jedes AC eine Matrix:
 
-Der Plan muss außerdem eine AC-Evidenzmatrix führen:
-
-`AC-ID -> Artefakte -> Plattform -> Positivtest -> Negativtest -> erwarteter
+`AC-ID -> Artefakte -> Windows-Positivtest -> Windows-Negativtest -> erwarteter
 Status/Fehlercode -> lokaler Befehl -> Remote-Check/Evidence`.
 
-Mindestens ein Issue-#746-spezifischer Validator oder ein gleichwertig enges
-Mapping auf exakte bestehende Testmethoden prüft die Provenienztrennung,
-Preflight-Reihenfolge, Null-Schreibzähler, Redaktionssentinels, jeden
-Blockierpfad und alle drei Journal-Crashfenster. Ein rohes Modul- oder
-Validatornamenslisting genügt nicht. Der bestehende M365-Live-
-Aktivierungsvalidator ist Regressionsevidence, aber allein kein Nachweis für
-alle AC-746-Kriterien.
+Pflichtnachweise umfassen mindestens:
 
-AC-746-01 benötigt zusätzlich zur allgemeinen Sprachparitätsprüfung einen
-unabhängigen semantischen DE/EN-Review oder eine gemeinsam normalisierte
-maschinenlesbare Zustands-/Gate-Tabelle. AC-746-02 benötigt eine redigierte,
-hashgebundene Provenienzreferenz auf die unveränderlichen GitHub-Kommentare oder
-einen gleichwertigen owner-freien, read-only GitHub-Nachweis; Issue-Flächen
-selbst bleiben ausdrücklich kein Produktzustand.
+- Dateihandle-, Datei-ID-, Volume-ID- und Hashbindung;
+- SID-, DACL- und Reparse-Point-Negativtests;
+- vollständige Launcher-/Interpreter-/Paket-Attestation;
+- suspendierten Prozessstart und Job-Object-Zuordnung;
+- Mutex-, Abandoned-Mutex- und drei Journal-Crashfenster;
+- Replay-Matrix für #746, #739 und #632;
+- Credential-, Redaktions- und unbekannte-Felder-Sentinels;
+- zwei identische read-only Snapshots bei Null-Schreibzählern;
+- Windows-SPFx-Build und Windows-Function-Eingabepaket;
+- Windows-native CLI-, Graft- und Strict-Doctor-Prüfung;
+- Spec-Traceability, DE/EN-Parität, Governance-Sync, Privacy und Secret Scan.
 
-Vor Merge werden vollständige Datei-, Commit- und `base...head`-Diff geprüft.
-Remote müssen mindestens `Privacy and Secrets Guard / secret-scan`, `Privacy
-and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate`
-als exakte Namen vorhanden und erfolgreich sein. Fehlende, übersprungene,
-abgebrochene oder anders benannte Ersatzchecks blockieren; der spätere
-`post_pr_remote`-Nachweis wertet die strukturierte Checkliste deterministisch
-aus. Bis Plan, Implementierung und diese Evidence vorliegen, bleiben AC-746-01
-bis AC-746-08 offen; der aktuelle Draft behauptet keine Abnahme.
+Vor einem späteren Merge werden vollständige Datei-, Commit- und
+`base...head`-Diff geprüft. Mindestens `Privacy and Secrets Guard / secret-scan`,
+`Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`
+und das verpflichtende Windows-Gate müssen erfolgreich sein. PR #747 bleibt
+bis zu einer gesonderten Merge-Freigabe Draft.
+
+## Risiken und Gegenmaßnahmen
+
+| Risiko | Gegenmaßnahme |
+| --- | --- |
+| Austausch zwischen Hashprüfung und Prozessstart | Handle offen halten, Write/Delete Sharing verweigern, Datei-/Volume-ID binden und Prozessimage nachprüfen |
+| Manipulierter Wrapper oder Interpreter | vollständige Launcher-/Interpreter-/Paket-Attestation |
+| Reparse-Point- oder Junction-Umleitung | relevante Pfadkette und finalen Handle-Pfad prüfen |
+| Zu breite ACL | vor Credential-, Netzwerk- und Providerzugriff blockieren |
+| Unerwartete CLI-Kindprozesse | attestierte Prozessstruktur und Windows Job Object |
+| Credential-Cache-Mutation | Adaptergrenze und Vorher-/Nachher-Prüfung; bei nicht beweisbarer Schreibfreiheit blockieren |
+| Crash mit verwaistem Mutex | `RECOVERY_REQUIRED`, kein automatischer Lauf |
+| Windows-/Azure-Linux-Paketdrift | deterministisches Windows-Eingabepaket und gebundener Azure Remote Build |
+| Linux-CI wird versehentlich Pflicht | maschinenlesbar `required_gate: false` und `may_block_windows_delivery: false` |
 
 ## Stop Conditions
 
-Die Sequenz stoppt ohne Mutation bei nicht unterstützter Plattform, unsauberem
-Arbeitsbaum, fehlender oder abweichender Laufbindung, State-/Ledger-/Lock-
-Integritätsfehler, Toolchain- oder Binary-Drift, Netzwerkpolicy-Block,
-Credentialfehler, unbekannter Providerantwort, Snapshot-Drift, beobachtetem oder
-nicht sicher ausgeschlossenen Deployment, nicht redigierbarer Evidence oder
-fehlgeschlagener unabhängiger Prüfung.
+Die Sequenz stoppt fail-closed bei unsauberem Arbeitsbaum, fehlender oder
+abweichender Bindung, State-/Ledger-/Journalfehler, unzulässiger SID oder ACL,
+Reparse Point, Toolchain-Drift, konkurrierendem oder verlassenem Lock,
+Netzwerksperre, Authentifizierungsanforderung, Credentialmutation, unbekannter
+Providerantwort, Snapshot-Drift, beobachtetem oder nicht sicher ausgeschlossenem
+Deployment, nicht redigierbarer Ausgabe oder fehlgeschlagenem Pflicht-Gate.
+
+Ein blockierter Lauf autorisiert keinen Retry.
 
 ## Nicht-Ziele
 
-- kein Live-Retry oder Provider-Write in diesem PR;
-- kein Resume, Rollback, Delete oder manuelles Unlock;
-- keine neue oder breitere Permission;
-- keine lokale Umgehung zentraler Netzwerkpolicy;
-- keine Änderung der Teams-UI zur Unterdrückung eines berechtigten Deny;
-- keine Behauptung, dass die Function App das neue Paket ausführt;
-- keine produktiven Daten oder Erweiterung auf andere Workspaces.
+- keine Migration der Azure Function von Linux auf Windows;
+- keine Abschaffung des Azure OneDeploy Remote Build;
+- kein WSL, Docker, SBX, lokale Linux-VM oder separater POSIX-Runner;
+- kein allgemeines lokales Sandboxprodukt;
+- keine allgemeine Tenant-Administration;
+- keine neue oder breitere Azure-, Entra-, Graph-, SharePoint-, Teams- oder
+  App-Catalog-Berechtigung;
+- keine Änderung der zwölf fachlichen Aktivierungsschritte;
+- keine UI-Umgehung einer legitimen Zugriffsverweigerung;
+- kein Umschreiben historischer Evidence;
+- kein automatisches Resume, Rollback, Delete, Unlock oder Retry;
+- kein Merge oder Force-Push von PR #747;
+- keine Speicherung realer Identitätszuordnungen, Tokens, Credentials,
+  personenbezogener Tenantdaten oder Mandatsdaten im Repository oder in
+  öffentlichen Logs.
 
-## Review-Gate
+## Review Gate
 
-Der Owner hat diesen Spec-Stand auf Commit
-`012c441b74cfd1a1de61fd3d48ed09282aaba328` freigegeben. Der verlinkte DE/EN-
-Implementierungsplan hat `plan -> review -> fix` abgeschlossen;
-`implement -> review -> fix` läuft. Diese Freigabe ersetzt weder das lokale
-Issue-#739-Release-Gate noch das Issue-#632-Gate für einen späteren Live-Lauf.
-Der auf `012c441b...` freigegebene Ursprungsscope umfasst nicht die spätere
-Account-zu-Principal-Governance-Reparatur und die aktuelle erweiterte
-Artefaktliste. Dieser kombinierte Scope benötigt nach Abschluss der Fixes eine
-neue, exakt an den finalen PR-Head gebundene Owner-Freigabe. Die vorliegende
-lokale Governance-Entscheidung wählt für Issue #746 `OWNER_SOLO_APPROVAL`, weil
-keine anwendbare externe Zwei-Personen-Pflicht mit Quellenreferenz und Scope
-  belegt ist; sie ist keine Vier-Augen-Freigabe. Die versionierte öffentliche
-Registry enthält nur synthetische Beispiele. Ein repository-externer,
-eigentümergebundener POSIX-Resolver mit exakt Modus `0600` muss genau drei bekannte
-Accounts demselben Principal zuordnen und seinen SHA-256 an die
-final-head-gebundene Freigabe binden. Account und Principal erscheinen in
-öffentlicher Evidence ausschließlich als zweckgetrennte SHA-256-Bindungen.
-Diese Identitätsauflösung bleibt für
-  jedes spätere #739- oder #632-Gate separat erforderlich. Die Abnahme bleibt
-  außerdem wegen noch ausstehender ausführbarer Evidence für Credential-, Redaktions- und
-#739-Hashgrenzen sowie dynamische Fehlercodepfade ausdrücklich `BLOCKED`.
+Die vier Designabschnitte Plattformgrenze, Windows-Sicherheitsbackend,
+Abschlusskette sowie Scope und Akzeptanzkriterien wurden im führenden Task vom
+Owner freigegeben. Diese schriftliche DE/EN-Spec muss dennoch separat geprüft
+und freigegeben werden, bevor der Implementierungsplan überarbeitet oder Code
+geändert wird.
+
+Die Spec-Freigabe ersetzt weder die später final-head-gebundene
+Issue-#746-`OWNER_SOLO_APPROVAL` noch die Issue-#739-Quarantänefreigabe oder die
+Issue-#632-Live-Freigabe. Bis zur Implementierung des vollständigen Windows-
+Backends bleibt die bestehende Laufzeitsperre fail-closed aktiv.
