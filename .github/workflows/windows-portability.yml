@@ -22,8 +22,26 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
       - name: Install NaC
         run: python -m pip install --disable-pip-version-check -e .
 
-      - name: Verify portable offline CLI and SPFx readback
-        run: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion
+      - name: Verify native Windows activation security and portability
+        run: python -m unittest discover -s tests -p "test_activation_security*.py"
+
+      - name: Verify portable CLI, SPFx readback, and Issue 746 contract
+        run: |
+          python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"
+          python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"
+          python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"
+          python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"
+
+      - name: Verify Issue 746 and activation contracts
+        run: |
+          python scripts/validate_m365_bff_failed_partial_safe_completion.py
+          python scripts/validate_m365_azure_bff_live_activation.py
+          python scripts/validate_spec_traceability.py

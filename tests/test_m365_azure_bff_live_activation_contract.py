@@ -56,17 +56,16 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
-    def test_windows_live_contract_weakening_fails_closed(self) -> None:
+    def test_windows_native_contract_weakening_fails_closed(self) -> None:
         payload = self._domain()
         windows = payload["consolidated_owner_gate"][
             "toolchain_attestation_binding"
-        ]["windows_light_runner"]
-        windows["enabled"] = True
-        windows["live_activation"] = "allowed"
+        ]["windows_native_runner"]
+        windows["reconciliation"] = "unrestricted"
         self._write_domain(payload)
 
         self.assertIn(
-            "domain Windows offline-only boundary differs",
+            "domain Windows native boundary differs",
             validator.validate(self.root),
         )
 
@@ -1049,6 +1048,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             if os.name == "nt"
             else validator.BEHAVIOR_TEST_MODULES
         )
+        if os.name == "nt":
+            expected_modules = tuple(
+                module.removeprefix("tests.") for module in expected_modules
+            )
         self.assertEqual(
             argv,
             [
@@ -1059,6 +1062,10 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             ],
         )
         self.assertFalse(process.call_args.kwargs["check"])
+        self.assertEqual(
+            process.call_args.kwargs["cwd"],
+            REPO_ROOT / "tests" if os.name == "nt" else REPO_ROOT,
+        )
         self.assertEqual(process.call_args.kwargs["timeout"], 180)
         environment = process.call_args.kwargs["env"]
         self.assertNotEqual(environment["HOME"], os.environ.get("HOME"))
@@ -1098,8 +1105,11 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.VERIFICATION_PATH,
             validator.SPFX_HERMETIC_BUILD_EVIDENCE_PATH,
             validator.INTERRUPTION_BASELINE_TEMPLATE_PATH,
+            Path("src/nac_bff/activation_security_backend.py"),
+            Path("src/nac_bff/activation_security_windows.py"),
             Path("src/nac_bff/azure_activation_contract.py"),
             Path("src/nac_bff/azure_activation_facade.py"),
+            Path("tests/test_activation_security_windows.py"),
             Path("tests/test_windows_offline_cli_portability.py"),
             Path("tests/test_m365_bff_failed_partial_safe_completion.py"),
             Path(".github/workflows/windows-portability.yml"),

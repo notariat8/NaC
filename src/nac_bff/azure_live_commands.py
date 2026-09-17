@@ -9,8 +9,10 @@ import os
 import platform
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
@@ -52,7 +54,11 @@ AZURE_CLI_SHA256_ENV = AZURE_CLI_TOOLCHAIN_SHA256_ENV
 
 # The isolated CLI used by the Azure activation lane is preferred over host tools.
 AZURE_CLI_CANDIDATES = (
-    Path("/tmp/nac-azure-cli-venv/bin/az"),
+    (
+        Path(shutil.which("az") or "C:/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd")
+        if os.name == "nt"
+        else Path("/tmp/nac-azure-cli-venv/bin/az")
+    ),
     Path("/usr/local/bin/az"),
     Path("/usr/bin/az"),
     Path("/opt/az/bin/az"),
@@ -1431,7 +1437,26 @@ def build_azure_cli_env(
         for key, value in source.items()
         if key in _ENV_ALLOWLIST and isinstance(value, str) and value
     }
-    child["PATH"] = "/usr/bin:/bin"
+    if os.name == "nt":
+        system_root = (
+            source.get("SystemRoot")
+            or source.get("WINDIR")
+            or os.environ.get("SystemRoot")
+            or os.environ.get("WINDIR")
+        )
+        if system_root:
+            child["SystemRoot"] = system_root
+            child["WINDIR"] = system_root
+        child["PATH"] = os.pathsep.join(
+            part
+            for part in (
+                str(Path(sys.executable).resolve().parent),
+                source.get("PATH", ""),
+            )
+            if part
+        )
+    else:
+        child["PATH"] = "/usr/bin:/bin"
     child["AZURE_CORE_COLLECT_TELEMETRY"] = "0"
     child["AZURE_CORE_NO_COLOR"] = "true"
     child["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -1637,17 +1662,54 @@ def _run_azure_cli(
                 if artifact_sealed is not None
                 else ()
             )
-            completed = subprocess.run(
-                runtime.command(bound_argv),
-                check=False,
-                capture_output=True,
-                text=True,
-                shell=False,
-                stdin=subprocess.DEVNULL,
-                timeout=timeout_seconds,
-                env=build_azure_cli_env(environ),
-                pass_fds=runtime.pass_fds + artifact_fds,
-            )
+            if os.name == "nt":
+                from nac_bff.activation_security_backend import (
+                    ProcessSpec,
+                    SecurityBoundaryError,
+                    get_platform_security_backend,
+                )
+
+                command_line = runtime.command(bound_argv)
+                executable = Path(command_line[0])
+                executable_sha256 = get_platform_security_backend().inspect_private_path(
+                    executable, purpose="toolchain-executable"
+                ).sha256
+                try:
+                    process_result = get_platform_security_backend().launch_attested_process(
+                        ProcessSpec(
+                            executable=executable,
+                            arguments=tuple(command_line[1:]),
+                            cwd=Path.cwd().resolve(),
+                            environment=build_azure_cli_env(environ),
+                            executable_sha256=executable_sha256,
+                            timeout_seconds=float(timeout_seconds),
+                            maximum_output_bytes=8 * 1024 * 1024,
+                            allowed_exit_codes=tuple(range(256)),
+                            credential_write_guard=True,
+                        )
+                    )
+                except SecurityBoundaryError as exc:
+                    if exc.code == "PROCESS_TIMEOUT":
+                        raise subprocess.TimeoutExpired(command_line, timeout_seconds) from exc
+                    raise OSError(exc.code) from exc
+                completed = subprocess.CompletedProcess(
+                    command_line,
+                    process_result.exit_code,
+                    process_result.stdout.decode("utf-8", errors="replace"),
+                    process_result.stderr.decode("utf-8", errors="replace"),
+                )
+            else:
+                completed = subprocess.run(
+                    runtime.command(bound_argv),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=timeout_seconds,
+                    env=build_azure_cli_env(environ),
+                    pass_fds=runtime.pass_fds + artifact_fds,
+                )
     except SealedToolchainError:
         return _command_result(
             ok=False,
@@ -1822,6 +1884,24 @@ def _azure_cloud_config_boundary(
         config_root = Path(home).expanduser() / ".azure"
     if not config_root.is_absolute():
         return "AZURE_CLI_CONFIG_PATH_INVALID", None
+    if os.name == "nt":
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        backend = get_platform_security_backend()
+        try:
+            backend.validate_private_directory(config_root)
+        except (OSError, SecurityBoundaryError):
+            return "AZURE_CLI_CONFIG_UNTRUSTED", None
+        cloud_selection = config_root / "clouds.config"
+        if not cloud_selection.exists():
+            return None, None
+        digest = _exact_default_cloud_selection_digest(cloud_selection)
+        if digest is None:
+            return "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED", None
+        return None, digest
     try:
         config_root.lstat()
     except FileNotFoundError:
@@ -1844,6 +1924,24 @@ def _azure_cloud_config_boundary(
 
 
 def _exact_default_cloud_selection_digest(path: Path) -> str | None:
+    if os.name == "nt":
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(path, purpose="azure-cloud-config")
+            if binding.size > _MAX_CLOUD_SELECTION_BYTES:
+                return None
+            with backend.open_bound_read(path, binding) as handle:
+                raw = handle.read(_MAX_CLOUD_SELECTION_BYTES + 1)
+        except (OSError, SecurityBoundaryError):
+            return None
+        if len(raw) != binding.size:
+            return None
+        return _default_cloud_selection_digest(raw, binding.sha256)
     try:
         metadata = path.lstat()
     except OSError:
@@ -1862,6 +1960,10 @@ def _exact_default_cloud_selection_digest(path: Path) -> str | None:
     digest, raw = measurement
     if len(raw) != metadata.st_size:
         return None
+    return _default_cloud_selection_digest(raw, digest)
+
+
+def _default_cloud_selection_digest(raw: bytes, digest: str) -> str | None:
     try:
         text = raw.decode("utf-8")
         parser = configparser.ConfigParser(
@@ -2451,7 +2553,8 @@ def _executable_path(
     *,
     expected_sha256: str | None = None,
 ) -> tuple[Path | None, str]:
-    if not path.is_absolute() or path.name != "az":
+    allowed_names = {"az.cmd", "az.exe"} if os.name == "nt" else {"az"}
+    if not path.is_absolute() or path.name.casefold() not in allowed_names:
         return None, "AZURE_CLI_BINARY_NOT_FOUND"
     try:
         metadata = path.lstat()
@@ -2459,6 +2562,21 @@ def _executable_path(
         return None, "AZURE_CLI_BINARY_NOT_FOUND"
     if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
         return None, "AZURE_CLI_BINARY_UNTRUSTED"
+    if os.name == "nt":
+        attestation, attestation_code = _windows_toolchain_attestation(path)
+        if attestation is None:
+            return None, attestation_code
+        if expected_sha256 is None:
+            return None, "AZURE_CLI_BINARY_ATTESTATION_REQUIRED"
+        if not isinstance(expected_sha256, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", expected_sha256.lower()
+        ):
+            return None, "AZURE_CLI_BINARY_ATTESTATION_INVALID"
+        return (
+            (path, "AZURE_CLI_BINARY_TRUSTED")
+            if attestation.digest == expected_sha256.lower()
+            else (None, "AZURE_CLI_BINARY_ATTESTATION_MISMATCH")
+        )
     if metadata.st_uid not in {0, os.geteuid()}:
         return None, "AZURE_CLI_BINARY_UNTRUSTED"
     if metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
@@ -2503,7 +2621,7 @@ def _prepare_bound_runtime(
     *,
     expected_sha256: str | None,
     cloud_selection_sha256: str | None,
-) -> SealedAzureCliRuntime | None:
+) -> SealedAzureCliRuntime | "_WindowsAzureCliRuntime" | None:
     if expected_sha256 is None or not isinstance(expected_sha256, str):
         return None
     normalized = expected_sha256.lower()
@@ -2513,6 +2631,16 @@ def _prepare_bound_runtime(
         metadata = path.lstat()
     except OSError:
         return None
+    if os.name == "nt":
+        attestation, _code = _windows_toolchain_attestation(path)
+        if (
+            attestation is None
+            or attestation.digest != normalized
+            or attestation.interpreter_path is None
+            or attestation.interpreter_digest is None
+        ):
+            return None
+        return _WindowsAzureCliRuntime(path, attestation)
     attestation, _code = _toolchain_attestation(path, metadata)
     if (
         attestation is None
@@ -2534,6 +2662,67 @@ def _prepare_bound_runtime(
     )
 
 
+class _WindowsAzureCliRuntime:
+    pass_fds: tuple[int, ...] = ()
+
+    def __init__(self, wrapper: Path, attestation: "_ToolchainAttestation") -> None:
+        self.wrapper = wrapper
+        self.attestation = attestation
+        self._stack: ExitStack | None = None
+
+    def __enter__(self) -> "_WindowsAzureCliRuntime":
+        from nac_bff.activation_security_backend import get_platform_security_backend
+
+        backend = get_platform_security_backend()
+        stack = ExitStack()
+        try:
+            for path in (self.wrapper, self.attestation.interpreter_path):
+                assert path is not None
+                binding = backend.inspect_private_path(
+                    path, purpose="toolchain-executable"
+                )
+                stack.enter_context(backend.open_bound_read(path, binding))
+            package_root = self.attestation.package_root
+            if package_root is None:
+                raise SealedToolchainError("AZURE_CLI_RUNTIME_BINDING_FAILED")
+            for current, directories, filenames in os.walk(
+                package_root, followlinks=False
+            ):
+                current_path = Path(current)
+                directories.sort(key=str.casefold)
+                filenames.sort(key=str.casefold)
+                for filename in filenames:
+                    module_path = current_path / filename
+                    binding = backend.inspect_private_path(
+                        module_path, purpose="toolchain-executable"
+                    )
+                    stack.enter_context(
+                        backend.open_bound_read(module_path, binding)
+                    )
+        except BaseException:
+            stack.close()
+            raise
+        self._stack = stack
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        if self._stack is not None:
+            self._stack.close()
+            self._stack = None
+        measured, _code = _windows_toolchain_attestation(self.wrapper)
+        if measured is None or measured.digest != self.attestation.digest:
+            raise SealedToolchainError("AZURE_CLI_RUNTIME_BINDING_FAILED")
+
+    def command(self, argv: Sequence[str]) -> list[str]:
+        assert self.attestation.interpreter_path is not None
+        return [
+            str(self.attestation.interpreter_path),
+            "-m",
+            "azure.cli",
+            *argv,
+        ]
+
+
 def calculate_azure_cli_toolchain_sha256(
     path: str | os.PathLike[str],
 ) -> str | None:
@@ -2548,8 +2737,12 @@ def calculate_azure_cli_toolchain_sha256(
         metadata = candidate.lstat()
     except (OSError, RuntimeError, TypeError):
         return None
-    if not candidate.is_absolute() or candidate.name != "az":
+    allowed_names = {"az.cmd", "az.exe"} if os.name == "nt" else {"az"}
+    if not candidate.is_absolute() or candidate.name.casefold() not in allowed_names:
         return None
+    if os.name == "nt":
+        attestation, _code = _windows_toolchain_attestation(candidate)
+        return None if attestation is None else attestation.digest
     attestation, _code = _toolchain_attestation(candidate, metadata)
     return None if attestation is None else attestation.digest
 
@@ -2563,6 +2756,101 @@ class _ToolchainAttestation:
     package_root: Path | None = None
     package_digest: str | None = None
     runtime_uids: frozenset[int] = frozenset()
+
+
+def _windows_toolchain_attestation(
+    path: Path,
+) -> tuple[_ToolchainAttestation | None, str]:
+    try:
+        from nac_bff.activation_security_backend import get_platform_security_backend
+
+        backend = get_platform_security_backend()
+        wrapper = backend.inspect_private_path(path, purpose="toolchain-executable")
+        roots = (path.parent, path.parent.parent)
+        interpreter = next(
+            (
+                candidate
+                for root in roots
+                for candidate in (root / "python.exe", root / "python3.exe")
+                if candidate.is_file()
+            ),
+            None,
+        )
+        if interpreter is None:
+            return None, "AZURE_CLI_BINARY_UNTRUSTED"
+        interpreter_binding = backend.inspect_private_path(
+            interpreter, purpose="toolchain-executable"
+        )
+        package_root = next(
+            (
+                candidate
+                for root in roots
+                for candidate in (root / "Lib" / "site-packages", root / "lib" / "site-packages")
+                if (candidate / "azure" / "cli" / "__main__.py").is_file()
+            ),
+            None,
+        )
+        if package_root is None:
+            return None, "AZURE_CLI_BINARY_UNTRUSTED"
+        package_digest = _windows_tree_digest(package_root)
+        if package_digest is None:
+            return None, "AZURE_CLI_BINARY_UNTRUSTED"
+        digest = _attestation_digest(
+            ("schema", _ATTESTATION_SCHEMA),
+            ("kind", "windows-python-package"),
+            ("wrapper_path", str(path)),
+            ("wrapper_content", wrapper.sha256),
+            ("interpreter_path", str(interpreter)),
+            ("interpreter_content", interpreter_binding.sha256),
+            ("package_root", str(package_root)),
+            ("package_tree", package_digest),
+        )
+        return (
+            _ToolchainAttestation(
+                digest=digest,
+                requires_expected=True,
+                interpreter_path=interpreter,
+                interpreter_digest=interpreter_binding.sha256,
+                package_root=package_root,
+                package_digest=package_digest,
+            ),
+            "AZURE_CLI_BINARY_TRUSTED",
+        )
+    except (OSError, RuntimeError):
+        return None, "AZURE_CLI_BINARY_UNTRUSTED"
+
+
+def _windows_tree_digest(root: Path) -> str | None:
+    try:
+        from nac_bff.activation_security_backend import get_platform_security_backend
+
+        backend = get_platform_security_backend()
+        digest = hashlib.sha256()
+        count = 0
+        total = 0
+        for current, directories, filenames in os.walk(root, followlinks=False):
+            directories.sort(key=str.casefold)
+            filenames.sort(key=str.casefold)
+            current_path = Path(current)
+            for directory in tuple(directories):
+                metadata = (current_path / directory).lstat()
+                if getattr(metadata, "st_file_attributes", 0) & 0x400:
+                    return None
+            for filename in filenames:
+                path = current_path / filename
+                binding = backend.inspect_private_path(
+                    path, purpose="toolchain-executable"
+                )
+                count += 1
+                total += binding.size
+                if count > 50000 or total > 2 * 1024 * 1024 * 1024:
+                    return None
+                relative = path.relative_to(root).as_posix().casefold()
+                digest.update(relative.encode("utf-8") + b"\0")
+                digest.update(binding.sha256.encode("ascii") + b"\n")
+        return digest.hexdigest() if count else None
+    except (OSError, RuntimeError, ValueError):
+        return None
 
 
 def _toolchain_attestation(

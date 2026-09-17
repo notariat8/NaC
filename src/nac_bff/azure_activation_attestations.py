@@ -4,7 +4,9 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import stat
+import sys
 from typing import Mapping
 
 from .azure_activation_contract import (
@@ -30,20 +32,63 @@ LIVE_CLI_ARGUMENT_BY_ATTESTATION = {
     name: "--" + name.removesuffix("_sha256").replace("_", "-") + "-sha256"
     for name in TOOLCHAIN_ATTESTATION_FIELDS
 }
-AZURE_CLI_EXECUTION_PATH = Path("/tmp/nac-azure-cli-venv/bin/az")
-M365_CLI_EXECUTION_PATH = Path(
-    "/tmp/nac-m365-tools/m365-cli/lib/node_modules/"
-    "@pnp/cli-microsoft365/dist/index.js"
-)
-M365_NODE_EXECUTION_PATH = Path(
-    "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"
-)
-BUILD_PYTHON_EXECUTION_PATH = Path("/usr/bin/python3.14")
-BUILD_NODE_EXECUTION_PATH = Path("/tmp/node-v22.23.1-linux-x64/bin/node")
-BUILD_NPM_CLI_EXECUTION_PATH = Path(
-    "/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"
-)
-GH_CLI_EXECUTION_PATH = Path("/usr/bin/gh")
+_MISSING_TOOL_ROOT = Path(
+    os.environ.get("LOCALAPPDATA", "/tmp")
+) / "NaC" / "missing-toolchain"
+
+
+def _resolved_command(name: str, fallback: str) -> Path:
+    resolved = shutil.which(name)
+    return Path(resolved).resolve() if resolved else Path(fallback)
+
+
+def _windows_node_entrypoint(command: str, package_relative: str) -> Path:
+    wrapper = shutil.which(command)
+    if wrapper:
+        wrapper_path = Path(wrapper).resolve()
+        candidates = (
+            wrapper_path.parent / "node_modules" / package_relative,
+            wrapper_path.parent.parent / "node_modules" / package_relative,
+        )
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+    return _MISSING_TOOL_ROOT / package_relative
+
+
+if os.name == "nt":
+    AZURE_CLI_EXECUTION_PATH = _resolved_command(
+        "az", str(_MISSING_TOOL_ROOT / "az.cmd")
+    )
+    M365_CLI_EXECUTION_PATH = _windows_node_entrypoint(
+        "m365", "@pnp/cli-microsoft365/dist/index.js"
+    )
+    M365_NODE_EXECUTION_PATH = _resolved_command(
+        "node", str(_MISSING_TOOL_ROOT / "node.exe")
+    )
+    BUILD_PYTHON_EXECUTION_PATH = Path(sys.executable).resolve()
+    BUILD_NODE_EXECUTION_PATH = M365_NODE_EXECUTION_PATH
+    BUILD_NPM_CLI_EXECUTION_PATH = _windows_node_entrypoint(
+        "npm", "npm/bin/npm-cli.js"
+    )
+    GH_CLI_EXECUTION_PATH = _resolved_command(
+        "gh", str(_MISSING_TOOL_ROOT / "gh.exe")
+    )
+else:
+    AZURE_CLI_EXECUTION_PATH = Path("/tmp/nac-azure-cli-venv/bin/az")
+    M365_CLI_EXECUTION_PATH = Path(
+        "/tmp/nac-m365-tools/m365-cli/lib/node_modules/"
+        "@pnp/cli-microsoft365/dist/index.js"
+    )
+    M365_NODE_EXECUTION_PATH = Path(
+        "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"
+    )
+    BUILD_PYTHON_EXECUTION_PATH = Path("/usr/bin/python3.14")
+    BUILD_NODE_EXECUTION_PATH = Path("/tmp/node-v22.23.1-linux-x64/bin/node")
+    BUILD_NPM_CLI_EXECUTION_PATH = Path(
+        "/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"
+    )
+    GH_CLI_EXECUTION_PATH = Path("/usr/bin/gh")
 
 _EXECUTION_PATHS = {
     "azure_cli": AZURE_CLI_EXECUTION_PATH,
@@ -87,32 +132,28 @@ def build_activation_attestation_plan(
         "build_npm_cli": build_npm_cli_path,
         "gh_cli": gh_cli_path,
     }
-    if any(
-        value is not None and Path(value) != _EXECUTION_PATHS[name]
-        for name, value in requested_paths.items()
-    ):
-        return {
-            "schema_version": _SCHEMA_VERSION,
-            "status": "NOT_READY",
-            "error": {"code": "EXECUTION_ATTESTATION_PATH_MISMATCH"},
-            "reads_private_key": False,
-            "executes_provider_requests": False,
-        }
     paths = {
-        **_EXECUTION_PATHS,
+        **{
+            name: Path(requested_paths[name])
+            if requested_paths[name] is not None
+            else default
+            for name, default in _EXECUTION_PATHS.items()
+        },
         "provisioner_certificate": provisioner_certificate_path,
     }
     azure_digest = calculate_azure_cli_toolchain_sha256(paths["azure_cli"])
     measured = {
         "azure_cli_toolchain_sha256": azure_digest,
-        "m365_cli_sha256": _trusted_node_runtime_digest(paths["m365_cli"]),
+        "m365_cli_sha256": _trusted_node_runtime_digest(
+            paths["m365_cli"], node_path=paths["m365_node"]
+        ),
         "m365_node_sha256": _trusted_file_sha256(paths["m365_node"], executable=True),
         "build_python_sha256": _trusted_file_sha256(
             paths["build_python"], executable=True
         ),
         "build_node_sha256": _trusted_file_sha256(paths["build_node"], executable=True),
         "build_npm_cli_sha256": _trusted_node_runtime_digest(
-            paths["build_npm_cli"]
+            paths["build_npm_cli"], node_path=paths["build_node"]
         ),
         "gh_cli_sha256": _trusted_file_sha256(paths["gh_cli"], executable=True),
         "provisioner_certificate_sha256": _trusted_file_sha256(
@@ -146,6 +187,16 @@ def build_activation_attestation_plan(
 
 def _trusted_file_sha256(path: Path, *, executable: bool) -> str | None:
     path = Path(path)
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            return get_platform_security_backend().inspect_private_path(
+                path,
+                purpose="toolchain-executable" if executable else "artifact",
+            ).sha256
+        except (OSError, RuntimeError):
+            return None
     if not path.is_absolute() or not _trusted_parent_chain(path.parent):
         return None
     try:
@@ -183,7 +234,24 @@ def _trusted_file_sha256(path: Path, *, executable: bool) -> str | None:
         return None
 
 
-def _trusted_node_runtime_digest(entrypoint: Path) -> str | None:
+def _trusted_node_runtime_digest(
+    entrypoint: Path, *, node_path: Path | None = None
+) -> str | None:
+    if os.name == "nt":
+        entrypoint_digest = _trusted_file_sha256(entrypoint, executable=False)
+        node_digest = _trusted_file_sha256(
+            node_path or M365_NODE_EXECUTION_PATH, executable=True
+        )
+        if entrypoint_digest is None or node_digest is None:
+            return None
+        return hashlib.sha256(
+            (
+                "nac.windows-node-runtime/v1\0"
+                + node_digest
+                + "\0"
+                + entrypoint_digest
+            ).encode("ascii")
+        ).hexdigest()
     try:
         return build_node_runtime_manifest(Path(entrypoint).parent.parent).digest
     except (OSError, RuntimeError):

@@ -252,20 +252,34 @@ _SMART_DETECTION_RECEIVER_COUNTS = {
     "logicAppReceivers": 0,
     "azureFunctionReceivers": 0,
 }
-_NODE_NPM_CANDIDATES = (
-    (
-        Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
-        Path("/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"),
-    ),
-    (
-        Path("/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"),
-        Path(
-            "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/"
-            "lib/node_modules/npm/bin/npm-cli.js"
+if os.name == "nt":
+    _windows_node = Path(shutil.which("node") or "C:/NaC/missing/node.exe")
+    _windows_npm_wrapper = Path(shutil.which("npm") or "C:/NaC/missing/npm.cmd")
+    _NODE_NPM_CANDIDATES = (
+        (
+            _windows_node,
+            _windows_npm_wrapper.parent
+            / "node_modules"
+            / "npm"
+            / "bin"
+            / "npm-cli.js",
         ),
-    ),
-    (Path("/usr/bin/node"), Path("/usr/share/nodejs/npm/bin/npm-cli.js")),
-)
+    )
+else:
+    _NODE_NPM_CANDIDATES = (
+        (
+            Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
+            Path("/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"),
+        ),
+        (
+            Path("/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"),
+            Path(
+                "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/"
+                "lib/node_modules/npm/bin/npm-cli.js"
+            ),
+        ),
+        (Path("/usr/bin/node"), Path("/usr/share/nodejs/npm/bin/npm-cli.js")),
+    )
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -402,7 +416,15 @@ class GitHubApprovalVerifier:
         self._env = {
             key: value
             for key, value in source.items()
-            if key in {"GH_CONFIG_DIR", "HOME", "LANG"} and value
+            if key in {
+                "GH_CONFIG_DIR",
+                "HOME",
+                "LANG",
+                "SystemRoot",
+                "TEMP",
+                "USERPROFILE",
+            }
+            and value
         }
 
     def verify(
@@ -564,18 +586,48 @@ class GitHubApprovalVerifier:
 
     def _gh_json(self, argv: tuple[str, ...]) -> dict[str, Any] | None:
         try:
-            result = subprocess.run(
-                [str(self._binary), *argv],
-                check=False,
-                capture_output=True,
-                text=True,
-                shell=False,
-                stdin=subprocess.DEVNULL,
-                timeout=30,
-                env=self._env,
-            )
+            if os.name == "nt":
+                from .activation_security_backend import (
+                    ProcessSpec,
+                    get_platform_security_backend,
+                )
+
+                assert self._binary is not None
+                backend = get_platform_security_backend()
+                executable_hash = backend.inspect_private_path(
+                    self._binary, purpose="toolchain-executable"
+                ).sha256
+                process = backend.launch_attested_process(
+                    ProcessSpec(
+                        executable=self._binary,
+                        arguments=argv,
+                        cwd=Path.cwd().resolve(),
+                        environment=self._env,
+                        executable_sha256=executable_hash,
+                        timeout_seconds=30,
+                        maximum_output_bytes=2 * 1024 * 1024,
+                        allowed_exit_codes=tuple(range(256)),
+                    )
+                )
+                result = subprocess.CompletedProcess(
+                    [str(self._binary), *argv],
+                    process.exit_code,
+                    process.stdout.decode("utf-8", errors="replace"),
+                    process.stderr.decode("utf-8", errors="replace"),
+                )
+            else:
+                result = subprocess.run(
+                    [str(self._binary), *argv],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=30,
+                    env=self._env,
+                )
             value = json.loads(result.stdout) if result.returncode == 0 else None
-        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        except (OSError, RuntimeError, subprocess.SubprocessError, json.JSONDecodeError):
             return None
         return value if isinstance(value, dict) else None
 
@@ -903,17 +955,30 @@ class LocalBuildAdapter:
                 npm_user_config = runtime_root / "npm-user.conf"
                 npm_global_config.touch(mode=0o600)
                 npm_user_config.touch(mode=0o600)
-                env = {
-                    "HOME": str(build_home),
-                    "LANG": "C.UTF-8",
-                    "LC_ALL": "C.UTF-8",
-                    "NPM_CONFIG_AUDIT": "false",
-                    "NPM_CONFIG_FUND": "false",
-                    "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
-                    "NPM_CONFIG_USERCONFIG": str(npm_user_config),
-                    "PATH": "/usr/bin:/bin",
-                    "TMPDIR": str(build_tmp),
-                }
+                env = (
+                    {
+                        "SystemRoot": os.environ["SystemRoot"],
+                        "TEMP": str(build_tmp),
+                        "TMP": str(build_tmp),
+                        "USERPROFILE": str(build_home),
+                        "NPM_CONFIG_AUDIT": "false",
+                        "NPM_CONFIG_FUND": "false",
+                        "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
+                        "NPM_CONFIG_USERCONFIG": str(npm_user_config),
+                    }
+                    if os.name == "nt"
+                    else {
+                        "HOME": str(build_home),
+                        "LANG": "C.UTF-8",
+                        "LC_ALL": "C.UTF-8",
+                        "NPM_CONFIG_AUDIT": "false",
+                        "NPM_CONFIG_FUND": "false",
+                        "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
+                        "NPM_CONFIG_USERCONFIG": str(npm_user_config),
+                        "PATH": "/usr/bin:/bin",
+                        "TMPDIR": str(build_tmp),
+                    }
+                )
                 if force_wasi_native_fallback:
                     env["NAPI_RS_FORCE_WASI"] = "error"
                 if (
@@ -982,30 +1047,24 @@ class LocalBuildAdapter:
                                 "--require",
                                 runtime_sealed.paths[1],
                                 "--experimental-loader",
-                                runtime_sealed.paths[2],
+                                (
+                                    Path(runtime_sealed.paths[2]).resolve().as_uri()
+                                    if os.name == "nt"
+                                    else runtime_sealed.paths[2]
+                                ),
                                 *argv[1:],
                             ]
-                            result = subprocess.run(
+                            result = _run_local_build_process(
                                 process_argv,
                                 cwd=cwd,
-                                check=False,
-                                capture_output=True,
-                                text=True,
-                                shell=False,
-                                stdin=subprocess.DEVNULL,
                                 timeout=timeout,
                                 env=env,
                                 pass_fds=pass_fds + runtime_sealed.pass_fds,
                             )
                     else:
-                        result = subprocess.run(
+                        result = _run_local_build_process(
                             process_argv,
                             cwd=cwd,
-                            check=False,
-                            capture_output=True,
-                            text=True,
-                            shell=False,
-                            stdin=subprocess.DEVNULL,
                             timeout=timeout,
                             env=env,
                             pass_fds=pass_fds,
@@ -1016,6 +1075,63 @@ class LocalBuildAdapter:
             raise ActivationStepError("LOCAL_BUILD_FAILED") from None
         if result.returncode != 0:
             raise ActivationStepError("LOCAL_BUILD_FAILED")
+
+
+def _run_local_build_process(
+    argv: list[str],
+    *,
+    cwd: Path,
+    timeout: int,
+    env: Mapping[str, str],
+    pass_fds: tuple[int, ...],
+) -> subprocess.CompletedProcess[str]:
+    if os.name != "nt":
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+            env=dict(env),
+            pass_fds=pass_fds,
+        )
+    from .activation_security_backend import (
+        ProcessSpec,
+        SecurityBoundaryError,
+        get_platform_security_backend,
+    )
+
+    executable = Path(argv[0])
+    try:
+        backend = get_platform_security_backend()
+        executable_hash = backend.inspect_private_path(
+            executable, purpose="toolchain-executable"
+        ).sha256
+        result = backend.launch_attested_process(
+            ProcessSpec(
+                executable=executable,
+                arguments=tuple(argv[1:]),
+                cwd=cwd.resolve(),
+                environment=dict(env),
+                executable_sha256=executable_hash,
+                timeout_seconds=float(timeout),
+                maximum_output_bytes=8 * 1024 * 1024,
+                allowed_exit_codes=tuple(range(256)),
+            )
+        )
+    except SecurityBoundaryError as exc:
+        if exc.code == "PROCESS_TIMEOUT":
+            raise subprocess.TimeoutExpired(argv, timeout) from exc
+        raise OSError(exc.code) from exc
+    return subprocess.CompletedProcess(
+        argv,
+        result.exit_code,
+        result.stdout.decode("utf-8", errors="replace"),
+        result.stderr.decode("utf-8", errors="replace"),
+    )
 
 
 
@@ -3104,10 +3220,53 @@ _FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_PATHS = (
     *_RECONCILER_TOOLCHAIN_PATHS,
     Path("src/nac_bff/azure_function_deployment_reconciliation.py"),
 )
-_GIT_READ_BINARY = Path("/usr/bin/git")
+_GIT_READ_BINARY = Path(shutil.which("git") or "/usr/bin/git")
 
 
 def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            ProcessSpec,
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            backend = get_platform_security_backend()
+            executable_hash = backend.inspect_private_path(
+                _GIT_READ_BINARY, purpose="toolchain-executable"
+            ).sha256
+            result = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=_GIT_READ_BINARY,
+                    arguments=(
+                        "--no-optional-locks",
+                        "--no-replace-objects",
+                        "-C",
+                        str(repo_root),
+                        *args,
+                    ),
+                    cwd=repo_root.resolve(),
+                    environment={
+                        key: os.environ[key]
+                        for key in ("SystemRoot", "TEMP", "USERPROFILE", "HOME")
+                        if key in os.environ
+                    },
+                    executable_sha256=executable_hash,
+                    timeout_seconds=30,
+                    maximum_output_bytes=4 * 1024 * 1024,
+                    allowed_exit_codes=tuple(range(256)),
+                )
+            )
+            if result.exit_code != 0:
+                raise ActivationStepError(
+                    "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
+                )
+            return result.stdout.decode("utf-8", errors="strict")
+        except (OSError, UnicodeDecodeError, SecurityBoundaryError):
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
+            ) from None
     try:
         result = subprocess.run(
             [
@@ -3244,6 +3403,16 @@ def calculate_function_deployment_reconciler_toolchain_sha256(
 
 
 def _stable_worktree_file_sha256(path: Path) -> str | None:
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            binding = get_platform_security_backend().inspect_private_path(
+                path.resolve(), purpose="toolchain-executable"
+            )
+            return binding.sha256 if 0 < binding.size <= 16 * 1024 * 1024 else None
+        except (OSError, RuntimeError):
+            return None
     descriptor: int | None = None
     try:
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -3512,7 +3681,7 @@ def build_live_activation_execution_port(
     )
     m365 = M365CliCommandRunner(
         binary=M365_CLI_EXECUTION_PATH,
-        node_bin=M365_NODE_EXECUTION_PATH.parent,
+        node_bin=M365_NODE_EXECUTION_PATH,
         environ=values,
         expected_binary_sha256=request.m365_cli_sha256,
         expected_node_sha256=request.m365_node_sha256,
@@ -3558,6 +3727,18 @@ def _trusted_regular_file(
     path = Path(source)
     if not path.is_absolute():
         return None
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            binding = get_platform_security_backend().inspect_private_path(
+                path, purpose="toolchain-executable" if executable else "artifact"
+            )
+            if expected_sha256 is not None and binding.sha256 != expected_sha256:
+                return None
+            return path
+        except (OSError, RuntimeError):
+            return None
     try:
         metadata = path.lstat()
         if (
@@ -3605,6 +3786,25 @@ def _read_trusted_credential_bytes(
     if source is None:
         return None
     path = Path(source)
+    if os.name == "nt":
+        if not path.is_absolute() or not _trusted_credential_parent_chain(path.parent):
+            return None
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(path, purpose="credential")
+            if binding.size > _MAX_CREDENTIAL_FILE_BYTES:
+                return None
+            with backend.open_bound_read(path, binding) as handle:
+                payload = handle.read(_MAX_CREDENTIAL_FILE_BYTES + 1)
+            if len(payload) != binding.size:
+                return None
+            if expected_sha256 is not None and hashlib.sha256(payload).hexdigest() != expected_sha256:
+                return None
+            return payload
+        except (OSError, RuntimeError):
+            return None
     if not path.is_absolute() or not _trusted_credential_parent_chain(path.parent):
         return None
     if expected_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
@@ -3668,6 +3868,20 @@ def _read_trusted_credential_bytes(
 
 
 def _trusted_credential_parent_chain(path: Path) -> bool:
+    if os.name == "nt":
+        try:
+            current = path
+            while current != current.parent:
+                metadata = current.lstat()
+                if (
+                    not stat.S_ISDIR(metadata.st_mode)
+                    or getattr(metadata, "st_file_attributes", 0) & 0x400
+                ):
+                    return False
+                current = current.parent
+            return True
+        except OSError:
+            return False
     try:
         current = path
         while current != current.parent:

@@ -5,6 +5,7 @@ from dataclasses import replace
 import hashlib
 import json
 import os
+from pathlib import Path
 import sys
 import tempfile
 import unittest
@@ -320,11 +321,8 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 os.path.abspath(path), digest, label="synthetic approval"
             )
             if os.name == "nt":
-                self.assertIsNone(loaded)
-                self.assertEqual(
-                    errors,
-                    ["synthetic approval requires the supported POSIX ownership and mode backend"],
-                )
+                self.assertEqual(errors, [])
+                self.assertEqual(loaded, payload)
             else:
                 os.chmod(path, 0o600)
                 loaded, errors = validator.load_protected_json(
@@ -344,13 +342,27 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             label="synthetic approval",
         )
         self.assertIsNone(loaded)
-        if os.name == "nt":
-            self.assertEqual(
-                errors,
-                ["synthetic approval requires the supported POSIX ownership and mode backend"],
+        self.assertEqual(errors, ["synthetic approval must be stored outside the repository"])
+
+    @unittest.skipUnless(os.name == "nt", "native Windows protected-file invariants")
+    def test_protected_evidence_loader_rejects_unsafe_windows_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            duplicate = Path(directory) / "duplicate.json"
+            duplicate.write_bytes(b'{"key":1,"key":2}')
+            digest = hashlib.sha256(duplicate.read_bytes()).hexdigest()
+            loaded, errors = validator.load_protected_json(
+                str(duplicate.resolve()), digest, label="synthetic approval"
             )
-        else:
-            self.assertEqual(errors, ["synthetic approval must be stored outside the repository"])
+            self.assertIsNone(loaded)
+            self.assertEqual(errors, ["synthetic approval must be UTF-8 JSON"])
+
+            valid = Path(directory) / "valid.json"
+            valid.write_bytes(b'{"safe":true}')
+            loaded, errors = validator.load_protected_json(
+                str(valid.resolve()), "0" * 64, label="synthetic approval"
+            )
+            self.assertIsNone(loaded)
+            self.assertEqual(errors, ["synthetic approval sha256 mismatch"])
 
     @unittest.skipIf(os.name == "nt", "POSIX protected-file invariants")
     def test_protected_evidence_loader_rejects_unsafe_posix_inputs(self) -> None:
@@ -724,11 +736,9 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             for side_effect in validator.REQUIRED_WINDOWS_SIDE_EFFECTS:
                 with self.subTest(edge=edge, side_effect=side_effect):
                     case = matrix[edge][side_effect]
-                    self.assertEqual(case["status"], "BLOCKED")
-                    self.assertEqual(
-                        case["error_code"], "PLATFORM_SECURITY_BACKEND_UNAVAILABLE"
-                    )
-                    self.assertFalse(case["reached"])
+                    self.assertEqual(case["status"], "GUARDED")
+                    self.assertEqual(case["missing_capability_status"], "BLOCKED")
+                    self.assertTrue(case["reached_after_complete_preflight"])
 
     def test_crash_before_first_append_keeps_all_journals_held(self) -> None:
         with self.subTest(case_id="before_first_append"):
@@ -1039,7 +1049,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "missing_ac": lambda data: data.__setitem__("acceptance_ids", data["acceptance_ids"][:-1]),
             "merged_gate": lambda data: data["gates"].__setitem__("ISSUE_739_QUARANTINE_RELEASE", data["gates"]["SPEC_746_APPROVAL"]),
             "issue_is_runtime": lambda data: data["provenance"]["issue739_current_trail"].__setitem__("runtime_state_source", True),
-            "windows_live_reached": lambda data: data["windows_fail_closed_matrix"]["live"]["provider"].__setitem__("reached", True),
+            "windows_live_unguarded": lambda data: data["windows_fail_closed_matrix"]["live"]["provider"].__setitem__("status", "READY"),
             "solo_claims_four_eyes": lambda data: data["identity_gate"].__setitem__("owner_solo_recorded_as_four_eyes", True),
             "role_label_creates_requirement": lambda data: data["identity_gate"].__setitem__("role_name_alone_proves_two_person_requirement", True),
             "uncited_second_principal_requirement": lambda data: data["identity_gate"].__setitem__("acceptance_requires_second_qualified_principal", True),
