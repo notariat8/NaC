@@ -62,6 +62,10 @@ commands:
   - {id: ai_sbom, platform: windows_remote_ci, command: python scripts/validate_ai_sbom.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
   - {id: ai_sbom_export_mapping, platform: windows_native, command: python scripts/validate_ai_sbom_export_mapping.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
   - {id: issue746_windows_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_activation_security*.py', acceptance_ids: [AC-746-02, AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_bff_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_nac_bff_azure_*.py', acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_business_case_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_business_case_type_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_m365_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_m365_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_sqlite_outbox_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_sqlite_evidence_staging_outbox.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: azure_runtime_compatibility, platform: azure_linux_runtime_optional, command: python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py, acceptance_ids: [AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: azure_target_compatibility, side_effect_class: ci_read_or_synthetic}
   - {id: activation_validator, platform: windows_native, command: python scripts/validate_m365_azure_bff_live_activation.py, acceptance_ids: [AC-746-03, AC-746-04, AC-746-05, AC-746-06], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: graft_build, platform: windows_native, command: graft build, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
@@ -344,19 +348,19 @@ pr_scope:
   exact_changed_files:
     - .github/workflows/governance-policy-sync.yml
     - .github/workflows/windows-portability.yml
-    - AGENTS.md
     - agent-context/index.json
+    - AGENTS.md
     - assets/docs/generic-workbench/VIS-721-manifest.json
     - docs/de/cli.md
     - docs/de/minimum-requirements.md
+    - docs/de/role-model.md
     - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
     - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-    - docs/de/role-model.md
     - docs/en/cli.md
     - docs/en/minimum-requirements.md
+    - docs/en/role-model.md
     - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
     - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-    - docs/en/role-model.md
     - policies/access-control-policy.yaml
     - policies/github-identity-registry.json
     - policies/github-identity-registry.schema.json
@@ -367,34 +371,103 @@ pr_scope:
     - scripts/onboarding_wizard.py
     - scripts/quality_gate.py
     - scripts/validate_agent_authentication_boundary.py
+    - scripts/validate_business_case_type_azure_blob_worm.py
+    - scripts/validate_business_case_type_graph_write_edge.py
+    - scripts/validate_generic_workbench_foundation.py
+    - scripts/validate_graft_context_layer.py
     - scripts/validate_identity_registry.py
     - scripts/validate_m365_azure_bff_live_activation.py
+    - scripts/validate_m365_azure_bff_performance_acceptance.py
     - scripts/validate_m365_bff_failed_partial_safe_completion.py
+    - scripts/validate_m365_release_readiness_gate.py
+    - scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+    - scripts/validate_microsoft_first_onprem_target_architecture.py
+    - scripts/validate_notarial_application_interface_inventory.py
+    - scripts/validate_xnotar_xjustiz_package_boundary.py
+    - src/nac_ai_sbom/export_mapping.py
     - src/nac_bff/activation_security_backend.py
     - src/nac_bff/activation_security_linux.py
     - src/nac_bff/activation_security_windows.py
+    - src/nac_bff/approved_git_tree.py
     - src/nac_bff/azure_activation_attestations.py
     - src/nac_bff/azure_activation_composition.py
     - src/nac_bff/azure_activation_contract.py
+    - src/nac_bff/azure_activation_provisioner_bootstrap.py
     - src/nac_bff/azure_activation_runner.py
-    - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_activation.py
+    - src/nac_bff/azure_interruption_baseline.py
+    - src/nac_bff/azure_interruption_reconciliation.py
     - src/nac_bff/azure_live_commands_win.py
-    - src/nac_ai_sbom/export_mapping.py
+    - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_performance_acceptance.py
+    - src/nac_bff/azure_performance_authorization.py
+    - src/nac_bff/azure_performance_infrastructure_safety.py
+    - src/nac_bff/azure_performance_lease_broker_auth.py
+    - src/nac_bff/azure_performance_lease.py
+    - src/nac_bff/azure_performance_owner_gate.py
+    - src/nac_bff/azure_performance_runtime.py
+    - src/nac_bff/azure_performance_storage_ports.py
+    - src/nac_cli/cli.py
+    - src/nac_m365_graph/business_case_type_production_adapters.py
+    - src/nac_m365_graph/business_case_type_production_composition.py
+    - src/nac_m365_graph/business_case_type_write_state.py
     - src/nac_m365_graph/mvp_test_environment_deploy.py
     - src/nac_m365_graph/node_runtime_integrity.py
     - src/nac_m365_graph/sealed_toolchain.py
+    - src/nac_m365_graph/spfx_site_deployment.py
+    - src/nac_runtime/platform_file_lock.py
+    - src/nac_runtime/sqlite_evidence_staging_outbox.py
+    - src/notary_kg/business_case_type_migration_quarantine.py
+    - src/notary_kg/business_case_type_migration_runner.py
+    - src/notary_kg/pilot_checklist.py
+    - src/notary_kg/workflow_contract.py
     - tests/test_activation_security_backend.py
     - tests/test_activation_security_windows.py
     - tests/test_agent_authentication_boundary.py
+    - tests/test_business_case_type_graph_write_composition.py
+    - tests/test_business_case_type_graph_write_crash_recovery.py
+    - tests/test_business_case_type_graph_write_state_store.py
+    - tests/test_business_case_type_migration_cli.py
+    - tests/test_business_case_type_migration_quarantine.py
+    - tests/test_business_case_type_production_adapters.py
+    - tests/test_business_case_type_production_composition.py
+    - tests/test_codex_agent_context_index_audit.py
+    - tests/test_graft_context_layer.py
     - tests/test_identity_registry.py
     - tests/test_m365_azure_bff_live_activation_contract.py
     - tests/test_m365_bff_failed_partial_safe_completion.py
+    - tests/test_m365_mvp_test_environment_deploy.py
+    - tests/test_m365_sharepoint_bpmn_viewer_adapter.py
+    - tests/test_nac_bff_approved_git_tree.py
+    - tests/test_nac_bff_azure_activation_attestations.py
+    - tests/test_nac_bff_azure_activation_composition.py
+    - tests/test_nac_bff_azure_activation_owner_gate.py
+    - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
+    - tests/test_nac_bff_azure_activation_runner.py
+    - tests/test_nac_bff_azure_function_deployment_reconciliation.py
+    - tests/test_nac_bff_azure_interruption_baseline.py
+    - tests/test_nac_bff_azure_interruption_reconciliation.py
+    - tests/test_nac_bff_azure_live_commands.py
+    - tests/test_nac_bff_azure_performance_acceptance.py
+    - tests/test_nac_bff_azure_performance_authorization.py
+    - tests/test_nac_bff_azure_performance_infrastructure_safety.py
+    - tests/test_nac_bff_azure_performance_lease_broker_auth.py
+    - tests/test_nac_bff_azure_performance_owner_gate.py
+    - tests/test_nac_bff_azure_performance_runtime.py
+    - tests/test_nac_bff_azure_performance_storage_ports.py
+    - tests/test_nac_m365_node_runtime_integrity.py
+    - tests/test_nac_m365_sealed_toolchain.py
+    - tests/test_notarkammer_demo_runtime_seed.py
+    - tests/test_notary_kg.py
+    - tests/test_platform_file_lock.py
+    - tests/test_sqlite_evidence_staging_outbox.py
+    - tests/test_validate_generic_workbench_foundation.py
     - tests/test_validate_windows_offline_cli_portability.py
     - tests/test_windows_offline_cli_portability.py
+    - tests/test_xnotar_xjustiz_package_boundary.py
     - workflows/contracts/m365-azure-bff-live-activation.contract.json
     - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
     - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
-
 ai_sbom:
   component_id: m365-bff-failed-partial-safe-completion-contract
   human_review_owner: owner_solo_approval_source_bound

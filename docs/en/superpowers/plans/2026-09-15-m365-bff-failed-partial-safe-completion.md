@@ -341,6 +341,24 @@ Mandatory remote evidence:
 Linux CI may verify Azure Linux compatibility, but is not a replacement and
 must not independently block Windows delivery.
 
+### 11.1 Subsequent Strict Doctor Windows Clusters
+
+The native full suite exposed additional POSIX assumptions in existing
+security and persistence paths. They belong to AC-746-05 and
+AC-746-07 because Windows completion is reliable only when its direct
+consumers also operate natively and fail closed:
+
+- Git-tree, reconciliation, activation, live, and performance paths;
+- business-case composition, quarantine, migration, and SQLite outbox;
+- M365 Node, sealed toolchain, SPFx, and MVP deployment paths;
+- repository-local validators, canonical paths, and Windows test fixtures.
+
+The port replaces POSIX file-descriptor, UID, mode, signal, pass_fds, and
+symlink assumptions with the bound Windows security backend. SID, DACL, file
+ID, hash, hardlink, reparse, locking, toolchain, and fail-closed checks remain
+fully enforced. Focused regressions run before the full suite, Graft, and
+Strict Doctor; a red shard must not be hidden by an isolated green test.
+
 ### 12. Documentation, traceability, and AI SBOM
 
 Synchronize DE/EN:
@@ -397,6 +415,26 @@ commands:
     platform: windows_native
     command: python -m unittest discover -s tests -p test_activation_security*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: windows_bff_regression_tests
+    platform: windows_native
+    command: python -m unittest discover -s tests -p test_nac_bff_azure_*.py
+    acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: windows_business_case_regression_tests
+    platform: windows_native
+    command: python -m unittest discover -s tests -p test_business_case_type_*.py
+    acceptance_ids: [AC-746-05, AC-746-07, AC-746-08]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: windows_m365_regression_tests
+    platform: windows_native
+    command: python -m unittest discover -s tests -p test_m365_*.py
+    acceptance_ids: [AC-746-05, AC-746-07, AC-746-08]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: windows_sqlite_outbox_tests
+    platform: windows_native
+    command: python -m unittest discover -s tests -p test_sqlite_evidence_staging_outbox.py
+    acceptance_ids: [AC-746-05, AC-746-07, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_windows_tests
     platform: windows_native
