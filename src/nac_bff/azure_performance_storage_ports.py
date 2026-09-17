@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import fcntl
 import hashlib
 import json
 import math
@@ -18,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator, Mapping
 from uuid import UUID, uuid4
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
@@ -125,7 +126,7 @@ class PerformanceExecutionFence:
                 parent_fd, self._path.name, create=True
             )
             try:
-                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                lock_exclusive(lock_fd, nonblocking=True)
             except BlockingIOError:
                 raise AzurePerformanceStoragePortError(
                     "AZURE_PERFORMANCE_EXECUTION_ALREADY_ACTIVE"
@@ -140,7 +141,7 @@ class PerformanceExecutionFence:
         finally:
             if lock_fd is not None:
                 try:
-                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
             os.close(parent_fd)
@@ -237,7 +238,7 @@ class DurableLeaseBindingHandoff:
             lock_fd = _open_private_file_at(
                 parent_fd, self._path.name + ".lock", create=True
             )
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            lock_exclusive(lock_fd, nonblocking=False)
             yield parent_fd
         except AzurePerformanceStoragePortError:
             raise
@@ -248,7 +249,7 @@ class DurableLeaseBindingHandoff:
         finally:
             if lock_fd is not None:
                 try:
-                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
             os.close(parent_fd)

@@ -3,13 +3,14 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime
-import fcntl
 import hashlib
 import os
 from pathlib import Path
 import re
 import stat
 from typing import Any, Callable, Protocol, cast
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from .azure_activation import LOCATION, RESOURCE_GROUP, SUBSCRIPTION_ID, TENANT_ID
 from .azure_interruption_baseline import (
@@ -2002,7 +2003,7 @@ def _open_lock_set_read_only(
             opened = os.fstat(descriptor)
             if opened.st_ino != metadata.st_ino or opened.st_dev != metadata.st_dev:
                 return None, "INTERRUPTION_LOCK_SET_INVALID"
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_exclusive(descriptor, nonblocking=True)
         return tuple(descriptors), None  # type: ignore[return-value]
     except BlockingIOError:
         return None, "INTERRUPTION_LOCK_ACTIVE"
@@ -2032,7 +2033,7 @@ def _open_lock_set_for_terminalization(
 def _close_lock_set(descriptors: tuple[int, ...]) -> None:
     for descriptor in reversed(descriptors):
         try:
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            unlock(descriptor)
         finally:
             os.close(descriptor)
 

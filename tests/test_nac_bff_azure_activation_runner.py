@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 import errno
 import hashlib
 import json
-import fcntl
 import os
-import pwd
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from nac_bff.azure_activation_runner import (
     ActivationStepError,
@@ -399,10 +399,19 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 self.assertEqual(port.calls, [])
 
     def test_default_host_state_root_is_persistent_user_state(self) -> None:
-        expected = (
-            Path(pwd.getpwuid(os.geteuid()).pw_dir)
-            / ".local/state/nac/m365-bff-live-activation"
-        )
+        if os.name == "posix":
+            import pwd
+
+            expected = (
+                Path(pwd.getpwuid(os.geteuid()).pw_dir)
+                / ".local/state/nac/m365-bff-live-activation"
+            )
+        else:
+            expected = (
+                Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir()))
+                / "NaC"
+                / "m365-bff-live-activation"
+            )
         self.assertEqual(
             _HOST_STATE_RELATIVE_PATH,
             ".local/state/nac/m365-bff-live-activation",
@@ -941,7 +950,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             descriptor = os.open(
                 lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
             )
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_exclusive(descriptor, nonblocking=True)
             try:
                 port = _Port()
                 result = self._run(
@@ -950,7 +959,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                     lock_root=shared_lock_root,
                 )
             finally:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
                 os.close(descriptor)
                 lock.unlink()
 
@@ -2044,11 +2053,9 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                     path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
                 )
                 try:
-                    fcntl.flock(
-                        descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB
-                    )
+                    lock_exclusive(descriptor, nonblocking=True)
                 finally:
-                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    unlock(descriptor)
                     os.close(descriptor)
 
     def test_released_marker_accepts_new_activation_and_held_blocks(
@@ -2060,14 +2067,14 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             self.assertIsNotNone(first)
             assert first is not None
             _write_lock_marker(first, HASH, "RELEASED")
-            fcntl.flock(first, fcntl.LOCK_UN)
+            unlock(first)
             os.close(first)
 
             next_hash = "9" * 64
             second = _acquire_lock(path, next_hash)
             self.assertIsNotNone(second)
             assert second is not None
-            fcntl.flock(second, fcntl.LOCK_UN)
+            unlock(second)
             os.close(second)
 
             self.assertIsNone(_acquire_lock(path, "8" * 64))

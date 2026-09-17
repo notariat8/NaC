@@ -9,7 +9,6 @@ monkeypatch any Python control, including type checks and module-private state.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import fcntl
 import hashlib
 import json
 import os
@@ -20,6 +19,8 @@ import stat
 import threading
 from types import MappingProxyType
 from typing import Any, Mapping
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from .azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureReadbackCapability,
@@ -564,7 +565,7 @@ class _DurableAuthorizationUsageLedger:
             lock_fd = _open_private_regular_at(
                 parent_fd, self.path.name + ".lock", create=True
             )
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            lock_exclusive(lock_fd, nonblocking=False)
             record = _read_json_at(parent_fd, self.path.name)
             if record is None:
                 if not initialize:
@@ -593,7 +594,7 @@ class _DurableAuthorizationUsageLedger:
         finally:
             if lock_fd is not None:
                 try:
-                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
             os.close(parent_fd)

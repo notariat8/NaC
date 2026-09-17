@@ -15,11 +15,11 @@ import tempfile
 from typing import Any, Callable
 
 if os.name == "posix":
-    import fcntl
     import pwd
 else:
-    fcntl = None  # type: ignore[assignment]
     pwd = None  # type: ignore[assignment]
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from .azure_activation import build_azure_bff_activation_plan
 from .azure_activation_contract import (
@@ -162,7 +162,7 @@ def _release_descriptor_lock(descriptor: int) -> None:
             lock.close()
     else:
         assert fcntl is not None
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        unlock(descriptor)
 
 
 def run_azure_bff_live_activation(
@@ -1161,7 +1161,7 @@ def _acquire_existing_lock_for_recovery(
         if opened.st_ino != metadata.st_ino or opened.st_dev != metadata.st_dev:
             os.close(descriptor)
             return None, "ACTIVATION_LOCK_INVALID"
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_exclusive(descriptor, nonblocking=True)
         return descriptor, None
     except BlockingIOError:
         if descriptor is not None:
@@ -1936,16 +1936,16 @@ def _acquire_lock(path: Path, activation_hash: str) -> int | None:
         if not _trusted_secure_artifact_metadata(metadata):
             os.close(descriptor)
             return None
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_exclusive(descriptor, nonblocking=True)
         if created:
             if metadata.st_size != 0:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
                 os.close(descriptor)
                 return None
         else:
             marker = _read_lock_marker_descriptor(descriptor)
             if not _released_lock_marker_is_valid(marker):
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
                 os.close(descriptor)
                 return None
         _write_lock_marker(descriptor, activation_hash, "HELD")

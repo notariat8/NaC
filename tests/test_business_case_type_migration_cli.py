@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-import fcntl
 import os
 import io
 import json
@@ -16,6 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+
+from nac_runtime.platform_file_lock import lock_exclusive
 
 from nac_cli import cli as nac_cli
 from notary_kg import business_case_type_migration_runner as runner
@@ -331,7 +332,7 @@ class MigrationCliTests(unittest.TestCase):
             descriptor = os.open(lock_path, os.O_RDONLY)
             try:
                 with self.assertRaises(BlockingIOError):
-                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    lock_exclusive(descriptor, nonblocking=True)
                 lock_was_held = True
             finally:
                 os.close(descriptor)

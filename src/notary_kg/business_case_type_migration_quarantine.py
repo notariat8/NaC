@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import re
@@ -11,6 +10,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
 from typing import Any, Iterator
+
+from nac_runtime.platform_file_lock import lock_exclusive
 
 
 INDEX_SCHEMA_VERSION = "nac.business-case-type-migration-quarantine-index/v0.1"
@@ -469,7 +470,7 @@ def _open_exclusive_lock_at(parent_fd: int, name: str) -> int:
             raise ArtifactWriteError()
         if created:
             os.fsync(parent_fd)
-        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        lock_exclusive(descriptor, nonblocking=False)
         current = _regular_entry_stat(parent_fd, name)
         if current is None or current.st_nlink != 1 or (
             current.st_dev,
