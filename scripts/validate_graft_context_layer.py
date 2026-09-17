@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +24,77 @@ GRAFT_SKILL_ENTRY = "workflows/skills/graft-context"
 AGENTS_MARKER = "graft-context-layer-policy.yaml"
 STARTUP_MARKER = "graft"
 QUALITY_GATE_MARKER = "validate_graft_context_layer.py"
+
+
+def _bound_existing_file(path: Path) -> Path | None:
+    try:
+        candidate = path.absolute() if os.name == "nt" else path.resolve(strict=True)
+        metadata = candidate.lstat()
+    except OSError:
+        return None
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    if (
+        not candidate.is_file()
+        or getattr(metadata, "st_file_attributes", 0) & reparse_flag
+    ):
+        return None
+    return candidate
+
+
+def _resolve_graft_check_command() -> list[str] | None:
+    """Resolve the npm Windows shim to its bound Node entry point."""
+    discovered: str | None = None
+    if os.name == "nt":
+        wrappers: list[Path] = []
+        userprofile = os.environ.get("USERPROFILE")
+        if userprofile:
+            wrappers.append(
+                Path(userprofile) / "AppData" / "Roaming" / "npm" / "graft.cmd"
+            )
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            wrappers.append(Path(appdata) / "npm" / "graft.cmd")
+        discovered = next(
+            (str(wrapper) for wrapper in wrappers if wrapper.is_file()), None
+        )
+    if discovered is None:
+        discovered = shutil.which("graft")
+    if discovered is None:
+        return None
+    executable = _bound_existing_file(Path(discovered))
+    if executable is None:
+        return None
+    if os.name != "nt" or executable.suffix.lower() not in {".cmd", ".bat"}:
+        return [str(executable), "check"]
+
+    entry_point = (
+        executable.parent
+        / "node_modules"
+        / "@nanonets"
+        / "graft"
+        / "dist"
+        / "cli.js"
+    )
+    node_candidates = [executable.parent / "node.exe"]
+    program_files = os.environ.get("ProgramFiles")
+    if program_files:
+        node_candidates.append(Path(program_files) / "nodejs" / "node.exe")
+    node_candidates.extend(
+        Path(value) for value in (shutil.which("node"),) if value is not None
+    )
+    node_discovered = next(
+        (str(candidate) for candidate in node_candidates if candidate.is_file()),
+        None,
+    )
+    if node_discovered is None:
+        return None
+    node = _bound_existing_file(Path(node_discovered))
+    entry_point = _bound_existing_file(entry_point)
+    if node is None or entry_point is None:
+        return None
+    if not node.is_file() or not entry_point.is_file():
+        return None
+    return [str(node), str(entry_point), "check"]
 
 
 def _read_text(path: Path) -> str:
@@ -128,13 +201,14 @@ def _validate_contract() -> list[str]:
 
 def _validate_graft_check() -> list[str]:
     """Run `graft check` (deterministic, $0, no LLM) to detect graph drift."""
-    if shutil.which("graft") is None:
+    command = _resolve_graft_check_command()
+    if command is None:
         return [
             "graft-CLI nicht installiert; bitte 'npm i -g @nanonets/graft' ausfuehren, "
             "damit der deterministische Drift-Check (Tier 1) laeuft."
         ]
     result = subprocess.run(
-        ["graft", "check"],
+        command,
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,

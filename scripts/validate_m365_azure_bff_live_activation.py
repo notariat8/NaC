@@ -1218,6 +1218,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_safe_bff_http_denial", "Request failed with status code 403",
         '"code": "ACCESS_DENIED"', "sealed_toolchain",
         "build_node_runtime_integrity_payloads", "pass_fds",
+        "_verify_windows_node_version", "M365_NODE_VERSION_UNSUPPORTED",
+        "int(match.group(1)) < 24",
+        '"--permission", "--allow-fs-read=*", "--allow-worker"',
     ),
     SEALED_TOOLCHAIN_PATH: (
         "O_NOFOLLOW", "F_ADD_SEALS", "F_SEAL_WRITE",
@@ -1731,7 +1734,6 @@ def _validate_windows_portability(
     ):
         if marker not in m365_runner_text:
             errors.append(f"Windows M365 runner marker missing: {marker}")
-    return
 
     test_path = repo_root / "tests/test_windows_offline_cli_portability.py"
     try:

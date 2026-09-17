@@ -34,9 +34,9 @@ EXPECTED_POLICY = {
 }
 
 REQUIRED_ISSUE_746_MARKERS = (
-    "must not start\ninteractive authentication",
-    "Windows remains blocked for live, recovery, and provider reconciliation before\nall such access",
-    "This draft PR performs no tenant, provider, credential, or live\n  action",
+    "The controller uses only an already established authentication context",
+    "Login, device code,\nbrowser authentication, token refresh, cache creation, or configuration rewrite\nblocks reconciliation",
+    "There is no\nprovider, tenant, credential, or live access",
 )
 
 

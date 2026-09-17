@@ -1109,6 +1109,7 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             Path("src/nac_bff/activation_security_windows.py"),
             Path("src/nac_bff/azure_activation_contract.py"),
             Path("src/nac_bff/azure_activation_facade.py"),
+            validator.M365_RUNNER_PATH,
             Path("tests/test_activation_security_windows.py"),
             Path("tests/test_windows_offline_cli_portability.py"),
             Path("tests/test_m365_bff_failed_partial_safe_completion.py"),

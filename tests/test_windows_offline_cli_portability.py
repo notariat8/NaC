@@ -324,8 +324,9 @@ else:
         runner.assert_not_called()
 
     @unittest.skipUnless(os.name == "nt", "native Windows contract")
-    def test_python_live_facade_dispatches_only_after_complete_backend(self) -> None:
+    def test_python_live_facade_blocks_all_side_effect_categories(self) -> None:
         from nac_bff import azure_activation_facade as facade
+        from nac_bff.azure_activation_contract import ActivationStepError
 
         edges = (
             facade.run_azure_bff_live_activation,
@@ -334,29 +335,45 @@ else:
             facade.build_interruption_reconciliation_ports,
             facade.build_function_deployment_reconciliation_ports,
         )
-        dispatch = unittest.mock.Mock(return_value={"status": "SYNTHETIC"})
+        guards = {
+            category: unittest.mock.Mock(name=category)
+            for category in FORBIDDEN_SIDE_EFFECT_CATEGORIES
+        }
+
+        def touch_all_side_effects(*args, **kwargs):
+            for guard in guards.values():
+                guard()
+            return {"status": "SYNTHETIC"}
 
         fake_runner = types.ModuleType("nac_bff.azure_activation_runner")
-        fake_runner.run_azure_bff_live_activation = dispatch
-        fake_runner.reconcile_azure_bff_live_activation_lock = dispatch
+        fake_runner.run_azure_bff_live_activation = touch_all_side_effects
+        fake_runner.reconcile_azure_bff_live_activation_lock = touch_all_side_effects
         fake_composition = types.ModuleType("nac_bff.azure_activation_composition")
-        fake_composition.build_live_activation_execution_port = dispatch
-        fake_composition.build_interruption_reconciliation_ports = dispatch
-        fake_composition.build_function_deployment_reconciliation_ports = dispatch
+        fake_composition.build_live_activation_execution_port = touch_all_side_effects
+        fake_composition.build_interruption_reconciliation_ports = touch_all_side_effects
+        fake_composition.build_function_deployment_reconciliation_ports = touch_all_side_effects
         with patch.dict(
             sys.modules,
             {
                 "nac_bff.azure_activation_runner": fake_runner,
                 "nac_bff.azure_activation_composition": fake_composition,
             },
+        ), patch.object(
+            facade,
+            "require_platform_security_backend",
+            side_effect=ActivationStepError(PLATFORM_ERROR_CODE),
         ):
             for edge in edges:
                 with self.subTest(edge=edge.__name__):
-                    self.assertEqual(edge(), {"status": "SYNTHETIC"})
-        self.assertEqual(dispatch.call_count, len(edges))
+                    with self.assertRaisesRegex(
+                        ActivationStepError, PLATFORM_ERROR_CODE
+                    ):
+                        edge()
+        for guard in guards.values():
+            guard.assert_not_called()
 
     @unittest.skipUnless(os.name == "nt", "native Windows contract")
-    def test_live_child_ignores_forged_platform_hints(self) -> None:
+    def test_live_child_ignores_forged_platform_hints_before_all_side_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             synthetic_root = Path(temporary_directory)
             environment = self._guarded_child_environment(synthetic_root)
