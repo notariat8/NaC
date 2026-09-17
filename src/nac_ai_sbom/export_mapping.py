@@ -115,7 +115,7 @@ def _validate_source_documents(payload: dict[str, Any], repo_root: Path) -> None
     source_documents = payload.get("source_documents")
     if not isinstance(source_documents, dict):
         raise ValueError("AI-SBOM export mapping source_documents muss ein Objekt sein")
-    if source_documents.get("ai_sbom_baseline") != str(AI_SBOM_BASELINE_PATH):
+    if source_documents.get("ai_sbom_baseline") != AI_SBOM_BASELINE_PATH.as_posix():
         raise ValueError("AI-SBOM export mapping muss die AI-SBOM-Baseline referenzieren")
     for key, value in source_documents.items():
         if not isinstance(key, str) or not isinstance(value, str):

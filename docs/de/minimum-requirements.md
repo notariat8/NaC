@@ -4,13 +4,18 @@
 
 | Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
 | --- | --- | --- |
-| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | nur mit verfügbarem Windows-Sicherheitsbackend und nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
 
 Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
-Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
-nicht für Live-Ausführung freischalten.
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können ein
+fehlendes Sicherheitsbackend nicht umgehen. Der Windows-Live-Pfad verlangt
+NTFS-Handle-/Datei-ID-Bindung, SID-/DACL- und Reparse-Prüfung, Named Mutex,
+Job Object, atomare Flush-Semantik sowie einen schreibfreien Credential-Guard
+für Azure CLI und M365/Node. Fehlt eine dieser Fähigkeiten, stoppt der Pfad mit
+`PLATFORM_SECURITY_BACKEND_UNAVAILABLE` vor Credential-, Netzwerk- oder
+Providerzugriff.
 
 Status: verbindliche Day-0-Baseline
 Letzte inhaltliche Anpassung: 2026-05-15

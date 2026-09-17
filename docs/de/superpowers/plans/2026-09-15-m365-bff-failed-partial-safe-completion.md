@@ -225,6 +225,10 @@ Timeout, übergroße Ausgabe oder nicht allowlisteter Exitcode.
 Threadhandle, `AssignProcessToJobObject`, `KILL_ON_JOB_CLOSE`, anschließendes
 `ResumeThread`, attestierte Kindprozessstruktur, feste Argumentliste, feste
 Arbeitsdirectory, minimale Environment-Allowlist und redigierte bounded output.
+Der Python-Providerpfad setzt vor `ResumeThread` Low Integrity; der
+Node-/M365-Pfad startet mit attestiertem Node-Permission-Modus ohne
+Dateischreibrecht. Vererbte Windows-Fehlerdialoge sind deaktiviert, damit jeder
+Loaderfehler ausschließlich fail-closed als redigierter Code endet.
 
 Der alte Windows-Light-Runner-Code wird nicht parallel behalten. Verwertbare
 Teile werden übernommen, der fehlerhafte Stub anschließend entfernt oder zum
@@ -318,7 +322,8 @@ Snapshot und Paket ab.
 - `.github/workflows/windows-portability.yml`;
 - Quality-Gate- und SBOM-Artefakte.
 
-Der Startup-Check weist einen nativen Python-Interpreter `>=3.11`, Node `>=20`,
+Der Windows-Portability-Job und der lokale Aktivierungsvalidator weisen einen
+nativen Python-Interpreter `>=3.11`, Node `>=24`,
 die gepinnte Graft-CLI und die benötigten Buildwerkzeuge nach. Ein defekter
 Launcher, der seine Standardbibliothek oder Paketabhängigkeiten nicht auflösen
 kann, gilt als nicht verfügbar. Es gibt keinen Linux-Fallback.
@@ -395,7 +400,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: windows_security_tests
     platform: windows_native
-    command: python -m unittest tests.test_activation_security_backend tests.test_activation_security_windows
+    command: python -m unittest discover -s tests -p test_activation_security*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_windows_tests
@@ -430,7 +435,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: windows_ci_security_tests
     platform: windows_remote_ci
-    command: python -m unittest tests.test_activation_security_backend tests.test_activation_security_windows
+    command: python -m unittest discover -s tests -p test_activation_security*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_ci_activation_tests

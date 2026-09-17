@@ -1,6 +1,6 @@
 # Sicherer Windows-Abschluss der partiellen M365-BFF-Aktivierung
 
-Status: Designabschnitte vom Owner freigegeben; schriftliche Spec-Prüfung ausstehend; Implementierung und operative Ausführung blockiert
+Status: Spec und Plan vom Owner freigegeben; lokale Windows-Implementierung in Arbeit; operative Ausführung blockiert
 
 Datum: 17. September 2026
 
@@ -37,9 +37,15 @@ affected_artifacts:
   - docs/en/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
   - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
   - sbom/ai/nac-ai-sbom-draft.json
+  - sbom/ai/nac-ai-sbom-export-mapping.json
   - scripts/validate_m365_azure_bff_live_activation.py
   - scripts/validate_m365_bff_failed_partial_safe_completion.py
+  - src/nac_bff/activation_security_backend.py
+  - src/nac_ai_sbom/export_mapping.py
+  - src/nac_bff/activation_security_linux.py
+  - src/nac_bff/activation_security_windows.py
   - src/nac_bff/azure_activation_attestations.py
+  - src/nac_bff/azure_activation_composition.py
   - src/nac_bff/azure_activation_contract.py
   - src/nac_bff/azure_activation_facade.py
   - src/nac_bff/azure_activation_runner.py
@@ -47,9 +53,13 @@ affected_artifacts:
   - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
   - src/nac_m365_graph/mvp_test_environment_deploy.py
+  - src/nac_m365_graph/node_runtime_integrity.py
   - src/nac_m365_graph/sealed_toolchain.py
   - tests/test_m365_azure_bff_live_activation_contract.py
   - tests/test_m365_bff_failed_partial_safe_completion.py
+  - tests/test_activation_security_backend.py
+  - tests/test_ai_sbom_export_mapping.py
+  - tests/test_activation_security_windows.py
   - tests/test_windows_offline_cli_portability.py
   - workflows/contracts/m365-azure-bff-live-activation.contract.json
   - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
@@ -70,7 +80,7 @@ validation_commands:
   - python scripts/validate_ai_sbom.py
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
-  - python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion tests.test_m365_azure_bff_live_activation_contract
+  - python -m unittest discover -s tests -p test_activation_security*.py
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -248,6 +258,14 @@ Wo möglich startet der Controller den gebundenen Python- oder Node-Interpreter
 direkt mit dem attestierten Einstiegspunkt, statt `.cmd` über eine allgemeine
 Shell auszuführen. Tokens und Credentials erscheinen weder in Argumenten noch
 in Logs oder Evidence.
+
+Provider-nahe Python-Prozesse laufen unter Windows vor dem ersten Thread-Resume
+mit einem Low-Integrity-Token; dadurch kann der vorhandene Auth-Kontext gelesen,
+aber ein normal geschützter Credential- oder Konfigurationsspeicher nicht
+geschrieben werden. Node-basierte M365-Prozesse verwenden den attestierten
+Node-Permission-Modus ohne Dateischreibrecht; Runtime-Dateien bleiben zugleich
+über Windows-Handles gebunden. Windows-Loaderfehler werden als redigierte
+Fehlercodes zurückgegeben und dürfen keinen modalen Systemdialog öffnen.
 
 ### Locking und Crash-Erkennung
 

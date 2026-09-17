@@ -6,14 +6,20 @@ Status: first unified CLI implemented on 2026-05-19
 
 | Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
 | --- | --- | --- |
-| Windows 11 with Python 3.11 | supported | blocked with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` |
+| Windows 11 with Python 3.11 and Node.js 24 | supported | supported only with the complete Windows security backend and after every existing owner and security gate |
 | Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
 | Other or unknown platform | where the individual offline command is portable | blocked |
 
 Platform detection uses trusted runtime properties only. CLI arguments,
-environment variables and configuration cannot enable live execution on
-Windows. The binding design is defined by the
-[Windows offline CLI spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md).
+environment variables and configuration cannot bypass missing Windows
+security capabilities. Handle/file-ID binding, SID/DACL and reparse checks, a
+named mutex, a Job Object, flush semantics, and credential-write prevention
+must all be available; otherwise the path stops with
+`PLATFORM_SECURITY_BACKEND_UNAVAILABLE` before credential, network, or provider
+access. The offline boundary is defined by the
+[Windows offline CLI spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md),
+and the Windows completion path by the
+[Issue #746 spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
 ## Idea
 

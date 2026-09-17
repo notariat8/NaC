@@ -1,4 +1,4 @@
-schema_version: nac.m365-bff-failed-partial-safe-completion/v0.1
+schema_version: nac.m365-bff-failed-partial-safe-completion/v0.2
 contract_id: m365-bff-failed-partial-safe-completion
 existing_domain_contract: workflows/contracts/m365-azure-bff-live-activation.contract.json
 existing_verification_contract: workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
@@ -15,11 +15,8 @@ acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-0
 acceptance_status: BLOCKED
 acceptance_blockers:
   - protected_operational_provider_identity_resolution_pending
-  - credential_boundary_executable_evidence_pending
-  - redaction_sink_executable_evidence_pending
   - issue739_hash_bound_provenance_evidence_pending
-  - dynamic_error_code_executable_evidence_pending
-  - expanded_scope_owner_approval_pending
+  - windows_remote_ci_evidence_pending
 
 provenance:
   issue620_parent: {issue: 620, role: parent_environment_trail, runtime_state_source: false}
@@ -34,7 +31,7 @@ gates:
 
 phases:
   - {id: phase_0_offline, success: OFFLINE_PLAN_VERIFIED, mutation: repository_and_pr_artifacts_only}
-  - {id: phase_1_posix_preflight, success: POSIX_READY, mutation: none}
+  - {id: phase_1_windows_preflight, success: WINDOWS_READY, mutation: none}
   - {id: phase_2_provider_inspection, success: FUNCTION_DEPLOYMENT_NOT_APPLIED, mutation: none}
   - {id: phase_3_local_release, success: LOCK_JOURNALS_RELEASED, mutation: three_append_only_RELEASED_records}
   - {id: phase_4_new_offline_gate, success: NEW_OFFLINE_OWNER_GATE_REQUIRED, mutation: local_offline_evidence}
@@ -62,14 +59,14 @@ commands:
   - {id: language_parity, platform: windows_native, command: python scripts/validate_language_parity.py, acceptance_ids: [AC-746-01], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: doc_links, platform: windows_native, command: python scripts/validate_doc_links.py, acceptance_ids: [AC-746-01, AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: issue746_validator, platform: windows_native, command: python scripts/validate_m365_bff_failed_partial_safe_completion.py, acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
-  - {id: ai_sbom, platform: ubuntu_remote_ci, command: python scripts/validate_ai_sbom.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
-  - {id: ai_sbom_export_mapping, platform: ubuntu_remote_ci, command: python scripts/validate_ai_sbom_export_mapping.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
-  - {id: issue746_windows_tests, platform: windows_native, command: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion, acceptance_ids: [AC-746-02, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
-  - {id: issue746_posix_tests, platform: posix_local, command: PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli, acceptance_ids: [AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
-  - {id: activation_validator, platform: posix_local, command: python scripts/validate_m365_azure_bff_live_activation.py, acceptance_ids: [AC-746-03, AC-746-04, AC-746-05, AC-746-06], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
-  - {id: graft_build, platform: ubuntu_remote_ci, command: graft build, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
-  - {id: graft_check, platform: ubuntu_remote_ci, command: graft check, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
-  - {id: strict_doctor, platform: ubuntu_remote_ci, command: python scripts/nac.py doctor --profile strict, acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
+  - {id: ai_sbom, platform: windows_remote_ci, command: python scripts/validate_ai_sbom.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
+  - {id: ai_sbom_export_mapping, platform: windows_native, command: python scripts/validate_ai_sbom_export_mapping.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: issue746_windows_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_activation_security*.py', acceptance_ids: [AC-746-02, AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: azure_runtime_compatibility, platform: azure_linux_runtime_optional, command: python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py, acceptance_ids: [AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: azure_target_compatibility, side_effect_class: ci_read_or_synthetic}
+  - {id: activation_validator, platform: windows_native, command: python scripts/validate_m365_azure_bff_live_activation.py, acceptance_ids: [AC-746-03, AC-746-04, AC-746-05, AC-746-06], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: graft_build, platform: windows_native, command: graft build, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: graft_check, platform: windows_native, command: graft check, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: strict_doctor, platform: windows_native, command: python scripts/nac.py doctor --profile strict, acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
   - {id: fetch_main, platform: post_pr_remote, command: git fetch --no-tags --prune origin main, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [fresh origin/main], scope: pr_747_expected_head, side_effect_class: github_read_only}
   - {id: diff_files, platform: post_pr_remote, command: git diff --name-status origin/main...HEAD, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [complete file list], scope: pr_747_expected_head, side_effect_class: github_read_only}
   - {id: diff_commits, platform: post_pr_remote, command: git log --oneline origin/main..HEAD, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [complete commit list], scope: pr_747_expected_head, side_effect_class: github_read_only}
@@ -86,8 +83,9 @@ identity_gate:
     schema_version: nac.protected-identity-resolver/v1
     contract_id: issue-746-owner-account-principal-resolution
     repository_external: true
-    platform: posix_owner_mode_backend
-    required_owner_mode: "0600"
+    platform: windows_sid_dacl_backend
+    required_owner_binding: current_user_sid
+    required_dacl: current_user_system_administrators_no_broad_write
     nofollow_atomic_open_required: true
     duplicate_json_keys_rejected: true
     maximum_bytes: 131072
@@ -291,13 +289,13 @@ status_counter_hash_cases:
 
 windows_fail_closed_matrix:
   live: &windows_edge
-    credential: &windows_block {status: BLOCKED, error_code: PLATFORM_SECURITY_BACKEND_UNAVAILABLE, reached: false}
-    state: *windows_block
-    lock: *windows_block
-    network: *windows_block
-    subprocess: *windows_block
-    tenant: *windows_block
-    provider: *windows_block
+    credential: &windows_guard {status: GUARDED, missing_capability_status: BLOCKED, reached_after_complete_preflight: true}
+    state: *windows_guard
+    lock: *windows_guard
+    network: *windows_guard
+    subprocess: *windows_guard
+    tenant: *windows_guard
+    provider: *windows_guard
   recovery: *windows_edge
   interruption_reconciliation: *windows_edge
   function_deployment_reconciliation: *windows_edge
@@ -344,32 +342,47 @@ remote_checks:
 pr_scope:
   base_ref: origin/main
   exact_changed_files:
-    - .github/workflows/governance-policy-sync.yml
     - .github/workflows/windows-portability.yml
-    - AGENTS.md
     - agent-context/index.json
-    - assets/docs/generic-workbench/VIS-721-manifest.json
-    - docs/de/role-model.md
+    - docs/de/cli.md
+    - docs/de/minimum-requirements.md
     - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+    - docs/de/superpowers/specs/2026-08-09-windows-light-runner-design.md
+    - docs/de/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
     - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-    - docs/en/role-model.md
+    - docs/en/cli.md
+    - docs/en/minimum-requirements.md
     - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+    - docs/en/superpowers/specs/2026-08-09-windows-light-runner-design.md
+    - docs/en/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md
     - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
-    - policies/access-control-policy.yaml
-    - policies/github-identity-registry.json
-    - policies/github-identity-registry.schema.json
-    - policies/role-model-policy.yaml
     - sbom/ai/nac-ai-sbom-draft.json
-    - sbom/ai/nac-ai-sbom-export-mapping.json
-    - scripts/onboarding_wizard.py
-    - scripts/quality_gate.py
-    - scripts/validate_identity_registry.py
     - scripts/validate_m365_azure_bff_live_activation.py
     - scripts/validate_m365_bff_failed_partial_safe_completion.py
-    - tests/test_identity_registry.py
+    - src/nac_bff/activation_security_backend.py
+    - src/nac_bff/activation_security_linux.py
+    - src/nac_bff/activation_security_windows.py
+    - src/nac_bff/azure_activation_attestations.py
+    - src/nac_bff/azure_activation_composition.py
+    - src/nac_bff/azure_activation_contract.py
+    - src/nac_bff/azure_activation_facade.py
+    - src/nac_bff/azure_activation_runner.py
+    - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_live_commands_win.py
+    - src/nac_ai_sbom/export_mapping.py
+    - src/nac_cli/cli.py
+    - src/nac_m365_graph/mvp_test_environment_deploy.py
+    - src/nac_m365_graph/node_runtime_integrity.py
+    - src/nac_m365_graph/sealed_toolchain.py
+    - tests/test_activation_security_backend.py
+    - tests/test_activation_security_windows.py
+    - tests/test_ai_sbom_export_mapping.py
     - tests/test_m365_azure_bff_live_activation_contract.py
     - tests/test_m365_bff_failed_partial_safe_completion.py
-    - tests/test_validate_windows_offline_cli_portability.py
+    - tests/test_windows_offline_cli_portability.py
+    - workflows/contracts/m365-azure-bff-live-activation.contract.json
+    - sbom/ai/nac-ai-sbom-export-mapping.json
+    - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
     - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
 
 ai_sbom:

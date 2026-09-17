@@ -6,14 +6,20 @@ Status: erste zentrale CLI umgesetzt am 2026-05-19
 
 | Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
 | --- | --- | --- |
-| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | nur mit vollständigem Windows-Sicherheitsbackend und nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
 
 Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
-Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
-nicht für Live-Ausführung freischalten. Die verbindliche Ausgestaltung steht
-in der [Windows-Offline-CLI-Spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md).
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können fehlende
+Windows-Sicherheitsfähigkeiten nicht umgehen. Handle-/Datei-ID-Bindung,
+SID-/DACL- und Reparse-Prüfung, Named Mutex, Job Object, Flush-Semantik und der
+Credential-Schreibschutz müssen gemeinsam verfügbar sein; andernfalls stoppt
+der Pfad mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` vor Credential-, Netzwerk-
+oder Providerzugriff. Die Offline-Grenze steht in der
+[Windows-Offline-CLI-Spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md),
+der Windows-Abschlusspfad in der
+[Issue-#746-Spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
 ## Idee
 

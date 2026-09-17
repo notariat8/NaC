@@ -4,13 +4,17 @@
 
 | Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
 | --- | --- | --- |
-| Windows 11 with Python 3.11 | supported | blocked with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` |
+| Windows 11 with Python 3.11 and Node.js 24 | supported | supported only with the Windows security backend available and after every existing owner and security gate |
 | Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
 | Other or unknown platform | where the individual offline command is portable | blocked |
 
 Platform detection uses trusted runtime properties only. CLI arguments,
-environment variables and configuration cannot enable live execution on
-Windows.
+environment variables and configuration cannot bypass a missing security
+backend. The Windows live path requires NTFS handle/file-ID binding, SID/DACL
+and reparse checks, a named mutex, a Job Object, atomic flush semantics, and a
+credential-write guard for Azure CLI and M365/Node. If any capability is
+missing, the path stops with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` before
+credential, network, or provider access.
 
 Status: binding day-0 baseline
 Last content update: 2026-05-15

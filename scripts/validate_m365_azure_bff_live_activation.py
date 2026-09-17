@@ -1549,9 +1549,12 @@ BEHAVIOR_TEST_MODULES = (
 )
 
 WINDOWS_BEHAVIOR_TEST_MODULES = (
+    "tests.test_activation_security_backend",
+    "tests.test_activation_security_windows",
     "tests.test_windows_offline_cli_portability",
     "tests.test_spfx_bff_catalog_readback_regression",
     "tests.test_m365_bff_failed_partial_safe_completion",
+    "tests.test_nac_bff_azure_activation_cli",
 )
 
 
@@ -1581,16 +1584,26 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     env["TMPDIR"] = str(test_home)
     src = str((repo_root / "src").resolve())
     current = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = src if not current else os.pathsep.join((src, current))
+    roots = (str(repo_root.resolve()), src)
+    env["PYTHONPATH"] = (
+        os.pathsep.join(roots)
+        if not current
+        else os.pathsep.join((*roots, current))
+    )
     try:
         modules = (
             WINDOWS_BEHAVIOR_TEST_MODULES
             if os.name == "nt"
             else BEHAVIOR_TEST_MODULES
         )
+        invocation_modules = (
+            tuple(module.removeprefix("tests.") for module in modules)
+            if os.name == "nt"
+            else modules
+        )
         completed = subprocess.run(
-            [sys.executable, "-m", "unittest", *modules],
-            cwd=repo_root,
+            [sys.executable, "-m", "unittest", *invocation_modules],
+            cwd=repo_root / "tests" if os.name == "nt" else repo_root,
             env=env,
             check=False,
             capture_output=True,
@@ -1613,8 +1626,11 @@ def _validate_windows_portability(
     repo_root: Path, errors: list[str]
 ) -> None:
     required_paths = (
+        Path("src/nac_bff/activation_security_backend.py"),
+        Path("src/nac_bff/activation_security_windows.py"),
         Path("src/nac_bff/azure_activation_contract.py"),
         Path("src/nac_bff/azure_activation_facade.py"),
+        Path("tests/test_activation_security_windows.py"),
         Path("tests/test_windows_offline_cli_portability.py"),
         Path("tests/test_m365_bff_failed_partial_safe_completion.py"),
         Path(".github/workflows/windows-portability.yml"),
@@ -1632,16 +1648,12 @@ def _validate_windows_portability(
         return
     jobs = workflow.get("jobs") if isinstance(workflow, dict) else None
     job = jobs.get("windows-offline-cli") if isinstance(jobs, dict) else None
-    steps = job.get("steps") if isinstance(job, dict) else None
-    run_commands = [
-        step.get("run")
-        for step in steps or []
-        if isinstance(step, dict) and isinstance(step.get("run"), str)
-    ]
-    exact_test_command = (
-        "python -m unittest tests.test_windows_offline_cli_portability "
-        "tests.test_spfx_bff_catalog_readback_regression "
-        "tests.test_m365_bff_failed_partial_safe_completion"
+    exact_test_commands = (
+        'python -m unittest discover -s tests -p "test_activation_security*.py"',
+        'python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"',
+        'python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"',
+        'python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"',
+        'python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"',
     )
     if not isinstance(workflow, dict) or workflow.get("name") != "NaC Windows Portability":
         errors.append("Windows portability workflow name differs")
@@ -1650,14 +1662,21 @@ def _validate_windows_portability(
             errors.append(f"Windows portability workflow trigger missing: {trigger}")
     if not isinstance(job, dict) or job.get("runs-on") != "windows-latest":
         errors.append("Windows portability runner differs")
-    if exact_test_command not in run_commands:
-        errors.append("Windows portability exact test command missing")
+    for exact_test_command in exact_test_commands:
+        if exact_test_command not in workflow_text:
+            errors.append(
+                f"Windows portability exact test command missing: {exact_test_command}"
+            )
     if 'python-version: "3.11"' not in workflow_text:
         errors.append("Windows portability Python 3.11 pin missing")
     if "uses: actions/checkout@v7" not in workflow_text:
         errors.append("Windows portability checkout pin differs")
     if "uses: actions/setup-python@v6" not in workflow_text:
         errors.append("Windows portability setup-python pin differs")
+    if "uses: actions/setup-node@v6" not in workflow_text:
+        errors.append("Windows portability setup-node pin differs")
+    if 'node-version: "24"' not in workflow_text:
+        errors.append("Windows portability Node.js 24 pin missing")
     if not re.search(r"(?m)^permissions:\s*\n  contents: read\s*$", workflow_text):
         errors.append("Windows portability read-only permissions missing")
     if "persist-credentials: false" not in workflow_text:
@@ -1681,6 +1700,38 @@ def _validate_windows_portability(
         errors.append("Windows portability workflow contains forbidden secret expression")
     if re.search(r"(?m)^\s+paths(?:-ignore)?:", workflow_text):
         errors.append("Windows portability workflow must not use path filters")
+
+    windows_test_path = repo_root / "tests/test_activation_security_windows.py"
+    try:
+        windows_test_text = windows_test_path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    for marker in (
+        "test_credential_guard_blocks_profile_write_before_resume",
+        "test_node_permission_guard_blocks_cache_write",
+        "test_node_permission_guard_is_inherited_by_allowed_worker",
+        "test_m365_runner_is_windows_native_and_credential_write_free",
+        "test_attested_process_is_assigned_before_resume",
+        "ERR_ACCESS_DENIED",
+        "credential_write_guard=True",
+    ):
+        if marker not in windows_test_text:
+            errors.append(f"Windows activation security test marker missing: {marker}")
+    try:
+        m365_runner_text = (repo_root / M365_RUNNER_PATH).read_text(
+            encoding="utf-8"
+        )
+    except OSError:
+        return
+    for marker in (
+        "_verify_windows_node_version",
+        "M365_NODE_VERSION_UNSUPPORTED",
+        "int(match.group(1)) < 24",
+        '"--permission", "--allow-fs-read=*", "--allow-worker"',
+    ):
+        if marker not in m365_runner_text:
+            errors.append(f"Windows M365 runner marker missing: {marker}")
+    return
 
     test_path = repo_root / "tests/test_windows_offline_cli_portability.py"
     try:
@@ -2208,7 +2259,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             )
             expected_runtime_binding = {
                 "runtime_executable_bytes_mode": (
-                    "linux_sealed_memfd_and_proc_fd_only"
+                    "platform_handle_bound_exact_bytes"
                 ),
                 "node_runtime_bundle_digest_fields": [
                     "m365_cli_sha256",
@@ -2221,16 +2272,20 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "runtime_unmanifested_or_changed_module_execution_allowed": False,
                 "runtime_native_node_addons_allowed": False,
                 "runtime_module_symlinks_allowed": False,
-                "linux_memfd_and_proc_fd_required": True,
+                "platform_handle_binding_required": True,
                 "azure_cli_runtime_bundle_digest_field": (
                     "azure_cli_toolchain_sha256"
                 ),
                 "azure_cli_runtime_bytes_mode": (
-                    "linux_sealed_memfd_subprocess"
+                    "platform_attested_interpreter_job_object"
                 ),
                 "azure_cli_original_wrapper_execution_allowed": False,
-                "azure_cli_private_user_and_mount_namespace_required": True,
-                "azure_cli_namespace_unavailable_behavior": (
+                "azure_cli_credential_write_guard_required": True,
+                "azure_cli_process_containment_mode": (
+                    "suspended_start_job_object_kill_on_close_low_integrity_"
+                    "write_guard"
+                ),
+                "credential_guard_unavailable_behavior": (
                     "fail_closed_before_provider_request"
                 ),
                 "azure_cli_extension_loading_allowed": False,
@@ -2372,7 +2427,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 ),
                 "provider_artifact_binding_mode": (
                     "expected_sha256_pre_and_post_verified_private_readonly_by_default_"
-                    "filename_preserving_snapshot_via_inherited_directory_fd_"
+                    "filename_preserving_platform_handle_binding_"
                     "attested_provider_same_account_attacker_excluded"
                 ),
                 "spfx_package_reproducibility_mode": (
@@ -2392,19 +2447,19 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 errors.append(
                     "domain sealed toolchain runtime binding differs"
                 )
-            if toolchain.get("windows_light_runner") != {
-                "enabled": False,
-                "support_mode": "offline_only",
-                "live_activation": "blocked",
-                "recovery": "blocked",
-                "reconciliation": "blocked",
+            if toolchain.get("windows_native_runner") != {
+                "enabled": True,
+                "support_mode": "native_control_plane",
+                "live_activation": "capability_guarded",
+                "recovery": "capability_guarded",
+                "reconciliation": "capability_guarded_read_only",
                 "stable_error_code": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
                 "writes_started": False,
                 "minimum_os": "Windows 11",
                 "wsl_required": False,
                 "container_required": False,
             }:
-                errors.append("domain Windows offline-only boundary differs")
+                errors.append("domain Windows native boundary differs")
 
     function_deploy_step = next(
         (

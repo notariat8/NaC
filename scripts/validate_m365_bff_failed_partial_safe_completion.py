@@ -44,7 +44,12 @@ PLAN_PATHS = (
 )
 
 REQUIRED_ACCEPTANCE_IDS = tuple(f"AC-746-{index:02d}" for index in range(1, 9))
-REQUIRED_PLATFORMS = {"windows_native", "posix_local", "ubuntu_remote_ci", "post_pr_remote"}
+REQUIRED_PLATFORMS = {
+    "windows_native",
+    "windows_remote_ci",
+    "azure_linux_runtime_optional",
+    "post_pr_remote",
+}
 REQUIRED_PROVENANCE = {
     "issue620_parent": "parent_environment_trail",
     "issue632_live_contract": "future_live_gate_contract",
@@ -138,32 +143,47 @@ REQUIRED_REMOTE_CONTEXTS = {
 FOUR_EYES_APPROVAL = "FOUR_EYES_APPROVAL"
 BLOCKED_REQUIREMENT_ASSESSMENT_INVALID = "BLOCKED_REQUIREMENT_ASSESSMENT_INVALID"
 EXPECTED_PR_FILES = {
-    ".github/workflows/governance-policy-sync.yml",
     ".github/workflows/windows-portability.yml",
-    "AGENTS.md",
     "agent-context/index.json",
-    "assets/docs/generic-workbench/VIS-721-manifest.json",
-    "docs/de/role-model.md",
+    "docs/de/cli.md",
+    "docs/de/minimum-requirements.md",
     "docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md",
+    "docs/de/superpowers/specs/2026-08-09-windows-light-runner-design.md",
+    "docs/de/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md",
     "docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md",
-    "docs/en/role-model.md",
+    "docs/en/cli.md",
+    "docs/en/minimum-requirements.md",
     "docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md",
+    "docs/en/superpowers/specs/2026-08-09-windows-light-runner-design.md",
+    "docs/en/superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md",
     "docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md",
-    "policies/access-control-policy.yaml",
-    "policies/github-identity-registry.json",
-    "policies/github-identity-registry.schema.json",
-    "policies/role-model-policy.yaml",
     "sbom/ai/nac-ai-sbom-draft.json",
-    "sbom/ai/nac-ai-sbom-export-mapping.json",
-    "scripts/onboarding_wizard.py",
-    "scripts/quality_gate.py",
-    "scripts/validate_identity_registry.py",
     "scripts/validate_m365_azure_bff_live_activation.py",
     "scripts/validate_m365_bff_failed_partial_safe_completion.py",
-    "tests/test_identity_registry.py",
+    "src/nac_bff/activation_security_backend.py",
+    "src/nac_bff/activation_security_linux.py",
+    "src/nac_bff/activation_security_windows.py",
+    "src/nac_bff/azure_activation_attestations.py",
+    "src/nac_bff/azure_activation_composition.py",
+    "src/nac_bff/azure_activation_contract.py",
+    "src/nac_bff/azure_activation_facade.py",
+    "src/nac_bff/azure_activation_runner.py",
+    "src/nac_bff/azure_live_commands.py",
+    "src/nac_bff/azure_live_commands_win.py",
+    "src/nac_ai_sbom/export_mapping.py",
+    "src/nac_cli/cli.py",
+    "src/nac_m365_graph/mvp_test_environment_deploy.py",
+    "src/nac_m365_graph/node_runtime_integrity.py",
+    "src/nac_m365_graph/sealed_toolchain.py",
+    "tests/test_activation_security_backend.py",
+    "tests/test_activation_security_windows.py",
+    "tests/test_ai_sbom_export_mapping.py",
     "tests/test_m365_azure_bff_live_activation_contract.py",
     "tests/test_m365_bff_failed_partial_safe_completion.py",
-    "tests/test_validate_windows_offline_cli_portability.py",
+    "tests/test_windows_offline_cli_portability.py",
+    "workflows/contracts/m365-azure-bff-live-activation.contract.json",
+    "sbom/ai/nac-ai-sbom-export-mapping.json",
+    "workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml",
     "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
 }
 REQUIRED_EXISTING_REGRESSIONS = {
@@ -190,7 +210,7 @@ REQUIRED_NEW_TEST_METHODS = {
     "test_provenance_roles_are_distinct_and_not_runtime_state",
     "test_approval_replay_matrix_blocks_before_mutation",
     "test_registry_approval_mode_is_source_bound_before_release",
-    "test_protected_evidence_loader_rejects_unsafe_posix_inputs",
+    "test_protected_evidence_loader_rejects_unsafe_windows_inputs",
     "test_protected_identity_resolver_requires_three_same_principal_accounts",
     "test_preflight_binding_drift_matrix_blocks_before_provider",
     "test_reconciler_binding_changes_require_new_approval_after_bounded_reads",
@@ -283,14 +303,14 @@ EXPECTED_COMMANDS = {
     "language_parity": _command_signature("windows_native", "python scripts/validate_language_parity.py", ["AC-746-01"], ["NaC Quality Gate / quality-gate"], "repository_static", "local_read_or_synthetic"),
     "doc_links": _command_signature("windows_native", "python scripts/validate_doc_links.py", ["AC-746-01", "AC-746-07"], ["NaC Quality Gate / quality-gate"], "repository_static", "local_read_or_synthetic"),
     "issue746_validator": _command_signature("windows_native", "python scripts/validate_m365_bff_failed_partial_safe_completion.py", REQUIRED_ACCEPTANCE_IDS, ["NaC Quality Gate / quality-gate"], "repository_static", "local_read_or_synthetic"),
-    "ai_sbom": _command_signature("ubuntu_remote_ci", "python scripts/validate_ai_sbom.py", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "ci_read_or_synthetic"),
-    "ai_sbom_export_mapping": _command_signature("ubuntu_remote_ci", "python scripts/validate_ai_sbom_export_mapping.py", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "ci_read_or_synthetic"),
-    "issue746_windows_tests": _command_signature("windows_native", "python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion", ["AC-746-02", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
-    "issue746_posix_tests": _command_signature("posix_local", "PYTHONPATH=src python3 -m unittest tests.test_m365_bff_failed_partial_safe_completion tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_azure_activation_cli", ["AC-746-02", "AC-746-03", "AC-746-04", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_static", "local_read_or_synthetic"),
-    "activation_validator": _command_signature("posix_local", "python scripts/validate_m365_azure_bff_live_activation.py", ["AC-746-03", "AC-746-04", "AC-746-05", "AC-746-06"], ["NaC Quality Gate / quality-gate"], "repository_static", "local_read_or_synthetic"),
-    "graft_build": _command_signature("ubuntu_remote_ci", "graft build", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "ci_read_or_synthetic"),
-    "graft_check": _command_signature("ubuntu_remote_ci", "graft check", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "ci_read_or_synthetic"),
-    "strict_doctor": _command_signature("ubuntu_remote_ci", "python scripts/nac.py doctor --profile strict", REQUIRED_ACCEPTANCE_IDS, ["NaC Quality Gate / quality-gate"], "repository_aggregate", "ci_read_or_synthetic"),
+    "ai_sbom": _command_signature("windows_remote_ci", "python scripts/validate_ai_sbom.py", ["AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "ci_read_or_synthetic"),
+    "ai_sbom_export_mapping": _command_signature("windows_native", "python scripts/validate_ai_sbom_export_mapping.py", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "local_read_or_synthetic"),
+    "issue746_windows_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_activation_security*.py", ["AC-746-02", "AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
+    "azure_runtime_compatibility": _command_signature("azure_linux_runtime_optional", "python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py", ["AC-746-07"], ["NaC Quality Gate / quality-gate"], "azure_target_compatibility", "ci_read_or_synthetic"),
+    "activation_validator": _command_signature("windows_native", "python scripts/validate_m365_azure_bff_live_activation.py", ["AC-746-03", "AC-746-04", "AC-746-05", "AC-746-06"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
+    "graft_build": _command_signature("windows_native", "graft build", ["AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "local_read_or_synthetic"),
+    "graft_check": _command_signature("windows_native", "graft check", ["AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "local_read_or_synthetic"),
+    "strict_doctor": _command_signature("windows_native", "python scripts/nac.py doctor --profile strict", REQUIRED_ACCEPTANCE_IDS, ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "local_read_or_synthetic"),
     "fetch_main": _command_signature("post_pr_remote", "git fetch --no-tags --prune origin main", ["AC-746-07", "AC-746-08"], ["fresh origin/main"], "pr_747_expected_head", "github_read_only"),
     "diff_files": _command_signature("post_pr_remote", "git diff --name-status origin/main...HEAD", ["AC-746-07", "AC-746-08"], ["complete file list"], "pr_747_expected_head", "github_read_only"),
     "diff_commits": _command_signature("post_pr_remote", "git log --oneline origin/main..HEAD", ["AC-746-07", "AC-746-08"], ["complete commit list"], "pr_747_expected_head", "github_read_only"),
@@ -474,7 +494,7 @@ def _validate_ai_sbom(errors: list[str]) -> None:
 
 def validate_contract(contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if contract.get("schema_version") != "nac.m365-bff-failed-partial-safe-completion/v0.1":
+    if contract.get("schema_version") != "nac.m365-bff-failed-partial-safe-completion/v0.2":
         errors.append("invalid Issue #746 schema_version")
     if contract.get("leading_issue") != "https://github.com/notariat8/NaC/issues/746":
         errors.append("leading_issue must be Issue #746")
@@ -490,11 +510,8 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("acceptance_ids must contain AC-746-01 through AC-746-08 in order")
     expected_blockers = {
         "protected_operational_provider_identity_resolution_pending",
-        "credential_boundary_executable_evidence_pending",
-        "redaction_sink_executable_evidence_pending",
         "issue739_hash_bound_provenance_evidence_pending",
-        "dynamic_error_code_executable_evidence_pending",
-        "expanded_scope_owner_approval_pending",
+        "windows_remote_ci_evidence_pending",
     }
     if contract.get("acceptance_status") != "BLOCKED":
         errors.append("acceptance_status must remain BLOCKED until all owner and evidence gates close")
@@ -598,8 +615,9 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
             "schema_version": "nac.protected-identity-resolver/v1",
             "contract_id": "issue-746-owner-account-principal-resolution",
             "repository_external": True,
-            "platform": "posix_owner_mode_backend",
-            "required_owner_mode": "0600",
+            "platform": "windows_sid_dacl_backend",
+            "required_owner_binding": "current_user_sid",
+            "required_dacl": "current_user_system_administrators_no_broad_write",
             "nofollow_atomic_open_required": True,
             "duplicate_json_keys_rejected": True,
             "maximum_bytes": 131072,
@@ -766,11 +784,13 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
                 continue
             for side_effect, case in cases.items():
                 if not isinstance(case, dict) or case != {
-                    "status": "BLOCKED",
-                    "error_code": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
-                    "reached": False,
+                    "status": "GUARDED",
+                    "missing_capability_status": "BLOCKED",
+                    "reached_after_complete_preflight": True,
                 }:
-                    errors.append(f"windows {edge}/{side_effect} is not fail-closed")
+                    errors.append(
+                        f"windows {edge}/{side_effect} is not capability-gated"
+                    )
 
     journal = contract.get("journal_crash_cases")
     required_journal = {
@@ -840,9 +860,8 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     if '"m365_bff_failed_partial_safe_completion"' not in QUALITY_GATE_PATH.read_text(encoding="utf-8"):
         errors.append("strict quality gate does not register the Issue #746 validator")
     expected_windows_command = (
-        "python -m unittest tests.test_windows_offline_cli_portability "
-        "tests.test_spfx_bff_catalog_readback_regression "
-        "tests.test_m365_bff_failed_partial_safe_completion"
+        'python -m unittest discover -s tests -p '
+        '"test_m365_bff_failed_partial_safe_completion.py"'
     )
     if expected_windows_command not in WINDOWS_WORKFLOW_PATH.read_text(encoding="utf-8"):
         errors.append("Windows portability workflow does not execute the Issue #746 tests")
@@ -1081,14 +1100,63 @@ def load_protected_json(
     path = Path(path_value)
     if not path.is_absolute():
         return None, [f"{label} path must be absolute"]
-    if os.name == "nt":
-        return None, [f"{label} requires the supported POSIX ownership and mode backend"]
     normalized = Path(os.path.abspath(path_value))
     try:
         normalized.relative_to(REPO_ROOT.resolve())
         return None, [f"{label} must be stored outside the repository"]
     except ValueError:
         pass
+    if os.name == "nt":
+        try:
+            from nac_bff.activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(
+                normalized, purpose="protected-identity-resolver"
+            )
+            if binding.size > 131072:
+                return None, [f"{label} exceeds the bounded resolver size"]
+            with backend.open_bound_read(normalized, binding) as handle:
+                payload_bytes = handle.read(131073)
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return None, [f"{label} secure Windows handle/SID/DACL open failed"]
+        if len(payload_bytes) > 131072:
+            return None, [f"{label} exceeds the bounded resolver size"]
+    else:
+        payload_bytes, secure_errors = _load_posix_protected_bytes(
+            normalized, label
+        )
+        if secure_errors:
+            return None, secure_errors
+        assert payload_bytes is not None
+    actual_sha256 = hashlib.sha256(payload_bytes).hexdigest()
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or actual_sha256 != expected_sha256:
+        return None, [f"{label} sha256 mismatch"]
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate key")
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(
+            payload_bytes.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return None, [f"{label} must be UTF-8 JSON"]
+    if not isinstance(payload, dict):
+        return None, [f"{label} must contain a JSON object"]
+    return payload, []
+
+
+def _load_posix_protected_bytes(
+    normalized: Path, label: str
+) -> tuple[bytes | None, list[str]]:
     nofollow = getattr(os, "O_NOFOLLOW", None)
     directory = getattr(os, "O_DIRECTORY", None)
     if nofollow is None or directory is None:
@@ -1140,26 +1208,7 @@ def load_protected_json(
             os.close(descriptor)
         if directory_descriptor is not None:
             os.close(directory_descriptor)
-    actual_sha256 = hashlib.sha256(payload_bytes).hexdigest()
-    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or actual_sha256 != expected_sha256:
-        return None, [f"{label} sha256 mismatch"]
-    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError("duplicate key")
-            result[key] = value
-        return result
-
-    try:
-        payload = json.loads(
-            payload_bytes.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
-        )
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        return None, [f"{label} must be UTF-8 JSON"]
-    if not isinstance(payload, dict):
-        return None, [f"{label} must contain a JSON object"]
-    return payload, []
+    return payload_bytes, []
 
 
 def validate_protected_identity_resolver(

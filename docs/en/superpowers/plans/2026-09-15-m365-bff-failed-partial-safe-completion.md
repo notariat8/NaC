@@ -223,6 +223,10 @@ timeout, oversized output, or non-allowlisted exit code.
 handles, `AssignProcessToJobObject`, `KILL_ON_JOB_CLOSE`, then `ResumeThread`,
 attested child-process structure, fixed argument list and working directory,
 minimal environment allowlist, and redacted bounded output.
+The Python provider path applies low integrity before `ResumeThread`; the
+Node/M365 path starts in an attested Node permission mode without file-write
+permission. Inherited Windows error dialogs are disabled so every loader
+failure ends fail-closed as a redacted code only.
 
 The old Windows Light Runner code is not retained in parallel. Reusable parts
 are migrated; the faulty stub is then removed or reduced to a compatibility
@@ -314,7 +318,8 @@ tests.
 - `.github/workflows/windows-portability.yml`;
 - quality-gate and SBOM artifacts.
 
-The startup check proves a native Python interpreter `>=3.11`, Node `>=20`, the
+The Windows portability job and local activation validator prove a native
+Python interpreter `>=3.11`, Node `>=24`, the
 pinned Graft CLI, and required build tools. A broken launcher that cannot
 resolve its standard library or package dependencies is unavailable. There is
 no Linux fallback.
@@ -390,7 +395,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: windows_security_tests
     platform: windows_native
-    command: python -m unittest tests.test_activation_security_backend tests.test_activation_security_windows
+    command: python -m unittest discover -s tests -p test_activation_security*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_windows_tests
@@ -425,7 +430,7 @@ commands:
     remote_evidence: [NaC Quality Gate / quality-gate]
   - id: windows_ci_security_tests
     platform: windows_remote_ci
-    command: python -m unittest tests.test_activation_security_backend tests.test_activation_security_windows
+    command: python -m unittest discover -s tests -p test_activation_security*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_ci_activation_tests
