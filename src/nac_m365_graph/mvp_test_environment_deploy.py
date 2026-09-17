@@ -654,7 +654,13 @@ class M365CliCommandRunner:
                 binding = get_platform_security_backend().inspect_private_path(
                     candidate, purpose="toolchain-executable"
                 )
-            except (OSError, SecurityBoundaryError):
+            except SecurityBoundaryError as exc:
+                if exc.code == "REPARSE_POINT_REJECTED":
+                    raise M365CliReadinessError(
+                        f"{label}_SYMLINK_REJECTED"
+                    ) from None
+                raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
+            except OSError:
                 raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
             normalized_expected = (
                 expected_sha256.strip().lower() if expected_sha256 else None
