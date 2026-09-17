@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from nac_bff.activation_security_backend import get_platform_security_backend
+
 from nac_bff.azure_activation_runner import (
     ActivationStepError,
     DEFAULT_OUTPUT_ROOT,
@@ -273,11 +275,21 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
 
     @staticmethod
     def _lock_marker(path: Path) -> dict | None:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        session = None
+        if os.name == "nt":
+            session = get_platform_security_backend().open_secure_directory(
+                path.parent,
+                create=False,
+            )
+            descriptor = session.open_regular_descriptor(path.name, create=False)
+        else:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
         try:
             return _read_lock_marker_descriptor(descriptor)
         finally:
             os.close(descriptor)
+            if session is not None:
+                session.close()
 
     def _inspect(self, port: _ObservationPort | None = None) -> dict:
         with self._runtime_patches():

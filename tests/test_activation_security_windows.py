@@ -117,6 +117,19 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 self.assertFalse((private / "redirected.json").exists())
             private.rename(moved)
 
+    def test_secure_directory_session_create_exclusive_rejects_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.backend.open_secure_directory(
+                Path(directory), create=False
+            ) as session:
+                snapshot = session.create_exclusive("claim.json", b"first")
+                self.assertEqual(snapshot.size, 5)
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "SECURE_CHILD_ALREADY_EXISTS"
+                ):
+                    session.create_exclusive("claim.json", b"second")
+                self.assertEqual(session.read_bounded("claim.json", 5), b"first")
+
     def test_secure_directory_session_rejects_non_ntfs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with patch(
@@ -145,23 +158,11 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 private, create=False
             ) as session:
                 moved = root / "moved-ancestor"
-                try:
+                with self.assertRaises(PermissionError):
                     ancestor.rename(moved)
-                except PermissionError:
-                    self.assertTrue(private.is_dir())
-                    return
-                ancestor.mkdir()
-                (ancestor / "private").mkdir()
-                with self.assertRaisesRegex(
-                    SecurityBoundaryError, "FINAL_PATH_BINDING_MISMATCH"
-                ):
-                    session.atomic_write("evidence.json", b"blocked")
-                self.assertFalse(
-                    (ancestor / "private" / "evidence.json").exists()
-                )
-                self.assertFalse(
-                    (moved / "private" / "evidence.json").exists()
-                )
+                self.assertTrue(private.is_dir())
+                self.assertFalse(moved.exists())
+                self.assertFalse((private / "evidence.json").exists())
 
     def test_reparse_point_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

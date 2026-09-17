@@ -1742,15 +1742,24 @@ def command_kg(args: argparse.Namespace) -> int:
     ):
         value = getattr(args, attribute, None)
         if value is not None:
-            argv.extend([flag, str(value)])
+            argv.extend([flag, value.as_posix() if isinstance(value, Path) else str(value)])
     if getattr(args, "artifact_root", None) is not None:
         argv.extend(["--artifact-root", str(args.artifact_root)])
     if getattr(args, "query", None) is not None:
         argv.extend(["--query", str(args.query)])
     if getattr(args, "output", None) is not None:
-        argv.extend(["--output", str(args.output)])
+        output = args.output
+        argv.extend(["--output", output.as_posix() if isinstance(output, Path) else str(output)])
     if getattr(args, "markdown_output", None) is not None:
-        argv.extend(["--markdown-output", str(args.markdown_output)])
+        markdown_output = args.markdown_output
+        argv.extend(
+            [
+                "--markdown-output",
+                markdown_output.as_posix()
+                if isinstance(markdown_output, Path)
+                else str(markdown_output),
+            ]
+        )
     if getattr(args, "no_ensure_default_artifact", False):
         argv.append("--no-ensure-default-artifact")
     if getattr(args, "no_ensure_default_artifacts", False):

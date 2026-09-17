@@ -287,37 +287,46 @@ PROHIBITED_MARKERS = (
 def validate(repo_root: Path = REPO_ROOT) -> list[str]:
     errors: list[str] = []
     for relative_path, markers in REQUIRED_DOC_MARKERS.items():
-        _validate_required_markers(repo_root / relative_path, markers, errors)
+        _validate_required_markers(repo_root, relative_path, markers, errors)
     for relative_path, markers in REQUIRED_BATCH_APPROVAL_MARKERS.items():
-        _validate_required_markers(repo_root / relative_path, markers, errors)
-    _validate_required_markers(repo_root / "scripts" / "quality_gate.py", REQUIRED_QUALITY_GATE_MARKERS, errors)
+        _validate_required_markers(repo_root, relative_path, markers, errors)
+    _validate_required_markers(
+        repo_root,
+        "scripts/quality_gate.py",
+        REQUIRED_QUALITY_GATE_MARKERS,
+        errors,
+    )
     for relative_path, markers in REQUIRED_REPORT_SURFACE_MARKERS.items():
-        _validate_required_markers(repo_root / relative_path, markers, errors)
+        _validate_required_markers(repo_root, relative_path, markers, errors)
     return errors
 
 
-def _validate_required_markers(path: Path, markers: tuple[str, ...], errors: list[str]) -> None:
+def _validate_required_markers(
+    repo_root: Path,
+    relative_path: str,
+    markers: tuple[str, ...],
+    errors: list[str],
+) -> None:
+    path = repo_root / relative_path
+    display_path = Path(relative_path).as_posix()
     if not path.is_file():
-        errors.append(f"missing file: {_display_path(path)}")
+        errors.append(f"missing file: {display_path}")
         return
     text = path.read_text(encoding="utf-8")
-    _reject_prohibited_markers(path, text, errors)
+    _reject_prohibited_markers(display_path, text, errors)
     for marker in markers:
         if marker not in text:
-            errors.append(f"{_display_path(path)} missing marker {marker}")
+            errors.append(f"{display_path} missing marker {marker}")
 
 
-def _reject_prohibited_markers(path: Path, text: str, errors: list[str]) -> None:
+def _reject_prohibited_markers(
+    display_path: str,
+    text: str,
+    errors: list[str],
+) -> None:
     for marker in PROHIBITED_MARKERS:
         if marker in text:
-            errors.append(f"{_display_path(path)} contains prohibited marker {marker}")
-
-
-def _display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(REPO_ROOT))
-    except ValueError:
-        return str(path)
+            errors.append(f"{display_path} contains prohibited marker {marker}")
 
 
 def main() -> int:

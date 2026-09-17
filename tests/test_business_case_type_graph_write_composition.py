@@ -30,6 +30,7 @@ from nac_m365_graph.business_case_type_write_composition_smoke import (
     _target,
     build_business_case_type_write_composition_smoke,
 )
+from nac_bff.activation_security_backend import get_platform_security_backend
 
 
 class _ForbiddenEnvironment(dict):
@@ -118,7 +119,7 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                 text=True,
                 timeout=30,
                 env={
-                    "PYTHONPATH": f"{guard_root}:{SRC}",
+                    "PYTHONPATH": os.pathsep.join((str(guard_root), str(SRC))),
                     "S4C_DATABASE_PATH": str(database_path),
                     "S4C_REPOSITORY_ROOT": str(ROOT),
                 },
@@ -143,11 +144,11 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
             credential_path = Path(directory) / "credential.pem"
             credential_path.write_text("synthetic", encoding="utf-8")
             environment = {
-                "PYTHONPATH": f"{guard_root}:{SRC}",
+                "PYTHONPATH": os.pathsep.join((str(guard_root), str(SRC))),
                 "S4C_DATABASE_PATH": str(database_path),
                 "S4C_REPOSITORY_ROOT": str(ROOT),
             }
-            probes = (
+            probes = [
                 (
                     "path_open",
                     f"from pathlib import Path; Path({str(credential_path)!r}).open()",
@@ -193,12 +194,15 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                     "import os; str(os.environ)",
                     "S4C_AUDIT_BLOCKED:environment_access_blocked",
                 ),
-                (
-                    "binary_environment_copy",
-                    "import os; os.environb.copy()",
-                    "S4C_AUDIT_BLOCKED:environment_access_blocked",
-                ),
-            )
+            ]
+            if hasattr(os, "environb"):
+                probes.append(
+                    (
+                        "binary_environment_copy",
+                        "import os; os.environb.copy()",
+                        "S4C_AUDIT_BLOCKED:environment_access_blocked",
+                    )
+                )
             for name, probe, expected_marker in probes:
                 with self.subTest(name=name):
                     completed = subprocess.run(
@@ -217,7 +221,7 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
             # crash during import.  Reads of non-safe keys via getenv/getenvb/
             # environb.get must therefore NOT crash; instead they return None
             # (act like an empty environment) so no secret value ever leaks.
-            no_leak_probes = (
+            no_leak_probes = [
                 (
                     "environment",
                     (
@@ -227,25 +231,30 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                         "print(\"NO_LEAK_OK\")"
                     ),
                 ),
-                (
-                    "binary_environment",
-                    (
-                        "import os; "
-                        "v = os.environb.get(b\"S4C_DATABASE_PATH\"); "
-                        "assert v is None, v; "
-                        "print(\"NO_LEAK_OK\")"
-                    ),
-                ),
-                (
-                    "binary_environment_function",
-                    (
-                        "import os; "
-                        "v = os.getenvb(b\"S4C_DATABASE_PATH\"); "
-                        "assert v is None, v; "
-                        "print(\"NO_LEAK_OK\")"
-                    ),
-                ),
-            )
+            ]
+            if hasattr(os, "environb"):
+                no_leak_probes.extend(
+                    [
+                        (
+                            "binary_environment",
+                            (
+                                "import os; "
+                                "v = os.environb.get(b\"S4C_DATABASE_PATH\"); "
+                                "assert v is None, v; "
+                                "print(\"NO_LEAK_OK\")"
+                            ),
+                        ),
+                        (
+                            "binary_environment_function",
+                            (
+                                "import os; "
+                                "v = os.getenvb(b\"S4C_DATABASE_PATH\"); "
+                                "assert v is None, v; "
+                                "print(\"NO_LEAK_OK\")"
+                            ),
+                        ),
+                    ]
+                )
             for name, probe in no_leak_probes:
                 with self.subTest(name=name):
                     completed = subprocess.run(
@@ -300,7 +309,13 @@ class BusinessCaseTypeWriteCompositionTests(unittest.TestCase):
                 "automatic_retries",
             ):
                 self.assertEqual(result["summary"][counter], 0)
-            self.assertEqual(database_path.stat().st_mode & 0o777, 0o600)
+            if os.name == "nt":
+                get_platform_security_backend().inspect_private_path(
+                    database_path,
+                    purpose="test-evidence-database",
+                )
+            else:
+                self.assertEqual(database_path.stat().st_mode & 0o777, 0o600)
 
     def test_plan_revalidation_block_does_not_call_token_provider(self) -> None:
         target = _target()

@@ -124,12 +124,20 @@ def _build_windows_manifest(
         ):
             current = Path(current_text)
             backend.validate_private_directory(current)
-            if current == runtime_root:
-                directories[:] = [
-                    name
-                    for name in directories
-                    if name not in excluded_top_level_directories
-                ]
+            excluded_here = {
+                name
+                for name in directories
+                if name == ".bin"
+                or (
+                    current == runtime_root
+                    and name in excluded_top_level_directories
+                )
+            }
+            for name in excluded_here:
+                backend.validate_private_directory(current / name)
+            directories[:] = [
+                name for name in directories if name not in excluded_here
+            ]
             directories.sort(key=str.casefold)
             names.sort(key=str.casefold)
             directory_entries.append(
@@ -156,8 +164,11 @@ def _build_windows_manifest(
             current_names = (
                 child.name
                 for child in directory.iterdir()
-                if directory != runtime_root
-                or child.name not in excluded_top_level_directories
+                if child.name != ".bin"
+                and (
+                    directory != runtime_root
+                    or child.name not in excluded_top_level_directories
+                )
             )
             if tuple(
                 sorted(current_names, key=str.casefold)
@@ -170,7 +181,20 @@ def _build_windows_manifest(
                 _fail("NODE_RUNTIME_TREE_CHANGED")
     except NodeRuntimeIntegrityError:
         raise
-    except (OSError, SecurityBoundaryError, ValueError) as exc:
+    except SecurityBoundaryError as exc:
+        if exc.code == "REPARSE_POINT_REJECTED":
+            _fail("NODE_RUNTIME_SYMLINK_REJECTED")
+        if exc.code in {
+            "FILE_LINK_COUNT_INVALID",
+            "FILE_OWNER_MISMATCH",
+            "FILE_DACL_MISSING",
+            "FILE_DACL_INVALID",
+            "FILE_DACL_UNSUPPORTED_ALLOW_ACE",
+            "FILE_DACL_TOO_BROAD",
+        }:
+            _fail("NODE_RUNTIME_FILE_UNTRUSTED")
+        raise NodeRuntimeIntegrityError("NODE_RUNTIME_ROOT_UNAVAILABLE") from exc
+    except (OSError, ValueError) as exc:
         raise NodeRuntimeIntegrityError("NODE_RUNTIME_ROOT_UNAVAILABLE") from exc
 
     ordered = tuple(
@@ -1355,6 +1379,7 @@ function writeVerifiedCopy(destination, payload, mode) {{
   try {{
     const destinationMetadata = primitiveLstatSync(absolute, {{ bigint: true }});
     if ((destinationMetadata.mode & FILE_TYPE_MASK) === 0o120000n ||
+        (process.platform === 'win32' && destinationMetadata.nlink !== 1n) ||
         (mode && (mode & fs.constants.COPYFILE_EXCL))) {{
       throw integrityError('NODE_RUNTIME_COPY_DESTINATION_REJECTED');
     }}

@@ -11,7 +11,11 @@ from pathlib import Path
 from threading import RLock
 from typing import Any, Iterator
 
-from nac_runtime.platform_file_lock import lock_exclusive
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
+from nac_bff.activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 
 
 INDEX_SCHEMA_VERSION = "nac.business-case-type-migration-quarantine-index/v0.1"
@@ -51,6 +55,11 @@ def canonical_contained_path(path: Path | str, *, root: Path | str) -> Path:
         if candidate == boundary:
             raise ArtifactWriteError()
         candidate.relative_to(boundary)
+        if os.name == "nt":
+            _verify_windows_existing_components(boundary)
+            _verify_windows_existing_components(candidate.parent)
+            _reject_windows_final_reparse(candidate)
+            return candidate
         _verify_existing_directory_components(boundary)
         _verify_existing_directory_components(candidate.parent)
         _reject_final_symlink(candidate)
@@ -79,7 +88,13 @@ class QuarantineStore:
                     return self._reconcile_open(state_fd, records_fd)
             except ArtifactWriteError:
                 raise
-            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            except (
+                OSError,
+                SecurityBoundaryError,
+                TypeError,
+                ValueError,
+                json.JSONDecodeError,
+            ):
                 raise ArtifactWriteError() from None
 
     def persist(self, records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
@@ -102,6 +117,7 @@ class QuarantineStore:
             except (
                 ArtifactWriteError,
                 OSError,
+                SecurityBoundaryError,
                 TypeError,
                 ValueError,
                 json.JSONDecodeError,
@@ -127,7 +143,13 @@ class QuarantineStore:
                     index = self._reconcile_open(state_fd, records_fd)
                 except ArtifactWriteError:
                     raise
-                except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                except (
+                    OSError,
+                    SecurityBoundaryError,
+                    TypeError,
+                    ValueError,
+                    json.JSONDecodeError,
+                ):
                     raise ArtifactWriteError() from None
                 yield index
             finally:
@@ -142,6 +164,10 @@ class QuarantineStore:
 
     @contextmanager
     def _open_store(self) -> Iterator[tuple[int, int]]:
+        if os.name == "nt":
+            with self._open_store_windows() as opened:
+                yield opened  # type: ignore[misc]
+            return
         state_fd = _open_absolute_directory(self.state_dir, create=True)
         lock_fd = -1
         try:
@@ -157,21 +183,82 @@ class QuarantineStore:
                 os.close(lock_fd)
             os.close(state_fd)
 
-    def _reconcile_open(self, state_fd: int, records_fd: int) -> dict[str, Any]:
+    @contextmanager
+    def _open_store_windows(self) -> Iterator[tuple[Any, Any]]:
+        backend = get_platform_security_backend()
+        _reconcile_previous_path(self.state_dir, "index.json")
+        if (
+            not self.state_dir.exists()
+            or not (self.state_dir / _LOCK_NAME).exists()
+            or not self.records_dir.exists()
+        ):
+            with backend.open_secure_directory(
+                self.state_dir, create=True
+            ) as bootstrap_state:
+                try:
+                    bootstrap_state.create_exclusive(_LOCK_NAME, b"")
+                except SecurityBoundaryError as exc:
+                    if exc.code != "SECURE_CHILD_ALREADY_EXISTS":
+                        raise
+            with backend.open_secure_directory(self.records_dir, create=True):
+                pass
+        control_session = backend.open_secure_directory(
+            self.state_dir, create=False, require_current_owner=False
+        )
+        state_session = None
+        records_session = None
+        lock_fd = -1
+        try:
+            _require_windows_session_owner(control_session)
+            lock_fd = _open_windows_shared_lock(
+                self.state_dir / _LOCK_NAME
+            )
+            backend.inspect_open_file_metadata(
+                lock_fd, "migration-quarantine-lock"
+            )
+            lock_exclusive(lock_fd, nonblocking=False)
+            control_session.close()
+            state_session = backend.open_secure_directory(
+                self.state_dir, create=False
+            )
+            records_session = backend.open_secure_directory(
+                self.records_dir, create=False
+            )
+            yield state_session, records_session
+        finally:
+            if lock_fd >= 0:
+                try:
+                    unlock(lock_fd)
+                finally:
+                    os.close(lock_fd)
+            if records_session is not None:
+                records_session.close()
+            if state_session is not None:
+                state_session.close()
+            control_session.close()
+
+    def _reconcile_open(self, state_fd: Any, records_fd: Any) -> dict[str, Any]:
         indexed_ids = self._read_index_ids(state_fd)
         disk_ids = self._read_all_records(records_fd)
         if not indexed_ids.issubset(disk_ids):
             raise ArtifactWriteError()
         index = self._make_index(disk_ids)
-        _atomic_replace_json_at(state_fd, "index.json", index)
+        if isinstance(state_fd, int):
+            _atomic_replace_json_at(state_fd, "index.json", index)
+        else:
+            _atomic_replace_json_windows(state_fd, "index.json", index)
         return index
 
-    def _read_index_ids(self, state_fd: int) -> set[str]:
-        raw = _read_regular_file_at(
-            state_fd,
-            "index.json",
-            missing_ok=True,
-            max_bytes=_MAX_INDEX_BYTES,
+    def _read_index_ids(self, state_fd: Any) -> set[str]:
+        raw = (
+            _read_regular_file_at(
+                state_fd,
+                "index.json",
+                missing_ok=True,
+                max_bytes=_MAX_INDEX_BYTES,
+            )
+            if isinstance(state_fd, int)
+            else state_fd.read_bounded("index.json", _MAX_INDEX_BYTES)
         )
         if raw is None:
             return set()
@@ -197,17 +284,21 @@ class QuarantineStore:
             raise ArtifactWriteError()
         return set(ids)
 
-    def _read_all_records(self, records_fd: int) -> set[str]:
+    def _read_all_records(self, records_fd: Any) -> set[str]:
         result: set[str] = set()
         entry_count = 0
-        with os.scandir(records_fd) as entries:
+        scan_target = records_fd if isinstance(records_fd, int) else records_fd.path
+        with os.scandir(scan_target) as entries:
             for entry in entries:
                 entry_count += 1
                 if entry_count > _MAX_DIRECTORY_ENTRIES:
                     raise ArtifactWriteError()
                 name = entry.name
                 if name.startswith(".tmp-"):
-                    _require_regular_entry(records_fd, name)
+                    if isinstance(records_fd, int):
+                        _require_regular_entry(records_fd, name)
+                    else:
+                        records_fd.read_bounded(name, _MAX_RECORD_BYTES)
                     continue
                 if not name.endswith(".json"):
                     raise ArtifactWriteError()
@@ -218,11 +309,17 @@ class QuarantineStore:
                 result.add(record_id)
         return result
 
-    def _read_record(self, records_fd: int, record_id: str) -> bytes:
-        raw = _read_regular_file_at(
-            records_fd,
-            f"{record_id}.json",
-            max_bytes=_MAX_RECORD_BYTES,
+    def _read_record(self, records_fd: Any, record_id: str) -> bytes:
+        raw = (
+            _read_regular_file_at(
+                records_fd,
+                f"{record_id}.json",
+                max_bytes=_MAX_RECORD_BYTES,
+            )
+            if isinstance(records_fd, int)
+            else records_fd.read_bounded(
+                f"{record_id}.json", _MAX_RECORD_BYTES
+            )
         )
         assert raw is not None
         value = json.loads(raw)
@@ -232,8 +329,19 @@ class QuarantineStore:
             raise ArtifactWriteError()
         return raw
 
-    def _publish_record(self, records_fd: int, record_id: str, payload: bytes) -> None:
+    def _publish_record(self, records_fd: Any, record_id: str, payload: bytes) -> None:
         target = f"{record_id}.json"
+        if not isinstance(records_fd, int):
+            try:
+                _create_record_windows(records_fd, target, payload)
+            except SecurityBoundaryError as exc:
+                if exc.code != "SECURE_CHILD_ALREADY_EXISTS":
+                    raise ArtifactWriteError() from None
+                if self._read_record(records_fd, record_id) != payload:
+                    raise ArtifactWriteError()
+            if self._read_record(records_fd, record_id) != payload:
+                raise ArtifactWriteError()
+            return
         temporary = _write_temporary_at(records_fd, payload)
         try:
             try:
@@ -280,6 +388,9 @@ def write_redacted_output(
         output = _normalized_absolute(output_path)
         boundary = _normalized_absolute(allowed_root) if allowed_root is not None else output.parent
         output = canonical_contained_path(output, root=boundary)
+        if os.name == "nt":
+            _write_redacted_output_windows(output, dict(payload), boundary)
+            return
         relative = output.relative_to(boundary)
         boundary_fd = _open_absolute_directory(boundary, create=True)
         try:
@@ -638,6 +749,212 @@ def _reject_final_symlink(path: Path) -> None:
             raise ArtifactWriteError()
     finally:
         os.close(parent_fd)
+
+
+def _verify_windows_existing_components(path: Path) -> None:
+    current = Path(path.anchor)
+    for component in path.parts[1:]:
+        current /= component
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            return
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or getattr(metadata, "st_reparse_tag", 0)
+            or not stat.S_ISDIR(metadata.st_mode)
+        ):
+            raise ArtifactWriteError()
+
+
+def _reject_windows_final_reparse(path: Path) -> None:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return
+    if (
+        stat.S_ISLNK(metadata.st_mode)
+        or getattr(metadata, "st_reparse_tag", 0)
+        or metadata.st_nlink != 1
+    ):
+        raise ArtifactWriteError()
+
+
+def _read_regular_file_path(
+    parent: Path,
+    name: str,
+    *,
+    missing_ok: bool = False,
+    max_bytes: int = _MAX_RECORD_BYTES,
+) -> bytes | None:
+    if type(max_bytes) is not int or max_bytes <= 0:
+        raise ArtifactWriteError()
+    try:
+        backend = get_platform_security_backend()
+        with backend.open_secure_directory(parent, create=False) as session:
+            payload = session.read_bounded(name, max_bytes)
+    except FileNotFoundError:
+        if missing_ok:
+            return None
+        raise
+    except SecurityBoundaryError:
+        raise ArtifactWriteError() from None
+    if payload is None and not missing_ok:
+        raise FileNotFoundError(name)
+    return payload
+
+
+def _reconcile_previous_path(parent: Path, name: str) -> None:
+    previous = parent / _previous_name(name)
+    target = parent / name
+    try:
+        previous.lstat()
+    except FileNotFoundError:
+        return
+    try:
+        get_platform_security_backend().inspect_private_path(
+            previous, purpose="migration-previous"
+        )
+    except SecurityBoundaryError:
+        raise ArtifactWriteError() from None
+    if target.exists():
+        try:
+            get_platform_security_backend().inspect_private_path(
+                target, purpose="migration-output"
+            )
+        except SecurityBoundaryError:
+            raise ArtifactWriteError() from None
+        previous.unlink()
+    else:
+        os.replace(previous, target)
+
+
+def _atomic_replace_json_path(parent: Path, name: str, value: Any) -> None:
+    try:
+        get_platform_security_backend().atomic_write(
+            (parent / name).resolve(), _canonical_json_bytes(value)
+        )
+    except (OSError, SecurityBoundaryError):
+        raise ArtifactWriteError() from None
+
+
+def _atomic_replace_json_windows(session: Any, name: str, value: Any) -> None:
+    payload = _canonical_json_bytes(value)
+    previous = _previous_name(name)
+    try:
+        prior = session.read_bounded(name, _MAX_INDEX_BYTES)
+        if session.inspect_optional_child(previous, "migration-previous") is not None:
+            raise ArtifactWriteError()
+        if prior is not None:
+            session.create_exclusive(previous, prior)
+        try:
+            session.atomic_write(name, payload)
+        except BaseException:
+            current = session.read_bounded(name, _MAX_INDEX_BYTES)
+            if current == payload:
+                if prior is None:
+                    session.delete_child(name)
+                else:
+                    session.atomic_write(name, prior)
+                session.delete_child(previous)
+            raise
+        try:
+            session.delete_child(previous)
+        except (OSError, SecurityBoundaryError):
+            pass
+    except (OSError, SecurityBoundaryError):
+        raise ArtifactWriteError() from None
+
+
+def _create_record_windows(session: Any, name: str, payload: bytes) -> None:
+    session.create_exclusive(name, payload)
+
+
+def _write_redacted_output_windows(
+    output: Path, payload: Mapping[str, Any], boundary: Path
+) -> None:
+    del boundary
+    backend = get_platform_security_backend()
+    session = None
+    control_session = None
+    lock_fd = -1
+    try:
+        lock_name = _lock_name(output.name)
+        if not output.parent.exists() or not (output.parent / lock_name).exists():
+            with backend.open_secure_directory(
+                output.parent, create=True
+            ) as bootstrap_session:
+                try:
+                    bootstrap_session.create_exclusive(lock_name, b"")
+                except SecurityBoundaryError as exc:
+                    if exc.code != "SECURE_CHILD_ALREADY_EXISTS":
+                        raise
+        control_session = backend.open_secure_directory(
+            output.parent, create=False, require_current_owner=False
+        )
+        _require_windows_session_owner(control_session)
+        lock_fd = _open_windows_shared_lock(output.parent / lock_name)
+        backend.inspect_open_file_metadata(lock_fd, "migration-output-lock")
+        lock_exclusive(lock_fd, nonblocking=False)
+        control_session.close()
+        _reconcile_previous_path(output.parent, output.name)
+        session = backend.open_secure_directory(output.parent, create=False)
+        _atomic_replace_json_windows(session, output.name, dict(payload))
+    except (OSError, SecurityBoundaryError, TypeError, ValueError):
+        raise ArtifactWriteError() from None
+    finally:
+        if lock_fd >= 0:
+            try:
+                unlock(lock_fd)
+            finally:
+                os.close(lock_fd)
+        if session is not None:
+            session.close()
+        if control_session is not None:
+            control_session.close()
+
+
+def _require_windows_session_owner(session: Any) -> None:
+    operator = get_platform_security_backend().current_operator_binding()
+    if session.binding.owner_sid_sha256 != operator.sid_sha256:
+        raise SecurityBoundaryError("FILE_OWNER_MISMATCH")
+
+
+def _open_windows_shared_lock(path: Path) -> int:
+    import ctypes
+    from ctypes import wintypes
+    import msvcrt
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_file = kernel32.CreateFileW
+    create_file.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    )
+    create_file.restype = wintypes.HANDLE
+    handle = create_file(
+        str(path),
+        0x80000000 | 0x40000000,
+        0x00000001 | 0x00000002,
+        None,
+        3,
+        0x00000080,
+        None,
+    )
+    invalid = ctypes.c_void_p(-1).value
+    if handle in (None, 0, invalid):
+        error = ctypes.get_last_error()
+        raise OSError(error, "LOCK_FILE_OPEN_FAILED")
+    try:
+        return msvcrt.open_osfhandle(int(handle), os.O_RDWR)
+    except BaseException:
+        kernel32.CloseHandle(handle)
+        raise
 
 
 def _normalized_absolute(path: Path | str) -> Path:

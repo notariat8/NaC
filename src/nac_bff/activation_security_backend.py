@@ -67,6 +67,18 @@ class BoundFileSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class PrivateFileMetadata:
+    path_sha256: str
+    volume_serial: int
+    file_id: int
+    size: int
+    owner_sid_sha256: str
+    security_descriptor_sha256: str
+    dacl_sha256: str
+    reparse_point: bool
+
+
+@dataclass(frozen=True, slots=True)
 class SecureDirectoryBinding:
     path_sha256: str
     volume_serial: int
@@ -123,6 +135,8 @@ class SecureDirectorySession(Protocol):
 
     def atomic_write(self, name: str, payload: bytes) -> BoundFileSnapshot: ...
 
+    def create_exclusive(self, name: str, payload: bytes) -> BoundFileSnapshot: ...
+
     def append_and_flush(
         self, name: str, payload: bytes
     ) -> BoundFileSnapshot: ...
@@ -144,14 +158,35 @@ class ActivationSecurityBackend(Protocol):
         self, path: Path, purpose: str
     ) -> BoundFileSnapshot: ...
 
+    def inspect_private_metadata(
+        self, path: Path, purpose: str
+    ) -> PrivateFileMetadata: ...
+
     def inspect_open_file_descriptor(
         self, descriptor: int, purpose: str
     ) -> BoundFileSnapshot: ...
 
+    def inspect_open_file_metadata(
+        self, descriptor: int, purpose: str
+    ) -> PrivateFileMetadata: ...
+
+    def inspect_bound_input_path(
+        self, path: Path, purpose: str
+    ) -> BoundFileSnapshot: ...
+
+    def open_bound_input_read(
+        self, path: Path, expected_binding: BoundFileSnapshot
+    ) -> AbstractContextManager[BinaryIO]: ...
+
     def validate_private_directory(self, path: Path) -> str: ...
 
     def open_secure_directory(
-        self, path: Path, *, create: bool, require_current_owner: bool = True
+        self,
+        path: Path,
+        *,
+        create: bool,
+        require_current_owner: bool = True,
+        require_restrictive_dacl: bool = True,
     ) -> SecureDirectorySession: ...
 
     def open_bound_read(

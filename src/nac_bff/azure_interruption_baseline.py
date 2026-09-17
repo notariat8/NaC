@@ -200,13 +200,44 @@ _UUID_RE = re.compile(
 
 
 def read_bound_prepared_artifact(root: Path, relative_path: str) -> bytes | None:
+    relative = Path(relative_path)
+    if relative.is_absolute() or not relative.parts or any(
+        part in {"", ".", ".."} for part in relative.parts
+    ):
+        return None
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            canonical_root = Path(os.path.abspath(root))
+            candidate = canonical_root.joinpath(*relative.parts)
+            candidate.relative_to(canonical_root)
+            backend = get_platform_security_backend()
+            backend.validate_private_directory(canonical_root)
+            current = canonical_root
+            for component in relative.parts[:-1]:
+                current /= component
+                backend.validate_private_directory(current)
+            binding = backend.inspect_private_path(
+                candidate, purpose="prepared-artifact"
+            )
+            if (
+                binding.size < 1
+                or binding.size > runner._MAX_SECURE_ARTIFACT_BYTES
+            ):
+                return None
+            with backend.open_bound_read(candidate, binding) as handle:
+                raw = handle.read(runner._MAX_SECURE_ARTIFACT_BYTES + 1)
+            if len(raw) != binding.size:
+                return None
+            return raw
+        except (OSError, SecurityBoundaryError, ValueError):
+            return None
     descriptors: list[int] = []
     try:
-        relative = Path(relative_path)
-        if relative.is_absolute() or not relative.parts or any(
-            part in {"", ".", ".."} for part in relative.parts
-        ):
-            return None
         directory_flags = (
             os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
         )
@@ -278,6 +309,18 @@ def load_expectation(
     )
     if raw == (None, None, None, None):
         prepared_root = run_dir / "prepared"
+        if os.name == "nt" and prepared_root.exists():
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            try:
+                get_platform_security_backend().validate_private_directory(
+                    prepared_root
+                )
+            except SecurityBoundaryError:
+                return None, "INTERRUPTION_BASELINE_BINDING_INVALID"
         if prepared_root.is_symlink() or any(
             (run_dir / relative_path).is_symlink()
             for relative_path in relative_paths

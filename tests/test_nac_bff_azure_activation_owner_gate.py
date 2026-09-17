@@ -380,12 +380,16 @@ class AzureBffActivationOwnerGateTests(unittest.TestCase):
 
     def test_builder_redacts_repo_path_resolution_failure(self) -> None:
         loop = self.root / "loop"
-        loop.symlink_to(loop)
-        result = build_activation_owner_gate(
-            loop,
-            self.certificate,
-            **self._gate_kwargs(),
-        )
+        with patch.object(
+            Path,
+            "resolve",
+            side_effect=RuntimeError("synthetic resolution failure"),
+        ):
+            result = build_activation_owner_gate(
+                loop,
+                self.certificate,
+                **self._gate_kwargs(),
+            )
         self.assertEqual(result["status"], "NOT_READY")
         self.assertEqual(result["error_code"], "GIT_SNAPSHOT_UNAVAILABLE")
         self.assertNotIn(str(self.root), json.dumps(result))

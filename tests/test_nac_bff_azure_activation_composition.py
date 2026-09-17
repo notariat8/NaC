@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timezone
+from contextlib import nullcontext
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
+import subprocess
 from types import SimpleNamespace
 import tempfile
 import unittest
 import zipfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from nac_bff.azure_activation import (
     DELEGATED_SCOPE,
@@ -78,6 +81,64 @@ TREE = "c" * 40
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
 )
+
+
+def _make_windows_file_broadly_writable(path: Path) -> None:
+    completed = subprocess.run(
+        ["icacls", str(path), "/grant", "*S-1-1-0:(W)"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise AssertionError("failed to create broad Windows DACL fixture")
+
+
+class _WindowsProcessBackendProxy:
+    def __init__(self, delegate) -> None:
+        self._delegate = delegate
+
+    def __getattr__(self, name: str):
+        return getattr(self._delegate, name)
+
+    def launch_attested_process(self, spec):
+        if not isinstance(subprocess.run, Mock):
+            return self._delegate.launch_attested_process(spec)
+        try:
+            completed = subprocess.run(
+                [str(spec.executable), *spec.arguments],
+                cwd=spec.cwd,
+                shell=False,
+                text=True,
+                capture_output=True,
+                check=False,
+                env=dict(spec.environment),
+                timeout=spec.timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            from nac_bff.activation_security_backend import SecurityBoundaryError
+
+            raise SecurityBoundaryError("PROCESS_TIMEOUT") from exc
+        return SimpleNamespace(
+            exit_code=completed.returncode,
+            stdout=(getattr(completed, "stdout", "") or "").encode("utf-8"),
+            stderr=(getattr(completed, "stderr", "") or "").encode("utf-8"),
+            image_sha256=spec.executable_sha256,
+            job_object_assigned=True,
+        )
+
+
+def _windows_process_backend_patch():
+    if os.name != "nt":
+        return nullcontext()
+    from nac_bff.activation_security_backend import get_platform_security_backend
+
+    return patch(
+        "nac_bff.activation_security_backend.get_platform_security_backend",
+        return_value=_WindowsProcessBackendProxy(
+            get_platform_security_backend()
+        ),
+    )
 TERMINALIZATION_APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/717#issuecomment-987654321"
 )
@@ -1018,7 +1079,32 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
         github.assert_not_called()
 
         symlink = context.repo_root / "gh-link"
-        symlink.symlink_to(gh)
+        if os.name == "nt":
+            target_directory = context.repo_root / "gh-target"
+            target_directory.mkdir()
+            target = target_directory / "gh"
+            target.write_bytes(gh.read_bytes())
+            target.chmod(0o700)
+            linked_directory = context.repo_root / "gh-linked-directory"
+            completed = subprocess.run(
+                [
+                    "cmd.exe",
+                    "/d",
+                    "/c",
+                    "mklink",
+                    "/J",
+                    str(linked_directory),
+                    str(target_directory),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                shell=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            symlink = linked_directory / "gh"
+        else:
+            symlink.symlink_to(gh)
         linked = GitHubApprovalVerifier(
             binary=symlink,
             expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
@@ -1304,7 +1390,10 @@ class LocalActivationAdapterTests(unittest.TestCase):
             target = root / "target.bin"
             target.write_bytes(b"trusted")
             source = root / "source.bin"
-            source.symlink_to(target)
+            if os.name == "nt":
+                os.link(target, source)
+            else:
+                source.symlink_to(target)
             with self.assertRaisesRegex(
                 ActivationStepError,
                 r"^PREPARED_ARTIFACT_SNAPSHOT_FAILED\Z",
@@ -1803,14 +1892,44 @@ class LocalActivationAdapterTests(unittest.TestCase):
                 node.write_bytes(b"mutated-node")
                 return SimpleNamespace(returncode=0)
 
-            with (
-                patch(
-                    "nac_bff.azure_activation_composition.subprocess.run",
-                    side_effect=first_process_then_mutate,
-                ) as run,
-                self.assertRaises(ActivationStepError) as raised,
-            ):
-                adapter.build_spfx(root, root / "isolated")
+            if os.name == "nt":
+                original_run = adapter._run
+                run_count = 0
+
+                def bound_process_then_mutate(*args, **kwargs):
+                    nonlocal run_count
+                    original_run(*args, **kwargs)
+                    run_count += 1
+                    if run_count == 1:
+                        dependencies = kwargs["cwd"] / "node_modules"
+                        heft = dependencies / "@rushstack/heft/bin/heft"
+                        heft.parent.mkdir(parents=True)
+                        heft.write_bytes(b"trusted-heft")
+                        node.write_bytes(b"mutated-node")
+
+                with (
+                    _windows_process_backend_patch(),
+                    patch(
+                        "nac_bff.azure_activation_composition.subprocess.run",
+                        return_value=SimpleNamespace(returncode=0),
+                    ) as run,
+                    patch.object(
+                        adapter,
+                        "_run",
+                        side_effect=bound_process_then_mutate,
+                    ),
+                    self.assertRaises(ActivationStepError) as raised,
+                ):
+                    adapter.build_spfx(root, root / "isolated")
+            else:
+                with (
+                    patch(
+                        "nac_bff.azure_activation_composition.subprocess.run",
+                        side_effect=first_process_then_mutate,
+                    ) as run,
+                    self.assertRaises(ActivationStepError) as raised,
+                ):
+                    adapter.build_spfx(root, root / "isolated")
 
             self.assertEqual(
                 raised.exception.code, "BUILD_TOOLCHAIN_ATTESTATION_FAILED"
@@ -1875,7 +1994,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
         node_source = node_candidate.resolve(strict=True)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            node = root / "node"
+            node = root / ("node.exe" if os.name == "nt" else "node")
             shutil.copyfile(node_source, node)
             node.chmod(0o700)
             runtime = root / "runtime"
@@ -1938,9 +2057,12 @@ class LocalActivationAdapterTests(unittest.TestCase):
             tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             tool.chmod(0o700)
             tool_sha256 = hashlib.sha256(tool.read_bytes()).hexdigest()
-            with patch(
-                "nac_bff.azure_activation_composition.subprocess.run"
-            ) as run:
+            with (
+                _windows_process_backend_patch(),
+                patch(
+                    "nac_bff.azure_activation_composition.subprocess.run"
+                ) as run,
+            ):
                 run.return_value = SimpleNamespace(returncode=0)
                 with patch.dict(
                     "os.environ",
@@ -1961,7 +2083,10 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertNotIn("NODE_OPTIONS", environment)
             self.assertNotIn("NODE_PATH", environment)
             self.assertEqual(environment["NAPI_RS_FORCE_WASI"], "error")
-            self.assertEqual(environment["PATH"], "/usr/bin:/bin")
+            if os.name == "nt":
+                self.assertNotIn("PATH", environment)
+            else:
+                self.assertEqual(environment["PATH"], "/usr/bin:/bin")
             self.assertNotEqual(
                 environment["NPM_CONFIG_USERCONFIG"],
                 environment["NPM_CONFIG_GLOBALCONFIG"],
@@ -1972,8 +2097,14 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertTrue(
                 environment["NPM_CONFIG_GLOBALCONFIG"].endswith("npm-global.conf")
             )
-            self.assertRegex(run.call_args.args[0][0], r"^/proc/self/fd/[0-9]+$")
-            self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 1)
+            if os.name == "nt":
+                self.assertTrue(Path(run.call_args.args[0][0]).is_absolute())
+                self.assertNotIn("pass_fds", run.call_args.kwargs)
+            else:
+                self.assertRegex(
+                    run.call_args.args[0][0], r"^/proc/self/fd/[0-9]+$"
+                )
+                self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 1)
 
     def test_http_readiness_rejects_foreign_host_without_network(self) -> None:
         adapter = HttpReadinessAdapter(attempts=1, delay_seconds=0)
@@ -4784,7 +4915,11 @@ class AzureBffCompositionTests(unittest.TestCase):
             "PROVISIONER_CERTIFICATE_FILE_UNTRUSTED",
         )
 
-        Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"]).chmod(0o644)
+        private_key = Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"])
+        if os.name == "nt":
+            _make_windows_file_broadly_writable(private_key)
+        else:
+            private_key.chmod(0o644)
         with self.assertRaises(GraphConfigError) as unsafe_key:
             _bound_provisioner_token_provider(
                 environ, expected_certificate_sha256=certificate_sha256
@@ -4800,7 +4935,11 @@ class AzureBffCompositionTests(unittest.TestCase):
         provider = _bound_provisioner_token_provider(
             environ, expected_certificate_sha256=certificate_sha256
         )
-        Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"]).chmod(0o644)
+        private_key = Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"])
+        if os.name == "nt":
+            _make_windows_file_broadly_writable(private_key)
+        else:
+            private_key.chmod(0o644)
         with self.assertRaises(GraphConfigError) as raised:
             provider.fetch_access_token()
         self.assertEqual(
@@ -4868,7 +5007,10 @@ class AzureBffCompositionTests(unittest.TestCase):
             environ, expected_certificate_sha256=certificate_sha256
         )
         certificate_path.rename(original_path)
-        certificate_path.symlink_to(original_path)
+        if os.name == "nt":
+            os.link(original_path, certificate_path)
+        else:
+            certificate_path.symlink_to(original_path)
 
         with (
             patch(
@@ -4947,6 +5089,37 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertNotEqual(first, changed)
 
     def test_interruption_git_reads_disable_replace_refs(self) -> None:
+        if os.name == "nt":
+            observed = {}
+
+            class _Backend:
+                def inspect_private_path(self, _path, *, purpose):
+                    self.purpose = purpose
+                    return SimpleNamespace(sha256="1" * 64)
+
+                def launch_attested_process(self, spec):
+                    observed["spec"] = spec
+                    return SimpleNamespace(exit_code=0, stdout=b"bound\n")
+
+            backend = _Backend()
+            with patch(
+                "nac_bff.activation_security_backend."
+                "get_platform_security_backend",
+                return_value=backend,
+            ):
+                self.assertEqual(
+                    _run_interruption_git_read(
+                        Path("C:/repo"), "rev-parse", "HEAD"
+                    ),
+                    "bound",
+                )
+            command = observed["spec"].arguments
+            self.assertEqual(backend.purpose, "toolchain-executable")
+            self.assertIn("--no-replace-objects", command)
+            self.assertLess(
+                command.index("--no-replace-objects"), command.index("-C")
+            )
+            return
         process_result = SimpleNamespace(returncode=0, stdout="bound\n")
         with patch(
             "nac_bff.azure_activation_composition.subprocess.run",

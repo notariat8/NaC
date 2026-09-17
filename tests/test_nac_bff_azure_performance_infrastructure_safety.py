@@ -111,17 +111,23 @@ ADAPTER_TOOLCHAIN = {
 
 class _FdBackedTestRuntime:
     def __init__(self, executable: Path) -> None:
-        self._descriptor = os.open(executable, os.O_RDONLY)
-        self.pass_fds = (self._descriptor,)
+        self._executable = executable
+        self._descriptor = (
+            -1 if os.name == "nt" else os.open(executable, os.O_RDONLY)
+        )
+        self.pass_fds = () if os.name == "nt" else (self._descriptor,)
 
     def command(self, azure_argv: list[str]) -> list[str]:
+        if os.name == "nt":
+            return [sys.executable, str(self._executable), *azure_argv]
         return [f"/proc/self/fd/{self._descriptor}", *azure_argv]
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_args: object) -> None:
-        os.close(self._descriptor)
+        if self._descriptor >= 0:
+            os.close(self._descriptor)
 
 
 def _prepare_test_runtime(path: Path, **_kwargs: object) -> _FdBackedTestRuntime:
@@ -1696,10 +1702,20 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
                 ],
                 PRIVATE_DNS_VNET_LINK_ID,
             )
-            self.assertEqual(
-                stat.S_IMODE((store.directory / store._NAME_FILE).stat().st_mode),
-                0o400,
-            )
+            receipt_path = store.directory / store._NAME_FILE
+            if os.name == "nt":
+                from nac_bff.activation_security_backend import (
+                    get_platform_security_backend,
+                )
+
+                snapshot = get_platform_security_backend().inspect_private_path(
+                    receipt_path, purpose="restart-receipt"
+                )
+                self.assertFalse(snapshot.reparse_point)
+                self.assertRegex(snapshot.owner_sid_sha256, r"^[0-9a-f]{64}$")
+                self.assertRegex(snapshot.dacl_sha256, r"^[0-9a-f]{64}$")
+            else:
+                self.assertEqual(stat.S_IMODE(receipt_path.stat().st_mode), 0o400)
             with self.assertRaisesRegex(
                 AzurePerformanceInfrastructureSafetyError,
                 "INFRASTRUCTURE_ORIGINAL_NAME_RECEIPT_ALREADY_EXISTS",
@@ -1752,11 +1768,22 @@ class AzurePerformanceInfrastructureSafetyTests(unittest.TestCase):
                 receipt_path = store.directory / filename
                 receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
                 receipt["provider_observation_sha256"] = "0" * 64
-                receipt_path.chmod(0o600)
-                receipt_path.write_text(
-                    json.dumps(receipt, sort_keys=True) + "\n", encoding="utf-8"
+                tampered = (json.dumps(receipt, sort_keys=True) + "\n").encode(
+                    "utf-8"
                 )
-                receipt_path.chmod(0o400)
+                if os.name == "nt":
+                    from nac_bff.activation_security_backend import (
+                        get_platform_security_backend,
+                    )
+
+                    with get_platform_security_backend().open_secure_directory(
+                        store.directory, create=False
+                    ) as session:
+                        session.atomic_write(filename, tampered)
+                else:
+                    receipt_path.chmod(0o600)
+                    receipt_path.write_bytes(tampered)
+                    receipt_path.chmod(0o400)
                 with self.assertRaisesRegex(
                     AzurePerformanceInfrastructureSafetyError, error
                 ):

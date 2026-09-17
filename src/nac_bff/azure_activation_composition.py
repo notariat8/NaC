@@ -1040,7 +1040,11 @@ class LocalBuildAdapter:
                             env[MANIFEST_ENV] = runtime_sealed.paths[0]
                             env["NODE"] = sealed.paths[0]
                             env["NAC_NODE_RUNTIME_PRELOADER"] = runtime_sealed.paths[1]
-                            env["NAC_NODE_RUNTIME_ESM_LOADER"] = runtime_sealed.paths[2]
+                            env["NAC_NODE_RUNTIME_ESM_LOADER"] = (
+                                Path(runtime_sealed.paths[2]).resolve().as_uri()
+                                if os.name == "nt"
+                                else runtime_sealed.paths[2]
+                            )
                             process_argv = [
                                 sealed.paths[0],
                                 "--preserve-symlinks",
@@ -1219,17 +1223,34 @@ def _normalize_zip_archive(path: Path) -> None:
                     (stat.S_IFDIR | 0o755) if is_directory else (stat.S_IFREG | 0o644)
                 ) << 16
                 target.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
-        descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
-        os.replace(temporary, path)
-        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        if os.name == "nt":
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            try:
+                payload = _stable_file_bytes(temporary)
+                with get_platform_security_backend().open_secure_directory(
+                    Path(os.path.abspath(path.parent)), create=False
+                ) as session:
+                    session.atomic_write(path.name, payload)
+            except SecurityBoundaryError:
+                raise ActivationStepError(
+                    "SPFX_PACKAGE_NORMALIZATION_FAILED"
+                ) from None
+        else:
+            descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            os.replace(temporary, path)
+            directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
     except ActivationStepError:
         raise
     except (OSError, zipfile.BadZipFile, KeyError, RuntimeError):
@@ -3262,7 +3283,7 @@ def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
                 raise ActivationStepError(
                     "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
                 )
-            return result.stdout.decode("utf-8", errors="strict")
+            return result.stdout.decode("utf-8", errors="strict").rstrip("\n")
         except (OSError, UnicodeDecodeError, SecurityBoundaryError):
             raise ActivationStepError(
                 "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
@@ -3681,7 +3702,7 @@ def build_live_activation_execution_port(
     )
     m365 = M365CliCommandRunner(
         binary=M365_CLI_EXECUTION_PATH,
-        node_bin=M365_NODE_EXECUTION_PATH,
+        node_bin=M365_NODE_EXECUTION_PATH.parent,
         environ=values,
         expected_binary_sha256=request.m365_cli_sha256,
         expected_node_sha256=request.m365_node_sha256,
@@ -3729,6 +3750,10 @@ def _trusted_regular_file(
         return None
     if os.name == "nt":
         try:
+            if executable and expected_sha256 is None:
+                return None
+            if path.is_symlink():
+                return None
             from .activation_security_backend import get_platform_security_backend
 
             binding = get_platform_security_backend().inspect_private_path(
@@ -4617,6 +4642,40 @@ def _field(row: Mapping[str, Any], *names: str) -> Any:
 
 
 def _stable_file_bytes(source: Path) -> bytes:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            backend = get_platform_security_backend()
+            absolute_source = Path(os.path.abspath(source))
+            expected = backend.inspect_private_path(
+                absolute_source, purpose="prepared-artifact-source"
+            )
+            with backend.open_secure_directory(
+                absolute_source.parent, create=False
+            ) as session:
+                payload = session.read_bounded(
+                    source.name, max(expected.size, 1) + 1
+                )
+            if (
+                payload is None
+                or len(payload) != expected.size
+                or hashlib.sha256(payload).hexdigest() != expected.sha256
+                or backend.inspect_private_path(
+                    absolute_source,
+                    purpose="prepared-artifact-source",
+                )
+                != expected
+            ):
+                raise SecurityBoundaryError("FILE_BINDING_CHANGED")
+            return payload
+        except (OSError, SecurityBoundaryError, ValueError):
+            raise ActivationStepError(
+                "PREPARED_ARTIFACT_SNAPSHOT_FAILED"
+            ) from None
     descriptor = -1
     flags = (
         os.O_RDONLY
@@ -4683,6 +4742,29 @@ def _copy_snapshot(
     payload = _stable_file_bytes(source)
     if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            if destination.exists() or destination.is_symlink():
+                raise SecurityBoundaryError("SECURE_CHILD_ALREADY_EXISTS")
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            with get_platform_security_backend().open_secure_directory(
+                Path(os.path.abspath(destination.parent)), create=False
+            ) as session:
+                session.create_exclusive(destination.name, payload)
+        except (OSError, SecurityBoundaryError, ValueError):
+            raise ActivationStepError(
+                "PREPARED_ARTIFACT_SNAPSHOT_FAILED"
+            ) from None
+        if strict_destination:
+            _require_digest(expected_sha256, destination)
+        else:
+            _require_content_digest(expected_sha256, destination)
+        return
     descriptor = -1
     try:
         if destination.exists() or destination.is_symlink():

@@ -645,6 +645,9 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
                 snapshot = owner_gate._git_snapshot(measured)
 
         self.assertEqual(snapshot, (measured_commit, measured_tree, False))
+        if os.name == "nt":
+            self.assertEqual(git_run.call_count, 0)
+            return
         self.assertEqual(git_run.call_count, 3)
         for call in git_run.call_args_list:
             command = call.args[0]
@@ -685,21 +688,22 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
 
     @staticmethod
     def _create_git_repo(root: Path, content: str) -> tuple[str, str]:
+        git = shutil.which("git") or "/usr/bin/git"
         root.mkdir()
         subprocess.run(
-            ["/usr/bin/git", "init", "--quiet", str(root)],
+            [git, "init", "--quiet", str(root)],
             check=True,
             capture_output=True,
         )
         (root / "source.txt").write_text(content, encoding="utf-8")
         subprocess.run(
-            ["/usr/bin/git", "-C", str(root), "add", "source.txt"],
+            [git, "-C", str(root), "add", "source.txt"],
             check=True,
             capture_output=True,
         )
         subprocess.run(
             [
-                "/usr/bin/git",
+                git,
                 "-C",
                 str(root),
                 "-c",
@@ -717,7 +721,7 @@ class PerformanceInfrastructureOwnerGateTests(unittest.TestCase):
 
         def output(*arguments: str) -> str:
             result = subprocess.run(
-                ["/usr/bin/git", "-C", str(root), *arguments],
+                [git, "-C", str(root), *arguments],
                 check=True,
                 capture_output=True,
                 text=True,

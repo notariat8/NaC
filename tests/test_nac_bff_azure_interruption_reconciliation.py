@@ -299,7 +299,12 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
 
     @staticmethod
     def _marker(path: Path) -> dict:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        descriptor = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_BINARY", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
         try:
             marker = _read_lock_marker_descriptor(descriptor)
         finally:
@@ -442,7 +447,7 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
         self.assertNotIn(sentinel, json.dumps(result))
 
     def test_exact_hashbound_bicep_baseline_can_be_terminalized(self):
-        from tests.test_nac_bff_azure_interruption_baseline import (
+        from test_nac_bff_azure_interruption_baseline import (
             _deployment,
             _identity_binding,
             _inventory,
@@ -573,7 +578,7 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
             self.assertEqual(self._marker(path)["status"], "HELD")
 
     def test_pre_mutation_prepared_artifact_tamper_fails_closed(self):
-        from tests.test_nac_bff_azure_interruption_baseline import (
+        from test_nac_bff_azure_interruption_baseline import (
             _deployment,
             _identity_binding,
             _inventory,
@@ -712,11 +717,9 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
         )
         state = json.loads(state_path.read_text(encoding="utf-8"))
         state["steps"][1]["id"] = "deploy_bicep_baseline"
-        state_path.write_text(
-            json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n",
-            encoding="utf-8",
-        )
-        os.chmod(state_path, 0o600)
+        from nac_bff import azure_activation_runner as activation_runner
+
+        activation_runner._atomic_json_write(state_path, state)
         unsupported = self._inspect()
         self.assertEqual(
             unsupported["error"]["code"],
@@ -874,7 +877,7 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
         self.assertEqual(marker["status"], "MIDRUN_RELEASED")
 
     def test_raw_duplicate_operations_are_not_accepted_as_canonical(self):
-        from tests.test_nac_bff_azure_interruption_baseline import (
+        from test_nac_bff_azure_interruption_baseline import (
             _deployment,
             _identity_binding,
             _inventory,
@@ -1246,9 +1249,12 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
                 output_root=self.root / DEFAULT_OUTPUT_ROOT,
             )
 
-        self.assertEqual(
-            result["error"]["code"], "INTERRUPTION_LOCK_REPLACED"
+        expected_code = (
+            "INTERRUPTION_RECONCILER_REVALIDATION_FAILED"
+            if os.name == "nt"
+            else "INTERRUPTION_LOCK_REPLACED"
         )
+        self.assertEqual(result["error"]["code"], expected_code)
         marker_path = (
             self.root
             / DEFAULT_OUTPUT_ROOT

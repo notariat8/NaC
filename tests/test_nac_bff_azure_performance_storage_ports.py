@@ -26,6 +26,11 @@ from nac_bff.azure_performance_lease import (  # noqa: E402
     AttestedAzureStorageAccessToken,
     AzureBlobLeaseBinding,
 )
+from nac_bff.activation_security_backend import (  # noqa: E402
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
+from nac_bff.activation_security_windows import WindowsSecureDirectorySession  # noqa: E402
 from nac_bff.azure_performance_storage_ports import (  # noqa: E402
     STORAGE_SCOPE,
     AttestedAzureStorageTokenProvider,
@@ -166,9 +171,18 @@ class DurableLeaseBindingHandoffTests(unittest.TestCase):
         restarted = self._store()
         self.assertEqual(restarted.load(), committed)
         self.assertEqual(restarted.commit_and_load(_binding()), committed)
-        self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(self.path.with_name(self.path.name + ".lock").stat().st_mode & 0o777, 0o600)
-        self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o700)
+        if os.name == "nt":
+            backend = get_platform_security_backend()
+            backend.inspect_private_path(self.path, purpose="test-handoff")
+            backend.inspect_private_path(
+                self.path.with_name(self.path.name + ".lock"),
+                purpose="test-handoff-lock",
+            )
+            backend.validate_private_directory(self.path.parent)
+        else:
+            self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(self.path.with_name(self.path.name + ".lock").stat().st_mode & 0o777, 0o600)
+            self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o700)
         self.assertFalse(any(self.path.parent.glob("*.tmp")))
     def test_exact_owner_target_resource_and_etag_are_immutable(self) -> None:
         self._store().commit_and_load(_binding())
@@ -196,21 +210,34 @@ class DurableLeaseBindingHandoffTests(unittest.TestCase):
         target = self.root / "target.json"
         target.write_text("{}", encoding="ascii")
         target.chmod(0o600)
-        self.path.symlink_to(target)
+        if os.name == "nt":
+            os.link(target, self.path)
+        else:
+            self.path.symlink_to(target)
         with self.assertRaises(AzurePerformanceStoragePortError):
             self._store().commit_and_load(_binding())
         self.path.unlink()
 
-        self.path.write_text("{}", encoding="ascii")
-        self.path.chmod(0o644)
-        with self.assertRaises(AzurePerformanceStoragePortError):
-            self._store().load()
+        if os.name != "nt":
+            self.path.write_text("{}", encoding="ascii")
+            self.path.chmod(0o644)
+            with self.assertRaises(AzurePerformanceStoragePortError):
+                self._store().load()
 
     def test_failed_atomic_commit_leaves_no_binding_or_temporary_file(self) -> None:
-        with mock.patch(
-            "nac_bff.azure_performance_storage_ports.os.link",
-            side_effect=OSError("offline failure"),
-        ):
+        patch_target = (
+            mock.patch.object(
+                WindowsSecureDirectorySession,
+                "create_exclusive",
+                side_effect=SecurityBoundaryError("offline failure"),
+            )
+            if os.name == "nt"
+            else mock.patch(
+                "nac_bff.azure_performance_storage_ports.os.link",
+                side_effect=OSError("offline failure"),
+            )
+        )
+        with patch_target:
             with self.assertRaisesRegex(
                 AzurePerformanceStoragePortError,
                 r"^AZURE_PERFORMANCE_LEASE_HANDOFF_WRITE_FAILED$",
@@ -237,7 +264,13 @@ class PerformanceExecutionFenceTests(unittest.TestCase):
                         self.fail("second execution fence must stay closed")
 
             with second.hold():
-                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                if os.name != "nt":
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            if os.name == "nt":
+                get_platform_security_backend().inspect_private_path(
+                    path,
+                    purpose="test-execution-fence",
+                )
 
 
 class AttestedAzureStorageTokenProviderTests(unittest.TestCase):
@@ -364,7 +397,10 @@ class AttestedAzureStorageTokenProviderTests(unittest.TestCase):
     def test_untrusted_or_mismatched_credentials_fail_before_http(self) -> None:
         original = self.root / "original.cert.pem"
         self.certificate_path.rename(original)
-        self.certificate_path.symlink_to(original)
+        if os.name == "nt":
+            os.link(original, self.certificate_path)
+        else:
+            self.certificate_path.symlink_to(original)
         with self.assertRaisesRegex(
             AzurePerformanceStoragePortError,
             r"^AZURE_STORAGE_CREDENTIAL_UNTRUSTED$",
@@ -376,13 +412,25 @@ class AttestedAzureStorageTokenProviderTests(unittest.TestCase):
         self.certificate_path.unlink()
         original.rename(self.certificate_path)
 
-        self.private_key_path.chmod(0o644)
-        with self.assertRaises(AzurePerformanceStoragePortError):
-            self._provider().get_token(
-                audience=STORAGE_SCOPE,
-                identity_binding_sha256=READ_BINDING,
-            )
-        self.private_key_path.chmod(0o600)
+        if os.name == "nt":
+            original_key = self.root / "original.key.pem"
+            self.private_key_path.rename(original_key)
+            os.link(original_key, self.private_key_path)
+            with self.assertRaises(AzurePerformanceStoragePortError):
+                self._provider().get_token(
+                    audience=STORAGE_SCOPE,
+                    identity_binding_sha256=READ_BINDING,
+                )
+            self.private_key_path.unlink()
+            original_key.rename(self.private_key_path)
+        else:
+            self.private_key_path.chmod(0o644)
+            with self.assertRaises(AzurePerformanceStoragePortError):
+                self._provider().get_token(
+                    audience=STORAGE_SCOPE,
+                    identity_binding_sha256=READ_BINDING,
+                )
+            self.private_key_path.chmod(0o600)
 
         _, other_key = _certificate_and_key(self.other_credential_key)
         self.private_key_path.write_bytes(other_key)

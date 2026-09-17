@@ -722,6 +722,7 @@ def reconcile_azure_bff_live_activation_lock(
             request=request,
             state_path=state_path,
             lock_path=lock_path,
+            lock_descriptor=lock_fd,
             target_binding_sha256=target_binding_sha256,
             committed=committed,
         )
@@ -1072,9 +1073,18 @@ def _reconcile_marker_payload(
     request: LiveActivationRequest,
     state_path: Path,
     lock_path: Path,
+    lock_descriptor: int | None,
     target_binding_sha256: str,
     committed: bool,
 ) -> dict[str, Any]:
+    lock_sha256 = _artifact_sha256(lock_path)
+    if os.name == "nt" and lock_descriptor is not None:
+        try:
+            lock_sha256 = get_platform_security_backend().inspect_open_file_descriptor(
+                lock_descriptor, purpose="activation-lock"
+            ).sha256
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            lock_sha256 = None
     return {
         "schema_version": FINALIZATION_RECOVERY_SCHEMA_VERSION,
         "status": "LOCK_RELEASE_AUTHORIZED_BY_RECONCILE",
@@ -1094,7 +1104,7 @@ def _reconcile_marker_payload(
         "target_binding_sha256": target_binding_sha256,
         "state_sha256": _artifact_sha256(state_path),
         "ledger_head_sha256": state["ledger_head_sha256"],
-        "lock_sha256": _artifact_sha256(lock_path),
+        "lock_sha256": lock_sha256,
         "committed_artifacts_valid": committed,
         "resume_enabled": False,
     }
@@ -1255,7 +1265,7 @@ def _clean_tree(root: Path) -> bool:
         completed = _run_windows_git(
             Path(git),
             ("--no-optional-locks", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"),
-            timeout=10,
+            timeout=_GIT_STATUS_TIMEOUT_SECONDS,
         )
         return completed is not None and completed[0] == 0 and completed[1] == ""
     try:
@@ -2832,6 +2842,17 @@ def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
 def _atomic_append(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(path.parent, 0o700)
+    if os.name == "nt":
+        try:
+            with get_platform_security_backend().open_secure_directory(
+                Path(os.path.abspath(path.parent)), create=False
+            ) as session:
+                session.create_exclusive(path.name, payload)
+        except SecurityBoundaryError as exc:
+            if exc.code == "SECURE_CHILD_ALREADY_EXISTS":
+                raise ActivationStepError("LEDGER_APPEND_CONFLICT") from exc
+            raise ActivationStepError("LEDGER_APPEND_FAILED") from exc
+        return
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     descriptor = os.open(
         temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
@@ -2846,10 +2867,6 @@ def _atomic_append(path: Path, payload: bytes) -> None:
         except FileExistsError as exc:
             raise ActivationStepError("LEDGER_APPEND_CONFLICT") from exc
         os.chmod(path, 0o600)
-        if os.name == "nt":
-            get_platform_security_backend().inspect_private_path(
-                path.resolve(), purpose="activation-artifact"
-            )
         _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)

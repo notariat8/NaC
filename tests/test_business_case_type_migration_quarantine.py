@@ -3,11 +3,16 @@ from __future__ import annotations
 import json
 import os
 import stat
+import subprocess
 import tempfile
 import threading
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest import mock
+
+from nac_bff.activation_security_backend import SecurityBoundaryError
+from nac_bff.activation_security_windows import WindowsSecureDirectorySession
 
 from src.notary_kg import business_case_type_migration_quarantine as quarantine_module
 from src.notary_kg.business_case_type_migration_quarantine import (
@@ -24,6 +29,24 @@ def _record(character: str = "a", *, classification: str = "conflict") -> dict[s
         "classification": classification,
         "record_ref_hash": "f" * 64,
     }
+
+
+def _make_directory_alias(link: Path, target: Path) -> None:
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def _make_file_alias(link: Path, target: Path) -> None:
+    if os.name == "nt":
+        os.link(target, link)
+    else:
+        link.symlink_to(target)
 
 
 class QuarantineStoreTests(unittest.TestCase):
@@ -53,11 +76,11 @@ class QuarantineStoreTests(unittest.TestCase):
         errors = []
 
         with first._open_store():
-            real_flock = __import__("fcntl").flock
+            real_lock = quarantine_module.lock_exclusive
 
-            def observe_flock(descriptor, operation):
+            def observe_lock(descriptor, *, nonblocking):
                 attempted.set()
-                return real_flock(descriptor, operation)
+                return real_lock(descriptor, nonblocking=nonblocking)
 
             def reconcile_second():
                 try:
@@ -68,8 +91,8 @@ class QuarantineStoreTests(unittest.TestCase):
                     completed.set()
 
             with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.fcntl.flock",
-                side_effect=observe_flock,
+                "src.notary_kg.business_case_type_migration_quarantine.lock_exclusive",
+                side_effect=observe_lock,
             ):
                 worker = threading.Thread(target=reconcile_second)
                 worker.start()
@@ -89,11 +112,11 @@ class QuarantineStoreTests(unittest.TestCase):
 
         with first.persist_locked([_record("a")]) as index:
             self.assertEqual("a" * 64, index["records"][0]["record_id"])
-            real_flock = __import__("fcntl").flock
+            real_lock = quarantine_module.lock_exclusive
 
-            def observe_flock(descriptor, operation):
+            def observe_lock(descriptor, *, nonblocking):
                 attempted.set()
-                return real_flock(descriptor, operation)
+                return real_lock(descriptor, nonblocking=nonblocking)
 
             def reconcile_second():
                 try:
@@ -104,8 +127,8 @@ class QuarantineStoreTests(unittest.TestCase):
                     completed.set()
 
             with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.fcntl.flock",
-                side_effect=observe_flock,
+                "src.notary_kg.business_case_type_migration_quarantine.lock_exclusive",
+                side_effect=observe_lock,
             ):
                 worker = threading.Thread(target=reconcile_second)
                 worker.start()
@@ -120,7 +143,7 @@ class QuarantineStoreTests(unittest.TestCase):
         self.state.mkdir(parents=True)
         external = self.root / "external.lock"
         external.write_text("external", encoding="utf-8")
-        (self.state / ".quarantine.lock").symlink_to(external)
+        _make_file_alias(self.state / ".quarantine.lock", external)
         with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
             QuarantineStore(self.state).reconcile()
 
@@ -141,21 +164,40 @@ class QuarantineStoreTests(unittest.TestCase):
     def test_reconcile_recovers_complete_orphan_after_index_failure(self):
         store = QuarantineStore(self.state)
         store.reconcile()
-        real_replace = os.replace
-        index_replacements = 0
+        if os.name == "nt":
+            real_atomic = quarantine_module._atomic_replace_json_windows
+            index_replacements = 0
 
-        def fail_index(source, destination, **kwargs):
-            nonlocal index_replacements
-            if destination == "index.json":
-                index_replacements += 1
-                if index_replacements == 2:
-                    raise OSError("injected")
-            return real_replace(source, destination, **kwargs)
+            def fail_windows_index(session, name, value):
+                nonlocal index_replacements
+                if name == "index.json":
+                    index_replacements += 1
+                    if index_replacements == 2:
+                        raise OSError("injected")
+                return real_atomic(session, name, value)
 
-        with mock.patch(
-            "src.notary_kg.business_case_type_migration_quarantine.os.replace",
-            side_effect=fail_index,
-        ):
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine."
+                "_atomic_replace_json_windows",
+                side_effect=fail_windows_index,
+            )
+        else:
+            real_replace = os.replace
+            index_replacements = 0
+
+            def fail_index(source, destination, **kwargs):
+                nonlocal index_replacements
+                if destination == "index.json":
+                    index_replacements += 1
+                    if index_replacements == 2:
+                        raise OSError("injected")
+                return real_replace(source, destination, **kwargs)
+
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine.os.replace",
+                side_effect=fail_index,
+            )
+        with patcher:
             with self.assertRaises(ArtifactWriteError):
                 store.persist([_record("b")])
         recovered = QuarantineStore(self.state).reconcile()
@@ -181,6 +223,30 @@ class QuarantineStoreTests(unittest.TestCase):
         replaced_index = False
         failed = False
 
+        if os.name == "nt":
+            real_atomic_write = WindowsSecureDirectorySession.atomic_write
+
+            def fail_windows_post_replace(session, name, payload):
+                nonlocal failed
+                result = real_atomic_write(session, name, payload)
+                if (
+                    name == "index.json"
+                    and b'"record_id":"b' in payload
+                    and not failed
+                ):
+                    failed = True
+                    raise SecurityBoundaryError("INJECTED_DURABILITY_FAILURE")
+                return result
+
+            patcher = mock.patch.object(
+                WindowsSecureDirectorySession,
+                "atomic_write",
+                autospec=True,
+                side_effect=fail_windows_post_replace,
+            )
+        else:
+            patcher = None
+
         def observe_replace(source, destination, **kwargs):
             nonlocal replaced_index
             result = real_replace(source, destination, **kwargs)
@@ -195,16 +261,22 @@ class QuarantineStoreTests(unittest.TestCase):
                 raise OSError("injected post-replace fsync failure")
             return real_fsync(descriptor)
 
-        with (
-            mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.os.replace",
-                side_effect=observe_replace,
-            ),
-            mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
-                side_effect=fail_post_replace_fsync,
-            ),
-        ):
+        if os.name == "nt":
+            contexts = (patcher,)
+        else:
+            contexts = (
+                mock.patch(
+                    "src.notary_kg.business_case_type_migration_quarantine.os.replace",
+                    side_effect=observe_replace,
+                ),
+                mock.patch(
+                    "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
+                    side_effect=fail_post_replace_fsync,
+                ),
+            )
+        with ExitStack() as stack:
+            for context in contexts:
+                stack.enter_context(context)
             with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                 store.persist([_record("b")])
 
@@ -235,7 +307,10 @@ class QuarantineStoreTests(unittest.TestCase):
         store.persist([_record()])
         path = self.state / "records" / f"{'a' * 64}.json"
         path.unlink()
-        os.mkfifo(path)
+        if os.name == "nt":
+            path.mkdir()
+        else:
+            os.mkfifo(path)
         with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
             store.reconcile()
 
@@ -272,18 +347,34 @@ class QuarantineStoreTests(unittest.TestCase):
     def test_record_published_before_failure_is_recovered(self):
         store = QuarantineStore(self.state)
         store.reconcile()
-        real_link = os.link
+        if os.name == "nt":
+            real_create = quarantine_module._create_record_windows
 
-        def fail_after_publication(source, destination, **kwargs):
-            result = real_link(source, destination, **kwargs)
-            if destination == "c" * 64 + ".json":
-                raise OSError("injected post-publication failure")
-            return result
+            def fail_windows_after_publication(session, name, payload):
+                result = real_create(session, name, payload)
+                if name == "c" * 64 + ".json":
+                    raise OSError("injected post-publication failure")
+                return result
 
-        with mock.patch(
-            "src.notary_kg.business_case_type_migration_quarantine.os.link",
-            side_effect=fail_after_publication,
-        ):
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine."
+                "_create_record_windows",
+                side_effect=fail_windows_after_publication,
+            )
+        else:
+            real_link = os.link
+
+            def fail_after_publication(source, destination, **kwargs):
+                result = real_link(source, destination, **kwargs)
+                if destination == "c" * 64 + ".json":
+                    raise OSError("injected post-publication failure")
+                return result
+
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine.os.link",
+                side_effect=fail_after_publication,
+            )
+        with patcher:
             with self.assertRaises(ArtifactWriteError):
                 store.persist([_record("c")])
         recovered = QuarantineStore(self.state).reconcile()
@@ -295,25 +386,50 @@ class QuarantineStoreTests(unittest.TestCase):
         external = self.root / "external"
         external.mkdir()
         displaced = self.state / "displaced-records"
-        real_link = os.link
         swapped = False
 
-        def swap_then_link(source, destination, **kwargs):
-            nonlocal swapped
-            if not swapped:
-                swapped = True
-                (self.state / "records").rename(displaced)
-                (self.state / "records").symlink_to(external, target_is_directory=True)
-            return real_link(source, destination, **kwargs)
+        if os.name == "nt":
+            real_create = quarantine_module._create_record_windows
 
-        with mock.patch(
-            "src.notary_kg.business_case_type_migration_quarantine.os.link",
-            side_effect=swap_then_link,
-        ):
-            store.persist([_record("d")])
+            def swap_then_create(session, name, payload):
+                nonlocal swapped
+                if not swapped:
+                    swapped = True
+                    (self.state / "records").rename(displaced)
+                    _make_directory_alias(self.state / "records", external)
+                return real_create(session, name, payload)
+
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine."
+                "_create_record_windows",
+                side_effect=swap_then_create,
+            )
+        else:
+            real_link = os.link
+
+            def swap_then_link(source, destination, **kwargs):
+                nonlocal swapped
+                if not swapped:
+                    swapped = True
+                    (self.state / "records").rename(displaced)
+                    (self.state / "records").symlink_to(external, target_is_directory=True)
+                return real_link(source, destination, **kwargs)
+
+            patcher = mock.patch(
+                "src.notary_kg.business_case_type_migration_quarantine.os.link",
+                side_effect=swap_then_link,
+            )
+
+        with patcher:
+            if os.name == "nt":
+                with self.assertRaises(ArtifactWriteError):
+                    store.persist([_record("d")])
+            else:
+                store.persist([_record("d")])
 
         name = f"{'d' * 64}.json"
-        self.assertTrue((displaced / name).is_file())
+        if os.name != "nt":
+            self.assertTrue((displaced / name).is_file())
         self.assertFalse((external / name).exists())
 
     def test_record_id_is_supplied_and_must_match_payload(self):
@@ -327,7 +443,7 @@ class QuarantineStoreTests(unittest.TestCase):
         target = self.root / "target"
         target.mkdir()
         linked_state = self.root / "linked-state"
-        linked_state.symlink_to(target, target_is_directory=True)
+        _make_directory_alias(linked_state, target)
         with self.assertRaises(ArtifactWriteError):
             QuarantineStore(linked_state).reconcile()
 
@@ -335,7 +451,9 @@ class QuarantineStoreTests(unittest.TestCase):
         store.reconcile()
         external = self.root / "external.json"
         external.write_text(json.dumps(_record()), encoding="utf-8")
-        (self.state / "records" / f"{'a' * 64}.json").symlink_to(external)
+        _make_file_alias(
+            self.state / "records" / f"{'a' * 64}.json", external
+        )
         with self.assertRaises(ArtifactWriteError):
             store.reconcile()
 
@@ -350,11 +468,13 @@ class QuarantineStoreTests(unittest.TestCase):
             canonical_contained_path(allowed / ".." / "escape.json", root=allowed)
         target = self.root / "target"
         target.mkdir()
-        (allowed / "link").symlink_to(target, target_is_directory=True)
+        _make_directory_alias(allowed / "link", target)
         with self.assertRaises(ArtifactWriteError):
             canonical_contained_path(allowed / "link" / "result.json", root=allowed)
         final_link = allowed / "result-link.json"
-        final_link.symlink_to(self.root / "outside.json")
+        outside = self.root / "outside.json"
+        outside.write_text("outside", encoding="utf-8")
+        _make_file_alias(final_link, outside)
         with self.assertRaises(ArtifactWriteError):
             canonical_contained_path(final_link, root=allowed)
 
@@ -374,10 +494,13 @@ class RedactedOutputTests(unittest.TestCase):
             output = root / "output.json"
             write_redacted_output(output, {"generation": 1}, allowed_root=root)
             prior = output.read_bytes()
-            with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.os.replace",
-                side_effect=OSError("injected"),
-            ):
+            target = (
+                "nac_bff.activation_security_windows."
+                "WindowsSecureDirectorySession.atomic_write"
+                if os.name == "nt"
+                else "src.notary_kg.business_case_type_migration_quarantine.os.replace"
+            )
+            with mock.patch(target, side_effect=OSError("injected")):
                 with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                     write_redacted_output(output, {"generation": 2}, allowed_root=root)
             self.assertEqual(prior, output.read_bytes())
@@ -393,6 +516,30 @@ class RedactedOutputTests(unittest.TestCase):
             replaced_output = False
             failed = False
 
+            if os.name == "nt":
+                real_atomic_write = WindowsSecureDirectorySession.atomic_write
+
+                def fail_windows_post_replace(session, name, payload):
+                    nonlocal failed
+                    result = real_atomic_write(session, name, payload)
+                    if b'"generation":2' in payload and not failed:
+                        failed = True
+                        raise SecurityBoundaryError(
+                            "INJECTED_DURABILITY_FAILURE"
+                        )
+                    return result
+
+                contexts = (
+                    mock.patch.object(
+                        WindowsSecureDirectorySession,
+                        "atomic_write",
+                        autospec=True,
+                        side_effect=fail_windows_post_replace,
+                    ),
+                )
+            else:
+                contexts = ()
+
             def observe_replace(source, destination, **kwargs):
                 nonlocal replaced_output
                 result = real_replace(source, destination, **kwargs)
@@ -407,16 +554,20 @@ class RedactedOutputTests(unittest.TestCase):
                     raise OSError("injected post-replace fsync failure")
                 return real_fsync(descriptor)
 
-            with (
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.replace",
-                    side_effect=observe_replace,
-                ),
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
-                    side_effect=fail_post_replace_fsync,
-                ),
-            ):
+            if os.name != "nt":
+                contexts = (
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.replace",
+                        side_effect=observe_replace,
+                    ),
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
+                        side_effect=fail_post_replace_fsync,
+                    ),
+                )
+            with ExitStack() as stack:
+                for context in contexts:
+                    stack.enter_context(context)
                 with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                     write_redacted_output(output, {"generation": 2}, allowed_root=root)
 
@@ -431,6 +582,28 @@ class RedactedOutputTests(unittest.TestCase):
             real_fsync = os.fsync
             directory_fsyncs = 0
 
+            if os.name == "nt":
+                real_delete = WindowsSecureDirectorySession.delete_child
+
+                def fail_previous_cleanup(session, name):
+                    nonlocal directory_fsyncs
+                    if name == ".output.json.previous":
+                        directory_fsyncs += 1
+                        raise SecurityBoundaryError("INJECTED_CLEANUP_FAILURE")
+                    return real_delete(session, name)
+
+                patcher = mock.patch.object(
+                    WindowsSecureDirectorySession,
+                    "delete_child",
+                    autospec=True,
+                    side_effect=fail_previous_cleanup,
+                )
+            else:
+                patcher = mock.patch(
+                    "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
+                    side_effect=fail_cleanup_fsync,
+                )
+
             def fail_cleanup_fsync(descriptor):
                 nonlocal directory_fsyncs
                 if stat.S_ISDIR(os.fstat(descriptor).st_mode):
@@ -439,13 +612,10 @@ class RedactedOutputTests(unittest.TestCase):
                         raise OSError("injected previous-marker cleanup fsync failure")
                 return real_fsync(descriptor)
 
-            with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
-                side_effect=fail_cleanup_fsync,
-            ):
+            with patcher:
                 write_redacted_output(output, {"generation": 2}, allowed_root=root)
 
-            self.assertEqual(3, directory_fsyncs)
+            self.assertEqual(1 if os.name == "nt" else 3, directory_fsyncs)
             self.assertEqual({"generation": 2}, json.loads(output.read_bytes()))
 
     def test_output_writers_serialize_on_sibling_lock(self):
@@ -457,8 +627,13 @@ class RedactedOutputTests(unittest.TestCase):
             second_attempted = threading.Event()
             second_completed = threading.Event()
             errors = []
-            real_atomic = quarantine_module._atomic_replace_json_at
-            real_flock = __import__("fcntl").flock
+            atomic_name = (
+                "_atomic_replace_json_windows"
+                if os.name == "nt"
+                else "_atomic_replace_json_at"
+            )
+            real_atomic = getattr(quarantine_module, atomic_name)
+            real_lock = quarantine_module.lock_exclusive
 
             def hold_first_writer(parent_fd, name, value):
                 if threading.current_thread().name == "first-output-writer":
@@ -467,10 +642,10 @@ class RedactedOutputTests(unittest.TestCase):
                         raise AssertionError("first writer was not released")
                 return real_atomic(parent_fd, name, value)
 
-            def observe_flock(descriptor, operation):
+            def observe_lock(descriptor, *, nonblocking):
                 if threading.current_thread().name == "second-output-writer":
                     second_attempted.set()
-                return real_flock(descriptor, operation)
+                return real_lock(descriptor, nonblocking=nonblocking)
 
             def write(generation, completed=None):
                 try:
@@ -487,12 +662,13 @@ class RedactedOutputTests(unittest.TestCase):
 
             with (
                 mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine._atomic_replace_json_at",
+                    "src.notary_kg.business_case_type_migration_quarantine."
+                    + atomic_name,
                     side_effect=hold_first_writer,
                 ),
                 mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.fcntl.flock",
-                    side_effect=observe_flock,
+                    "src.notary_kg.business_case_type_migration_quarantine.lock_exclusive",
+                    side_effect=observe_lock,
                 ),
             ):
                 first = threading.Thread(
@@ -533,6 +709,32 @@ class RedactedOutputTests(unittest.TestCase):
             replacement_visible = False
             swapped = False
 
+            if os.name == "nt":
+                real_atomic_write = WindowsSecureDirectorySession.atomic_write
+
+                def swap_windows_payload(session, name, payload):
+                    nonlocal swapped
+                    if b'"generation":2' in payload and not swapped:
+                        swapped = True
+                        real_atomic_write(
+                            session, name, b'{"owner":"other"}\n'
+                        )
+                        raise SecurityBoundaryError(
+                            "INJECTED_POST_SWAP_FAILURE"
+                        )
+                    return real_atomic_write(session, name, payload)
+
+                contexts = (
+                    mock.patch.object(
+                        WindowsSecureDirectorySession,
+                        "atomic_write",
+                        autospec=True,
+                        side_effect=swap_windows_payload,
+                    ),
+                )
+            else:
+                contexts = ()
+
             def observe_replace(source, destination, **kwargs):
                 nonlocal replacement_visible
                 result = real_replace(source, destination, **kwargs)
@@ -552,16 +754,20 @@ class RedactedOutputTests(unittest.TestCase):
                     raise OSError("injected post-swap durability failure")
                 return real_fsync(descriptor)
 
-            with (
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.replace",
-                    side_effect=observe_replace,
-                ),
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
-                    side_effect=swap_before_failed_fsync,
-                ),
-            ):
+            if os.name != "nt":
+                contexts = (
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.replace",
+                        side_effect=observe_replace,
+                    ),
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
+                        side_effect=swap_before_failed_fsync,
+                    ),
+                )
+            with ExitStack() as stack:
+                for context in contexts:
+                    stack.enter_context(context)
                 with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                     write_redacted_output(output, {"generation": 2}, allowed_root=root)
 
@@ -582,8 +788,15 @@ class RedactedOutputTests(unittest.TestCase):
             prior = output.read_bytes()
             output.replace(previous)
 
+            atomic_target = (
+                "src.notary_kg.business_case_type_migration_quarantine."
+                "_atomic_replace_json_windows"
+                if os.name == "nt"
+                else "src.notary_kg.business_case_type_migration_quarantine."
+                "_atomic_replace_json_at"
+            )
             with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine._atomic_replace_json_at",
+                atomic_target,
                 side_effect=OSError("stop after recovery"),
             ):
                 with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
@@ -601,7 +814,7 @@ class RedactedOutputTests(unittest.TestCase):
             write_redacted_output(output, {"generation": 1}, allowed_root=root)
             prior = output.read_bytes()
             external.write_text("external", encoding="utf-8")
-            previous.symlink_to(external)
+            _make_file_alias(previous, external)
 
             with self.assertRaises(ArtifactWriteError):
                 write_redacted_output(output, {"generation": 2}, allowed_root=root)
@@ -615,7 +828,7 @@ class RedactedOutputTests(unittest.TestCase):
             output = root / "output.json"
             external = root / "external.lock"
             external.write_text("external", encoding="utf-8")
-            (root / ".output.json.lock").symlink_to(external)
+            _make_file_alias(root / ".output.json.lock", external)
 
             with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                 write_redacted_output(output, {"generation": 1}, allowed_root=root)
@@ -630,7 +843,7 @@ class RedactedOutputTests(unittest.TestCase):
             target = root / "target.json"
             target.write_text("retained", encoding="utf-8")
             linked = root / "linked.json"
-            linked.symlink_to(target)
+            _make_file_alias(linked, target)
             with self.assertRaises(ArtifactWriteError):
                 write_redacted_output(linked, {}, allowed_root=root)
             self.assertEqual("retained", target.read_text(encoding="utf-8"))
@@ -648,10 +861,19 @@ class RedactedOutputTests(unittest.TestCase):
                     return None
                 return real_mkdir(name, mode=mode, dir_fd=dir_fd)
 
-            with mock.patch(
-                "src.notary_kg.business_case_type_migration_quarantine.os.mkdir",
-                side_effect=replace_nested_with_symlink,
-            ):
+            if os.name == "nt":
+                _make_directory_alias(root / "nested", external)
+                context = mock.patch.object(
+                    quarantine_module,
+                    "_MAX_DIRECTORY_ENTRIES",
+                    quarantine_module._MAX_DIRECTORY_ENTRIES,
+                )
+            else:
+                context = mock.patch(
+                    "src.notary_kg.business_case_type_migration_quarantine.os.mkdir",
+                    side_effect=replace_nested_with_symlink,
+                )
+            with context:
                 with self.assertRaisesRegex(ArtifactWriteError, "^artifact_write_failed$"):
                     write_redacted_output(
                         root / "nested" / "output.json",
@@ -676,22 +898,36 @@ class RedactedOutputTests(unittest.TestCase):
                 events.append(("fsync", None, os.fstat(descriptor).st_ino))
                 return real_fsync(descriptor)
 
-            with (
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.mkdir",
-                    side_effect=observe_mkdir,
-                ),
-                mock.patch(
-                    "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
-                    side_effect=observe_fsync,
-                ),
-            ):
+            contexts = (
+                ()
+                if os.name == "nt"
+                else (
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.mkdir",
+                        side_effect=observe_mkdir,
+                    ),
+                    mock.patch(
+                        "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
+                        side_effect=observe_fsync,
+                    ),
+                )
+            )
+            with ExitStack() as stack:
+                for context in contexts:
+                    stack.enter_context(context)
                 write_redacted_output(
                     root / "one" / "two" / "output.json",
                     {"generation": 1},
                     allowed_root=root,
                 )
 
+            if os.name == "nt":
+                self.assertTrue((root / "one" / "two").is_dir())
+                self.assertEqual(
+                    {"generation": 1},
+                    json.loads((root / "one" / "two" / "output.json").read_bytes()),
+                )
+                return
             mkdir_positions = [index for index, event in enumerate(events) if event[0] == "mkdir"]
             self.assertEqual(2, len(mkdir_positions))
             for index in mkdir_positions:

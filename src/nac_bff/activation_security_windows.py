@@ -15,6 +15,7 @@ from typing import BinaryIO, Iterator
 from .activation_security_backend import (
     BoundFileSnapshot,
     OperatorBinding,
+    PrivateFileMetadata,
     ProcessResult,
     ProcessSpec,
     SecureDirectoryBinding,
@@ -681,7 +682,10 @@ def _sid_string(sid: int) -> str:
 
 
 def _security_hashes(
-    handle: int, *, require_current_owner: bool
+    handle: int,
+    *,
+    require_current_owner: bool,
+    require_restrictive_dacl: bool = True,
 ) -> tuple[str, str, str]:
     owner = wintypes.LPVOID()
     dacl = wintypes.LPVOID()
@@ -713,7 +717,12 @@ def _security_hashes(
         if dacl_size < 8:
             raise SecurityBoundaryError("FILE_DACL_INVALID")
         dacl_bytes = ctypes.string_at(dacl, dacl_size)
-        _require_restrictive_dacl(dacl.value, dacl_bytes)
+        if require_restrictive_dacl:
+            _require_restrictive_dacl(
+                dacl.value,
+                dacl_bytes,
+                owner_sid=_sid_string(owner.value),
+            )
         return (
             hashlib.sha256(owner_bytes).hexdigest(),
             hashlib.sha256(descriptor_bytes).hexdigest(),
@@ -723,7 +732,12 @@ def _security_hashes(
         kernel32.LocalFree(descriptor)
 
 
-def _require_restrictive_dacl(dacl: int, raw: bytes) -> None:
+def _require_restrictive_dacl(
+    dacl: int,
+    raw: bytes,
+    *,
+    owner_sid: str,
+) -> None:
     ace_count = int.from_bytes(raw[4:6], "little")
     writable_principals = {
         _current_sid_string(),
@@ -731,6 +745,7 @@ def _require_restrictive_dacl(dacl: int, raw: bytes) -> None:
         "S-1-3-4",  # OWNER_RIGHTS, scoped to the bound owner
         "S-1-5-18",  # LOCAL_SYSTEM
         "S-1-5-32-544",  # BUILTIN\\Administrators
+        owner_sid,
     }
     write_mask = (
         0x00000002
@@ -792,7 +807,13 @@ def _duplicate_for_python(handle: int) -> BinaryIO:
     return os.fdopen(descriptor, "rb", closefd=True)
 
 
-def _snapshot(handle: int, *, require_current_owner: bool = True) -> BoundFileSnapshot:
+def _snapshot(
+    handle: int,
+    *,
+    require_current_owner: bool = True,
+    require_restrictive_dacl: bool = True,
+    require_single_link: bool = True,
+) -> BoundFileSnapshot:
     information = BY_HANDLE_FILE_INFORMATION()
     if not kernel32.GetFileInformationByHandle(handle, ctypes.byref(information)):
         _raise_last_error("FILE_INFORMATION_READ_FAILED")
@@ -803,7 +824,7 @@ def _snapshot(handle: int, *, require_current_owner: bool = True) -> BoundFileSn
         raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
     if information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
         raise SecurityBoundaryError("REGULAR_FILE_REQUIRED")
-    if information.nNumberOfLinks != 1:
+    if require_single_link and information.nNumberOfLinks != 1:
         raise SecurityBoundaryError("FILE_LINK_COUNT_INVALID")
     if not kernel32.SetFilePointerEx(handle, 0, None, 0):
         _raise_last_error("FILE_SEEK_FAILED")
@@ -812,7 +833,9 @@ def _snapshot(handle: int, *, require_current_owner: bool = True) -> BoundFileSn
     if not kernel32.SetFilePointerEx(handle, 0, None, 0):
         _raise_last_error("FILE_SEEK_FAILED")
     owner_hash, descriptor_hash, dacl_hash = _security_hashes(
-        handle, require_current_owner=require_current_owner
+        handle,
+        require_current_owner=require_current_owner,
+        require_restrictive_dacl=require_restrictive_dacl,
     )
     canonical = _final_path(handle).casefold().encode("utf-8")
     return BoundFileSnapshot(
@@ -828,6 +851,35 @@ def _snapshot(handle: int, *, require_current_owner: bool = True) -> BoundFileSn
     )
 
 
+def _metadata_snapshot(
+    handle: int, *, require_current_owner: bool = True
+) -> PrivateFileMetadata:
+    information = BY_HANDLE_FILE_INFORMATION()
+    if not kernel32.GetFileInformationByHandle(handle, ctypes.byref(information)):
+        _raise_last_error("FILE_INFORMATION_READ_FAILED")
+    if kernel32.GetFileType(handle) != FILE_TYPE_DISK:
+        raise SecurityBoundaryError("NON_DISK_PATH_REJECTED")
+    reparse = bool(information.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+    if reparse:
+        raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
+    if information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
+        raise SecurityBoundaryError("REGULAR_FILE_REQUIRED")
+    if information.nNumberOfLinks != 1:
+        raise SecurityBoundaryError("FILE_LINK_COUNT_INVALID")
+    owner_hash, descriptor_hash, dacl_hash = _security_hashes(
+        handle, require_current_owner=require_current_owner
+    )
+    canonical = _final_path(handle).casefold().encode("utf-8")
+    return PrivateFileMetadata(
+        path_sha256=hashlib.sha256(canonical).hexdigest(),
+        volume_serial=information.dwVolumeSerialNumber,
+        file_id=(information.nFileIndexHigh << 32) | information.nFileIndexLow,
+        size=(information.nFileSizeHigh << 32) | information.nFileSizeLow,
+        owner_sid_sha256=owner_hash,
+        security_descriptor_sha256=descriptor_hash,
+        dacl_sha256=dacl_hash,
+        reparse_point=False,
+    )
 class WindowsRunLock:
     def __init__(
         self, handle: int, name: str, status: str, target_binding: str
@@ -908,6 +960,10 @@ class WindowsSecureDirectorySession:
             return None
         try:
             _require_requested_path_binding(handle, target)
+            system_toolchain = purpose in {
+                "process-image",
+                "toolchain-executable",
+            }
             snapshot = _snapshot(
                 handle,
                 require_current_owner=purpose not in {
@@ -915,6 +971,8 @@ class WindowsSecureDirectorySession:
                     "test-executable",
                     "toolchain-executable",
                 },
+                require_restrictive_dacl=True,
+                require_single_link=not system_toolchain,
             )
             if snapshot.volume_serial != self.binding.volume_serial:
                 raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
@@ -1063,6 +1121,58 @@ class WindowsSecureDirectorySession:
                     )
                 _close_handle(int(handle))
 
+    def create_exclusive(self, name: str, payload: bytes) -> BoundFileSnapshot:
+        target = self.canonical_child_path(name)
+        try:
+            handle = _open_relative_child(
+                self._handles[-1],
+                name,
+                desired_access=GENERIC_READ | GENERIC_WRITE | DELETE,
+                share_access=FILE_SHARE_READ,
+                create=True,
+            )
+        except SecurityBoundaryError as exc:
+            if exc.code.endswith(("_80", "_183")):
+                raise SecurityBoundaryError("SECURE_CHILD_ALREADY_EXISTS") from None
+            raise
+        assert handle is not None
+        try:
+            offset = 0
+            while offset < len(payload):
+                chunk = payload[offset : offset + 1024 * 1024]
+                buffer = ctypes.create_string_buffer(chunk)
+                written = wintypes.DWORD()
+                if not kernel32.WriteFile(
+                    handle,
+                    buffer,
+                    len(chunk),
+                    ctypes.byref(written),
+                    None,
+                ):
+                    _raise_last_error("FILE_WRITE_FAILED")
+                if written.value != len(chunk):
+                    raise SecurityBoundaryError("FILE_WRITE_INCOMPLETE")
+                offset += written.value
+            if not kernel32.FlushFileBuffers(handle):
+                _raise_last_error("FILE_FLUSH_FAILED")
+            _require_requested_path_binding(handle, target)
+            result = _snapshot(handle, require_current_owner=True)
+            if result.volume_serial != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
+            self.flush()
+            return result
+        except BaseException:
+            disposition = FILE_DISPOSITION_INFO(True)
+            kernel32.SetFileInformationByHandle(
+                handle,
+                4,
+                ctypes.byref(disposition),
+                ctypes.sizeof(disposition),
+            )
+            raise
+        finally:
+            _close_handle(handle)
+
     def append_and_flush(
         self, name: str, payload: bytes
     ) -> BoundFileSnapshot:
@@ -1152,6 +1262,7 @@ class WindowsActivationSecurityBackend:
             candidate.parent,
             create=False,
             require_current_owner=require_owner,
+            require_restrictive_dacl=require_owner,
         ) as session:
             result = session.inspect_optional_child(candidate.name, purpose)
             if result is None:
@@ -1167,6 +1278,48 @@ class WindowsActivationSecurityBackend:
             raise SecurityBoundaryError("FILE_HANDLE_INVALID")
         return _snapshot(int(handle), require_current_owner=True)
 
+    def inspect_open_file_metadata(
+        self, descriptor: int, purpose: str
+    ) -> PrivateFileMetadata:
+        del purpose
+        handle = msvcrt.get_osfhandle(descriptor)
+        if handle == INVALID_HANDLE_VALUE:
+            raise SecurityBoundaryError("FILE_HANDLE_INVALID")
+        return _metadata_snapshot(int(handle), require_current_owner=True)
+
+    def inspect_private_metadata(
+        self, path: Path, purpose: str
+    ) -> PrivateFileMetadata:
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
+        require_owner = purpose not in {
+            "process-image",
+            "test-executable",
+            "toolchain-executable",
+        }
+        with self.open_secure_directory(
+            candidate.parent,
+            create=False,
+            require_current_owner=require_owner,
+        ) as session:
+            handle = _open_relative_child(
+                session._handles[-1],
+                candidate.name,
+                desired_access=GENERIC_READ,
+                share_access=FILE_SHARE_READ,
+                create=False,
+            )
+            if handle is None:
+                raise SecurityBoundaryError("FILE_OPEN_FAILED_2")
+            try:
+                _require_requested_path_binding(handle, candidate)
+                return _metadata_snapshot(
+                    handle, require_current_owner=require_owner
+                )
+            finally:
+                _close_handle(handle)
+
     def validate_private_directory(self, path: Path) -> str:
         candidate = Path(path)
         if not candidate.is_absolute():
@@ -1180,6 +1333,7 @@ class WindowsActivationSecurityBackend:
         *,
         create: bool,
         require_current_owner: bool = True,
+        require_restrictive_dacl: bool = True,
     ) -> WindowsSecureDirectorySession:
         candidate = Path(path)
         if not candidate.is_absolute():
@@ -1208,6 +1362,12 @@ class WindowsActivationSecurityBackend:
                 if index:
                     _validate_child_name(component)
                     current /= component
+                path_attributes = kernel32.GetFileAttributesW(str(current))
+                if (
+                    path_attributes != INVALID_FILE_ATTRIBUTES
+                    and path_attributes & FILE_ATTRIBUTE_REPARSE_POINT
+                ):
+                    raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
                 desired_access = FILE_READ_ATTRIBUTES | (
                     READ_CONTROL
                     | (GENERIC_WRITE if require_current_owner else 0)
@@ -1217,7 +1377,7 @@ class WindowsActivationSecurityBackend:
                 )
                 share_access = FILE_SHARE_READ | FILE_SHARE_WRITE | (
                     FILE_SHARE_DELETE
-                    if index < final_index or not require_current_owner
+                    if index == 0 or not require_current_owner
                     else 0
                 )
                 if index == 0:
@@ -1270,7 +1430,9 @@ class WindowsActivationSecurityBackend:
                     ):
                         raise SecurityBoundaryError("SECURE_DIRECTORY_VOLUME_MISMATCH")
             owner, descriptor, dacl = _security_hashes(
-                handles[-1], require_current_owner=require_current_owner
+                handles[-1],
+                require_current_owner=require_current_owner,
+                require_restrictive_dacl=require_restrictive_dacl,
             )
             final_information = BY_HANDLE_FILE_INFORMATION()
             if not kernel32.GetFileInformationByHandle(
@@ -1323,6 +1485,83 @@ class WindowsActivationSecurityBackend:
             actual = _snapshot(
                 int(msvcrt.get_osfhandle(descriptor)),
                 require_current_owner=False,
+            )
+            if actual != expected_binding:
+                raise SecurityBoundaryError("FILE_BINDING_MISMATCH")
+            session.close()
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = -1
+                yield stream
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            session.close()
+
+    def inspect_bound_input_path(
+        self, path: Path, purpose: str
+    ) -> BoundFileSnapshot:
+        del purpose
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
+        with self.open_secure_directory(
+            candidate.parent,
+            create=False,
+            require_current_owner=False,
+            require_restrictive_dacl=False,
+        ) as session:
+            if session.binding.owner_sid_sha256 != self.current_operator_binding().sid_sha256:
+                raise SecurityBoundaryError("FILE_OWNER_MISMATCH")
+            handle = _open_relative_child(
+                session._handles[-1],
+                candidate.name,
+                desired_access=GENERIC_READ,
+                share_access=FILE_SHARE_READ,
+                create=False,
+            )
+            if handle is None:
+                raise SecurityBoundaryError("FILE_OPEN_FAILED_2")
+            try:
+                _require_requested_path_binding(handle, candidate)
+                return _snapshot(
+                    handle,
+                    require_current_owner=True,
+                    require_restrictive_dacl=False,
+                )
+            finally:
+                _close_handle(handle)
+
+    @contextmanager
+    def open_bound_input_read(
+        self, path: Path, expected_binding: BoundFileSnapshot
+    ) -> Iterator[BinaryIO]:
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
+        session = self.open_secure_directory(
+            candidate.parent,
+            create=False,
+            require_current_owner=False,
+            require_restrictive_dacl=False,
+        )
+        descriptor = -1
+        try:
+            if session.binding.owner_sid_sha256 != self.current_operator_binding().sid_sha256:
+                raise SecurityBoundaryError("FILE_OWNER_MISMATCH")
+            handle = _open_relative_child(
+                session._handles[-1],
+                candidate.name,
+                desired_access=GENERIC_READ,
+                share_access=FILE_SHARE_READ,
+                create=False,
+            )
+            if handle is None:
+                raise SecurityBoundaryError("FILE_OPEN_FAILED_2")
+            descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+            actual = _snapshot(
+                int(msvcrt.get_osfhandle(descriptor)),
+                require_current_owner=True,
+                require_restrictive_dacl=False,
             )
             if actual != expected_binding:
                 raise SecurityBoundaryError("FILE_BINDING_MISMATCH")

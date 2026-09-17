@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 from typing import Any, Mapping
 from uuid import UUID
@@ -107,7 +108,7 @@ WORM_BASELINE_SOURCE_PATHS = (
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_OBJECT_RE = re.compile(r"^[0-9a-f]{40}$")
-_GIT_EXECUTABLE = "/usr/bin/git"
+_GIT_EXECUTABLE = str(Path(shutil.which("git") or "/usr/bin/git").resolve())
 _GIT_HEAD_ARGV = ("rev-parse", "--verify", "HEAD")
 _GIT_TREE_ARGV = ("rev-parse", "--verify", "HEAD^{tree}")
 _GIT_STATUS_ARGV = ("status", "--porcelain=v1", "--untracked-files=all")
@@ -729,6 +730,45 @@ def _git_snapshot(root: Path) -> tuple[str, str, bool]:
 def _git_output(root: Path, arguments: tuple[str, ...]) -> str:
     if arguments not in _GIT_ALLOWED_ARGV:
         raise ValueError("SOURCE_CONTROL_SNAPSHOT_INVALID")
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                ProcessSpec,
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            executable = Path(_GIT_EXECUTABLE)
+            executable_sha256 = backend.inspect_private_path(
+                executable,
+                purpose="toolchain-executable",
+            ).sha256
+            environment = {
+                name: os.environ[name]
+                for name in ("SystemRoot", "TEMP", "TMP", "USERPROFILE", "HOME")
+                if name in os.environ
+            }
+            result = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=executable,
+                    arguments=(*_GIT_BASE_ARGV[1:], "-C", str(root), *arguments),
+                    cwd=root,
+                    environment=environment,
+                    executable_sha256=executable_sha256,
+                    timeout_seconds=15.0,
+                    maximum_output_bytes=1024 * 1024,
+                    allowed_exit_codes=tuple(range(256)),
+                )
+            )
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            raise ValueError("SOURCE_CONTROL_SNAPSHOT_INVALID") from None
+        if result.exit_code != 0:
+            raise ValueError("SOURCE_CONTROL_SNAPSHOT_INVALID")
+        try:
+            return result.stdout.decode("utf-8", errors="strict").strip()
+        except UnicodeError:
+            raise ValueError("SOURCE_CONTROL_SNAPSHOT_INVALID") from None
     try:
         result = subprocess.run(
             [*_GIT_BASE_ARGV, "-C", str(root), *arguments],

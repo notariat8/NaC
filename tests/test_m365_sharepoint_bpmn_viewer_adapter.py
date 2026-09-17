@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -262,7 +263,10 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             target = Path(temp_dir) / "canonical.bpmn"
             target.write_bytes(adapter_validator.CANONICAL_BPMN.read_bytes())
             fixture = Path(temp_dir) / "fixture.bpmn"
-            fixture.symlink_to(target)
+            if os.name == "nt":
+                os.link(target, fixture)
+            else:
+                fixture.symlink_to(target)
             with patch.object(
                 adapter_validator, "SPFX_BPMN_TEST_FIXTURE", fixture
             ):

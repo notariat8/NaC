@@ -1637,18 +1637,48 @@ def _run_azure_cli(
     try:
         with ExitStack() as stack:
             stack.enter_context(runtime)
-            artifact_sealed = stack.enter_context(
-                sealed_artifacts(
-                    tuple(
-                        (path, expected_sha256)
-                        for _, (path, expected_sha256) in bindings
-                    )
+            if os.name == "nt" and bindings:
+                from nac_bff.activation_security_backend import (
+                    SecurityBoundaryError,
+                    get_platform_security_backend,
                 )
-            ) if bindings else None
-            replacements = {
-                argument: artifact_sealed.paths[index]
-                for index, (argument, _) in enumerate(bindings)
-            } if artifact_sealed is not None else {}
+
+                backend = get_platform_security_backend()
+                replacements = {}
+                for argument, (path, expected_sha256) in bindings:
+                    try:
+                        binding = backend.inspect_private_path(
+                            path, purpose="prepared-artifact"
+                        )
+                        if binding.sha256 != expected_sha256:
+                            raise SecurityBoundaryError(
+                                "PREPARED_ARTIFACT_HASH_MISMATCH"
+                            )
+                        stack.enter_context(backend.open_bound_read(path, binding))
+                    except (OSError, SecurityBoundaryError) as exc:
+                        raise SealedToolchainError(
+                            "AZURE_CLI_ARTIFACT_BINDING_FAILED"
+                        ) from exc
+                    replacements[argument] = path
+                artifact_fds: tuple[int, ...] = ()
+            else:
+                artifact_sealed = stack.enter_context(
+                    sealed_artifacts(
+                        tuple(
+                            (path, expected_sha256)
+                            for _, (path, expected_sha256) in bindings
+                        )
+                    )
+                ) if bindings else None
+                replacements = {
+                    argument: artifact_sealed.paths[index]
+                    for index, (argument, _) in enumerate(bindings)
+                } if artifact_sealed is not None else {}
+                artifact_fds = (
+                    artifact_sealed.pass_fds
+                    if artifact_sealed is not None
+                    else ()
+                )
             bound_argv = [
                 (
                     f"@{replacements[token[1:]]}"
@@ -1657,11 +1687,6 @@ def _run_azure_cli(
                 )
                 for token in azure_argv
             ]
-            artifact_fds = (
-                artifact_sealed.pass_fds
-                if artifact_sealed is not None
-                else ()
-            )
             if os.name == "nt":
                 from nac_bff.activation_security_backend import (
                     ProcessSpec,

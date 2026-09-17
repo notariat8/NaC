@@ -4,6 +4,7 @@ import base64
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import secrets
@@ -309,6 +310,29 @@ def broker_binding_fingerprint(binding_id: str, attestation: bytes) -> str:
 
 
 def _read_credential(path: Path, *, private: bool) -> bytes:
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(
+                path,
+                purpose="credential" if private else "artifact",
+            )
+            if not 1 <= binding.size <= _MAX_CREDENTIAL_BYTES:
+                raise SecurityBoundaryError("SECURE_CREDENTIAL_SIZE_INVALID")
+            with backend.open_bound_read(path, binding) as handle:
+                value = handle.read(_MAX_CREDENTIAL_BYTES + 1)
+            if len(value) != binding.size:
+                raise SecurityBoundaryError("SECURE_CREDENTIAL_BINDING_MISMATCH")
+            return value
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            raise PerformanceLeaseBrokerAuthError(
+                "BFF_APP_CREDENTIAL_INVALID"
+            ) from None
     try:
         metadata = path.stat(follow_symlinks=False)
         mode = stat.S_IMODE(metadata.st_mode)

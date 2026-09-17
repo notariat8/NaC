@@ -162,6 +162,6 @@ def _text_list(value: Any) -> list[str]:
 
 def _catalog_source(repo_root: Path, source_path: Path) -> str:
     try:
-        return str(source_path.relative_to(repo_root))
+        return source_path.relative_to(repo_root).as_posix()
     except ValueError:
-        return str(source_path)
+        return source_path.as_posix()

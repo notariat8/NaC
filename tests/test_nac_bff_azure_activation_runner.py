@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from nac_runtime.platform_file_lock import lock_exclusive, unlock
+from nac_bff.activation_security_backend import get_platform_security_backend
 
 from nac_bff.azure_activation_runner import (
     ActivationStepError,
@@ -26,6 +27,7 @@ from nac_bff.azure_activation_runner import (
     _load_existing_evidence,
     _read_secure_canonical_json,
     _read_lock_marker_descriptor,
+    _release_descriptor_lock,
     _sha256_json,
     _atomic_json_write,
     _state_matches_chain,
@@ -206,6 +208,14 @@ def _legacy_host_lock_path(root: Path) -> Path:
 
 
 def _read_test_lock_marker(path: Path) -> dict | None:
+    if os.name == "nt":
+        backend = get_platform_security_backend()
+        backend.inspect_private_path(path, purpose="activation-lock")
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+        try:
+            return _read_lock_marker_descriptor(descriptor)
+        finally:
+            os.close(descriptor)
     descriptor = os.open(
         path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
     )
@@ -213,6 +223,27 @@ def _read_test_lock_marker(path: Path) -> dict | None:
         return _read_lock_marker_descriptor(descriptor)
     finally:
         os.close(descriptor)
+
+
+def _release_test_lock(descriptor: int) -> None:
+    if os.name == "nt":
+        _release_descriptor_lock(descriptor)
+    else:
+        unlock(descriptor)
+
+
+def _assert_private_file(testcase: unittest.TestCase, path: Path) -> None:
+    if os.name == "nt":
+        binding = get_platform_security_backend().inspect_private_path(
+            path, purpose="activation-artifact"
+        )
+        testcase.assertFalse(binding.reparse_point)
+        testcase.assertEqual(binding.size, path.stat().st_size)
+        testcase.assertEqual(
+            binding.sha256, hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+    else:
+        testcase.assertEqual(oct(path.stat().st_mode & 0o777), "0o600")
 
 
 def _receipt_path(root: Path) -> Path:
@@ -239,6 +270,15 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         self.assertNotEqual(_binding_sha256_json(binding), _sha256_json(binding))
 
     def test_directory_fsync_tolerates_unsupported_filesystem(self) -> None:
+        if os.name == "nt":
+            backend = SimpleNamespace(flush_directory=unittest.mock.Mock())
+            with patch(
+                "nac_bff.azure_activation_runner.get_platform_security_backend",
+                return_value=backend,
+            ):
+                _fsync_directory(Path("C:/mnt/windows-backed"))
+            backend.flush_directory.assert_called_once()
+            return
         with (
             patch("nac_bff.azure_activation_runner.os.open", return_value=7),
             patch(
@@ -253,6 +293,21 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         close.assert_called_once_with(7)
 
     def test_directory_fsync_propagates_unexpected_errors(self) -> None:
+        if os.name == "nt":
+            backend = SimpleNamespace(
+                flush_directory=unittest.mock.Mock(
+                    side_effect=OSError(errno.EIO, "io error")
+                )
+            )
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner.get_platform_security_backend",
+                    return_value=backend,
+                ),
+                self.assertRaises(OSError),
+            ):
+                _fsync_directory(Path("C:/mnt/broken"))
+            return
         with (
             patch("nac_bff.azure_activation_runner.os.open", return_value=7),
             patch(
@@ -267,6 +322,20 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
         close.assert_called_once_with(7)
 
     def test_clean_tree_uses_mount_tolerant_status_timeout(self) -> None:
+        if os.name == "nt":
+            with (
+                patch(
+                    "nac_bff.azure_activation_runner._trusted_git_executable",
+                    return_value="C:/Program Files/Git/cmd/git.exe",
+                ),
+                patch(
+                    "nac_bff.azure_activation_runner._run_windows_git",
+                    return_value=(0, ""),
+                ) as run,
+            ):
+                self.assertTrue(_clean_tree(Path("C:/repo")))
+            self.assertEqual(run.call_args.kwargs["timeout"], 60)
+            return
         with (
             patch(
                 "nac_bff.azure_activation_runner._trusted_git_executable",
@@ -818,7 +887,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 _receipt_path(root),
                 *event_paths,
             ]:
-                self.assertEqual(oct(path.stat().st_mode & 0o777), "0o600")
+                _assert_private_file(self, path)
 
         self.assertEqual(result["status"], "PASSED")
         self.assertEqual(result["started_at_utc"], "2026-07-14T12:00:00Z")
@@ -1707,6 +1776,11 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 / "activation.finalization-reconciled.redacted.json"
             )
             self.assertTrue(reconciled_path.exists())
+            reconciled_marker = json.loads(reconciled_path.read_text())
+            self.assertTrue(
+                reconciled_marker["committed_artifacts_valid"],
+                reconciled_marker,
+            )
             self.assertFalse(
                 _legacy_lock_path(root).read_bytes().endswith(b"\n")
             )
@@ -1882,7 +1956,7 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                 )
             )
             self.assertEqual(len(receipts), 1)
-            self.assertEqual(oct(receipts[0].stat().st_mode & 0o777), "0o600")
+            _assert_private_file(self, receipts[0])
 
         self.assertEqual(first["status"], "PASSED")
         self.assertEqual(
@@ -1935,7 +2009,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             target = host / "attacker-controlled.json"
             target.write_text("{}\n")
             receipt_path.unlink()
-            receipt_path.symlink_to(target)
+            if os.name == "nt":
+                os.link(target, receipt_path)
+            else:
+                receipt_path.symlink_to(target)
 
             port = _Port()
             result = self._run(
@@ -2050,7 +2127,11 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
                     {"activation_hash": HASH, "status": "RELEASED"},
                 )
                 descriptor = os.open(
-                    path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
+                    path,
+                    os.O_RDWR
+                    | getattr(os, "O_NOFOLLOW", 0)
+                    | getattr(os, "O_CLOEXEC", 0)
+                    | getattr(os, "O_BINARY", 0),
                 )
                 try:
                     lock_exclusive(descriptor, nonblocking=True)
@@ -2067,14 +2148,14 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             self.assertIsNotNone(first)
             assert first is not None
             _write_lock_marker(first, HASH, "RELEASED")
-            unlock(first)
+            _release_test_lock(first)
             os.close(first)
 
             next_hash = "9" * 64
             second = _acquire_lock(path, next_hash)
             self.assertIsNotNone(second)
             assert second is not None
-            unlock(second)
+            _release_test_lock(second)
             os.close(second)
 
             self.assertIsNone(_acquire_lock(path, "8" * 64))
@@ -2291,22 +2372,44 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             backup = root / "original.redacted.json"
             _atomic_json_write(path, {"status": "ORIGINAL"})
             _atomic_json_write(replacement, {"status": "REPLACEMENT"})
-            original_open = os.open
             swapped = False
 
-            def swap_before_open(target, flags, *args, **kwargs):
-                nonlocal swapped
-                if Path(target) == path and not swapped:
-                    swapped = True
-                    path.rename(backup)
-                    replacement.rename(path)
-                return original_open(target, flags, *args, **kwargs)
+            if os.name == "nt":
+                delegate = get_platform_security_backend()
 
-            with patch(
-                "nac_bff.azure_activation_runner.os.open",
-                side_effect=swap_before_open,
-            ):
-                loaded = _read_secure_canonical_json(path)
+                class SwappingBackend:
+                    def __getattr__(self, name):
+                        return getattr(delegate, name)
+
+                    def open_bound_read(self, target, binding):
+                        nonlocal swapped
+                        if Path(target) == path and not swapped:
+                            swapped = True
+                            path.rename(backup)
+                            replacement.rename(path)
+                        return delegate.open_bound_read(target, binding)
+
+                with patch(
+                    "nac_bff.azure_activation_runner.get_platform_security_backend",
+                    return_value=SwappingBackend(),
+                ):
+                    loaded = _read_secure_canonical_json(path)
+            else:
+                original_open = os.open
+
+                def swap_before_open(target, flags, *args, **kwargs):
+                    nonlocal swapped
+                    if Path(target) == path and not swapped:
+                        swapped = True
+                        path.rename(backup)
+                        replacement.rename(path)
+                    return original_open(target, flags, *args, **kwargs)
+
+                with patch(
+                    "nac_bff.azure_activation_runner.os.open",
+                    side_effect=swap_before_open,
+                ):
+                    loaded = _read_secure_canonical_json(path)
 
             self.assertTrue(swapped)
             self.assertIsNone(loaded)
@@ -2319,7 +2422,10 @@ class AzureBffActivationRunnerTests(unittest.TestCase):
             event_path = sorted(ledger_dir.glob("*.redacted.json"))[0]
             target = event_path.with_suffix(".target")
             event_path.rename(target)
-            event_path.symlink_to(target)
+            if os.name == "nt":
+                os.link(target, event_path)
+            else:
+                event_path.symlink_to(target)
 
             events, error = _validate_event_chain(ledger_dir)
 

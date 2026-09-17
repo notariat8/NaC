@@ -20,6 +20,12 @@ from uuid import UUID, uuid4
 
 from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
+from .activation_security_backend import (
+    SecureDirectorySession,
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
+
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
@@ -108,6 +114,46 @@ class PerformanceExecutionFence:
 
     @contextmanager
     def hold(self) -> Iterator[None]:
+        if os.name == "nt":
+            backend = get_platform_security_backend()
+            parent: SecureDirectorySession | None = None
+            run_lock = None
+            try:
+                run_lock = backend.acquire_run_lock(
+                    hashlib.sha256(
+                        str(self._path.resolve()).casefold().encode("utf-8")
+                    ).hexdigest()
+                )
+                parent = backend.open_secure_directory(
+                    self._path.parent,
+                    create=True,
+                )
+                descriptor = parent.open_regular_descriptor(
+                    self._path.name,
+                    create=True,
+                )
+                os.close(descriptor)
+            except SecurityBoundaryError as error:
+                if run_lock is not None:
+                    run_lock.close()
+                if parent is not None:
+                    try:
+                        parent.close()
+                    except SecurityBoundaryError:
+                        pass
+                if error.code == "RUN_LOCK_HELD":
+                    raise AzurePerformanceStoragePortError(
+                        "AZURE_PERFORMANCE_EXECUTION_ALREADY_ACTIVE"
+                    ) from None
+                raise AzurePerformanceStoragePortError(
+                    "AZURE_PERFORMANCE_EXECUTION_FENCE_PATH_UNTRUSTED"
+                ) from None
+            try:
+                yield
+            finally:
+                run_lock.close()
+                parent.close()
+            return
         try:
             parent_fd = _open_root_anchored_private_parent(
                 self._path, create=True
@@ -144,7 +190,7 @@ class PerformanceExecutionFence:
                     unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
-            os.close(parent_fd)
+            _close_private_parent(parent_fd)
 
 
 class DurableLeaseBindingHandoff:
@@ -220,7 +266,9 @@ class DurableLeaseBindingHandoff:
             )
 
     @contextmanager
-    def _locked_parent(self, *, create: bool) -> Iterator[int]:
+    def _locked_parent(
+        self, *, create: bool
+    ) -> Iterator[int | SecureDirectorySession]:
         try:
             parent_fd = _open_root_anchored_private_parent(
                 self._path, create=create
@@ -252,9 +300,21 @@ class DurableLeaseBindingHandoff:
                     unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
-            os.close(parent_fd)
+            _close_private_parent(parent_fd)
 
-    def _read_binding(self, parent_fd: int) -> AzureBlobLeaseBinding | None:
+    def _read_binding(
+        self, parent_fd: int | SecureDirectorySession
+    ) -> AzureBlobLeaseBinding | None:
+        if not isinstance(parent_fd, int):
+            try:
+                raw = parent_fd.read_bounded(self._path.name, _MAX_HANDOFF_BYTES)
+            except SecurityBoundaryError:
+                raise AzurePerformanceStoragePortError(
+                    "AZURE_PERFORMANCE_LEASE_HANDOFF_INVALID"
+                ) from None
+            if raw is None:
+                return None
+            return self._decode_binding(raw)
         try:
             metadata = os.stat(
                 self._path.name, dir_fd=parent_fd, follow_symlinks=False
@@ -280,10 +340,11 @@ class DurableLeaseBindingHandoff:
             ) from None
         finally:
             os.close(descriptor)
+        return self._decode_binding(raw)
+
+    def _decode_binding(self, raw: bytes) -> AzureBlobLeaseBinding:
         try:
-            record = json.loads(
-                raw.decode("ascii"), object_pairs_hook=_unique_json_object
-            )
+            record = json.loads(raw.decode("ascii"), object_pairs_hook=_unique_json_object)
             if (
                 not isinstance(record, dict)
                 or set(record) != {"schema_version", "binding", "binding_sha256"}
@@ -314,8 +375,20 @@ class DurableLeaseBindingHandoff:
             "binding_sha256": _sha256_json(payload),
         }
 
-    def _atomic_commit(self, parent_fd: int, record: Mapping[str, Any]) -> None:
+    def _atomic_commit(
+        self,
+        parent_fd: int | SecureDirectorySession,
+        record: Mapping[str, Any],
+    ) -> None:
         raw = _canonical_json(record).encode("ascii")
+        if not isinstance(parent_fd, int):
+            try:
+                parent_fd.create_exclusive(self._path.name, raw)
+            except SecurityBoundaryError:
+                raise AzurePerformanceStoragePortError(
+                    "AZURE_PERFORMANCE_LEASE_HANDOFF_WRITE_FAILED"
+                ) from None
+            return
         temporary = f".{self._path.name}.{secrets.token_hex(16)}.tmp"
         descriptor: int | None = None
         linked = False
@@ -565,17 +638,34 @@ class AttestedAzureStorageTokenProvider:
         )
 
 
-def _open_private_file_at(parent_fd: int, name: str, *, create: bool) -> int:
+def _open_private_file_at(
+    parent_fd: int | SecureDirectorySession,
+    name: str,
+    *,
+    create: bool,
+) -> int:
     if (
         not isinstance(name, str)
         or name in {"", ".", ".."}
         or "/" in name
         or "\\" in name
-        or not hasattr(os, "O_NOFOLLOW")
+        or isinstance(parent_fd, int) and not hasattr(os, "O_NOFOLLOW")
     ):
         raise AzurePerformanceStoragePortError(
             "AZURE_PERFORMANCE_LEASE_HANDOFF_INVALID"
         )
+    if not isinstance(parent_fd, int):
+        try:
+            descriptor = parent_fd.open_regular_descriptor(name, create=create)
+        except SecurityBoundaryError:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_LEASE_HANDOFF_INVALID"
+            ) from None
+        if descriptor < 0:
+            raise AzurePerformanceStoragePortError(
+                "AZURE_PERFORMANCE_LEASE_HANDOFF_INVALID"
+            )
+        return descriptor
     flags = os.O_RDWR | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     if create:
         flags |= os.O_CREAT
@@ -658,6 +748,36 @@ def _write_all(descriptor: int, payload: bytes) -> None:
 def _read_trusted_credential(
     path: Path, *, expected_sha256: str | None = None
 ) -> bytes:
+    if os.name == "nt":
+        if (
+            not isinstance(path, Path)
+            or not path.is_absolute()
+            or expected_sha256 is not None
+            and not _is_sha256(expected_sha256)
+        ):
+            raise AzurePerformanceStoragePortError(
+                "AZURE_STORAGE_CREDENTIAL_UNTRUSTED"
+            )
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(path, purpose="credential")
+            if binding.size > _MAX_CREDENTIAL_BYTES:
+                raise SecurityBoundaryError("SECURE_READ_LIMIT_EXCEEDED")
+            with backend.open_bound_read(path, binding) as handle:
+                payload = handle.read(_MAX_CREDENTIAL_BYTES + 1)
+            if (
+                not payload
+                or len(payload) != binding.size
+                or len(payload) > _MAX_CREDENTIAL_BYTES
+                or expected_sha256 is not None
+                and hashlib.sha256(payload).hexdigest() != expected_sha256
+            ):
+                raise SecurityBoundaryError("SECURE_CREDENTIAL_BINDING_MISMATCH")
+            return payload
+        except (OSError, SecurityBoundaryError):
+            raise AzurePerformanceStoragePortError(
+                "AZURE_STORAGE_CREDENTIAL_UNTRUSTED"
+            ) from None
     if (
         not isinstance(path, Path)
         or not path.is_absolute()
@@ -765,6 +885,13 @@ def _trusted_parent_chain(path: Path) -> bool:
             current = current.parent
     except OSError:
         return False
+
+
+def _close_private_parent(parent: int | SecureDirectorySession) -> None:
+    if isinstance(parent, int):
+        os.close(parent)
+    else:
+        parent.close()
 
 
 def _load_credential_pair(

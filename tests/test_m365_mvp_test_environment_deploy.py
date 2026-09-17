@@ -815,7 +815,7 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             binary.write_text("#!/bin/sh\n", encoding="utf-8")
             if os.name == "nt":
                 os.link(binary, Path(tmp) / "binary-hardlink")
-                expected_error = "^M365_CLI_BINARY_UNAVAILABLE$"
+                expected_error = "^M365_CLI_RUNTIME_BUNDLE_MISMATCH$"
             else:
                 binary.chmod(0o777)
                 expected_error = "^M365_CLI_BINARY_MODE_UNSAFE$"

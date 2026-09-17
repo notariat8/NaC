@@ -141,6 +141,19 @@ def build_activation_attestation_plan(
         },
         "provisioner_certificate": provisioner_certificate_path,
     }
+    if any(
+        requested is not None
+        and Path(os.path.abspath(requested))
+        != Path(os.path.abspath(_EXECUTION_PATHS[name]))
+        for name, requested in requested_paths.items()
+    ):
+        return {
+            "schema_version": _SCHEMA_VERSION,
+            "status": "NOT_READY",
+            "error": {"code": "EXECUTION_ATTESTATION_PATH_MISMATCH"},
+            "reads_private_key": False,
+            "executes_provider_requests": False,
+        }
     azure_digest = calculate_azure_cli_toolchain_sha256(paths["azure_cli"])
     measured = {
         "azure_cli_toolchain_sha256": azure_digest,
@@ -286,7 +299,12 @@ def calculate_toolchain_attestations_sha256(
     value: Mapping[str, str],
 ) -> str:
     payload = (
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        )
         + "\n"
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()

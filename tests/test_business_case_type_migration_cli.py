@@ -4,6 +4,7 @@ from copy import deepcopy
 import os
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_runtime.platform_file_lock import lock_exclusive
+from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
 
 from nac_cli import cli as nac_cli
 from notary_kg import business_case_type_migration_runner as runner
@@ -38,6 +40,24 @@ SUMMARY_KEYS = {
     "class_counts",
     "top_level_hashes",
 }
+
+
+def _make_directory_alias(link: Path, target: Path) -> None:
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def _make_file_alias(link: Path, target: Path) -> None:
+    if os.name == "nt":
+        os.link(target, link)
+    else:
+        link.symlink_to(target)
 
 
 
@@ -78,8 +98,43 @@ class RepositoryHeadTests(unittest.TestCase):
             outside = root / "outside"
             outside.mkdir()
             (outside / "fixture.json").write_text('{"source":"outside"}', encoding="utf-8")
-            original_read = runner._read_file_at
             swapped = False
+
+            if os.name == "nt":
+                original_open = WindowsActivationSecurityBackend.open_bound_input_read
+
+                def swap_then_open(
+                    backend: WindowsActivationSecurityBackend,
+                    path: Path,
+                    expected_binding: object,
+                ) -> tuple[object, object]:
+                    nonlocal swapped
+                    if path.name == "fixture.json" and not swapped:
+                        moved = root / "opened-fixture-dir"
+                        fixture_dir.rename(moved)
+                        _make_directory_alias(fixture_dir, outside)
+                        swapped = True
+                    return original_open(backend, path, expected_binding)
+
+                with patch.object(
+                    WindowsActivationSecurityBackend,
+                    "open_bound_input_read",
+                    autospec=True,
+                    side_effect=swap_then_open,
+                ):
+                    with self.assertRaisesRegex(
+                        runner.MigrationValidationError,
+                        "fixture_invalid",
+                    ):
+                        runner._read_fixture_object(
+                            root,
+                            runner.FIXTURE_ROOT / "fixture.json",
+                        )
+
+                self.assertTrue(swapped)
+                return
+
+            original_read = runner._read_file_at
 
             def swap_then_read(
                 directory_fd: int,
@@ -92,7 +147,7 @@ class RepositoryHeadTests(unittest.TestCase):
                 if name == "fixture.json" and not swapped:
                     moved = root / "opened-fixture-dir"
                     fixture_dir.rename(moved)
-                    fixture_dir.symlink_to(outside, target_is_directory=True)
+                    _make_directory_alias(fixture_dir, outside)
                     swapped = True
                 return original_read(
                     directory_fd,
@@ -153,7 +208,7 @@ class RepositoryHeadTests(unittest.TestCase):
             (target / "HEAD").write_text("a" * 40 + "\n", encoding="ascii")
             root = base / "dot-git-link"
             root.mkdir()
-            (root / ".git").symlink_to(target, target_is_directory=True)
+            _make_directory_alias(root / ".git", target)
             self.assert_unavailable(root)
 
             for metadata in ("HEAD", "refs", "packed-refs"):
@@ -164,16 +219,16 @@ class RepositoryHeadTests(unittest.TestCase):
                     outside = base / f"outside-{metadata.replace('/', '-')}"
                     if metadata == "HEAD":
                         outside.write_text("b" * 40 + "\n", encoding="ascii")
-                        (git_dir / "HEAD").symlink_to(outside)
+                        _make_file_alias(git_dir / "HEAD", outside)
                     elif metadata == "refs":
                         (outside / "heads").mkdir(parents=True)
                         (outside / "heads/main").write_text("c" * 40 + "\n", encoding="ascii")
                         (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
-                        (git_dir / "refs").symlink_to(outside, target_is_directory=True)
+                        _make_directory_alias(git_dir / "refs", outside)
                     else:
                         outside.write_text("d" * 40 + " refs/heads/main\n", encoding="ascii")
                         (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
-                        (git_dir / "packed-refs").symlink_to(outside)
+                        _make_file_alias(git_dir / "packed-refs", outside)
                     self.assert_unavailable(repo)
 
     def test_loose_ref_read_stays_bound_to_opened_directory_components(self) -> None:
@@ -187,8 +242,35 @@ class RepositoryHeadTests(unittest.TestCase):
             (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
             (refs / "heads/main").write_text(expected + "\n", encoding="ascii")
 
-            original_open = runner.os.open
             replaced = False
+
+            if os.name == "nt":
+                original_bound_open = WindowsActivationSecurityBackend.open_bound_input_read
+
+                def substitute_refs_windows(
+                    backend: WindowsActivationSecurityBackend,
+                    path: Path,
+                    expected_binding: object,
+                ) -> tuple[object, object]:
+                    nonlocal replaced
+                    if path.name == "main" and not replaced:
+                        replaced = True
+                        refs.rename(git_dir / "refs-original")
+                        (refs / "heads").mkdir(parents=True)
+                        (refs / "heads/main").write_text(substituted + "\n", encoding="ascii")
+                    return original_bound_open(backend, path, expected_binding)
+
+                with patch.object(
+                    WindowsActivationSecurityBackend,
+                    "open_bound_input_read",
+                    autospec=True,
+                    side_effect=substitute_refs_windows,
+                ):
+                    self.assert_unavailable(root)
+                self.assertTrue(replaced)
+                return
+
+            original_open = runner.os.open
 
             def substitute_refs(path: object, flags: int, *args: object, **kwargs: object) -> int:
                 nonlocal replaced
@@ -239,11 +321,11 @@ class RepositoryHeadTests(unittest.TestCase):
                 elif spoof == "symlink-common-dir":
                     real_common = common.parent / "real.git"
                     common.rename(real_common)
-                    common.symlink_to(real_common, target_is_directory=True)
+                    _make_directory_alias(common, real_common)
                 elif spoof == "symlink-admin-dir":
                     real_admin = admin.parent / "real-wt"
                     admin.rename(real_admin)
-                    admin.symlink_to(real_admin, target_is_directory=True)
+                    _make_directory_alias(admin, real_admin)
                 else:
                     metadata = "gitdir" if spoof == "symlink-backlink" else "commondir"
                     outside = Path(temp_dir) / f"spoof-{metadata}"
@@ -252,7 +334,7 @@ class RepositoryHeadTests(unittest.TestCase):
                         encoding="utf-8",
                     )
                     (admin / metadata).unlink()
-                    (admin / metadata).symlink_to(outside)
+                    _make_file_alias(admin / metadata, outside)
                 self.assert_unavailable(root)
 
     def test_rejects_unsafe_refs_unborn_and_malformed_packed_metadata(self) -> None:

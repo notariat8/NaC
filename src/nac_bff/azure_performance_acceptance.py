@@ -18,6 +18,8 @@ import urllib.request
 
 from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
 
+from .activation_security_backend import SecurityBoundaryError, SecureDirectorySession
+
 from .azure_activation import (
     API_APP_URI,
     FUNCTION_APP,
@@ -3024,6 +3026,18 @@ class FixedBffPerformanceTransport:
                 True,
                 network_dispatched=False,
             )
+        if not all(
+            hasattr(signal, name)
+            for name in ("SIGALRM", "ITIMER_REAL", "getitimer", "setitimer")
+        ):
+            return PerformanceSample(
+                0,
+                0,
+                False,
+                "TRANSPORT_DEADLINE_UNAVAILABLE",
+                True,
+                network_dispatched=False,
+            )
         previous_handler = signal.getsignal(signal.SIGALRM)
         previous_timer = signal.getitimer(signal.ITIMER_REAL)
         if previous_timer != (0.0, 0.0):
@@ -3963,6 +3977,16 @@ def _read_secure_file(
     directory = _open_secure_parent_directory(path, create=False)
     if directory is None:
         return None
+    if not isinstance(directory, int):
+        try:
+            payload = directory.read_bounded(path.name, maximum_bytes)
+            if payload is None:
+                return None
+            return payload.decode(encoding)
+        except (SecurityBoundaryError, UnicodeError):
+            raise ValueError("PERFORMANCE_STATE_INVALID") from None
+        finally:
+            directory.close()
     descriptor: int | None = None
     try:
         try:
@@ -4000,6 +4024,14 @@ def _atomic_text_write(path: Path, value: str) -> None:
     directory = _open_secure_parent_directory(path, create=True)
     if directory is None:
         raise ValueError("PERFORMANCE_STATE_INVALID")
+    if not isinstance(directory, int):
+        try:
+            directory.atomic_write(path.name, value.encode("utf-8"))
+        except SecurityBoundaryError:
+            raise ValueError("PERFORMANCE_STATE_INVALID") from None
+        finally:
+            directory.close()
+        return
     temporary_name = f".{path.name}.{os.getpid()}.tmp"
     try:
         descriptor = os.open(
@@ -4028,7 +4060,9 @@ def _atomic_text_write(path: Path, value: str) -> None:
             os.close(directory)
 
 
-def _open_secure_parent_directory(path: Path, *, create: bool) -> int | None:
+def _open_secure_parent_directory(
+    path: Path, *, create: bool
+) -> int | SecureDirectorySession | None:
     try:
         return _open_root_anchored_private_parent(path, create=create)
     except SecurePerformancePathError:

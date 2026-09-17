@@ -354,7 +354,11 @@ class M365CliCommandRunner:
                     "NODE": sealed.paths[0],
                     MANIFEST_ENV: runtime_sealed.paths[0],
                     "NAC_NODE_RUNTIME_PRELOADER": runtime_sealed.paths[1],
-                    "NAC_NODE_RUNTIME_ESM_LOADER": runtime_sealed.paths[2],
+                    "NAC_NODE_RUNTIME_ESM_LOADER": (
+                        Path(runtime_sealed.paths[2]).resolve().as_uri()
+                        if os.name == "nt"
+                        else runtime_sealed.paths[2]
+                    ),
                 }
                 if os.name == "nt":
                     from nac_bff.activation_security_backend import (
@@ -770,6 +774,17 @@ def _validate_m365_command(argv: Sequence[str]) -> None:
     command = tuple(argv)
     exact_commands = {
         ("m365", "status", "--output", "json"),
+        (
+            "m365",
+            "util",
+            "accesstoken",
+            "get",
+            "--resource",
+            _EXPECTED_API_RESOURCE,
+            "--new",
+            "--output",
+            "json",
+        ),
         (
             "m365",
             "util",
