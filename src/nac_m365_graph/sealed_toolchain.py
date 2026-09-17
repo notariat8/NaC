@@ -44,16 +44,23 @@ def verified_tool_bytes(
     """Read one path exactly once and return only stable digest-matched bytes."""
 
     if os.name == "nt":
-        from nac_bff.activation_security_backend import get_platform_security_backend
-
-        backend = get_platform_security_backend()
-        binding = backend.inspect_private_path(
-            Path(path), purpose="toolchain-executable" if executable else "artifact"
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
         )
-        if binding.sha256 != expected_sha256:
-            raise SealedToolchainError("SEALED_TOOLCHAIN_HASH_MISMATCH")
-        with backend.open_bound_read(Path(path), binding) as handle:
-            payload = handle.read(_MAX_TOOL_BYTES + 1)
+
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(
+                Path(path),
+                purpose="toolchain-executable" if executable else "artifact",
+            )
+            if binding.sha256 != expected_sha256:
+                raise SealedToolchainError("SEALED_TOOLCHAIN_SHA256_MISMATCH")
+            with backend.open_bound_read(Path(path), binding) as handle:
+                payload = handle.read(_MAX_TOOL_BYTES + 1)
+        except SecurityBoundaryError as exc:
+            raise SealedToolchainError("SEALED_TOOLCHAIN_BINDING_FAILED") from exc
         if not payload or len(payload) > _MAX_TOOL_BYTES:
             raise SealedToolchainError("SEALED_TOOLCHAIN_SIZE_INVALID")
         return payload
@@ -72,21 +79,33 @@ def sealed_toolchain(
     if not platform_security_backend_available():
         raise SealedToolchainError(PLATFORM_SECURITY_BACKEND_UNAVAILABLE)
     if os.name == "nt":
-        from nac_bff.activation_security_backend import get_platform_security_backend
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
 
-        backend = get_platform_security_backend()
-        with ExitStack() as stack:
-            paths: list[str] = []
-            for path, executable, expected_sha256 in specifications:
-                binding = backend.inspect_private_path(
-                    Path(path),
-                    purpose="toolchain-executable" if executable else "artifact",
-                )
-                if binding.sha256 != expected_sha256:
-                    raise SealedToolchainError("SEALED_TOOLCHAIN_HASH_MISMATCH")
-                stack.enter_context(backend.open_bound_read(Path(path), binding))
-                paths.append(str(Path(path)))
-            yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        try:
+            backend = get_platform_security_backend()
+            with ExitStack() as stack:
+                paths: list[str] = []
+                for path, executable, expected_sha256 in specifications:
+                    binding = backend.inspect_private_path(
+                        Path(path),
+                        purpose=(
+                            "toolchain-executable" if executable else "artifact"
+                        ),
+                    )
+                    if binding.sha256 != expected_sha256:
+                        raise SealedToolchainError(
+                            "SEALED_TOOLCHAIN_SHA256_MISMATCH"
+                        )
+                    stack.enter_context(
+                        backend.open_bound_read(Path(path), binding)
+                    )
+                    paths.append(str(Path(path)))
+                yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        except SecurityBoundaryError as exc:
+            raise SealedToolchainError("SEALED_TOOLCHAIN_BINDING_FAILED") from exc
         return
     descriptors: list[int] = []
     try:
@@ -120,24 +139,38 @@ def sealed_payloads(
         raise SealedToolchainError(PLATFORM_SECURITY_BACKEND_UNAVAILABLE)
 
     if os.name == "nt":
-        from nac_bff.activation_security_backend import get_platform_security_backend
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
 
-        backend = get_platform_security_backend()
-        with tempfile.TemporaryDirectory(prefix="nac-sealed-payloads-") as temporary:
-            root = Path(temporary)
-            with ExitStack() as stack:
-                paths: list[str] = []
-                for name, payload, _executable in payloads:
-                    safe_name = re.sub(r"[^A-Za-z0-9_.-]", "-", name)[:80]
-                    if not safe_name or not payload or len(payload) > _MAX_TOOL_BYTES:
-                        raise SealedToolchainError("SEALED_TOOLCHAIN_SIZE_INVALID")
-                    destination = root / safe_name
-                    binding = backend.atomic_write(destination, payload)
-                    stack.enter_context(
-                        backend.open_bound_read(destination, binding)
-                    )
-                    paths.append(str(destination))
-                yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        try:
+            backend = get_platform_security_backend()
+            with tempfile.TemporaryDirectory(
+                prefix="nac-sealed-payloads-"
+            ) as temporary:
+                root = Path(temporary)
+                with ExitStack() as stack:
+                    paths: list[str] = []
+                    for name, payload, _executable in payloads:
+                        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "-", name)[:80]
+                        if (
+                            not safe_name
+                            or not payload
+                            or len(payload) > _MAX_TOOL_BYTES
+                        ):
+                            raise SealedToolchainError(
+                                "SEALED_TOOLCHAIN_SIZE_INVALID"
+                            )
+                        destination = root / safe_name
+                        binding = backend.atomic_write(destination, payload)
+                        stack.enter_context(
+                            backend.open_bound_read(destination, binding)
+                        )
+                        paths.append(str(destination))
+                    yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        except SecurityBoundaryError as exc:
+            raise SealedToolchainError("SEALED_TOOLCHAIN_BINDING_FAILED") from exc
         return
     descriptors: list[int] = []
     try:
@@ -182,18 +215,30 @@ def sealed_artifacts(
         raise SealedToolchainError("SEALED_ARTIFACT_NAMES_INVALID")
 
     if os.name == "nt":
-        from nac_bff.activation_security_backend import get_platform_security_backend
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
 
-        backend = get_platform_security_backend()
-        with ExitStack() as stack:
-            paths: list[str] = []
-            for path, expected_sha256 in specifications:
-                binding = backend.inspect_private_path(Path(path), purpose="artifact")
-                if binding.sha256 != expected_sha256:
-                    raise SealedToolchainError("SEALED_ARTIFACT_BINDING_FAILED")
-                stack.enter_context(backend.open_bound_read(Path(path), binding))
-                paths.append(str(Path(path)))
-            yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        try:
+            backend = get_platform_security_backend()
+            with ExitStack() as stack:
+                paths: list[str] = []
+                for path, expected_sha256 in specifications:
+                    binding = backend.inspect_private_path(
+                        Path(path), purpose="artifact"
+                    )
+                    if binding.sha256 != expected_sha256:
+                        raise SealedToolchainError(
+                            "SEALED_ARTIFACT_BINDING_FAILED"
+                        )
+                    stack.enter_context(
+                        backend.open_bound_read(Path(path), binding)
+                    )
+                    paths.append(str(Path(path)))
+                yield SealedToolchain(paths=tuple(paths), pass_fds=())
+        except SecurityBoundaryError as exc:
+            raise SealedToolchainError("SEALED_ARTIFACT_BINDING_FAILED") from exc
         return
 
     directory_fd = -1
