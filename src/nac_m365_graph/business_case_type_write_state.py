@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from notary_kg.business_case_type_mutation import canonical_hash
+from nac_bff.activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 
 from .business_case_type_write_edge import MutationPersistenceState
 
@@ -665,6 +669,9 @@ class SqliteMutationEvidenceHook:
         return True
 
     def _ensure_storage(self) -> None:
+        if os.name == "nt":
+            self._ensure_windows_storage()
+            return
         if os.name != "posix":
             raise _Unavailable
         parent = self._database_path.parent
@@ -707,16 +714,45 @@ class SqliteMutationEvidenceHook:
             _fsync_directory(parent)
         self._validate_sidecars(allow_journal=True)
 
+    def _ensure_windows_storage(self) -> None:
+        parent = self._database_path.parent
+        try:
+            backend = get_platform_security_backend()
+            parent.mkdir(mode=0o700, parents=False, exist_ok=True)
+            backend.validate_private_directory(parent)
+            if not _is_windows_fixed_local_path(parent):
+                raise _Unavailable
+            if not self._database_path.exists():
+                backend.atomic_write(self._database_path, b"")
+                backend.flush_directory(parent)
+            snapshot = backend.inspect_private_path(
+                self._database_path, purpose="mutation-evidence-database"
+            )
+        except (OSError, SecurityBoundaryError, ValueError) as exc:
+            raise _Unavailable from exc
+        if snapshot.reparse_point or snapshot.size > _MAX_DATABASE_BYTES:
+            raise _Unavailable
+        self._validate_sidecars(allow_journal=True)
+
     def _validate_sidecars(self, *, allow_journal: bool) -> None:
         for suffix in ("-wal", "-shm"):
             if os.path.lexists(f"{self._database_path}{suffix}"):
                 raise _Unavailable
         journal = Path(f"{self._database_path}-journal")
         if os.path.lexists(journal):
-            journal_stat = journal.lstat()
             if not allow_journal:
                 raise _Unavailable
-            _require_database(journal_stat)
+            if os.name == "nt":
+                try:
+                    snapshot = get_platform_security_backend().inspect_private_path(
+                        journal, purpose="mutation-evidence-journal"
+                    )
+                except (OSError, SecurityBoundaryError) as exc:
+                    raise _Unavailable from exc
+                if snapshot.reparse_point or snapshot.size > _MAX_DATABASE_BYTES:
+                    raise _Unavailable
+            else:
+                _require_database(journal.lstat())
 
     def _close(self, connection: sqlite3.Connection) -> None:
         try:
@@ -935,3 +971,23 @@ def _is_network_filesystem(path: Path) -> bool:
     if statfs(encoded_path, ctypes.byref(filesystem)) != 0:
         raise _Unavailable
     return filesystem[0] & 0xFFFFFFFF in _NETWORK_FILESYSTEM_MAGICS
+
+
+def _is_windows_fixed_local_path(path: Path) -> bool:
+    if os.name != "nt":
+        return False
+    volume_path = ctypes.create_unicode_buffer(32768)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.GetVolumePathNameW.argtypes = (
+        ctypes.c_wchar_p,
+        ctypes.c_wchar_p,
+        ctypes.c_ulong,
+    )
+    kernel32.GetVolumePathNameW.restype = ctypes.c_int
+    kernel32.GetDriveTypeW.argtypes = (ctypes.c_wchar_p,)
+    kernel32.GetDriveTypeW.restype = ctypes.c_uint
+    if not kernel32.GetVolumePathNameW(
+        str(path), volume_path, len(volume_path)
+    ):
+        raise _Unavailable
+    return kernel32.GetDriveTypeW(volume_path.value) == 3

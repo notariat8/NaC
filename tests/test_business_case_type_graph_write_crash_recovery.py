@@ -135,7 +135,7 @@ class SqliteMutationEvidenceCrashRecoveryTests(unittest.TestCase):
             timeout=10,
         )
 
-        self.assertLess(crashed.returncode, 0)
+        self.assertNotEqual(crashed.returncode, 0)
         restarted = self._restart()
         self.assertEqual(
             restarted.persistence_state(intent["execution_key"]),

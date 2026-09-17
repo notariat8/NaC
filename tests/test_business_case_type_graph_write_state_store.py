@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 import sqlite3
 import stat
 import sys
@@ -22,6 +23,7 @@ from nac_m365_graph.business_case_type_write_edge import (
 from nac_m365_graph.business_case_type_write_state import (
     SqliteMutationEvidenceHook,
 )
+from nac_bff.activation_security_backend import get_platform_security_backend
 from notary_kg.business_case_type_mutation import canonical_hash
 
 
@@ -75,6 +77,7 @@ def _phase(evidence, result_code, **changes):
 
 
 class SqliteMutationEvidenceHookTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "POSIX filesystem classification")
     def test_unknown_posix_filesystem_platform_fails_closed(self):
         with mock.patch.object(
             state_module.os,
@@ -117,10 +120,20 @@ class SqliteMutationEvidenceHookTests(unittest.TestCase):
         )
 
     def test_initializes_restrictive_delete_full_database(self):
-        self.assertEqual(
-            stat.S_IMODE(self.database_path.parent.stat().st_mode), 0o700
-        )
-        self.assertEqual(stat.S_IMODE(self.database_path.stat().st_mode), 0o600)
+        if os.name == "nt":
+            backend = get_platform_security_backend()
+            backend.validate_private_directory(self.database_path.parent)
+            snapshot = backend.inspect_private_path(
+                self.database_path, purpose="mutation-evidence-database"
+            )
+            self.assertFalse(snapshot.reparse_point)
+        else:
+            self.assertEqual(
+                stat.S_IMODE(self.database_path.parent.stat().st_mode), 0o700
+            )
+            self.assertEqual(
+                stat.S_IMODE(self.database_path.stat().st_mode), 0o600
+            )
         connection = sqlite3.connect(self.database_path)
         try:
             self.assertEqual(
@@ -261,7 +274,9 @@ class SqliteMutationEvidenceHookTests(unittest.TestCase):
             "absent",
         )
 
-        cases = ("corrupt", "oversize", "mode", "symlink")
+        cases = ["corrupt", "oversize"]
+        if os.name == "posix":
+            cases.extend(("mode", "symlink"))
         for case in cases:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "state.sqlite3"
