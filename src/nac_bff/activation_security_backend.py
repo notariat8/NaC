@@ -67,6 +67,16 @@ class BoundFileSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class SecureDirectoryBinding:
+    path_sha256: str
+    volume_serial: int
+    file_id: int
+    owner_sid_sha256: str
+    security_descriptor_sha256: str
+    dacl_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class ProcessSpec:
     executable: Path
     arguments: tuple[str, ...]
@@ -98,6 +108,33 @@ class RunLock(Protocol):
 
 
 @runtime_checkable
+class SecureDirectorySession(Protocol):
+    binding: SecureDirectoryBinding
+
+    def canonical_child_path(self, name: str) -> Path: ...
+
+    def inspect_optional_child(
+        self, name: str, purpose: str
+    ) -> BoundFileSnapshot | None: ...
+
+    def open_regular_descriptor(self, name: str, *, create: bool) -> int: ...
+
+    def read_bounded(self, name: str, maximum_bytes: int) -> bytes | None: ...
+
+    def atomic_write(self, name: str, payload: bytes) -> BoundFileSnapshot: ...
+
+    def append_and_flush(
+        self, name: str, payload: bytes
+    ) -> BoundFileSnapshot: ...
+
+    def delete_child(self, name: str) -> bool: ...
+
+    def flush(self) -> None: ...
+
+    def close(self) -> None: ...
+
+
+@runtime_checkable
 class ActivationSecurityBackend(Protocol):
     def capabilities(self) -> SecurityCapabilities: ...
 
@@ -112,6 +149,10 @@ class ActivationSecurityBackend(Protocol):
     ) -> BoundFileSnapshot: ...
 
     def validate_private_directory(self, path: Path) -> str: ...
+
+    def open_secure_directory(
+        self, path: Path, *, create: bool, require_current_owner: bool = True
+    ) -> SecureDirectorySession: ...
 
     def open_bound_read(
         self, path: Path, expected_binding: BoundFileSnapshot
@@ -157,6 +198,8 @@ __all__ = [
     "ProcessResult",
     "ProcessSpec",
     "RunLock",
+    "SecureDirectoryBinding",
+    "SecureDirectorySession",
     "SecurityBoundaryError",
     "SecurityCapabilities",
     "get_platform_security_backend",

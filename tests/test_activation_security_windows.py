@@ -8,7 +8,9 @@ import tempfile
 import unittest
 import ctypes
 import shutil
+import subprocess
 from ctypes import wintypes
+from unittest.mock import patch
 
 from nac_bff.activation_security_backend import ProcessSpec, SecurityBoundaryError
 from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
@@ -45,18 +47,136 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         with self.assertRaisesRegex(SecurityBoundaryError, "PATH_NOT_ABSOLUTE"):
             self.backend.inspect_private_path(Path("relative.txt"), purpose="test")
 
+    def test_private_paths_are_bound_to_supported_fixed_local_volume(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "bound.txt"
+            path.write_text("synthetic", encoding="utf-8")
+            self.assertRegex(
+                self.backend.validate_private_directory(root), r"^[0-9a-f]{64}$"
+            )
+            self.assertGreater(
+                self.backend.inspect_private_path(path, purpose="test").volume_serial,
+                0,
+            )
+
+    def test_non_fixed_volume_is_rejected_before_file_use(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bound.txt"
+            path.write_text("synthetic", encoding="utf-8")
+            with patch(
+                "nac_bff.activation_security_windows._drive_type",
+                return_value=4,
+            ):
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "LOCAL_FIXED_VOLUME_REQUIRED"
+                ):
+                    self.backend.inspect_private_path(path, purpose="test")
+
+    def test_secure_directory_session_rejects_unsafe_child_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.backend.open_secure_directory(
+                Path(directory), create=False
+            ) as session:
+                for name in (
+                    "",
+                    ".",
+                    "..",
+                    "child/name",
+                    "child\\name",
+                    "evidence.json:stream",
+                    "evidence.json.",
+                    "evidence.json ",
+                    "NUL",
+                    "COM1.txt",
+                    "*.json",
+                ):
+                    with self.subTest(name=name):
+                        with self.assertRaisesRegex(
+                            SecurityBoundaryError, "SECURE_CHILD_NAME_INVALID"
+                        ):
+                            session.canonical_child_path(name)
+
+    def test_secure_directory_session_retains_components_and_binds_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            private = root / "private"
+            with self.backend.open_secure_directory(
+                private, create=True
+            ) as session:
+                snapshot = session.atomic_write("evidence.json", b"synthetic")
+                self.assertEqual(
+                    snapshot.volume_serial, session.binding.volume_serial
+                )
+                self.assertEqual(
+                    session.read_bounded("evidence.json", 9), b"synthetic"
+                )
+                moved = root / "replaced"
+                with self.assertRaises(OSError):
+                    private.rename(moved)
+                self.assertFalse((private / "redirected.json").exists())
+            private.rename(moved)
+
+    def test_secure_directory_session_rejects_non_ntfs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with patch(
+                "nac_bff.activation_security_windows.kernel32.GetVolumeInformationW",
+                side_effect=lambda *_args: True,
+            ), patch(
+                "nac_bff.activation_security_windows._volume_root",
+                return_value="C:\\\\",
+            ):
+                # The filesystem buffer cannot be populated by this synthetic
+                # call, so the backend must fail closed as non-NTFS.
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "SUPPORTED_LOCAL_FILESYSTEM_REQUIRED"
+                ):
+                    self.backend.open_secure_directory(
+                        Path(directory), create=False
+                    )
+
+    def test_secure_directory_session_rejects_renamed_ancestor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ancestor = root / "ancestor"
+            private = ancestor / "private"
+            private.mkdir(parents=True)
+            with self.backend.open_secure_directory(
+                private, create=False
+            ) as session:
+                moved = root / "moved-ancestor"
+                try:
+                    ancestor.rename(moved)
+                except PermissionError:
+                    self.assertTrue(private.is_dir())
+                    return
+                ancestor.mkdir()
+                (ancestor / "private").mkdir()
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "FINAL_PATH_BINDING_MISMATCH"
+                ):
+                    session.atomic_write("evidence.json", b"blocked")
+                self.assertFalse(
+                    (ancestor / "private" / "evidence.json").exists()
+                )
+                self.assertFalse(
+                    (moved / "private" / "evidence.json").exists()
+                )
+
     def test_reparse_point_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            target = root / "target.txt"
-            link = root / "link.txt"
-            target.write_text("synthetic", encoding="utf-8")
-            try:
-                link.symlink_to(target)
-            except OSError as error:
-                self.skipTest(f"symlink creation unavailable: {error.winerror}")
+            target = root / "target"
+            link = root / "link"
+            target.mkdir()
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
             with self.assertRaisesRegex(SecurityBoundaryError, "REPARSE_POINT_REJECTED"):
-                self.backend.inspect_private_path(link, purpose="test")
+                self.backend.validate_private_directory(link)
 
     def test_broad_write_dacl_is_rejected(self) -> None:
         advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)

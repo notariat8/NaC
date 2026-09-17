@@ -8,7 +8,7 @@ import io
 import msvcrt
 import os
 from pathlib import Path
-import tempfile
+import secrets
 import threading
 from typing import BinaryIO, Iterator
 
@@ -17,6 +17,7 @@ from .activation_security_backend import (
     OperatorBinding,
     ProcessResult,
     ProcessSpec,
+    SecureDirectoryBinding,
     SecurityBoundaryError,
     SecurityCapabilities,
 )
@@ -28,6 +29,7 @@ if os.name != "nt":  # pragma: no cover - module is selected only on Windows
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+ntdll = ctypes.WinDLL("ntdll")
 
 kernel32.CreateFileW.argtypes = (
     wintypes.LPCWSTR,
@@ -60,6 +62,44 @@ kernel32.GetFileInformationByHandle.argtypes = (
 kernel32.GetFileInformationByHandle.restype = wintypes.BOOL
 kernel32.GetFileType.argtypes = (wintypes.HANDLE,)
 kernel32.GetFileType.restype = wintypes.DWORD
+kernel32.SetFileInformationByHandle.argtypes = (
+    wintypes.HANDLE,
+    ctypes.c_int,
+    wintypes.LPVOID,
+    wintypes.DWORD,
+)
+kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
+kernel32.WriteFile.argtypes = (
+    wintypes.HANDLE,
+    wintypes.LPCVOID,
+    wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+    wintypes.LPVOID,
+)
+kernel32.WriteFile.restype = wintypes.BOOL
+kernel32.GetFileAttributesW.argtypes = (wintypes.LPCWSTR,)
+kernel32.GetFileAttributesW.restype = wintypes.DWORD
+kernel32.GetVolumePathNameW.argtypes = (
+    wintypes.LPCWSTR,
+    wintypes.LPWSTR,
+    wintypes.DWORD,
+)
+kernel32.GetVolumePathNameW.restype = wintypes.BOOL
+kernel32.GetDriveTypeW.argtypes = (wintypes.LPCWSTR,)
+kernel32.GetDriveTypeW.restype = wintypes.UINT
+kernel32.GetVolumeInformationW.argtypes = (
+    wintypes.LPCWSTR,
+    wintypes.LPWSTR,
+    wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+    ctypes.POINTER(wintypes.DWORD),
+    ctypes.POINTER(wintypes.DWORD),
+    wintypes.LPWSTR,
+    wintypes.DWORD,
+)
+kernel32.GetVolumeInformationW.restype = wintypes.BOOL
+kernel32.CreateDirectoryW.argtypes = (wintypes.LPCWSTR, wintypes.LPVOID)
+kernel32.CreateDirectoryW.restype = wintypes.BOOL
 kernel32.FlushFileBuffers.argtypes = (wintypes.HANDLE,)
 kernel32.FlushFileBuffers.restype = wintypes.BOOL
 kernel32.SetFilePointerEx.argtypes = (
@@ -141,9 +181,16 @@ advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW.restype = wintypes
 
 INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
 GENERIC_READ = 0x80000000
+GENERIC_WRITE = 0x40000000
 FILE_APPEND_DATA = 0x00000004
+FILE_READ_ATTRIBUTES = 0x00000080
+READ_CONTROL = 0x00020000
+DELETE = 0x00010000
 FILE_SHARE_READ = 0x00000001
+FILE_SHARE_WRITE = 0x00000002
+FILE_SHARE_DELETE = 0x00000004
 OPEN_EXISTING = 3
+CREATE_NEW = 1
 OPEN_ALWAYS = 4
 FILE_ATTRIBUTE_NORMAL = 0x00000080
 FILE_ATTRIBUTE_DIRECTORY = 0x00000010
@@ -151,6 +198,8 @@ FILE_ATTRIBUTE_REPARSE_POINT = 0x00000400
 FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
 FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 FILE_TYPE_DISK = 0x0001
+INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
+DRIVE_FIXED = 3
 TOKEN_QUERY = 0x0008
 TOKEN_USER = 1
 OWNER_SECURITY_INFORMATION = 0x00000001
@@ -159,6 +208,15 @@ SE_FILE_OBJECT = 1
 WAIT_OBJECT_0 = 0x00000000
 WAIT_ABANDONED = 0x00000080
 WAIT_TIMEOUT = 0x00000102
+
+_RESERVED_DEVICE_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
 
 
 class BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
@@ -190,6 +248,86 @@ class SECURITY_ATTRIBUTES(ctypes.Structure):
         ("lpSecurityDescriptor", wintypes.LPVOID),
         ("bInheritHandle", wintypes.BOOL),
     ]
+
+
+class FILE_DISPOSITION_INFO(ctypes.Structure):
+    _fields_ = [("DeleteFile", wintypes.BOOL)]
+
+
+class FILE_RENAME_INFO(ctypes.Structure):
+    _fields_ = [
+        ("ReplaceIfExists", wintypes.BOOL),
+        ("RootDirectory", wintypes.HANDLE),
+        ("FileNameLength", wintypes.DWORD),
+        ("FileName", wintypes.WCHAR * 1),
+    ]
+
+
+class FILE_RENAME_INFO_EX(ctypes.Structure):
+    _fields_ = [
+        ("Flags", wintypes.DWORD),
+        ("RootDirectory", wintypes.HANDLE),
+        ("FileNameLength", wintypes.DWORD),
+        ("FileName", wintypes.WCHAR * 1),
+    ]
+
+
+class UNICODE_STRING(ctypes.Structure):
+    _fields_ = [
+        ("Length", wintypes.USHORT),
+        ("MaximumLength", wintypes.USHORT),
+        ("Buffer", wintypes.LPWSTR),
+    ]
+
+
+class OBJECT_ATTRIBUTES(ctypes.Structure):
+    _fields_ = [
+        ("Length", wintypes.ULONG),
+        ("RootDirectory", wintypes.HANDLE),
+        ("ObjectName", ctypes.POINTER(UNICODE_STRING)),
+        ("Attributes", wintypes.ULONG),
+        ("SecurityDescriptor", wintypes.LPVOID),
+        ("SecurityQualityOfService", wintypes.LPVOID),
+    ]
+
+
+class IO_STATUS_BLOCK(ctypes.Structure):
+    _fields_ = [("Status", ctypes.c_ssize_t), ("Information", ctypes.c_size_t)]
+
+
+ntdll.NtCreateFile.argtypes = (
+    ctypes.POINTER(wintypes.HANDLE),
+    wintypes.DWORD,
+    ctypes.POINTER(OBJECT_ATTRIBUTES),
+    ctypes.POINTER(IO_STATUS_BLOCK),
+    ctypes.POINTER(ctypes.c_longlong),
+    wintypes.ULONG,
+    wintypes.ULONG,
+    wintypes.ULONG,
+    wintypes.ULONG,
+    wintypes.LPVOID,
+    wintypes.ULONG,
+)
+ntdll.NtCreateFile.restype = ctypes.c_long
+ntdll.RtlNtStatusToDosError.argtypes = (ctypes.c_long,)
+ntdll.RtlNtStatusToDosError.restype = wintypes.ULONG
+ntdll.NtSetInformationFile.argtypes = (
+    wintypes.HANDLE,
+    ctypes.POINTER(IO_STATUS_BLOCK),
+    wintypes.LPVOID,
+    wintypes.ULONG,
+    wintypes.ULONG,
+)
+ntdll.NtSetInformationFile.restype = ctypes.c_long
+
+FILE_OPEN = 1
+FILE_CREATE = 2
+FILE_NON_DIRECTORY_FILE = 0x00000040
+FILE_DIRECTORY_FILE = 0x00000001
+FILE_SYNCHRONOUS_IO_NONALERT = 0x00000020
+FILE_OPEN_REPARSE_POINT_OPTION = 0x00200000
+SYNCHRONIZE = 0x00100000
+OBJ_CASE_INSENSITIVE = 0x00000040
 
 
 _local_mutex_guard = threading.Lock()
@@ -282,11 +420,234 @@ def _open_read_handle(path: Path) -> int:
     return int(handle)
 
 
+def _volume_root(path: Path) -> str:
+    buffer = ctypes.create_unicode_buffer(32768)
+    if not kernel32.GetVolumePathNameW(str(path), buffer, len(buffer)):
+        _raise_last_error("VOLUME_PATH_READ_FAILED")
+    return buffer.value
+
+
+def _drive_type(path: Path) -> int:
+    return int(kernel32.GetDriveTypeW(_volume_root(path)))
+
+
+def _validate_supported_local_path(path: Path) -> None:
+    candidate = Path(os.path.abspath(path))
+    if _drive_type(candidate) != DRIVE_FIXED:
+        raise SecurityBoundaryError("LOCAL_FIXED_VOLUME_REQUIRED")
+    filesystem = ctypes.create_unicode_buffer(64)
+    if not kernel32.GetVolumeInformationW(
+        _volume_root(candidate),
+        None,
+        0,
+        None,
+        None,
+        None,
+        filesystem,
+        len(filesystem),
+    ):
+        _raise_last_error("FILESYSTEM_READ_FAILED")
+    if filesystem.value.upper() != "NTFS":
+        raise SecurityBoundaryError("SUPPORTED_LOCAL_FILESYSTEM_REQUIRED")
+    current = Path(candidate.anchor)
+    for component in candidate.parts[1:]:
+        current /= component
+        attributes = kernel32.GetFileAttributesW(str(current))
+        if attributes == INVALID_FILE_ATTRIBUTES:
+            _raise_last_error("PATH_COMPONENT_READ_FAILED")
+        if attributes & FILE_ATTRIBUTE_REPARSE_POINT:
+            raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
+
+
+def _validate_child_name(name: str) -> str:
+    if (
+        not isinstance(name, str)
+        or name in {"", ".", ".."}
+        or name[-1:] in {" ", "."}
+        or any(character in name for character in ("/", "\\", ":", "\0", "*", "?"))
+        or Path(name).name != name
+    ):
+        raise SecurityBoundaryError("SECURE_CHILD_NAME_INVALID")
+    stem = name.split(".", 1)[0].upper()
+    if stem in _RESERVED_DEVICE_NAMES:
+        raise SecurityBoundaryError("SECURE_CHILD_NAME_INVALID")
+    return name
+
+
+@contextmanager
+def _private_security_attributes(*, directory: bool) -> Iterator[SECURITY_ATTRIBUTES]:
+    descriptor = wintypes.LPVOID()
+    descriptor_size = wintypes.DWORD()
+    inheritance = "OICI" if directory else ""
+    sid = _current_sid_string()
+    sddl = (
+        "D:P"
+        f"(A;{inheritance};GA;;;{sid})"
+        f"(A;{inheritance};GA;;;SY)"
+        f"(A;{inheritance};GA;;;BA)"
+    )
+    if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        sddl, 1, ctypes.byref(descriptor), ctypes.byref(descriptor_size)
+    ):
+        _raise_last_error("PRIVATE_SECURITY_DESCRIPTOR_CREATE_FAILED")
+    try:
+        yield SECURITY_ATTRIBUTES(
+            ctypes.sizeof(SECURITY_ATTRIBUTES), descriptor, False
+        )
+    finally:
+        kernel32.LocalFree(descriptor)
+
+
+def _open_relative_child(
+    directory_handle: int,
+    name: str,
+    *,
+    desired_access: int,
+    share_access: int,
+    create: bool,
+) -> int | None:
+    child = _validate_child_name(name)
+    name_buffer = ctypes.create_unicode_buffer(child)
+    unicode_name = UNICODE_STRING(
+        len(child.encode("utf-16-le")),
+        len(child.encode("utf-16-le")) + 2,
+        ctypes.cast(name_buffer, wintypes.LPWSTR),
+    )
+    handle = wintypes.HANDLE()
+    status_block = IO_STATUS_BLOCK()
+    security_descriptor = wintypes.LPVOID()
+    security_size = wintypes.DWORD()
+    if create:
+        sid = _current_sid_string()
+        sddl = f"D:P(A;;GA;;;{sid})(A;;GA;;;SY)(A;;GA;;;BA)"
+        if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl,
+            1,
+            ctypes.byref(security_descriptor),
+            ctypes.byref(security_size),
+        ):
+            _raise_last_error("PRIVATE_SECURITY_DESCRIPTOR_CREATE_FAILED")
+    attributes = OBJECT_ATTRIBUTES(
+        ctypes.sizeof(OBJECT_ATTRIBUTES),
+        wintypes.HANDLE(directory_handle),
+        ctypes.pointer(unicode_name),
+        OBJ_CASE_INSENSITIVE,
+        security_descriptor,
+        None,
+    )
+    try:
+        status = ntdll.NtCreateFile(
+            ctypes.byref(handle),
+            desired_access | SYNCHRONIZE,
+            ctypes.byref(attributes),
+            ctypes.byref(status_block),
+            None,
+            FILE_ATTRIBUTE_NORMAL,
+            share_access,
+            FILE_CREATE if create else FILE_OPEN,
+            FILE_NON_DIRECTORY_FILE
+            | FILE_SYNCHRONOUS_IO_NONALERT
+            | FILE_OPEN_REPARSE_POINT_OPTION,
+            None,
+            0,
+        )
+    finally:
+        if security_descriptor:
+            kernel32.LocalFree(security_descriptor)
+    if status < 0:
+        error = int(ntdll.RtlNtStatusToDosError(status))
+        if not create and error in {2, 3}:
+            return None
+        raise SecurityBoundaryError(
+            f"RELATIVE_FILE_OPEN_FAILED_{error}"
+            if error
+            else "RELATIVE_FILE_OPEN_FAILED"
+        )
+    return int(handle.value)
+
+
+def _open_relative_directory(
+    parent_handle: int,
+    name: str,
+    *,
+    desired_access: int,
+    share_access: int,
+    create: bool,
+) -> int:
+    component = _validate_child_name(name)
+    name_buffer = ctypes.create_unicode_buffer(component)
+    encoded_length = len(component.encode("utf-16-le"))
+    unicode_name = UNICODE_STRING(
+        encoded_length,
+        encoded_length + 2,
+        ctypes.cast(name_buffer, wintypes.LPWSTR),
+    )
+    descriptor = wintypes.LPVOID()
+    descriptor_size = wintypes.DWORD()
+    if create:
+        sid = _current_sid_string()
+        sddl = (
+            "D:P"
+            f"(A;OICI;GA;;;{sid})"
+            "(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)"
+        )
+        if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl, 1, ctypes.byref(descriptor), ctypes.byref(descriptor_size)
+        ):
+            _raise_last_error("PRIVATE_SECURITY_DESCRIPTOR_CREATE_FAILED")
+    attributes = OBJECT_ATTRIBUTES(
+        ctypes.sizeof(OBJECT_ATTRIBUTES),
+        wintypes.HANDLE(parent_handle),
+        ctypes.pointer(unicode_name),
+        OBJ_CASE_INSENSITIVE,
+        descriptor,
+        None,
+    )
+    handle = wintypes.HANDLE()
+    io_status = IO_STATUS_BLOCK()
+    try:
+        status = ntdll.NtCreateFile(
+            ctypes.byref(handle),
+            desired_access | SYNCHRONIZE,
+            ctypes.byref(attributes),
+            ctypes.byref(io_status),
+            None,
+            FILE_ATTRIBUTE_NORMAL,
+            share_access,
+            FILE_CREATE if create else FILE_OPEN,
+            FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_REPARSE_POINT_OPTION,
+            None,
+            0,
+        )
+    finally:
+        if descriptor:
+            kernel32.LocalFree(descriptor)
+    if status < 0:
+        error = int(ntdll.RtlNtStatusToDosError(status))
+        raise SecurityBoundaryError(f"DIRECTORY_OPEN_FAILED_{error}")
+    return int(handle.value)
+
+
+def _normalized_final_path(value: str) -> str:
+    if value.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + value[8:]
+    if value.startswith("\\\\?\\"):
+        return value[4:]
+    return value
+
+
+def _require_requested_path_binding(handle: int, path: Path) -> None:
+    requested = os.path.normcase(os.path.abspath(path))
+    final = os.path.normcase(_normalized_final_path(_final_path(handle)))
+    if requested != final:
+        raise SecurityBoundaryError("FINAL_PATH_BINDING_MISMATCH")
+
+
 def _open_directory_handle(path: Path) -> int:
     handle = kernel32.CreateFileW(
         str(path),
         GENERIC_READ,
-        FILE_SHARE_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         None,
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
@@ -364,11 +725,18 @@ def _security_hashes(
 
 def _require_restrictive_dacl(dacl: int, raw: bytes) -> None:
     ace_count = int.from_bytes(raw[4:6], "little")
-    broad_principals = {"S-1-1-0", "S-1-5-11", "S-1-5-32-545"}
+    writable_principals = {
+        _current_sid_string(),
+        "S-1-3-0",  # CREATOR_OWNER, resolves to the creating principal
+        "S-1-3-4",  # OWNER_RIGHTS, scoped to the bound owner
+        "S-1-5-18",  # LOCAL_SYSTEM
+        "S-1-5-32-544",  # BUILTIN\\Administrators
+    }
     write_mask = (
         0x00000002
         | 0x00000004
         | 0x00000010
+        | 0x00000040
         | 0x00000100
         | 0x00010000
         | 0x00040000
@@ -382,13 +750,24 @@ def _require_restrictive_dacl(dacl: int, raw: bytes) -> None:
             _raise_last_error("FILE_DACL_INVALID")
         header = ctypes.string_at(ace, 8)
         ace_type = header[0]
+        ace_flags = header[1]
         ace_size = int.from_bytes(header[2:4], "little")
         if ace_size < 8:
             raise SecurityBoundaryError("FILE_DACL_INVALID")
+        if ace_type in {4, 5, 9, 11}:
+            raise SecurityBoundaryError("FILE_DACL_UNSUPPORTED_ALLOW_ACE")
         if ace_type != 0:  # only ACCESS_ALLOWED_ACE has a fixed SID offset
             continue
         mask = int.from_bytes(header[4:8], "little")
-        if mask & write_mask and _sid_string(ace.value + 8) in broad_principals:
+        principal = _sid_string(ace.value + 8)
+        if principal == "S-1-3-0" and (
+            not ace_flags & 0x08 or not ace_flags & 0x03
+        ):
+            raise SecurityBoundaryError("FILE_DACL_TOO_BROAD")
+        if (
+            mask & write_mask
+            and principal not in writable_principals
+        ):
             raise SecurityBoundaryError("FILE_DACL_TOO_BROAD")
 
 
@@ -422,6 +801,10 @@ def _snapshot(handle: int, *, require_current_owner: bool = True) -> BoundFileSn
     reparse = bool(information.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
     if reparse:
         raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
+    if information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
+        raise SecurityBoundaryError("REGULAR_FILE_REQUIRED")
+    if information.nNumberOfLinks != 1:
+        raise SecurityBoundaryError("FILE_LINK_COUNT_INVALID")
     if not kernel32.SetFilePointerEx(handle, 0, None, 0):
         _raise_last_error("FILE_SEEK_FAILED")
     with _duplicate_for_python(handle) as stream:
@@ -472,6 +855,270 @@ class WindowsRunLock:
         self.close()
 
 
+class WindowsSecureDirectorySession:
+    """Retain every verified path component for one protected operation."""
+
+    def __init__(
+        self,
+        backend: "WindowsActivationSecurityBackend",
+        path: Path,
+        handles: list[int],
+        binding: SecureDirectoryBinding,
+    ) -> None:
+        self._backend = backend
+        self.path = path
+        self._handles = handles
+        self.binding = binding
+
+    def __enter__(self) -> "WindowsSecureDirectorySession":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        handles, self._handles = self._handles, []
+        for handle in reversed(handles):
+            _close_handle(handle)
+
+    def _require_open(self) -> None:
+        if not self._handles:
+            raise SecurityBoundaryError("SECURE_DIRECTORY_SESSION_CLOSED")
+
+    def _require_directory_path(self) -> None:
+        self._require_open()
+        _require_requested_path_binding(self._handles[-1], self.path)
+
+    def canonical_child_path(self, name: str) -> Path:
+        self._require_directory_path()
+        return self.path / _validate_child_name(name)
+
+    def inspect_optional_child(
+        self, name: str, purpose: str
+    ) -> BoundFileSnapshot | None:
+        target = self.canonical_child_path(name)
+        handle = _open_relative_child(
+            self._handles[-1],
+            name,
+            desired_access=GENERIC_READ,
+            share_access=FILE_SHARE_READ,
+            create=False,
+        )
+        if handle is None:
+            return None
+        try:
+            _require_requested_path_binding(handle, target)
+            snapshot = _snapshot(
+                handle,
+                require_current_owner=purpose not in {
+                    "process-image",
+                    "test-executable",
+                    "toolchain-executable",
+                },
+            )
+            if snapshot.volume_serial != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
+            return snapshot
+        finally:
+            _close_handle(handle)
+
+    def read_bounded(self, name: str, maximum_bytes: int) -> bytes | None:
+        if type(maximum_bytes) is not int or maximum_bytes < 0:
+            raise SecurityBoundaryError("SECURE_READ_LIMIT_INVALID")
+        descriptor = self.open_regular_descriptor(name, create=False)
+        if descriptor < 0:
+            return None
+        try:
+            metadata = os.fstat(descriptor)
+            if metadata.st_size > maximum_bytes:
+                raise SecurityBoundaryError("SECURE_READ_LIMIT_EXCEEDED")
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = -1
+                payload = stream.read(maximum_bytes + 1)
+            if len(payload) > maximum_bytes:
+                raise SecurityBoundaryError("SECURE_READ_LIMIT_EXCEEDED")
+            return payload
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+
+    def open_regular_descriptor(self, name: str, *, create: bool) -> int:
+        target = self.canonical_child_path(name)
+        handle = _open_relative_child(
+            self._handles[-1],
+            name,
+            desired_access=GENERIC_READ | GENERIC_WRITE,
+            share_access=FILE_SHARE_READ,
+            create=False,
+        )
+        if handle is None:
+            if not create:
+                return -1
+            handle = _open_relative_child(
+                self._handles[-1],
+                name,
+                desired_access=GENERIC_READ | GENERIC_WRITE,
+                share_access=FILE_SHARE_READ,
+                create=True,
+            )
+            assert handle is not None
+        integer_handle = handle
+        try:
+            _require_requested_path_binding(integer_handle, target)
+            snapshot = _snapshot(integer_handle, require_current_owner=True)
+            if snapshot.volume_serial != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
+            descriptor = msvcrt.open_osfhandle(integer_handle, os.O_RDWR)
+            integer_handle = 0
+            return descriptor
+        finally:
+            _close_handle(integer_handle)
+
+    def atomic_write(self, name: str, payload: bytes) -> BoundFileSnapshot:
+        target = self.canonical_child_path(name)
+        temporary_name = _validate_child_name(
+            f".{name}.{secrets.token_hex(16)}.tmp"
+        )
+        handle = INVALID_HANDLE_VALUE
+        published = False
+        try:
+            handle = _open_relative_child(
+                self._handles[-1],
+                temporary_name,
+                desired_access=GENERIC_READ | GENERIC_WRITE | DELETE,
+                share_access=FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                create=True,
+            )
+            assert handle is not None
+            integer_handle = handle
+            offset = 0
+            while offset < len(payload):
+                chunk = payload[offset : offset + 1024 * 1024]
+                buffer = ctypes.create_string_buffer(chunk)
+                written = wintypes.DWORD()
+                if not kernel32.WriteFile(
+                    integer_handle,
+                    buffer,
+                    len(chunk),
+                    ctypes.byref(written),
+                    None,
+                ):
+                    _raise_last_error("FILE_WRITE_FAILED")
+                if written.value != len(chunk):
+                    raise SecurityBoundaryError("FILE_WRITE_INCOMPLETE")
+                offset += written.value
+            if not kernel32.FlushFileBuffers(integer_handle):
+                _raise_last_error("FILE_FLUSH_FAILED")
+            if not kernel32.SetFilePointerEx(integer_handle, 0, None, 0):
+                _raise_last_error("FILE_SEEK_FAILED")
+            temporary_binding = _snapshot(
+                integer_handle, require_current_owner=True
+            )
+            if temporary_binding.volume_serial != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
+
+            encoded_name = name.encode("utf-16-le")
+            size = FILE_RENAME_INFO.FileName.offset + len(encoded_name)
+            rename_buffer = ctypes.create_string_buffer(size)
+            rename = ctypes.cast(
+                rename_buffer, ctypes.POINTER(FILE_RENAME_INFO)
+            ).contents
+            rename.ReplaceIfExists = True
+            rename.RootDirectory = wintypes.HANDLE(self._handles[-1])
+            rename.FileNameLength = len(encoded_name)
+            ctypes.memmove(
+                ctypes.addressof(rename_buffer) + FILE_RENAME_INFO.FileName.offset,
+                encoded_name,
+                len(encoded_name),
+            )
+            rename_io = IO_STATUS_BLOCK()
+            rename_status = ntdll.NtSetInformationFile(
+                integer_handle,
+                ctypes.byref(rename_io),
+                rename_buffer,
+                size,
+                10,
+            )
+            if rename_status < 0:
+                error = int(ntdll.RtlNtStatusToDosError(rename_status))
+                raise SecurityBoundaryError(
+                    f"FILE_ATOMIC_RENAME_FAILED_{error}"
+                )
+            published = True
+            self.flush()
+            _require_requested_path_binding(integer_handle, target)
+            result = _snapshot(integer_handle, require_current_owner=True)
+            if result.volume_serial != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
+            return result
+        finally:
+            if handle not in (INVALID_HANDLE_VALUE, None, 0):
+                if not published:
+                    disposition = FILE_DISPOSITION_INFO(True)
+                    kernel32.SetFileInformationByHandle(
+                        handle,
+                        4,
+                        ctypes.byref(disposition),
+                        ctypes.sizeof(disposition),
+                    )
+                _close_handle(int(handle))
+
+    def append_and_flush(
+        self, name: str, payload: bytes
+    ) -> BoundFileSnapshot:
+        descriptor = self.open_regular_descriptor(name, create=True)
+        try:
+            os.lseek(descriptor, 0, os.SEEK_END)
+            os.write(descriptor, payload)
+            os.fsync(descriptor)
+            result = _snapshot(
+                int(msvcrt.get_osfhandle(descriptor)),
+                require_current_owner=True,
+            )
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+        return result
+
+    def delete_child(self, name: str) -> bool:
+        target = self.canonical_child_path(name)
+        expected = self.inspect_optional_child(name, "secure-delete")
+        if expected is None:
+            return False
+        handle = _open_relative_child(
+            self._handles[-1],
+            name,
+            desired_access=GENERIC_READ | DELETE | FILE_READ_ATTRIBUTES | READ_CONTROL,
+            share_access=FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            create=False,
+        )
+        if handle is None:
+            return False
+        try:
+            _require_requested_path_binding(int(handle), target)
+            if _snapshot(int(handle), require_current_owner=True) != expected:
+                raise SecurityBoundaryError("FILE_BINDING_MISMATCH")
+            disposition = FILE_DISPOSITION_INFO(True)
+            if not kernel32.SetFileInformationByHandle(
+                handle,
+                4,
+                ctypes.byref(disposition),
+                ctypes.sizeof(disposition),
+            ):
+                _raise_last_error("FILE_DELETE_FAILED")
+        finally:
+            _close_handle(int(handle))
+        self.flush()
+        return True
+
+    def flush(self) -> None:
+        self._require_open()
+        if not kernel32.FlushFileBuffers(self._handles[-1]):
+            error = ctypes.get_last_error()
+            if error != 1:
+                _raise_last_error("DIRECTORY_FLUSH_FAILED")
+
+
 class WindowsActivationSecurityBackend:
     def capabilities(self) -> SecurityCapabilities:
         return SecurityCapabilities(
@@ -496,18 +1143,20 @@ class WindowsActivationSecurityBackend:
         candidate = Path(path)
         if not candidate.is_absolute():
             raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
-        handle = _open_read_handle(candidate)
-        try:
-            return _snapshot(
-                handle,
-                require_current_owner=purpose not in {
-                    "process-image",
-                    "test-executable",
-                    "toolchain-executable",
-                },
-            )
-        finally:
-            _close_handle(handle)
+        require_owner = purpose not in {
+            "process-image",
+            "test-executable",
+            "toolchain-executable",
+        }
+        with self.open_secure_directory(
+            candidate.parent,
+            create=False,
+            require_current_owner=require_owner,
+        ) as session:
+            result = session.inspect_optional_child(candidate.name, purpose)
+            if result is None:
+                raise SecurityBoundaryError("FILE_OPEN_FAILED_2")
+            return result
 
     def inspect_open_file_descriptor(
         self, descriptor: int, purpose: str
@@ -522,23 +1171,130 @@ class WindowsActivationSecurityBackend:
         candidate = Path(path)
         if not candidate.is_absolute():
             raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
-        handle = _open_directory_handle(candidate)
+        with self.open_secure_directory(candidate, create=False) as session:
+            return session.binding.path_sha256
+
+    def open_secure_directory(
+        self,
+        path: Path,
+        *,
+        create: bool,
+        require_current_owner: bool = True,
+    ) -> WindowsSecureDirectorySession:
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
+        candidate = Path(os.path.abspath(candidate))
+        if candidate.drive.startswith("\\") or str(candidate).startswith(
+            ("\\\\.\\", "\\\\?\\")
+        ):
+            raise SecurityBoundaryError("LOCAL_FIXED_VOLUME_REQUIRED")
+        if _drive_type(candidate) != DRIVE_FIXED:
+            raise SecurityBoundaryError("LOCAL_FIXED_VOLUME_REQUIRED")
+        filesystem = ctypes.create_unicode_buffer(64)
+        root = _volume_root(candidate)
+        if not kernel32.GetVolumeInformationW(
+            root, None, 0, None, None, None, filesystem, len(filesystem)
+        ):
+            _raise_last_error("FILESYSTEM_READ_FAILED")
+        if filesystem.value.upper() != "NTFS":
+            raise SecurityBoundaryError("SUPPORTED_LOCAL_FILESYSTEM_REQUIRED")
+
+        handles: list[int] = []
+        current = Path(candidate.anchor)
+        final_index = len(candidate.parts) - 1
         try:
-            information = BY_HANDLE_FILE_INFORMATION()
+            for index, component in enumerate((candidate.anchor, *candidate.parts[1:])):
+                if index:
+                    _validate_child_name(component)
+                    current /= component
+                desired_access = FILE_READ_ATTRIBUTES | (
+                    READ_CONTROL
+                    | (GENERIC_WRITE if require_current_owner else 0)
+                    | (DELETE if require_current_owner else 0)
+                    if index == final_index
+                    else 0
+                )
+                share_access = FILE_SHARE_READ | FILE_SHARE_WRITE | (
+                    FILE_SHARE_DELETE
+                    if index < final_index or not require_current_owner
+                    else 0
+                )
+                if index == 0:
+                    handle = kernel32.CreateFileW(
+                        str(current), desired_access, share_access, None,
+                        OPEN_EXISTING,
+                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                        None,
+                    )
+                    if handle == INVALID_HANDLE_VALUE:
+                        _raise_last_error("DIRECTORY_OPEN_FAILED")
+                    integer_handle = int(handle)
+                else:
+                    try:
+                        integer_handle = _open_relative_directory(
+                            handles[-1], component,
+                            desired_access=desired_access,
+                            share_access=share_access,
+                            create=False,
+                        )
+                    except SecurityBoundaryError as error:
+                        if not create or not error.code.endswith(("_2", "_3")):
+                            raise
+                        integer_handle = _open_relative_directory(
+                            handles[-1], component,
+                            desired_access=desired_access,
+                            share_access=share_access,
+                            create=True,
+                        )
+                handles.append(integer_handle)
+                information = BY_HANDLE_FILE_INFORMATION()
+                if not kernel32.GetFileInformationByHandle(
+                    integer_handle, ctypes.byref(information)
+                ):
+                    _raise_last_error("DIRECTORY_INFORMATION_READ_FAILED")
+                if not information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
+                    raise SecurityBoundaryError("DIRECTORY_REQUIRED")
+                if information.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT:
+                    raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
+                _require_requested_path_binding(integer_handle, current)
+                if len(handles) > 1:
+                    root_information = BY_HANDLE_FILE_INFORMATION()
+                    if not kernel32.GetFileInformationByHandle(
+                        handles[0], ctypes.byref(root_information)
+                    ):
+                        _raise_last_error("DIRECTORY_INFORMATION_READ_FAILED")
+                    if (
+                        information.dwVolumeSerialNumber
+                        != root_information.dwVolumeSerialNumber
+                    ):
+                        raise SecurityBoundaryError("SECURE_DIRECTORY_VOLUME_MISMATCH")
+            owner, descriptor, dacl = _security_hashes(
+                handles[-1], require_current_owner=require_current_owner
+            )
+            final_information = BY_HANDLE_FILE_INFORMATION()
             if not kernel32.GetFileInformationByHandle(
-                handle, ctypes.byref(information)
+                handles[-1], ctypes.byref(final_information)
             ):
                 _raise_last_error("DIRECTORY_INFORMATION_READ_FAILED")
-            if not information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
-                raise SecurityBoundaryError("DIRECTORY_REQUIRED")
-            if information.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT:
-                raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
-            _security_hashes(handle, require_current_owner=True)
-            return hashlib.sha256(
-                _final_path(handle).casefold().encode("utf-8")
-            ).hexdigest()
-        finally:
-            _close_handle(handle)
+            binding = SecureDirectoryBinding(
+                path_sha256=hashlib.sha256(
+                    _final_path(handles[-1]).casefold().encode("utf-8")
+                ).hexdigest(),
+                volume_serial=int(final_information.dwVolumeSerialNumber),
+                file_id=(int(final_information.nFileIndexHigh) << 32)
+                | int(final_information.nFileIndexLow),
+                owner_sid_sha256=owner,
+                security_descriptor_sha256=descriptor,
+                dacl_sha256=dacl,
+            )
+            return WindowsSecureDirectorySession(
+                self, candidate, handles, binding
+            )
+        except Exception:
+            for handle in reversed(handles):
+                _close_handle(handle)
+            raise
 
     @contextmanager
     def open_bound_read(
@@ -547,57 +1303,55 @@ class WindowsActivationSecurityBackend:
         candidate = Path(path)
         if not candidate.is_absolute():
             raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
-        handle = _open_read_handle(candidate)
+        session = self.open_secure_directory(
+            candidate.parent,
+            create=False,
+            require_current_owner=False,
+        )
+        descriptor = -1
         try:
-            if _snapshot(handle, require_current_owner=False) != expected_binding:
+            handle = _open_relative_child(
+                session._handles[-1],
+                candidate.name,
+                desired_access=GENERIC_READ,
+                share_access=FILE_SHARE_READ,
+                create=False,
+            )
+            if handle is None:
+                raise SecurityBoundaryError("FILE_OPEN_FAILED_2")
+            descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+            actual = _snapshot(
+                int(msvcrt.get_osfhandle(descriptor)),
+                require_current_owner=False,
+            )
+            if actual != expected_binding:
                 raise SecurityBoundaryError("FILE_BINDING_MISMATCH")
-            with _duplicate_for_python(handle) as stream:
+            session.close()
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = -1
                 yield stream
         finally:
-            _close_handle(handle)
+            if descriptor >= 0:
+                os.close(descriptor)
+            session.close()
 
     def atomic_write(self, path: Path, payload: bytes) -> BoundFileSnapshot:
         target = Path(path)
         if not target.is_absolute():
             raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
-        target.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary_name = tempfile.mkstemp(
-            prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
-        )
-        temporary = Path(temporary_name)
-        try:
-            with os.fdopen(descriptor, "wb", closefd=True) as stream:
-                stream.write(payload)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, target)
-            return self.inspect_private_path(target, purpose="atomic-write")
-        finally:
-            if temporary.exists():
-                temporary.unlink()
+        with self.open_secure_directory(target.parent, create=True) as session:
+            return session.atomic_write(target.name, payload)
 
     def append_and_flush(self, path: Path, payload: bytes) -> BoundFileSnapshot:
         target = Path(path)
         if not target.is_absolute():
             raise SecurityBoundaryError("PATH_NOT_ABSOLUTE")
-        with target.open("ab") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        return self.inspect_private_path(target, purpose="append")
+        with self.open_secure_directory(target.parent, create=True) as session:
+            return session.append_and_flush(target.name, payload)
 
     def flush_directory(self, path: Path) -> None:
-        handle = _open_directory_handle(Path(path))
-        try:
-            if not kernel32.FlushFileBuffers(handle):
-                error = ctypes.get_last_error()
-                # Some Windows filesystems reject directory flush even when
-                # every file handle was durably flushed. Reject all errors
-                # except the documented invalid-function response.
-                if error != 1:
-                    _raise_last_error("DIRECTORY_FLUSH_FAILED")
-        finally:
-            _close_handle(handle)
+        with self.open_secure_directory(Path(path), create=False) as session:
+            session.flush()
 
     def acquire_run_lock(self, target_binding: str) -> WindowsRunLock:
         if len(target_binding) != 64 or any(
