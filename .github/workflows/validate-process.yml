@@ -34,7 +34,19 @@ jobs:
         run: python scripts/nac.py process validate-all
 
       - name: Run tests
-        run: python -m unittest discover -s tests -p "test_*.py"
+        shell: bash
+        run: |
+          log_file="$(mktemp)"
+          if python -m unittest discover -s tests -p "test_*.py" >"$log_file" 2>&1; then
+            cat "$log_file"
+          else
+            failures="$(grep -E '^(FAIL|ERROR): test_[A-Za-z0-9_]+ \([A-Za-z0-9_.]+\)' "$log_file" | sed -E 's/^(FAIL|ERROR): ([A-Za-z0-9_]+) \(([A-Za-z0-9_.]+)\).*$/\1:\3.\2/' | sort -u | paste -sd, -)"
+            if [ -z "$failures" ]; then
+              failures="UNCLASSIFIED_UNITTEST_FAILURE"
+            fi
+            echo "::error title=Linux runtime fixture tests failed::failed_tests=$failures"
+            exit 1
+          fi
 
       - name: Render fixture summaries
         shell: bash

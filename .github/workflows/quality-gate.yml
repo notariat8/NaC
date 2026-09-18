@@ -83,18 +83,39 @@ jobs:
 
       - name: Test, build and package BPMN viewer
         working-directory: spfx/nac-bpmn-viewer
-        run: npm run build
+        shell: bash
+        run: |
+          log_file="$(mktemp)"
+          if npm run build >"$log_file" 2>&1; then
+            cat "$log_file"
+          else
+            echo "::error title=SPFx build failed::SPFX_BUILD_FAILED"
+            exit 1
+          fi
 
       - name: Reproduce committed Workbench visual evidence
         working-directory: spfx/nac-bpmn-viewer
+        shell: bash
         run: |
-          npm run workbench:capture
-          npm run workbench:live:capture
+          if ! npm run workbench:capture; then
+            echo "::error title=Workbench capture failed::WORKBENCH_CAPTURE_FAILED"
+            exit 1
+          fi
+          if ! npm run workbench:live:capture; then
+            echo "::error title=Live Workbench capture failed::WORKBENCH_LIVE_CAPTURE_FAILED"
+            exit 1
+          fi
 
       - name: Require deterministic Workbench visual evidence
+        shell: bash
         run: |
-          git diff --exit-code -- assets/docs/generic-workbench
-          git diff --exit-code -- assets/docs/workbench-live-read-binding
+          log_file="$(mktemp)"
+          if git diff --exit-code -- assets/docs/generic-workbench assets/docs/workbench-live-read-binding >"$log_file" 2>&1; then
+            cat "$log_file"
+          else
+            echo "::error title=Workbench visual evidence drifted::WORKBENCH_VISUAL_EVIDENCE_DRIFT"
+            exit 1
+          fi
 
       - name: Upload generic workbench compiled evidence
         uses: actions/upload-artifact@v7
@@ -200,7 +221,19 @@ jobs:
       - name: Run strict quality gate
         env:
           NAC_REQUIRE_WORKBENCH_BUILD_EVIDENCE: "1"
-        run: python scripts/quality_gate.py --profile strict
+        shell: bash
+        run: |
+          log_file="$(mktemp)"
+          if python scripts/quality_gate.py --profile strict >"$log_file" 2>&1; then
+            cat "$log_file"
+          else
+            failed_checks="$(python -c 'import json,re; p=json.load(open("out/quality/status.json",encoding="utf-8")); print(",".join(c["id"] for c in p.get("checks",[]) if c.get("passed") is not True and re.fullmatch(r"[a-z0-9_]+",str(c.get("id","")))))' 2>/dev/null || true)"
+            if [ -z "$failed_checks" ]; then
+              failed_checks="UNCLASSIFIED_QUALITY_GATE_FAILURE"
+            fi
+            echo "::error title=NaC strict quality gate failed::failed_checks=$failed_checks"
+            exit 1
+          fi
 
       - name: Render PR developer CI comment
         if: always() && github.event_name == 'pull_request'
