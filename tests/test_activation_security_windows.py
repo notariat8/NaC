@@ -21,6 +21,7 @@ from nac_bff.activation_security_backend import ProcessSpec, SecurityBoundaryErr
 from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
 from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
 from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
+from nac_m365_graph.sealed_toolchain import sealed_payloads, sealed_toolchain
 
 
 @contextmanager
@@ -546,6 +547,44 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 expected_node_sha256=node_sha256,
                 environ={},
             )
+            runtime_payloads = runner._runtime_payloads()
+            runtime_manifest = build_node_runtime_manifest(runtime)
+            with self.subTest(sealing_phase="runtime-files"):
+                with sealed_toolchain(
+                    tuple(
+                        (
+                            runtime / item.relative_path,
+                            False,
+                            item.sha256,
+                        )
+                        for item in runtime_manifest.files
+                    )
+                ):
+                    pass
+            with self.subTest(sealing_phase="node-binary"):
+                with sealed_toolchain(((node, True, node_sha256),)):
+                    pass
+            with self.subTest(sealing_phase="loader-payloads"):
+                with sealed_payloads(
+                    (
+                        (
+                            "node-runtime-manifest.json",
+                            runtime_payloads.manifest,
+                            False,
+                        ),
+                        (
+                            "node-runtime-preloader.cjs",
+                            runtime_payloads.commonjs_preloader,
+                            False,
+                        ),
+                        (
+                            "node-runtime-loader.mjs",
+                            runtime_payloads.esm_loader,
+                            False,
+                        ),
+                    )
+                ):
+                    pass
             result = runner.run(("m365", "status", "--output", "json"))
             payload = json.loads(result.stdout)
             self.assertEqual(result.returncode, 0)
