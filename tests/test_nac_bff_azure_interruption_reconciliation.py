@@ -7,10 +7,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
+
+_TESTS_ROOT = str(Path(__file__).resolve().parent)
+if _TESTS_ROOT not in sys.path:
+    sys.path.insert(0, _TESTS_ROOT)
 
 from nac_bff.azure_activation_runner import (
     ActivationStepError,

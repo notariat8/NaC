@@ -18,6 +18,10 @@ import zipfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+_TESTS_ROOT = str(Path(__file__).resolve().parent)
+if _TESTS_ROOT not in sys.path:
+    sys.path.insert(0, _TESTS_ROOT)
+
 import nac_bff.azure_cli_sealed_runtime as azure_cli_sealed_runtime
 import nac_bff.azure_live_commands as azure_live_commands
 from nac_bff.azure_performance_monitor import build_metrics_url, monitor_policy_sha256
