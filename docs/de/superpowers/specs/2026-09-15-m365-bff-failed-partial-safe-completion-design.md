@@ -504,6 +504,11 @@ kein Quellenbeleg.
   Recovery, Provider-Schreibzugriffe, Tenant-Schreibzugriffe,
   Credential-Mutation und automatische Wiederholung bleiben durch #746
   gesperrt; das bloße Entfernen einer Plattform-Sperre ist unzulässig.
+  PR und Owner-Kommentar werden ausschließlich über einen vom vertrauenswürdigen
+  Host injizierten, auf `notariat8/NaC`, PR #747 und Issue #746 begrenzten
+  semantischen GitHub-Lesekanal bezogen. Fehlt dieser Kanal, blockiert das Gate
+  vor Azure- oder Credentialzugriff; es gibt keinen `gh`-, Login-, Token- oder
+  Git/GCM-Fallback.
 - **AC-746-06 – Replay- und Crash-Sicherheit:** Die drei Freigaben sind nicht
   austauschbar; falsche Issue-, Principal-, Commit-, Tree-, Contract-, Body-
   oder Artefaktbindung blockiert. Abandoned Mutex und Teil-Appends führen nie
@@ -512,10 +517,14 @@ kein Quellenbeleg.
   DE/EN-Plan, AC-IDs, Dateien, positive und negative Tests sowie lokale und
   Remote-Evidence sind verbunden. Verpflichtende CI läuft auf Windows; Linux-
   CI bleibt optional und nicht blockierend.
+  Der Verification Contract wertet PR-Checks über den authentifizierten
+  GitHub-Connector am exakten erwarteten HEAD aus, nicht über eine lokale
+  `gh`-Sitzung.
 - **AC-746-08 – Keine vorgezogene Live-Aktion:** Design, Plan und
   Implementierungs-PR führen keine Quarantänefreigabe, Anmeldung, Provider-,
   Tenant-, Credential- oder Live-Aktion aus. #739 und #632 bleiben separate,
   hashgebundene Owner-Gates.
+  Ein Kanalfehler oder HTTP-401 löst weder Anmeldung noch Wiederholung aus.
 
 ## Validierungsmodell
 

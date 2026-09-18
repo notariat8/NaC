@@ -7965,7 +7965,11 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
         print(f"ERROR: {error}")
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    issue746_github_reader: Any | None = None,
+) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
     if any(
         command_index(effective_argv) is not None
@@ -8014,14 +8018,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     if interruption_index is not None:
         return _run_bff_azure_activation_interruption_command(
-            effective_argv, interruption_index
+            effective_argv,
+            interruption_index,
+            issue746_github_reader=issue746_github_reader,
         )
     function_deployment_index = (
         _bff_azure_function_deployment_command_index(effective_argv)
     )
     if function_deployment_index is not None:
         return _run_bff_azure_function_deployment_command(
-            effective_argv, function_deployment_index
+            effective_argv,
+            function_deployment_index,
+            issue746_github_reader=issue746_github_reader,
         )
     recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if recovery_index is not None:
@@ -8538,7 +8546,10 @@ def _live_activation_request_from_args(args: argparse.Namespace):
 
 
 def _run_bff_azure_activation_interruption_command(
-    argv: list[str], command_index: int
+    argv: list[str],
+    command_index: int,
+    *,
+    issue746_github_reader: Any | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(
         prog=(
@@ -8664,8 +8675,6 @@ def _run_bff_azure_activation_interruption_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
-            GH_CLI_EXECUTION_PATH,
-            GitHubApprovalVerifier,
         )
         from nac_bff.azure_activation_facade import (
             build_interruption_reconciliation_ports,
@@ -8679,6 +8688,7 @@ def _run_bff_azure_activation_interruption_command(
         from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
         from nac_bff.issue746_reconciliation_gate import (
             GATE_CLOSED as ISSUE746_RECONCILIATION_GATE_CLOSED,
+            GITHUB_READ_CHANNEL_UNAVAILABLE,
             Issue746ReconciliationGateError,
             verify_issue746_readonly_reconciliation_gate,
         )
@@ -8689,11 +8699,6 @@ def _run_bff_azure_activation_interruption_command(
     try:
         repo_root = resolve_repo_root(args.repo_root)
         request = _live_activation_request_from_args(args)
-        issue746_github_reader = GitHubApprovalVerifier(
-            binary=GH_CLI_EXECUTION_PATH,
-            expected_binary_sha256=request.gh_cli_sha256,
-            environ=dict(os.environ),
-        )
         issue746_authorization = verify_issue746_readonly_reconciliation_gate(
             repo_root=repo_root,
             protected_identity_resolver_file=(
@@ -8792,9 +8797,12 @@ def _run_bff_azure_activation_interruption_command(
                 observation_port=observation_port,
                 output_root=DEFAULT_OUTPUT_ROOT,
             )
-    except Issue746ReconciliationGateError:
+    except Issue746ReconciliationGateError as exc:
         return _emit_bff_azure_interruption_error(
-            ISSUE746_RECONCILIATION_GATE_CLOSED, args.format
+            GITHUB_READ_CHANNEL_UNAVAILABLE
+            if exc.reason == GITHUB_READ_CHANNEL_UNAVAILABLE
+            else ISSUE746_RECONCILIATION_GATE_CLOSED,
+            args.format,
         )
     except Exception:
         return _emit_bff_azure_interruption_error(
@@ -8812,7 +8820,10 @@ def _run_bff_azure_activation_interruption_command(
 
 
 def _run_bff_azure_function_deployment_command(
-    argv: list[str], command_index: int
+    argv: list[str],
+    command_index: int,
+    *,
+    issue746_github_reader: Any | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(
         prog=(
@@ -8892,8 +8903,6 @@ def _run_bff_azure_function_deployment_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
-            GH_CLI_EXECUTION_PATH,
-            GitHubApprovalVerifier,
         )
         from nac_bff.azure_activation_facade import (
             build_function_deployment_reconciliation_ports,
@@ -8901,6 +8910,7 @@ def _run_bff_azure_function_deployment_command(
         from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
         from nac_bff.issue746_reconciliation_gate import (
             GATE_CLOSED as ISSUE746_RECONCILIATION_GATE_CLOSED,
+            GITHUB_READ_CHANNEL_UNAVAILABLE,
             Issue746ReconciliationGateError,
             verify_issue746_readonly_reconciliation_gate,
         )
@@ -8917,11 +8927,6 @@ def _run_bff_azure_function_deployment_command(
     try:
         repo_root = resolve_repo_root(args.repo_root)
         request = _live_activation_request_from_args(args)
-        issue746_github_reader = GitHubApprovalVerifier(
-            binary=GH_CLI_EXECUTION_PATH,
-            expected_binary_sha256=request.gh_cli_sha256,
-            environ=dict(os.environ),
-        )
         issue746_authorization = verify_issue746_readonly_reconciliation_gate(
             repo_root=repo_root,
             protected_identity_resolver_file=(
@@ -9014,9 +9019,12 @@ def _run_bff_azure_function_deployment_command(
                 observation_port=observation_port,
                 output_root=DEFAULT_OUTPUT_ROOT,
             )
-    except Issue746ReconciliationGateError:
+    except Issue746ReconciliationGateError as exc:
         return _emit_bff_azure_interruption_error(
-            ISSUE746_RECONCILIATION_GATE_CLOSED, args.format
+            GITHUB_READ_CHANNEL_UNAVAILABLE
+            if exc.reason == GITHUB_READ_CHANNEL_UNAVAILABLE
+            else ISSUE746_RECONCILIATION_GATE_CLOSED,
+            args.format,
         )
     except Exception:
         return _emit_bff_azure_interruption_error(

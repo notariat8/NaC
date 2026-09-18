@@ -61,6 +61,32 @@ class AgentAuthenticationBoundaryTest(unittest.TestCase):
             errors,
         )
 
+    def test_issue746_runtime_rejects_reintroduced_gh_transport(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in (
+                Path("policies/process-policy.yaml"),
+                Path("docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md"),
+                Path("src/nac_cli/cli.py"),
+                Path("src/nac_bff/issue746_reconciliation_gate.py"),
+            ):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                text = (REPO_ROOT / relative).read_text(encoding="utf-8")
+                if relative == Path("src/nac_cli/cli.py"):
+                    text += "\nissue746_github_reader = GitHubApprovalVerifier(\n"
+                target.write_text(text, encoding="utf-8")
+            (root / "AGENTS.md").write_text(
+                (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+            errors = validate_agent_authentication_boundary.validate(root)
+
+        self.assertTrue(
+            any("forbidden marker found" in error for error in errors), errors
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

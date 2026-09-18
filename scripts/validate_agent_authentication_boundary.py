@@ -46,6 +46,14 @@ REQUIRED_ISSUE_746_MARKERS = (
     "There is no\nprovider, tenant, credential, or live access",
 )
 
+FORBIDDEN_ISSUE_746_RUNTIME_MARKERS = (
+    "issue746_github_reader = GitHubApprovalVerifier(",
+    "github_reader.read_json(",
+    '["gh", "pr"',
+    '["gh", "api"',
+    "gh auth login",
+)
+
 
 def validate(root: Path = REPO_ROOT) -> list[str]:
     errors: list[str] = []
@@ -85,6 +93,29 @@ def validate(root: Path = REPO_ROOT) -> list[str]:
     for marker in REQUIRED_ISSUE_746_MARKERS:
         if marker not in issue_746_spec:
             errors.append(f"Issue #746 safe-completion spec missing marker: {marker}")
+
+    runtime_paths = (
+        root / "src" / "nac_cli" / "cli.py",
+        root / "src" / "nac_bff" / "issue746_reconciliation_gate.py",
+    )
+    if all(path.is_file() for path in runtime_paths):
+        runtime_text = "\n".join(path.read_text(encoding="utf-8") for path in runtime_paths)
+        for marker in FORBIDDEN_ISSUE_746_RUNTIME_MARKERS:
+            if marker in runtime_text:
+                errors.append(
+                    "Issue #746 runtime must use the injected semantic GitHub read channel; "
+                    f"forbidden marker found: {marker}"
+                )
+        for marker in (
+            "def read_pull_request(",
+            "def read_issue_comment(",
+            "issue746_github_reader: Any | None = None",
+        ):
+            if marker not in runtime_text:
+                errors.append(
+                    "Issue #746 runtime missing semantic GitHub channel marker: "
+                    f"{marker}"
+                )
 
     return errors
 

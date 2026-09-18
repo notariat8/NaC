@@ -584,30 +584,28 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
         )
         valid_comment = {
             "html_url": reference,
+            "created_at": "2026-09-18T10:00:00Z",
+            "updated_at": "2026-09-18T10:00:00Z",
             "author_association": "OWNER",
             "user": {"login": "owner-example-primary"},
             "body": body,
         }
 
-        def fetch(comment: dict):
-            return patch.object(
-                validator.subprocess,
-                "run",
-                return_value=SimpleNamespace(
-                    returncode=0,
-                    stdout=json.dumps(comment),
-                    stderr="",
-                ),
-            )
+        class Reader:
+            def __init__(self, comment: dict):
+                self.comment = comment
 
-        with fetch(valid_comment):
-            approval, errors = validator.fetch_owner_solo_approval(
-                reference,
-                expected_head=head,
-                operator_account_id=account_id,
-                operator_principal_id=principal_id,
-                identity_resolver_sha256=resolver_sha256,
-            )
+            def read_issue_comment(self, **_kwargs):
+                return self.comment
+
+        approval, errors = validator.fetch_owner_solo_approval(
+            reference,
+            expected_head=head,
+            operator_account_id=account_id,
+            operator_principal_id=principal_id,
+            identity_resolver_sha256=resolver_sha256,
+            github_reader=Reader(valid_comment),
+        )
         self.assertEqual(errors, [])
         self.assertEqual(approval["head_sha"], head)
         self.assertEqual(approval["author_association"], "OWNER")
@@ -616,17 +614,19 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             ("body", body + "\nchanged=true"),
             ("author_association", "MEMBER"),
             ("html_url", "https://github.com/notariat8/NaC/issues/739#issuecomment-123456"),
+            ("updated_at", "2026-09-18T10:01:00Z"),
         )
         for field, value in mutations:
             changed = copy.deepcopy(valid_comment)
             changed[field] = value
-            with self.subTest(field=field), fetch(changed):
+            with self.subTest(field=field):
                 approval, errors = validator.fetch_owner_solo_approval(
                     reference,
                     expected_head=head,
                     operator_account_id=account_id,
                     operator_principal_id=principal_id,
                     identity_resolver_sha256=resolver_sha256,
+                    github_reader=Reader(changed),
                 )
                 self.assertIsNone(approval)
                 self.assertTrue(errors)
@@ -918,7 +918,13 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             for context in validator.REQUIRED_REMOTE_CONTEXTS
         ]
         self.assertEqual(validator.validate_check_rollup(valid), [])
-        payload = {"number": 747, "headRefOid": "a" * 40, "statusCheckRollup": valid}
+        payload = {
+            "number": 747,
+            "url": "https://github.com/notariat8/NaC/pull/747",
+            "repository": {"nameWithOwner": "notariat8/NaC"},
+            "headRefOid": "a" * 40,
+            "statusCheckRollup": valid,
+        }
         self.assertEqual(
             validator.validate_pr_payload(payload, expected_pr=747, expected_head="a" * 40),
             [],
@@ -942,6 +948,20 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                     wrong_head, expected_pr=747, expected_head="a" * 40
                 )
             )
+        for field, value in (
+            ("url", "https://github.com/other/NaC/pull/747"),
+            ("repository", {"nameWithOwner": "other/NaC"}),
+        ):
+            wrong_repository = copy.deepcopy(payload)
+            wrong_repository[field] = value
+            with self.subTest(case_id=f"wrong_{field}"):
+                self.assertTrue(
+                    validator.validate_pr_payload(
+                        wrong_repository,
+                        expected_pr=747,
+                        expected_head="a" * 40,
+                    )
+                )
         for case_id, mutated in validator.remote_check_negative_cases(valid).items():
             with self.subTest(case_id=case_id):
                 self.assertTrue(validator.validate_check_rollup(mutated))
@@ -954,7 +974,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             stdout="\n".join(sorted(validator.EXPECTED_PR_FILES)) + "\n",
             stderr="",
         )
-        failures = (
+        git_failures = (
             (
                 [SimpleNamespace(returncode=1, stdout="", stderr=sentinel)],
                 "FINAL_HEAD_RESOLUTION_FAILED",
@@ -963,20 +983,8 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 [ok_head, SimpleNamespace(returncode=1, stdout="", stderr=sentinel)],
                 "PR_SCOPE_RESOLUTION_FAILED",
             ),
-            (
-                [ok_head, ok_diff, SimpleNamespace(returncode=1, stdout="", stderr=sentinel)],
-                "GITHUB_PR_READ_FAILED",
-            ),
-            (
-                [ok_head, ok_diff, SimpleNamespace(returncode=0, stdout=sentinel, stderr="")],
-                "GITHUB_PR_RESPONSE_INVALID",
-            ),
-            (
-                [ok_head, ok_diff, SimpleNamespace(returncode=0, stdout="[]", stderr="")],
-                "GITHUB_PR_RESPONSE_INVALID",
-            ),
         )
-        for results, expected_code in failures:
+        for results, expected_code in git_failures:
             with self.subTest(expected_code=expected_code), patch.object(
                 validator.subprocess, "run", side_effect=results
             ):
@@ -987,6 +995,36 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                     protected_identity_resolver_sha256="d" * 64,
                     operator_account_id="github:owner-example-primary",
                     owner_solo_approval_reference=None,
+                )
+            self.assertEqual(errors, [expected_code])
+            self.assertNotIn(sentinel, "\n".join(errors))
+
+        class Reader:
+            def __init__(self, value=None, error=None):
+                self.value = value
+                self.error = error
+
+            def read_pull_request(self, **_kwargs):
+                if self.error is not None:
+                    raise self.error
+                return self.value
+
+        for reader, expected_code in (
+            (None, "GITHUB_READ_CHANNEL_UNAVAILABLE"),
+            (Reader(error=PermissionError(sentinel)), "GITHUB_PR_READ_FAILED"),
+            (Reader(value=[]), "GITHUB_PR_RESPONSE_INVALID"),
+        ):
+            with self.subTest(expected_code=expected_code), patch.object(
+                validator.subprocess, "run", side_effect=[ok_head, ok_diff]
+            ):
+                errors = validator.verify_pr_checks(
+                    expected_pr=747,
+                    expected_head_ref="HEAD",
+                    protected_identity_resolver_file="C:/protected/resolver.json",
+                    protected_identity_resolver_sha256="d" * 64,
+                    operator_account_id="github:owner-example-primary",
+                    owner_solo_approval_reference=None,
+                    github_reader=reader,
                 )
             self.assertEqual(errors, [expected_code])
             self.assertNotIn(sentinel, "\n".join(errors))
@@ -1015,10 +1053,11 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             argv = ["validator", "--verify-pr-checks"]
             for option, value in required.items():
                 argv.extend((option, value))
+            reader = object()
             with patch.object(sys, "argv", list(argv)), patch.object(
                 validator, "verify_pr_checks", return_value=[]
             ) as verify, patch("builtins.print") as output:
-                result = validator.main()
+                result = validator.main(github_reader=reader)
             self.assertEqual(result, 0, output.call_args_list)
             verify.assert_called_once_with(
                 747,
@@ -1027,7 +1066,144 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 required["--protected-identity-resolver-sha256"],
                 required["--operator-account-id"],
                 required["--owner-solo-approval-reference"],
+                github_reader=reader,
             )
+
+    def test_trusted_host_entrypoint_executes_with_semantic_reader(self) -> None:
+        head = "a" * 40
+        resolver_sha256 = "d" * 64
+        account_id = "github:owner-example-primary"
+        principal_id = "person:owner-example"
+        reference = (
+            "https://github.com/notariat8/NaC/issues/746#issuecomment-123456"
+        )
+        registry = {
+            "version": 2,
+            "principals": [
+                {
+                    "principal_id": principal_id,
+                    "technical_role_ids": ["prozessverantwortung"],
+                    "qualifications": ["process_design"],
+                    "active": True,
+                }
+            ],
+            "accounts": [
+                {
+                    "account_id": account_id,
+                    "provider": "github",
+                    "login": "owner-example-primary",
+                    "principal_id": principal_id,
+                    "active": True,
+                },
+                {
+                    "account_id": "github:owner-example-secondary",
+                    "provider": "github",
+                    "login": "owner-example-secondary",
+                    "principal_id": principal_id,
+                    "active": True,
+                },
+                {
+                    "account_id": "nvidia-gitlab:owner-example",
+                    "provider": "nvidia-gitlab",
+                    "login": "owner-example",
+                    "principal_id": principal_id,
+                    "active": True,
+                },
+            ],
+        }
+        resolver = {
+            "schema_version": "nac.protected-identity-resolver/v1",
+            "contract_id": "issue-746-owner-account-principal-resolution",
+            "known_owner_account_count": 3,
+            "all_known_accounts_same_principal": True,
+            "registry": registry,
+        }
+        body = (
+            "OWNER_SOLO_APPROVAL\nissue=746\npr=747\n"
+            f"head_sha={head}\n"
+            f"account_id_sha256={validator.identity_binding_sha256('account-id', account_id)}\n"
+            f"principal_id_sha256={validator.identity_binding_sha256('principal-id', principal_id)}\n"
+            f"identity_resolver_sha256={resolver_sha256}\n"
+            "four_eyes_satisfied=false"
+        )
+
+        class Reader:
+            def read_pull_request(self, **kwargs):
+                self.pr_args = kwargs
+                return {
+                    "number": 747,
+                    "url": "https://github.com/notariat8/NaC/pull/747",
+                    "repository": {"nameWithOwner": "notariat8/NaC"},
+                    "headRefOid": head,
+                    "statusCheckRollup": [
+                        {
+                            "workflowName": context.split(" / ", 1)[0],
+                            "name": context.split(" / ", 1)[1],
+                            "conclusion": "SUCCESS",
+                        }
+                        for context in validator.REQUIRED_REMOTE_CONTEXTS
+                    ],
+                    "reviewDecision": "",
+                    "latestReviews": [],
+                }
+
+            def read_issue_comment(self, **kwargs):
+                self.comment_args = kwargs
+                return {
+                    "html_url": reference,
+                    "created_at": "2026-09-18T10:00:00Z",
+                    "updated_at": "2026-09-18T10:00:00Z",
+                    "author_association": "OWNER",
+                    "user": {"login": "owner-example-primary"},
+                    "body": body,
+                }
+
+        reader = Reader()
+        argv = [
+            "--verify-pr-checks",
+            "--protected-identity-resolver-file",
+            "C:/protected/resolver.json",
+            "--protected-identity-resolver-sha256",
+            resolver_sha256,
+            "--operator-account-id",
+            account_id,
+            "--owner-solo-approval-reference",
+            reference,
+        ]
+        with (
+            patch.object(validator, "validate_contract", return_value=[]),
+            patch.object(
+                validator.subprocess,
+                "run",
+                side_effect=[
+                    SimpleNamespace(returncode=0, stdout=head + "\n", stderr=""),
+                    SimpleNamespace(
+                        returncode=0,
+                        stdout="\n".join(sorted(validator.EXPECTED_PR_FILES)) + "\n",
+                        stderr="",
+                    ),
+                ],
+            ),
+            patch.object(
+                validator, "load_protected_json", return_value=(resolver, [])
+            ),
+            patch("builtins.print"),
+        ):
+            result = validator.main(argv, github_reader=reader)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            reader.pr_args,
+            {"owner": "notariat8", "repository": "NaC", "number": 747},
+        )
+        self.assertEqual(
+            reader.comment_args,
+            {
+                "owner": "notariat8",
+                "repository": "NaC",
+                "comment_id": 123456,
+            },
+        )
 
     def test_ai_sbom_registers_issue746_agentic_contract_without_release_export(self) -> None:
         sbom = json.loads(validator.AI_SBOM_PATH.read_text(encoding="utf-8"))

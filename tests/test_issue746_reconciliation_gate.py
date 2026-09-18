@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 from nac_bff.issue746_reconciliation_gate import (
     GATE_CLOSED,
+    GITHUB_READ_CHANNEL_UNAVAILABLE,
     Issue746ReconciliationAuthorization,
     Issue746ReconciliationGateError,
     identity_binding_sha256,
@@ -92,9 +93,20 @@ class _Reader:
         self.checks = _checks() if checks is None else checks
         self.body = _approval_body() if body is None else body
 
-    def read_json(self, argv):
-        if argv[0] == "pr":
-            return {"number": 747, "headRefOid": HEAD, "statusCheckRollup": self.checks}
+        self.calls = []
+
+    def read_pull_request(self, *, owner, repository, number):
+        self.calls.append(("pr", owner, repository, number))
+        return {
+            "number": 747,
+            "url": "https://github.com/notariat8/NaC/pull/747",
+            "repository": {"nameWithOwner": "notariat8/NaC"},
+            "headRefOid": HEAD,
+            "statusCheckRollup": self.checks,
+        }
+
+    def read_issue_comment(self, *, owner, repository, comment_id):
+        self.calls.append(("comment", owner, repository, comment_id))
         return {
             "html_url": REFERENCE,
             "created_at": "2026-09-18T10:00:00Z",
@@ -127,10 +139,18 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
             )
 
     def test_valid_gate_returns_digest_bound_solo_owner_authorization(self) -> None:
-        authorization = self._verify()
+        reader = _Reader()
+        authorization = self._verify(reader)
         self.assertEqual(authorization.approved_head, HEAD)
         self.assertEqual(authorization.approved_tree, TREE)
         self.assertFalse(authorization.four_eyes_satisfied)
+        self.assertEqual(
+            reader.calls,
+            [
+                ("pr", "notariat8", "NaC", 747),
+                ("comment", "notariat8", "NaC", 123),
+            ],
+        )
         authorization.verify(expected_head=HEAD, expected_tree=TREE)
 
     def test_same_principal_accounts_never_satisfy_four_eyes(self) -> None:
@@ -162,6 +182,72 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
     def test_raw_login_is_not_a_governance_identity(self) -> None:
         with self.assertRaises(Issue746ReconciliationGateError):
             resolve_authorized_operator(_resolver(), "owner-primary")
+
+    def test_same_login_on_non_github_provider_cannot_authorize_comment(self) -> None:
+        with self.assertRaises(Issue746ReconciliationGateError) as raised:
+            with (
+                patch(
+                    "nac_bff.issue746_reconciliation_gate.load_protected_identity_resolver",
+                    return_value=_resolver(),
+                ),
+                patch(
+                    "nac_bff.issue746_reconciliation_gate.read_clean_git_snapshot",
+                    return_value=(HEAD, TREE),
+                ),
+            ):
+                verify_issue746_readonly_reconciliation_gate(
+                    repo_root=Mock(),
+                    protected_identity_resolver_file=Mock(),
+                    protected_identity_resolver_sha256=RESOLVER_SHA256,
+                    operator_account_id="nvidia-gitlab:owner",
+                    owner_solo_approval_reference=REFERENCE,
+                    github_reader=_Reader(),
+                )
+        self.assertEqual(raised.exception.code, GATE_CLOSED)
+
+    def test_missing_or_failed_provider_port_blocks_without_fallback(self) -> None:
+        class _FailedReader:
+            def read_pull_request(self, **_kwargs):
+                raise PermissionError("401")
+
+            def read_issue_comment(self, **_kwargs):
+                self.fail("must not be reached")
+
+        with self.assertRaises(Issue746ReconciliationGateError) as raised:
+            self._verify(_FailedReader())
+        self.assertEqual(raised.exception.code, GATE_CLOSED)
+        self.assertEqual(
+            raised.exception.reason, GITHUB_READ_CHANNEL_UNAVAILABLE
+        )
+
+    def test_wrong_repository_identity_blocks(self) -> None:
+        reader = _Reader()
+        original = reader.read_pull_request
+
+        def wrong_repo(**kwargs):
+            payload = dict(original(**kwargs))
+            payload["repository"] = {"nameWithOwner": "other/NaC"}
+            return payload
+
+        reader.read_pull_request = wrong_repo
+        with self.assertRaises(Issue746ReconciliationGateError):
+            self._verify(reader)
+
+    def test_comment_401_reports_exact_channel_gap_without_retry(self) -> None:
+        class Reader(_Reader):
+            def __init__(self):
+                super().__init__()
+                self.comment_attempts = 0
+
+            def read_issue_comment(self, **_kwargs):
+                self.comment_attempts += 1
+                raise PermissionError("401")
+
+        reader = Reader()
+        with self.assertRaises(Issue746ReconciliationGateError) as raised:
+            self._verify(reader)
+        self.assertEqual(raised.exception.reason, GITHUB_READ_CHANNEL_UNAVAILABLE)
+        self.assertEqual(reader.comment_attempts, 1)
 
 
 if __name__ == "__main__":

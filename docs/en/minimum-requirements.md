@@ -42,7 +42,7 @@ The base workspace is the minimum environment for repository work:
 | --- | --- | --- |
 | Operating system | Windows 11 or another current maintained developer OS | Local development and GitOps work |
 | Git | installed and available in `PATH` | versioning, branches, pull requests |
-| GitHub CLI `gh` | installed and authenticated | PR, Actions and repository operations |
+| GitHub read channel | authenticated GitHub connector preferred; `gh` optional | PR and Actions reads; Git/GCM remains limited to Git transport |
 | Python | `>= 3.11` | deterministic checks, KG runtime, workflow runtime |
 | Codex | required | agent-assisted contribution |
 | `pandoc` | recommended | later document export |

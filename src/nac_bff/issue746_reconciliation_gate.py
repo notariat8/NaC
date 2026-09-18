@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any, Mapping, Protocol
 
 from nac_identity.governance_registry import (
     OWNER_SOLO_APPROVAL,
@@ -20,8 +20,11 @@ from nac_identity.governance_registry import (
 
 ISSUE_NUMBER = 746
 PR_NUMBER = 747
+GITHUB_OWNER = "notariat8"
+GITHUB_REPOSITORY = "NaC"
 AUTHORIZATION_SCOPE = "issue746_readonly_reconciliation"
 GATE_CLOSED = "ISSUE_746_RECONCILIATION_GATE_CLOSED"
+GITHUB_READ_CHANNEL_UNAVAILABLE = "ISSUE_746_GITHUB_READ_CHANNEL_UNAVAILABLE"
 REQUIRED_REMOTE_CONTEXTS = frozenset(
     {
         "Privacy and Secrets Guard / secret-scan",
@@ -46,7 +49,13 @@ class Issue746ReconciliationGateError(RuntimeError):
 
 
 class Issue746GitHubReadPort(Protocol):
-    def read_json(self, argv: Sequence[str]) -> Mapping[str, Any] | None: ...
+    def read_pull_request(
+        self, *, owner: str, repository: str, number: int
+    ) -> Mapping[str, Any] | None: ...
+
+    def read_issue_comment(
+        self, *, owner: str, repository: str, comment_id: int
+    ) -> Mapping[str, Any] | None: ...
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -233,6 +242,15 @@ def load_protected_identity_resolver(
 def resolve_authorized_operator(
     resolver: Mapping[str, Any], operator_account_id: str
 ) -> Mapping[str, Any]:
+    _account, operator = _resolve_authorized_operator_binding(
+        resolver, operator_account_id
+    )
+    return operator
+
+
+def _resolve_authorized_operator_binding(
+    resolver: Mapping[str, Any], operator_account_id: str
+) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
     if set(resolver) != {
         "schema_version",
         "contract_id",
@@ -261,6 +279,21 @@ def resolve_authorized_operator(
     principal_ids = {account.get("principal_id") for account in active_accounts}
     if len(accounts) != 3 or len(active_accounts) != 3 or len(principal_ids) != 1:
         raise Issue746ReconciliationGateError("three-account principal binding invalid")
+    operator_accounts = [
+        account
+        for account in active_accounts
+        if account.get("account_id") == operator_account_id
+    ]
+    if len(operator_accounts) != 1:
+        raise Issue746ReconciliationGateError("operator account unresolved")
+    operator_account = operator_accounts[0]
+    if (
+        operator_account.get("provider") != "github"
+        or not isinstance(operator_account.get("login"), str)
+        or not str(operator_account_id).startswith("github:")
+        or operator_account_id.split(":", 1)[1] != operator_account.get("login")
+    ):
+        raise Issue746ReconciliationGateError("operator GitHub account invalid")
     try:
         operator = resolve_principal(registry, operator_account_id)
     except ValueError as exc:
@@ -281,7 +314,7 @@ def resolve_authorized_operator(
         or decision.get("four_eyes_satisfied") != "false"
     ):
         raise Issue746ReconciliationGateError("solo-owner mode invalid")
-    return operator
+    return operator_account, operator
 
 
 def _git_read(repo_root: Path, *args: str) -> str:
@@ -323,7 +356,14 @@ def _check_context(item: Mapping[str, Any]) -> str:
 
 
 def _verify_pr(payload: Mapping[str, Any], *, expected_head: str) -> str:
-    if payload.get("number") != PR_NUMBER or payload.get("headRefOid") != expected_head:
+    repository = payload.get("repository")
+    if (
+        payload.get("number") != PR_NUMBER
+        or payload.get("url") != f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPOSITORY}/pull/{PR_NUMBER}"
+        or not isinstance(repository, Mapping)
+        or repository.get("nameWithOwner") != f"{GITHUB_OWNER}/{GITHUB_REPOSITORY}"
+        or payload.get("headRefOid") != expected_head
+    ):
         raise Issue746ReconciliationGateError("PR binding mismatch")
     grouped: dict[str, list[Mapping[str, Any]]] = {}
     checks = payload.get("statusCheckRollup")
@@ -353,38 +393,51 @@ def verify_issue746_readonly_reconciliation_gate(
     protected_identity_resolver_sha256: str,
     operator_account_id: str,
     owner_solo_approval_reference: str,
-    github_reader: Issue746GitHubReadPort,
+    github_reader: Issue746GitHubReadPort | None,
 ) -> Issue746ReconciliationAuthorization:
     resolver = load_protected_identity_resolver(
         repo_root=repo_root,
         path=protected_identity_resolver_file,
         expected_sha256=protected_identity_resolver_sha256,
     )
-    operator = resolve_authorized_operator(resolver, operator_account_id)
+    operator_account, operator = _resolve_authorized_operator_binding(
+        resolver, operator_account_id
+    )
     principal_id = str(operator.get("principal_id"))
     head, tree = read_clean_git_snapshot(repo_root)
 
-    pr_payload = github_reader.read_json(
-        (
-            "pr",
-            "view",
-            str(PR_NUMBER),
-            "--json",
-            "number,headRefOid,statusCheckRollup",
+    if github_reader is None:
+        raise Issue746ReconciliationGateError(GITHUB_READ_CHANNEL_UNAVAILABLE)
+    try:
+        pr_payload = github_reader.read_pull_request(
+            owner=GITHUB_OWNER,
+            repository=GITHUB_REPOSITORY,
+            number=PR_NUMBER,
         )
-    )
-    if pr_payload is None:
-        raise Issue746ReconciliationGateError("GitHub PR read capability unavailable")
+    except Exception as exc:
+        raise Issue746ReconciliationGateError(
+            GITHUB_READ_CHANNEL_UNAVAILABLE
+        ) from exc
+    if not isinstance(pr_payload, Mapping):
+        raise Issue746ReconciliationGateError(GITHUB_READ_CHANNEL_UNAVAILABLE)
     required_checks_sha256 = _verify_pr(pr_payload, expected_head=head)
 
     match = _REFERENCE_RE.fullmatch(owner_solo_approval_reference)
     if match is None:
         raise Issue746ReconciliationGateError("owner approval reference invalid")
-    comment = github_reader.read_json(
-        ("api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}")
-    )
-    if comment is None:
-        raise Issue746ReconciliationGateError("owner approval read capability unavailable")
+    comment_id = int(match.group(1))
+    try:
+        comment = github_reader.read_issue_comment(
+            owner=GITHUB_OWNER,
+            repository=GITHUB_REPOSITORY,
+            comment_id=comment_id,
+        )
+    except Exception as exc:
+        raise Issue746ReconciliationGateError(
+            GITHUB_READ_CHANNEL_UNAVAILABLE
+        ) from exc
+    if not isinstance(comment, Mapping):
+        raise Issue746ReconciliationGateError(GITHUB_READ_CHANNEL_UNAVAILABLE)
     expected_body = (
         "OWNER_SOLO_APPROVAL\n"
         "issue=746\n"
@@ -396,7 +449,7 @@ def verify_issue746_readonly_reconciliation_gate(
         "four_eyes_satisfied=false"
     )
     author = comment.get("user")
-    account_login = operator_account_id.split(":", 1)[1]
+    account_login = str(operator_account.get("login"))
     if (
         comment.get("html_url") != owner_solo_approval_reference
         or comment.get("created_at") != comment.get("updated_at")

@@ -620,6 +620,9 @@ class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
         )
 
         gate.GATE_CLOSED = GATE_CLOSED
+        gate.GITHUB_READ_CHANNEL_UNAVAILABLE = (
+            "ISSUE_746_GITHUB_READ_CHANNEL_UNAVAILABLE"
+        )
         gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
         gate.verify_issue746_readonly_reconciliation_gate = Mock(
             return_value=object()
@@ -676,12 +679,16 @@ class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
         )
         stdout = io.StringIO()
         original_env = {"AZURE_CONFIG_DIR": "/home/test/.azure"}
+        github_reader = object()
         with (
             patch.dict(sys.modules, modules),
             patch.dict(os.environ, original_env, clear=True),
             redirect_stdout(stdout),
         ):
-            rc = nac_cli.main(self._argv("--format", "json"))
+            rc = nac_cli.main(
+                self._argv("--format", "json"),
+                issue746_github_reader=github_reader,
+            )
 
         self.assertEqual(rc, 0)
         factory.assert_called_once()
@@ -708,6 +715,16 @@ class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
         self.assertIs(kwargs["observation_port"], observation)
         self.assertEqual(kwargs["output_root"], Path("out/default"))
         terminalize.assert_not_called()
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        self.assertIs(
+            gate.verify_issue746_readonly_reconciliation_gate.call_args.kwargs[
+                "github_reader"
+            ],
+            github_reader,
+        )
+        modules[
+            "nac_bff.azure_activation_composition"
+        ].GitHubApprovalVerifier.assert_not_called()
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["provider_observation"]["read_count"], 2)
         self.assertNotIn("provider_secret", stdout.getvalue())
@@ -725,6 +742,30 @@ class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
         self.assertEqual(rc, 2)
         self.assertEqual(
             json.loads(stdout.getvalue())["error"]["code"], gate.GATE_CLOSED
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        terminalize.assert_not_called()
+
+    def test_missing_issue746_channel_blocks_before_interruption_factory(self) -> None:
+        modules, factory, inspect, terminalize, *_ = self._fake_modules()
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+
+        def require_reader(**kwargs):
+            if kwargs["github_reader"] is None:
+                raise gate.Issue746ReconciliationGateError(
+                    gate.GITHUB_READ_CHANNEL_UNAVAILABLE
+                )
+            return object()
+
+        gate.verify_issue746_readonly_reconciliation_gate.side_effect = require_reader
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv("--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            gate.GITHUB_READ_CHANNEL_UNAVAILABLE,
         )
         factory.assert_not_called()
         inspect.assert_not_called()
@@ -1035,6 +1076,9 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         )
 
         gate.GATE_CLOSED = GATE_CLOSED
+        gate.GITHUB_READ_CHANNEL_UNAVAILABLE = (
+            "ISSUE_746_GITHUB_READ_CHANNEL_UNAVAILABLE"
+        )
         gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
         gate.verify_issue746_readonly_reconciliation_gate = Mock(
             return_value=object()
@@ -1065,13 +1109,27 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
             self._fake_modules()
         )
         stdout = io.StringIO()
+        github_reader = object()
         with patch.dict(sys.modules, modules), redirect_stdout(stdout):
-            rc = nac_cli.main(self._argv("--format", "json"))
+            rc = nac_cli.main(
+                self._argv("--format", "json"),
+                issue746_github_reader=github_reader,
+            )
 
         self.assertEqual(rc, 0)
         self.assertFalse(factory.call_args.kwargs["require_owner_verifier"])
         self.assertIs(inspect.call_args.kwargs["observation_port"], observation)
         self.assertFalse(inspect.call_args.kwargs["request"].owner_approved)
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        self.assertIs(
+            gate.verify_issue746_readonly_reconciliation_gate.call_args.kwargs[
+                "github_reader"
+            ],
+            github_reader,
+        )
+        modules[
+            "nac_bff.azure_activation_composition"
+        ].GitHubApprovalVerifier.assert_not_called()
         release.assert_not_called()
         payload = json.loads(stdout.getvalue())
         self.assertEqual(
@@ -1092,6 +1150,30 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         self.assertEqual(rc, 2)
         self.assertEqual(
             json.loads(stdout.getvalue())["error"]["code"], gate.GATE_CLOSED
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        release.assert_not_called()
+
+    def test_missing_issue746_channel_blocks_before_function_factory(self) -> None:
+        modules, factory, inspect, release, *_ = self._fake_modules()
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+
+        def require_reader(**kwargs):
+            if kwargs["github_reader"] is None:
+                raise gate.Issue746ReconciliationGateError(
+                    gate.GITHUB_READ_CHANNEL_UNAVAILABLE
+                )
+            return object()
+
+        gate.verify_issue746_readonly_reconciliation_gate.side_effect = require_reader
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv("--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"],
+            gate.GITHUB_READ_CHANNEL_UNAVAILABLE,
         )
         factory.assert_not_called()
         inspect.assert_not_called()

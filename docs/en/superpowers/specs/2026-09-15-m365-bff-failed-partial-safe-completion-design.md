@@ -493,6 +493,10 @@ source evidence.
   authorization. Live, recovery, provider writes, tenant writes, credential
   mutation, and automatic retry remain blocked by #746; merely removing a
   platform block is prohibited.
+  The PR and owner comment are obtained only through a trusted-host-injected
+  semantic GitHub read channel bounded to `notariat8/NaC`, PR #747, and Issue
+  #746. If that channel is absent, the gate blocks before Azure or credential
+  access; there is no `gh`, login, token, or Git/GCM fallback.
 - **AC-746-06 — Replay and crash safety:** The three approvals are not
   interchangeable; wrong issue, principal, commit, tree, contract, body, or
   artifact binding blocks. An abandoned mutex and partial appends never cause
@@ -501,9 +505,13 @@ source evidence.
   specification, DE/EN plan, AC IDs, files, positive and negative tests, and
   local and remote evidence are connected. Mandatory CI runs on Windows; Linux
   CI remains optional and non-blocking.
+  The verification contract evaluates PR checks through the authenticated
+  GitHub connector at the exact expected HEAD, not through a local `gh`
+  session.
 - **AC-746-08 — No premature live action:** Design, plan, and implementation PR
   perform no quarantine release, login, provider, tenant, credential, or live
   action. #739 and #632 remain separate hash-bound owner gates.
+  A channel failure or HTTP 401 starts neither authentication nor a retry.
 
 ## Validation Model
 

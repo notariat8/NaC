@@ -576,15 +576,17 @@ Der lokale `plan -> review -> fix`-Durchlauf hat folgende Befunde korrigiert:
    SPFx- und Function-Paketierung wurden als Windows-Pflichtgates ergänzt.
 7. **GitHub-CLI wurde als Pflichtkanal behandelt.** Remote-Checkauswertung nutzt
    den vorhandenen authentifizierten GitHub-Connector; `gh` bleibt optional und
-   löst keine Anmeldung aus.
+   löst keine Anmeldung aus. Die produktive #746-Grenze akzeptiert nur zwei
+   semantische, fest auf Repository, PR und Kommentar begrenzte Reads eines vom
+   vertrauenswürdigen Host injizierten Kanals. Ohne Kanal blockiert sie vor der
+   Azure-Factory; ein 401 führt weder zu Login noch zu Retry.
 8. **Windows-CI war nur als Prosa, nicht als eigene Plattformzeile vorhanden.**
    Security-, Aktivierungs-, SPFx-, Graft- und Doctor-Läufe besitzen jetzt
    explizite `windows_remote_ci`-Einträge.
-9. **Der aktuelle #746-Validator ist noch auf die alte POSIX-Artefaktliste und
-   Befehlsmatrix fest verdrahtet.** Sein rotes Ergebnis gegen diesen Plan ist
-   die erwartete test-first Ausgangslage für Schritt 1; Validator, Verification
-   Contract und Tests werden gemeinsam auf den freigegebenen Windows-Vertrag
-   umgestellt, nicht durch eine rückwirkende Änderung der freigegebenen Spec.
+9. **Der #746-Validator war auf die alte POSIX-Artefaktliste und lokale
+   `gh`-Befehle fest verdrahtet.** Validator, Verification Contract und Tests
+   nutzen jetzt dieselbe semantische Kanalschnittstelle und die freigegebene
+   Windows-Befehlsmatrix.
 
 Nach diesen Fixes enthält der Plan keine bekannte verpflichtende lokale Linux-
 Abhängigkeit und keine vorgezogene operative Autorisierung.

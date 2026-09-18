@@ -569,15 +569,16 @@ The local `plan -> review -> fix` pass corrected these findings:
    Function packaging are now mandatory Windows gates.
 7. **GitHub CLI was treated as mandatory.** Remote check evaluation uses the
    existing authenticated GitHub connector; `gh` remains optional and starts no
-   authentication.
+   authentication. The productive #746 boundary accepts only two semantic reads
+   bounded to the repository, PR, and comment from a trusted-host-injected
+   channel. Without that channel it blocks before the Azure factory; a 401
+   triggers neither login nor retry.
 8. **Windows CI existed only in prose, not as its own platform row.** Security,
    activation, SPFx, Graft, and doctor runs now have explicit
    `windows_remote_ci` entries.
-9. **The current #746 validator is still hard-coded to the previous POSIX
-   artifact list and command matrix.** Its red result against this plan is the
-   expected test-first starting point for step 1; validator, verification
-   contract, and tests are migrated together to the approved Windows contract,
-   not by retroactively changing the approved specification.
+9. **The #746 validator was hard-coded to the previous POSIX artifact list and
+   local `gh` commands.** Validator, verification contract, and tests now use
+   the same semantic channel interface and the approved Windows command matrix.
 
 After these fixes, the plan has no known mandatory local Linux dependency and
 no premature operational authorization.

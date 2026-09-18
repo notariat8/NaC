@@ -394,7 +394,7 @@ EXPECTED_COMMANDS = {
     "ai_sbom": _command_signature("windows_remote_ci", "python scripts/validate_ai_sbom.py", ["AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "ci_read_or_synthetic"),
     "ai_sbom_export_mapping": _command_signature("windows_native", "python scripts/validate_ai_sbom_export_mapping.py", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "local_read_or_synthetic"),
     "issue746_windows_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_activation_security*.py", ["AC-746-02", "AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
-    "issue746_gate_tests": _command_signature("windows_native", "python -m unittest tests.test_issue746_reconciliation_gate", ["AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
+    "issue746_gate_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_issue746_reconciliation_gate.py", ["AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_bff_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_nac_bff_azure_*.py", ["AC-746-03", "AC-746-05", "AC-746-06", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_business_case_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_business_case_type_*.py", ["AC-746-05", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_m365_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_m365_*.py", ["AC-746-05", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
@@ -409,8 +409,8 @@ EXPECTED_COMMANDS = {
     "diff_commits": _command_signature("post_pr_remote", "git log --oneline origin/main..HEAD", ["AC-746-07", "AC-746-08"], ["complete commit list"], "pr_747_expected_head", "github_read_only"),
     "diff_patch": _command_signature("post_pr_remote", "git diff origin/main...HEAD", ["AC-746-01", "AC-746-07", "AC-746-08"], ["complete base...head patch"], "pr_747_expected_head", "github_read_only"),
     "diff_whitespace": _command_signature("post_pr_remote", "git diff --check origin/main...HEAD", ["AC-746-07"], ["complete base...head whitespace check"], "pr_747_expected_head", "github_read_only"),
-    "pr_checks_watch": _command_signature("post_pr_remote", "gh pr checks 747 --watch", ["AC-746-07", "AC-746-08"], sorted(REQUIRED_REMOTE_CONTEXTS), "pr_747_expected_head", "github_read_only"),
-    "pr_checks_enforced": _command_signature("post_pr_remote", "python scripts/validate_m365_bff_failed_partial_safe_completion.py --verify-pr-checks --expected-pr 747 --expected-head-from-local-git HEAD --protected-identity-resolver-file <repo-external-json> --protected-identity-resolver-sha256 <sha256> --operator-account-id <provider-qualified-operator-account> --owner-solo-approval-reference <issue-746-comment-url>", ["AC-746-07", "AC-746-08"], ["exact required check names and successful states"], "pr_747_expected_head", "github_read_only"),
+    "pr_checks_watch": _command_signature("post_pr_remote", "github-connector read notariat8/NaC PR 747 checks --expected-head HEAD", ["AC-746-07", "AC-746-08"], sorted(REQUIRED_REMOTE_CONTEXTS), "pr_747_expected_head", "github_read_only"),
+    "pr_checks_enforced": _command_signature("post_pr_remote", "python-api scripts.validate_m365_bff_failed_partial_safe_completion:main(argv, github_reader=trusted_github_connector_port)", ["AC-746-07", "AC-746-08"], ["exact required check names and successful states"], "pr_747_expected_head", "github_read_only"),
 }
 
 
@@ -1036,6 +1036,16 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("both reconciliation CLI entries must execute the productive Issue #746 gate")
     if cli_text.count("issue746_authorization=issue746_authorization") != 2:
         errors.append("both reconciliation CLI entries must forward the Issue #746 authorization")
+    for forbidden in (
+        "issue746_github_reader = GitHubApprovalVerifier(",
+        "github_reader.read_json(",
+        '["gh", "pr"',
+        '["gh", "api"',
+    ):
+        if forbidden in cli_text or forbidden in gate_text:
+            errors.append(
+                "Issue #746 read-only reconciliation must use the injected semantic GitHub channel"
+            )
 
     _validate_ai_sbom(errors)
     return errors
@@ -1085,6 +1095,14 @@ def validate_pr_payload(
     errors: list[str] = []
     if payload.get("number") != expected_pr:
         errors.append("returned PR number does not match expected PR")
+    repository = payload.get("repository")
+    if (
+        payload.get("url")
+        != f"https://github.com/notariat8/NaC/pull/{expected_pr}"
+        or not isinstance(repository, dict)
+        or repository.get("nameWithOwner") != "notariat8/NaC"
+    ):
+        errors.append("returned PR repository identity does not match notariat8/NaC")
     if payload.get("headRefOid") != expected_head:
         errors.append("local expected head does not match PR headRefOid")
     errors.extend(validate_check_rollup(payload.get("statusCheckRollup", [])))
@@ -1390,6 +1408,20 @@ def validate_protected_identity_resolver(
         operator = None
     if operator is None or operator.get("principal_id") not in principal_ids:
         return None, ["protected identity resolver does not resolve the operator"]
+    matching_accounts = [
+        account
+        for account in active_accounts
+        if account.get("account_id") == operator_account_id
+    ]
+    if (
+        len(matching_accounts) != 1
+        or matching_accounts[0].get("provider") != "github"
+        or matching_accounts[0].get("login")
+        != operator_account_id.split(":", 1)[-1]
+    ):
+        return None, [
+            "protected identity resolver does not bind a GitHub operator account"
+        ]
     if "prozessverantwortung" not in operator.get("technical_role_ids", []):
         return None, ["protected identity resolver principal lacks the process role"]
     if "process_design" not in operator.get("qualifications", []):
@@ -1404,6 +1436,7 @@ def fetch_owner_solo_approval(
     operator_account_id: str,
     operator_principal_id: str,
     identity_resolver_sha256: str,
+    github_reader: Any | None,
 ) -> tuple[dict[str, Any] | None, list[str]]:
     if not re.fullmatch(r"[0-9a-f]{64}", identity_resolver_sha256):
         return None, ["protected identity resolver digest is invalid"]
@@ -1413,18 +1446,17 @@ def fetch_owner_solo_approval(
     )
     if match is None:
         return None, ["owner-solo approval reference must identify an Issue #746 comment"]
-    result = subprocess.run(
-        ["gh", "api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}"],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
+    if github_reader is None:
         return None, ["cannot read the referenced owner-solo approval comment"]
     try:
-        comment = json.loads(result.stdout)
-    except json.JSONDecodeError:
+        comment = github_reader.read_issue_comment(
+            owner="notariat8",
+            repository="NaC",
+            comment_id=int(match.group(1)),
+        )
+    except Exception:
+        return None, ["cannot read the referenced owner-solo approval comment"]
+    if not isinstance(comment, dict):
         return None, ["owner-solo approval comment response is invalid"]
     expected_body = (
         "OWNER_SOLO_APPROVAL\n"
@@ -1441,6 +1473,7 @@ def fetch_owner_solo_approval(
     if (
         not isinstance(comment, dict)
         or comment.get("html_url") != reference
+        or comment.get("created_at") != comment.get("updated_at")
         or comment.get("author_association") != "OWNER"
         or f"github:{author_login}" != operator_account_id
         or comment.get("body") != expected_body
@@ -1472,6 +1505,8 @@ def verify_pr_checks(
     protected_identity_resolver_sha256: str | None,
     operator_account_id: str,
     owner_solo_approval_reference: str | None,
+    *,
+    github_reader: Any | None = None,
 ) -> list[str]:
     errors: list[str] = []
     if expected_pr != 747:
@@ -1496,16 +1531,14 @@ def verify_pr_checks(
             f"missing={sorted(EXPECTED_PR_FILES - actual_files)}, "
             f"unexpected={sorted(actual_files - EXPECTED_PR_FILES)}"
         )
-    gh = subprocess.run(
-        ["gh", "pr", "view", str(expected_pr), "--json", "number,headRefOid,statusCheckRollup,reviewDecision,latestReviews"],
-        cwd=REPO_ROOT, text=True, capture_output=True, check=False,
-    )
-    if gh.returncode != 0:
-        return ["GITHUB_PR_READ_FAILED"]
+    if github_reader is None:
+        return ["GITHUB_READ_CHANNEL_UNAVAILABLE"]
     try:
-        payload = json.loads(gh.stdout)
-    except json.JSONDecodeError:
-        return ["GITHUB_PR_RESPONSE_INVALID"]
+        payload = github_reader.read_pull_request(
+            owner="notariat8", repository="NaC", number=expected_pr
+        )
+    except Exception:
+        return ["GITHUB_PR_READ_FAILED"]
     if not isinstance(payload, dict):
         return ["GITHUB_PR_RESPONSE_INVALID"]
     errors.extend(
@@ -1538,6 +1571,7 @@ def verify_pr_checks(
             operator_account_id=operator_account_id,
             operator_principal_id=str(operator.get("principal_id")),
             identity_resolver_sha256=str(protected_identity_resolver_sha256),
+            github_reader=github_reader,
         )
         errors.extend(approval_errors)
         if approval is not None:
@@ -1553,7 +1587,11 @@ def verify_pr_checks(
     return errors
 
 
-def main() -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    github_reader: Any | None = None,
+) -> int:
     parser = argparse.ArgumentParser(description="Validate the offline Issue #746 safe-completion contract.")
     parser.add_argument("--verify-pr-checks", action="store_true")
     parser.add_argument("--expected-pr", type=int, default=747)
@@ -1562,7 +1600,7 @@ def main() -> int:
     parser.add_argument("--protected-identity-resolver-sha256")
     parser.add_argument("--operator-account-id")
     parser.add_argument("--owner-solo-approval-reference")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     errors = validate_contract(load_contract())
     if args.verify_pr_checks:
@@ -1589,6 +1627,7 @@ def main() -> int:
                     args.protected_identity_resolver_sha256,
                     args.operator_account_id,
                     args.owner_solo_approval_reference,
+                    github_reader=github_reader,
                 )
             )
     if errors:
