@@ -142,7 +142,6 @@ jobs:
             spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.styles.js
 
       - name: Upload live workbench host compiled evidence
-        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: workbench-live-host-compiled
@@ -150,7 +149,6 @@ jobs:
           path: |
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js
-            assets/docs/workbench-live-read-binding/
 
   quality-gate:
     needs: spfx-bpmn-viewer
