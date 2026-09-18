@@ -31,7 +31,17 @@ jobs:
         run: python -m pip install --disable-pip-version-check -e .
 
       - name: Verify native Windows activation security and portability
-        run: python -m unittest discover -s tests -p "test_activation_security*.py"
+        shell: pwsh
+        run: |
+          $testOutput = & python -m unittest discover -s tests -p "test_activation_security*.py" 2>&1
+          $testExitCode = $LASTEXITCODE
+          $testOutput | ForEach-Object { Write-Output $_ }
+          if ($testExitCode -ne 0) {
+            $diagnostic = ($testOutput | Select-Object -Last 80) -join "`n"
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Windows portability tests failed::$diagnostic"
+            exit $testExitCode
+          }
 
       - name: Verify portable CLI, SPFx readback, and Issue 746 contract
         run: |
