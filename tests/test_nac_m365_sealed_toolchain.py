@@ -10,12 +10,30 @@ import unittest
 from nac_m365_graph.sealed_toolchain import (
     SealedToolchainError,
     sealed_artifacts,
+    sealed_payloads,
     sealed_toolchain,
     verified_tool_bytes,
 )
 
 
 class SealedToolchainTests(unittest.TestCase):
+    def test_sealed_payload_uses_a_private_bound_snapshot(self) -> None:
+        payload = b'{"synthetic":true}\n'
+
+        with sealed_payloads((("runtime-manifest.json", payload, False),)) as sealed:
+            path = Path(sealed.paths[0])
+            self.assertEqual(path.read_bytes(), payload)
+            if os.name == "nt":
+                from nac_bff.activation_security_backend import (
+                    get_platform_security_backend,
+                )
+
+                binding = get_platform_security_backend().inspect_private_path(
+                    path, purpose="sealed-test-payload"
+                )
+                self.assertEqual(binding.sha256, hashlib.sha256(payload).hexdigest())
+                self.assertEqual(sealed.pass_fds, ())
+
     def test_sealed_execution_is_immune_to_source_path_replacement(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             tool = Path(temporary) / "tool"

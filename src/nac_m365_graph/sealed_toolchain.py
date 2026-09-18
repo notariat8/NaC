@@ -147,10 +147,12 @@ def sealed_payloads(
         try:
             backend = get_platform_security_backend()
             with tempfile.TemporaryDirectory(
-                prefix="nac-sealed-payloads-"
-            ) as temporary:
-                root = Path(temporary)
-                with ExitStack() as stack:
+                prefix="nac-sealed-payloads-parent-"
+            ) as temporary_parent:
+                root = Path(temporary_parent) / "sealed"
+                with backend.open_secure_directory(
+                    root, create=True
+                ) as session, ExitStack() as stack:
                     paths: list[str] = []
                     for name, payload, _executable in payloads:
                         safe_name = re.sub(r"[^A-Za-z0-9_.-]", "-", name)[:80]
@@ -162,8 +164,8 @@ def sealed_payloads(
                             raise SealedToolchainError(
                                 "SEALED_TOOLCHAIN_SIZE_INVALID"
                             )
-                        destination = root / safe_name
-                        binding = backend.atomic_write(destination, payload)
+                        destination = session.canonical_child_path(safe_name)
+                        binding = session.create_exclusive(safe_name, payload)
                         stack.enter_context(
                             backend.open_bound_read(destination, binding)
                         )
