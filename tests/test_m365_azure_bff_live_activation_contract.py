@@ -1084,6 +1084,29 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         self.assertNotIn("NAC_SECRET_SENTINEL_632", errors[0])
         self.assertNotIn("token", errors[0])
 
+    def test_behavioral_verification_reports_only_canonical_test_ids(self) -> None:
+        completed = validator.subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=(
+                "FAIL: test_bound_path "
+                "(tests.test_example.ExampleTests.test_bound_path)\n"
+                "secret payload must remain hidden\n"
+            ),
+            stderr="token must remain hidden",
+        )
+        with patch.object(validator.subprocess, "run", return_value=completed):
+            errors = validator._run_behavioral_tests(REPO_ROOT)
+        self.assertEqual(
+            errors,
+            [
+                "BEHAVIOR_TEST_FAILED:"
+                "tests.test_example.ExampleTests.test_bound_path"
+            ],
+        )
+        self.assertNotIn("secret payload", errors[0])
+        self.assertNotIn("token", errors[0])
+
     def test_strict_quality_gate_registers_validator(self) -> None:
         from scripts import quality_gate
 

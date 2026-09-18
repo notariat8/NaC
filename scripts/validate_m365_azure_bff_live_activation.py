@@ -1618,11 +1618,37 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     finally:
         temporary.cleanup()
     if completed.returncode != 0:
+        canonical_failures = _canonical_behavior_failures(
+            "\n".join((completed.stdout or "", completed.stderr or ""))
+        )
+        if canonical_failures:
+            return [
+                f"BEHAVIOR_TEST_FAILED:{failure}"
+                for failure in canonical_failures
+            ]
         return [
             "behavioral verification suite failed; run the exact listed unittest "
             "modules for local diagnostics"
         ]
     return []
+
+
+def _canonical_behavior_failures(output: str) -> tuple[str, ...]:
+    """Return only unittest identifiers; never expose captured test output."""
+
+    matches = re.finditer(
+        r"^(?:FAIL|ERROR): (test_[A-Za-z0-9_]+) "
+        r"\(([A-Za-z0-9_.]+)\)$",
+        output,
+        flags=re.MULTILINE,
+    )
+    failures: set[str] = set()
+    for match in matches:
+        test_name, context = match.groups()
+        failures.add(
+            context if context.endswith(f".{test_name}") else f"{context}.{test_name}"
+        )
+    return tuple(sorted(failures))
 
 
 def _validate_windows_portability(
