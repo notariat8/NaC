@@ -585,6 +585,14 @@ class RedactedOutputTests(unittest.TestCase):
             real_fsync = os.fsync
             directory_fsyncs = 0
 
+            def fail_cleanup_fsync(descriptor):
+                nonlocal directory_fsyncs
+                if stat.S_ISDIR(os.fstat(descriptor).st_mode):
+                    directory_fsyncs += 1
+                    if directory_fsyncs == 3:
+                        raise OSError("injected previous-marker cleanup fsync failure")
+                return real_fsync(descriptor)
+
             if os.name == "nt":
                 real_delete = WindowsSecureDirectorySession.delete_child
 
@@ -606,14 +614,6 @@ class RedactedOutputTests(unittest.TestCase):
                     "src.notary_kg.business_case_type_migration_quarantine.os.fsync",
                     side_effect=fail_cleanup_fsync,
                 )
-
-            def fail_cleanup_fsync(descriptor):
-                nonlocal directory_fsyncs
-                if stat.S_ISDIR(os.fstat(descriptor).st_mode):
-                    directory_fsyncs += 1
-                    if directory_fsyncs == 3:
-                        raise OSError("injected previous-marker cleanup fsync failure")
-                return real_fsync(descriptor)
 
             with patcher:
                 write_redacted_output(output, {"generation": 2}, allowed_root=root)

@@ -484,7 +484,7 @@ def _private_security_attributes(*, directory: bool) -> Iterator[SECURITY_ATTRIB
     inheritance = "OICI" if directory else ""
     sid = _current_sid_string()
     sddl = (
-        "D:P"
+        f"O:{sid}D:P"
         f"(A;{inheritance};GA;;;{sid})"
         f"(A;{inheritance};GA;;;SY)"
         f"(A;{inheritance};GA;;;BA)"
@@ -522,7 +522,7 @@ def _open_relative_child(
     security_size = wintypes.DWORD()
     if create:
         sid = _current_sid_string()
-        sddl = f"D:P(A;;GA;;;{sid})(A;;GA;;;SY)(A;;GA;;;BA)"
+        sddl = f"O:{sid}D:P(A;;GA;;;{sid})(A;;GA;;;SY)(A;;GA;;;BA)"
         if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
             sddl,
             1,
@@ -590,7 +590,7 @@ def _open_relative_directory(
     if create:
         sid = _current_sid_string()
         sddl = (
-            "D:P"
+            f"O:{sid}D:P"
             f"(A;OICI;GA;;;{sid})"
             "(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)"
         )
@@ -1681,7 +1681,8 @@ class WindowsActivationSecurityBackend:
             _local_mutexes.add(name)
         descriptor = wintypes.LPVOID()
         descriptor_size = wintypes.DWORD()
-        sddl = f"D:P(A;;GA;;;{_current_sid_string()})(A;;GA;;;SY)(A;;GA;;;BA)"
+        sid = _current_sid_string()
+        sddl = f"O:{sid}D:P(A;;GA;;;{sid})(A;;GA;;;SY)(A;;GA;;;BA)"
         if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
             sddl, 1, ctypes.byref(descriptor), ctypes.byref(descriptor_size)
         ):

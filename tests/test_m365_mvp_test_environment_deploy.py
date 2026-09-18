@@ -121,6 +121,13 @@ def _write_user_toolchain(root: Path) -> tuple[Path, Path, str, str]:
 
 class MvpTestEnvironmentDeployTests(unittest.TestCase):
     def setUp(self) -> None:
+        platform_gate = patch(
+            "nac_m365_graph.mvp_test_environment_deploy."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
         if os.name != "nt":
             return
         proxy = _WindowsProcessBackendProxy(get_platform_security_backend())

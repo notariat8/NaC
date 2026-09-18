@@ -63,7 +63,18 @@ class _FakeRequest:
     resume: bool = False
 
 
-class AzureBffLiveActivationCliTests(unittest.TestCase):
+class _CompleteBackendTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        platform_gate = patch(
+            "nac_bff.azure_activation_contract."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
+
+
+class AzureBffLiveActivationCliTests(_CompleteBackendTestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [
             "--repo-root",
@@ -493,7 +504,7 @@ class AzureBffLiveActivationCliTests(unittest.TestCase):
         self.assertNotIn("token", payload["step_results"][0])
 
 
-class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
+class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [
             "--repo-root",
@@ -873,7 +884,7 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         terminalize.assert_not_called()
 
 
-class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
+class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [
             "--repo-root",
@@ -1129,7 +1140,7 @@ class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
         self.assertNotIn("drop-me", stdout.getvalue())
 
 
-class AzureBffLiveActivationRecoveryCliTests(unittest.TestCase):
+class AzureBffLiveActivationRecoveryCliTests(_CompleteBackendTestCase):
     def _argv(self, *extra: str) -> list[str]:
         return [
             "--repo-root",

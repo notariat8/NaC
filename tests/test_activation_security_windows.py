@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import json
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 
@@ -34,6 +33,21 @@ def _private_test_directory(backend: WindowsActivationSecurityBackend):
             pass
         backend.validate_private_directory(private)
         yield private
+
+
+@contextmanager
+def _private_node(backend: WindowsActivationSecurityBackend):
+    """Copy Node into a backend-created private fixture before attestation."""
+
+    resolved = shutil.which("node")
+    if resolved is None:
+        raise unittest.SkipTest("Node is unavailable")
+    with _private_test_directory(backend) as directory:
+        with backend.open_secure_directory(directory, create=False) as session:
+            snapshot = session.create_exclusive(
+                "node.exe", Path(resolved).resolve().read_bytes()
+            )
+        yield directory / "node.exe", snapshot.sha256, directory
 
 
 @unittest.skipUnless(os.name == "nt", "native Windows security contract")
@@ -321,23 +335,19 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             first.close()
 
     def test_attested_process_is_assigned_before_resume(self) -> None:
-        executable = Path(sys.executable).resolve()
-        executable_hash = self.backend.inspect_private_path(
-            executable, purpose="test-executable"
-        ).sha256
-        result = self.backend.launch_attested_process(
-            ProcessSpec(
-                executable=executable,
-                arguments=("-c", "print('synthetic')"),
-                cwd=Path.cwd().resolve(),
-                environment={
-                    "SystemRoot": os.environ["SystemRoot"],
-                    "TEMP": tempfile.gettempdir(),
-                    "PYTHONUTF8": "1",
-                },
-                executable_sha256=executable_hash,
+        with _private_node(self.backend) as (executable, executable_hash, _root):
+            result = self.backend.launch_attested_process(
+                ProcessSpec(
+                    executable=executable,
+                    arguments=("-e", "console.log('synthetic')"),
+                    cwd=Path.cwd().resolve(),
+                    environment={
+                        "SystemRoot": os.environ["SystemRoot"],
+                        "TEMP": tempfile.gettempdir(),
+                    },
+                    executable_sha256=executable_hash,
+                )
             )
-        )
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(result.stdout.strip(), b"synthetic")
         self.assertEqual(result.stderr, b"")
@@ -345,43 +355,34 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         self.assertTrue(result.job_object_assigned)
 
     def test_process_hash_drift_blocks_before_launch(self) -> None:
-        with self.assertRaisesRegex(SecurityBoundaryError, "PROCESS_IMAGE_MISMATCH"):
-            self.backend.launch_attested_process(
-                ProcessSpec(
-                    executable=Path(sys.executable).resolve(),
-                    arguments=("-c", "raise SystemExit(99)"),
-                    cwd=Path.cwd().resolve(),
-                    environment={"SystemRoot": os.environ["SystemRoot"]},
-                    executable_sha256="0" * 64,
+        with _private_node(self.backend) as (executable, _hash, _root):
+            with self.assertRaisesRegex(SecurityBoundaryError, "PROCESS_IMAGE_MISMATCH"):
+                self.backend.launch_attested_process(
+                    ProcessSpec(
+                        executable=executable,
+                        arguments=("-e", "process.exit(99)"),
+                        cwd=Path.cwd().resolve(),
+                        environment={"SystemRoot": os.environ["SystemRoot"]},
+                        executable_sha256="0" * 64,
+                    )
                 )
-            )
 
     def test_credential_guard_blocks_profile_write_before_resume(self) -> None:
-        executable = Path(sys.executable).resolve()
-        executable_hash = self.backend.inspect_private_path(
-            executable, purpose="test-executable"
-        ).sha256
-        with _private_test_directory(self.backend) as directory:
+        with _private_node(self.backend) as (executable, executable_hash, directory):
             destination = directory / "credential-cache.json"
             script = (
-                "from pathlib import Path\n"
-                f"p = Path({str(destination)!r})\n"
-                "try:\n"
-                "    p.write_text('forbidden', encoding='utf-8')\n"
-                "except PermissionError:\n"
-                "    print('BLOCKED')\n"
-                "else:\n"
-                "    print('WRITTEN')\n"
+                "const fs=require('node:fs');"
+                f"try{{fs.writeFileSync({str(destination)!r},'forbidden');"
+                "console.log('WRITTEN')}catch(e){console.log('BLOCKED')}"
             )
             result = self.backend.launch_attested_process(
                 ProcessSpec(
                     executable=executable,
-                    arguments=("-c", script),
+                    arguments=("-e", script),
                     cwd=Path.cwd().resolve(),
                     environment={
                         "SystemRoot": os.environ["SystemRoot"],
                         "TEMP": tempfile.gettempdir(),
-                        "PYTHONUTF8": "1",
                     },
                     executable_sha256=executable_hash,
                     credential_write_guard=True,
@@ -391,33 +392,23 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             self.assertFalse(destination.exists())
 
     def test_loader_failure_is_redacted_without_interactive_error_mode(self) -> None:
-        executable = Path(sys.executable).resolve()
-        executable_hash = self.backend.inspect_private_path(
-            executable, purpose="test-executable"
-        ).sha256
-        with self.assertRaisesRegex(
-            SecurityBoundaryError, "PROCESS_EXIT_CODE_REJECTED"
-        ):
-            self.backend.launch_attested_process(
-                ProcessSpec(
-                    executable=executable,
-                    arguments=("-c", "raise SystemExit(17)"),
-                    cwd=Path.cwd().resolve(),
-                    environment={"SystemRoot": os.environ["SystemRoot"]},
-                    executable_sha256=executable_hash,
-                    allowed_exit_codes=(0,),
+        with _private_node(self.backend) as (executable, executable_hash, _root):
+            with self.assertRaisesRegex(
+                SecurityBoundaryError, "PROCESS_EXIT_CODE_REJECTED"
+            ):
+                self.backend.launch_attested_process(
+                    ProcessSpec(
+                        executable=executable,
+                        arguments=("-e", "process.exit(17)"),
+                        cwd=Path.cwd().resolve(),
+                        environment={"SystemRoot": os.environ["SystemRoot"]},
+                        executable_sha256=executable_hash,
+                        allowed_exit_codes=(0,),
+                    )
                 )
-            )
 
     def test_node_permission_guard_blocks_cache_write(self) -> None:
-        resolved = shutil.which("node")
-        if resolved is None:
-            self.skipTest("Node is unavailable")
-        executable = Path(resolved).resolve()
-        executable_hash = self.backend.inspect_private_path(
-            executable, purpose="toolchain-executable"
-        ).sha256
-        with _private_test_directory(self.backend) as directory:
+        with _private_node(self.backend) as (executable, executable_hash, directory):
             destination = directory / "m365-cache.json"
             script = (
                 "const fs=require('node:fs');"
@@ -444,14 +435,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             self.assertFalse(destination.exists())
 
     def test_node_permission_guard_is_inherited_by_allowed_worker(self) -> None:
-        resolved = shutil.which("node")
-        if resolved is None:
-            self.skipTest("Node is unavailable")
-        executable = Path(resolved).resolve()
-        executable_hash = self.backend.inspect_private_path(
-            executable, purpose="toolchain-executable"
-        ).sha256
-        with _private_test_directory(self.backend) as root:
+        with _private_node(self.backend) as (executable, executable_hash, root):
             destination = root / "worker-cache.json"
             worker = root / "worker.cjs"
             worker.write_text(
@@ -490,14 +474,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             self.assertFalse(destination.exists())
 
     def test_m365_runner_is_windows_native_and_credential_write_free(self) -> None:
-        resolved = shutil.which("node")
-        if resolved is None:
-            self.skipTest("Node is unavailable")
-        node = Path(resolved).resolve()
-        node_sha256 = self.backend.inspect_private_path(
-            node, purpose="toolchain-executable"
-        ).sha256
-        with _private_test_directory(self.backend) as root:
+        with _private_node(self.backend) as (node, node_sha256, root):
             runtime = root / "m365-runtime"
             entrypoint = runtime / "dist" / "index.js"
             entrypoint.parent.mkdir(parents=True)

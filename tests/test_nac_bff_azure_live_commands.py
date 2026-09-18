@@ -116,6 +116,13 @@ def _write_private_file(path: Path, payload: bytes) -> None:
 class _IsolatedAzureConfigTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
+        platform_gate = patch.object(
+            azure_live_commands,
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
         temporary = tempfile.TemporaryDirectory(prefix="nac-azure-cli-test-")
         self.addCleanup(temporary.cleanup)
         home = Path(temporary.name)

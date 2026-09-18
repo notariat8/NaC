@@ -37,6 +37,15 @@ def run_cli_with_exit(*argv: str) -> tuple[int, str]:
 
 
 class NaCCliTests(unittest.TestCase):
+    def setUp(self) -> None:
+        platform_gate = patch(
+            "nac_bff.azure_activation_contract."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
+
     def test_status_shows_single_entrypoint(self) -> None:
         rc, output = run_cli("status")
 

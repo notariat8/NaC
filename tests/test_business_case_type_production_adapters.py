@@ -355,6 +355,15 @@ class GraphHttpAdapterTests(unittest.TestCase):
 
 
 class GitHubOwnerVerifierTests(unittest.TestCase):
+    def setUp(self) -> None:
+        platform_gate = mock.patch(
+            "nac_m365_graph.business_case_type_production_adapters."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
+
     def test_exact_single_canonical_owner_comment_is_verified_without_body(
         self,
     ) -> None:
