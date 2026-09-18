@@ -125,6 +125,10 @@ class SecureDirectorySession(Protocol):
 
     def canonical_child_path(self, name: str) -> Path: ...
 
+    def open_secure_child_directory(
+        self, name: str, *, create: bool
+    ) -> "SecureDirectorySession": ...
+
     def inspect_optional_child(
         self, name: str, purpose: str
     ) -> BoundFileSnapshot | None: ...

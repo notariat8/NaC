@@ -10,6 +10,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
+def _is_windows_runtime() -> bool:
+    return os.name == "nt"
+
 POLICY_PATH = REPO_ROOT / "policies" / "graft-context-layer-policy.yaml"
 SETTINGS_PATH = REPO_ROOT / ".pi" / "settings.json"
 AGENTS_PATH = REPO_ROOT / "AGENTS.md"
@@ -44,7 +48,7 @@ def _bound_existing_file(path: Path) -> Path | None:
 def _resolve_graft_check_command() -> list[str] | None:
     """Resolve the npm Windows shim to its bound Node entry point."""
     discovered: str | None = None
-    if os.name == "nt":
+    if _is_windows_runtime():
         wrappers: list[Path] = []
         userprofile = os.environ.get("USERPROFILE")
         if userprofile:
@@ -64,7 +68,7 @@ def _resolve_graft_check_command() -> list[str] | None:
     executable = _bound_existing_file(Path(discovered))
     if executable is None:
         return None
-    if os.name != "nt" or executable.suffix.lower() not in {".cmd", ".bat"}:
+    if not _is_windows_runtime() or executable.suffix.lower() not in {".cmd", ".bat"}:
         return [str(executable), "check"]
 
     entry_point = (

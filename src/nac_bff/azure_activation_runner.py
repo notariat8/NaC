@@ -161,7 +161,6 @@ def _release_descriptor_lock(descriptor: int) -> None:
         if lock is not None:
             lock.close()
     else:
-        assert fcntl is not None
         unlock(descriptor)
 
 

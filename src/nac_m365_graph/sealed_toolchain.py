@@ -12,7 +12,7 @@ from typing import Iterator, Sequence
 
 from nac_bff.azure_activation_contract import (
     PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
-    platform_security_backend_available,
+    hermetic_posix_primitives_available,
 )
 
 try:
@@ -76,7 +76,7 @@ def sealed_toolchain(
     specifications: Sequence[tuple[Path, bool, str]],
 ) -> Iterator[SealedToolchain]:
     """Copy verified executable bytes into Linux sealed memfds."""
-    if not platform_security_backend_available():
+    if not hermetic_posix_primitives_available():
         raise SealedToolchainError(PLATFORM_SECURITY_BACKEND_UNAVAILABLE)
     if os.name == "nt":
         from nac_bff.activation_security_backend import (
@@ -135,7 +135,7 @@ def sealed_payloads(
 ) -> Iterator[SealedToolchain]:
     """Copy already verified in-memory payloads into sealed memfds."""
 
-    if not platform_security_backend_available():
+    if not hermetic_posix_primitives_available():
         raise SealedToolchainError(PLATFORM_SECURITY_BACKEND_UNAVAILABLE)
 
     if os.name == "nt":
@@ -203,7 +203,7 @@ def sealed_artifacts(
     provider process. Mode and SHA-256 are verified again after provider use.
     """
 
-    if not platform_security_backend_available():
+    if not hermetic_posix_primitives_available():
         raise SealedToolchainError(PLATFORM_SECURITY_BACKEND_UNAVAILABLE)
 
     names = [Path(path).name for path, _ in specifications]

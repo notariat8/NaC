@@ -30,7 +30,10 @@ from nac_bff.activation_security_backend import (  # noqa: E402
     SecurityBoundaryError,
     get_platform_security_backend,
 )
-from nac_bff.activation_security_windows import WindowsSecureDirectorySession  # noqa: E402
+if os.name == "nt":
+    from nac_bff.activation_security_windows import WindowsSecureDirectorySession  # noqa: E402
+else:
+    WindowsSecureDirectorySession = None  # type: ignore[assignment,misc]
 from nac_bff.azure_performance_storage_ports import (  # noqa: E402
     STORAGE_SCOPE,
     AttestedAzureStorageTokenProvider,

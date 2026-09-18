@@ -18,7 +18,10 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_runtime.platform_file_lock import lock_exclusive
-from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
+if os.name == "nt":
+    from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
+else:
+    WindowsActivationSecurityBackend = None  # type: ignore[assignment,misc]
 
 from nac_cli import cli as nac_cli
 from notary_kg import business_case_type_migration_runner as runner

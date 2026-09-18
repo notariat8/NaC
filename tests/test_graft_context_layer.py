@@ -75,7 +75,9 @@ class GraftCheckBehaviourTests(unittest.TestCase):
                 return str(wrapper) if command == "graft" else None
 
             with (
-                patch.object(graft_validator.os, "name", "nt"),
+                patch.object(
+                    graft_validator, "_is_windows_runtime", return_value=True
+                ),
                 patch.object(graft_validator.shutil, "which", side_effect=which),
                 patch.dict(
                     graft_validator.os.environ,
@@ -108,7 +110,9 @@ class GraftCheckBehaviourTests(unittest.TestCase):
             cli.write_text("fixture", encoding="utf-8")
             node.write_text("fixture", encoding="utf-8")
             with (
-                patch.object(graft_validator.os, "name", "nt"),
+                patch.object(
+                    graft_validator, "_is_windows_runtime", return_value=True
+                ),
                 patch.object(graft_validator.shutil, "which", return_value=None),
                 patch.dict(
                     graft_validator.os.environ,

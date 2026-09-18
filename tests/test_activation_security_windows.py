@@ -6,16 +6,34 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+
+if os.name != "nt":
+    raise unittest.SkipTest("native Windows security contract")
+
 import ctypes
 import shutil
 import subprocess
+from contextlib import contextmanager
 from ctypes import wintypes
 from unittest.mock import patch
 
+from nac_bff import activation_security_windows as security_windows
 from nac_bff.activation_security_backend import ProcessSpec, SecurityBoundaryError
 from nac_bff.activation_security_windows import WindowsActivationSecurityBackend
 from nac_m365_graph.mvp_test_environment_deploy import M365CliCommandRunner
 from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
+
+
+@contextmanager
+def _private_test_directory(backend: WindowsActivationSecurityBackend):
+    """Yield a backend-created owner-only directory below the host temp root."""
+
+    with tempfile.TemporaryDirectory() as directory:
+        private = Path(directory).resolve() / "private"
+        with backend.open_secure_directory(private, create=True):
+            pass
+        backend.validate_private_directory(private)
+        yield private
 
 
 @unittest.skipUnless(os.name == "nt", "native Windows security contract")
@@ -24,8 +42,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         self.backend = WindowsActivationSecurityBackend()
 
     def test_private_file_is_measured_from_bound_handle(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "evidence.json"
+        with _private_test_directory(self.backend) as directory:
+            path = directory / "evidence.json"
             payload = b'{"synthetic":true}\n'
             path.write_bytes(payload)
 
@@ -47,9 +65,38 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         with self.assertRaisesRegex(SecurityBoundaryError, "PATH_NOT_ABSOLUTE"):
             self.backend.inspect_private_path(Path("relative.txt"), purpose="test")
 
+    def test_extended_final_path_forms_are_canonicalized_without_aliasing(self) -> None:
+        self.assertEqual(
+            security_windows._normalized_final_path(r"\\?\C:\Private\evidence.json"),
+            r"C:\Private\evidence.json",
+        )
+        self.assertEqual(
+            security_windows._normalized_final_path(
+                r"\\?\UNC\server\share\evidence.json"
+            ),
+            r"\\server\share\evidence.json",
+        )
+
+    def test_requested_path_binding_accepts_case_but_rejects_other_target(self) -> None:
+        requested = Path(r"C:\Private\Evidence.json")
+        with patch.object(
+            security_windows,
+            "_final_path",
+            return_value=r"\\?\c:\private\evidence.json",
+        ):
+            security_windows._require_requested_path_binding(42, requested)
+        with patch.object(
+            security_windows,
+            "_final_path",
+            return_value=r"\\?\C:\Elsewhere\evidence.json",
+        ):
+            with self.assertRaisesRegex(
+                SecurityBoundaryError, "FINAL_PATH_BINDING_MISMATCH"
+            ):
+                security_windows._require_requested_path_binding(42, requested)
+
     def test_private_paths_are_bound_to_supported_fixed_local_volume(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             path = root / "bound.txt"
             path.write_text("synthetic", encoding="utf-8")
             self.assertRegex(
@@ -61,8 +108,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             )
 
     def test_non_fixed_volume_is_rejected_before_file_use(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "bound.txt"
+        with _private_test_directory(self.backend) as directory:
+            path = directory / "bound.txt"
             path.write_text("synthetic", encoding="utf-8")
             with patch(
                 "nac_bff.activation_security_windows._drive_type",
@@ -74,9 +121,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                     self.backend.inspect_private_path(path, purpose="test")
 
     def test_secure_directory_session_rejects_unsafe_child_names(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _private_test_directory(self.backend) as directory:
             with self.backend.open_secure_directory(
-                Path(directory), create=False
+                directory, create=False
             ) as session:
                 for name in (
                     "",
@@ -98,8 +145,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                             session.canonical_child_path(name)
 
     def test_secure_directory_session_retains_components_and_binds_child(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             private = root / "private"
             with self.backend.open_secure_directory(
                 private, create=True
@@ -118,9 +164,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             private.rename(moved)
 
     def test_secure_directory_session_create_exclusive_rejects_replay(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _private_test_directory(self.backend) as directory:
             with self.backend.open_secure_directory(
-                Path(directory), create=False
+                directory, create=False
             ) as session:
                 snapshot = session.create_exclusive("claim.json", b"first")
                 self.assertEqual(snapshot.size, 5)
@@ -130,8 +176,56 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                     session.create_exclusive("claim.json", b"second")
                 self.assertEqual(session.read_bounded("claim.json", 5), b"first")
 
+    def test_secure_child_directory_retains_parent_binding(self) -> None:
+        with _private_test_directory(self.backend) as root:
+            with self.backend.open_secure_directory(root, create=False) as parent:
+                with parent.open_secure_child_directory(
+                    "records", create=True
+                ) as child:
+                    child.create_exclusive("record.json", b"synthetic")
+                    self.assertEqual(
+                        child.binding.volume_serial, parent.binding.volume_serial
+                    )
+                    with self.assertRaises(PermissionError):
+                        root.rename(root.with_name("redirected"))
+                    self.assertEqual(
+                        child.read_bounded("record.json", 9), b"synthetic"
+                    )
+
+    def test_secure_child_directory_rejects_file_reparse_and_binding_drift(self) -> None:
+        with _private_test_directory(self.backend) as root:
+            regular = root / "regular"
+            regular.write_text("synthetic", encoding="utf-8")
+            target = root / "target"
+            target.mkdir()
+            junction = root / "junction"
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(junction), str(target)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            with self.backend.open_secure_directory(root, create=False) as parent:
+                with self.assertRaisesRegex(SecurityBoundaryError, "DIRECTORY_REQUIRED"):
+                    parent.open_secure_child_directory("regular", create=False)
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "REPARSE_POINT_REJECTED"
+                ):
+                    parent.open_secure_child_directory("junction", create=False)
+                plain = root / "plain"
+                plain.mkdir()
+                with patch.object(
+                    security_windows,
+                    "_require_requested_path_binding",
+                    side_effect=SecurityBoundaryError("FINAL_PATH_BINDING_MISMATCH"),
+                ):
+                    with self.assertRaisesRegex(
+                        SecurityBoundaryError, "FINAL_PATH_BINDING_MISMATCH"
+                    ):
+                        parent.open_secure_child_directory("plain", create=False)
+
     def test_secure_directory_session_rejects_non_ntfs(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        with _private_test_directory(self.backend) as directory:
             with patch(
                 "nac_bff.activation_security_windows.kernel32.GetVolumeInformationW",
                 side_effect=lambda *_args: True,
@@ -145,12 +239,11 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                     SecurityBoundaryError, "SUPPORTED_LOCAL_FILESYSTEM_REQUIRED"
                 ):
                     self.backend.open_secure_directory(
-                        Path(directory), create=False
+                        directory, create=False
                     )
 
     def test_secure_directory_session_rejects_renamed_ancestor(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             ancestor = root / "ancestor"
             private = ancestor / "private"
             private.mkdir(parents=True)
@@ -165,8 +258,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 self.assertFalse((private / "evidence.json").exists())
 
     def test_reparse_point_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             target = root / "target"
             link = root / "link"
             target.mkdir()
@@ -199,8 +291,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             convert("D:P(A;;GA;;;WD)", 1, ctypes.byref(descriptor), ctypes.byref(size))
         )
         try:
-            with tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / "broad.txt"
+            with _private_test_directory(self.backend) as directory:
+                path = directory / "broad.txt"
                 path.write_text("synthetic", encoding="utf-8")
                 self.assertTrue(set_security(str(path), 0x00000004, descriptor))
                 with self.assertRaisesRegex(SecurityBoundaryError, "FILE_DACL_TOO_BROAD"):
@@ -209,8 +301,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             kernel32.LocalFree(descriptor)
 
     def test_binding_drift_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "evidence.json"
+        with _private_test_directory(self.backend) as directory:
+            path = directory / "evidence.json"
             path.write_text("first", encoding="utf-8")
             snapshot = self.backend.inspect_private_path(path, purpose="test")
             path.write_text("second", encoding="utf-8")
@@ -269,8 +361,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         executable_hash = self.backend.inspect_private_path(
             executable, purpose="test-executable"
         ).sha256
-        with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "credential-cache.json"
+        with _private_test_directory(self.backend) as directory:
+            destination = directory / "credential-cache.json"
             script = (
                 "from pathlib import Path\n"
                 f"p = Path({str(destination)!r})\n"
@@ -325,8 +417,8 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         executable_hash = self.backend.inspect_private_path(
             executable, purpose="toolchain-executable"
         ).sha256
-        with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "m365-cache.json"
+        with _private_test_directory(self.backend) as directory:
+            destination = directory / "m365-cache.json"
             script = (
                 "const fs=require('node:fs');"
                 f"try{{fs.writeFileSync({str(destination)!r},'forbidden');"
@@ -359,8 +451,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         executable_hash = self.backend.inspect_private_path(
             executable, purpose="toolchain-executable"
         ).sha256
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             destination = root / "worker-cache.json"
             worker = root / "worker.cjs"
             worker.write_text(
@@ -406,8 +497,7 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         node_sha256 = self.backend.inspect_private_path(
             node, purpose="toolchain-executable"
         ).sha256
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+        with _private_test_directory(self.backend) as root:
             runtime = root / "m365-runtime"
             entrypoint = runtime / "dist" / "index.js"
             entrypoint.parent.mkdir(parents=True)

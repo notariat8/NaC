@@ -221,8 +221,8 @@ class QuarantineStore:
             state_session = backend.open_secure_directory(
                 self.state_dir, create=False
             )
-            records_session = backend.open_secure_directory(
-                self.records_dir, create=False
+            records_session = state_session.open_secure_child_directory(
+                "records", create=False
             )
             yield state_session, records_session
         finally:

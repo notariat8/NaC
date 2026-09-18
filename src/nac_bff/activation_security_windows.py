@@ -187,6 +187,8 @@ FILE_APPEND_DATA = 0x00000004
 FILE_READ_ATTRIBUTES = 0x00000080
 READ_CONTROL = 0x00020000
 DELETE = 0x00010000
+FILE_ADD_SUBDIRECTORY = 0x00000004
+FILE_TRAVERSE = 0x00000020
 FILE_SHARE_READ = 0x00000001
 FILE_SHARE_WRITE = 0x00000002
 FILE_SHARE_DELETE = 0x00000004
@@ -667,8 +669,7 @@ def _final_path(handle: int) -> str:
     written = kernel32.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
     if not written or written >= len(buffer):
         _raise_last_error("FINAL_PATH_READ_FAILED")
-    value = buffer.value
-    return value[4:] if value.startswith("\\\\?\\") else value
+    return _normalized_final_path(buffer.value)
 
 
 def _sid_string(sid: int) -> str:
@@ -944,6 +945,73 @@ class WindowsSecureDirectorySession:
     def canonical_child_path(self, name: str) -> Path:
         self._require_directory_path()
         return self.path / _validate_child_name(name)
+
+    def open_secure_child_directory(
+        self, name: str, *, create: bool
+    ) -> "WindowsSecureDirectorySession":
+        """Open one child relative to this retained, verified directory handle."""
+
+        target = self.canonical_child_path(name)
+        try:
+            handle = _open_relative_directory(
+                self._handles[-1],
+                name,
+                desired_access=(
+                    FILE_READ_ATTRIBUTES | READ_CONTROL | GENERIC_WRITE
+                ),
+                share_access=FILE_SHARE_READ | FILE_SHARE_WRITE,
+                create=False,
+            )
+        except SecurityBoundaryError as error:
+            if error.code.endswith("_267"):
+                raise SecurityBoundaryError("DIRECTORY_REQUIRED") from None
+            if not create or not error.code.endswith(("_2", "_3")):
+                raise
+            handle = _open_relative_directory(
+                self._handles[-1],
+                name,
+                desired_access=(
+                    FILE_READ_ATTRIBUTES | READ_CONTROL | GENERIC_WRITE
+                ),
+                share_access=FILE_SHARE_READ | FILE_SHARE_WRITE,
+                create=True,
+            )
+        try:
+            information = BY_HANDLE_FILE_INFORMATION()
+            if not kernel32.GetFileInformationByHandle(
+                handle, ctypes.byref(information)
+            ):
+                _raise_last_error("DIRECTORY_INFORMATION_READ_FAILED")
+            if not information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY:
+                raise SecurityBoundaryError("DIRECTORY_REQUIRED")
+            if information.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT:
+                raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
+            _require_requested_path_binding(handle, target)
+            owner, descriptor, dacl = _security_hashes(
+                handle,
+                require_current_owner=True,
+                require_restrictive_dacl=True,
+            )
+            if int(information.dwVolumeSerialNumber) != self.binding.volume_serial:
+                raise SecurityBoundaryError("SECURE_DIRECTORY_VOLUME_MISMATCH")
+            binding = SecureDirectoryBinding(
+                path_sha256=hashlib.sha256(
+                    _final_path(handle).casefold().encode("utf-8")
+                ).hexdigest(),
+                volume_serial=int(information.dwVolumeSerialNumber),
+                file_id=(int(information.nFileIndexHigh) << 32)
+                | int(information.nFileIndexLow),
+                owner_sid_sha256=owner,
+                security_descriptor_sha256=descriptor,
+                dacl_sha256=dacl,
+            )
+            child = WindowsSecureDirectorySession(
+                self._backend, target, [handle], binding
+            )
+            handle = 0
+            return child
+        finally:
+            _close_handle(handle)
 
     def inspect_optional_child(
         self, name: str, purpose: str
@@ -1368,10 +1436,17 @@ class WindowsActivationSecurityBackend:
                     and path_attributes & FILE_ATTRIBUTE_REPARSE_POINT
                 ):
                     raise SecurityBoundaryError("REPARSE_POINT_REJECTED")
-                desired_access = FILE_READ_ATTRIBUTES | (
+                create_child_access = (
+                    FILE_ADD_SUBDIRECTORY
+                    if create and index == final_index - 1
+                    else 0
+                )
+                traversal_access = FILE_TRAVERSE if index < final_index else 0
+                desired_access = (
+                    FILE_READ_ATTRIBUTES | traversal_access | create_child_access
+                ) | (
                     READ_CONTROL
                     | (GENERIC_WRITE if require_current_owner else 0)
-                    | (DELETE if require_current_owner else 0)
                     if index == final_index
                     else 0
                 )

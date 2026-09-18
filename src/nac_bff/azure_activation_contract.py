@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import ctypes
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import re
+import sys
 from typing import Any, Protocol
 
 from .activation_security_backend import get_platform_security_backend
@@ -102,7 +105,51 @@ class ActivationContext:
     approved_tree: str
 
 
+def hermetic_posix_primitives_available() -> bool:
+    """Report local POSIX primitives without authorizing a live backend."""
+
+    if os.name == "posix" and sys.platform == "linux":
+        if not Path("/proc/self/fd").is_dir():
+            return False
+        required_os_capabilities = (
+            "geteuid",
+            "memfd_create",
+            "MFD_ALLOW_SEALING",
+            "O_CLOEXEC",
+            "O_NOFOLLOW",
+        )
+        if any(not hasattr(os, name) for name in required_os_capabilities):
+            return False
+        try:
+            import fcntl
+            import pwd
+
+            libc = ctypes.CDLL(None, use_errno=True)
+        except (ImportError, OSError):
+            return False
+        return all(
+            hasattr(fcntl, name)
+            for name in (
+                "F_ADD_SEALS",
+                "F_GET_SEALS",
+                "F_SEAL_WRITE",
+                "F_SEAL_GROW",
+                "F_SEAL_SHRINK",
+                "F_SEAL_SEAL",
+                "LOCK_EX",
+                "LOCK_NB",
+                "LOCK_UN",
+                "flock",
+            )
+        ) and callable(getattr(pwd, "getpwuid", None)) and all(
+            hasattr(libc, name) for name in ("mount", "prctl", "unshare")
+        )
+    return platform_security_backend_available()
+
+
 def platform_security_backend_available() -> bool:
+    """Report only a complete platform backend suitable for live boundaries."""
+
     try:
         get_platform_security_backend()
     except (ImportError, OSError, RuntimeError):
@@ -122,6 +169,7 @@ __all__ = [
     "LiveActivationRequest",
     "PLATFORM_BOUNDARY_SCHEMA_VERSION",
     "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
+    "hermetic_posix_primitives_available",
     "platform_security_backend_available",
     "require_platform_security_backend",
 ]

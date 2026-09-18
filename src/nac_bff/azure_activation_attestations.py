@@ -11,7 +11,7 @@ from typing import Mapping
 
 from .azure_activation_contract import (
     PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
-    platform_security_backend_available,
+    hermetic_posix_primitives_available,
 )
 from .azure_live_commands import calculate_azure_cli_toolchain_sha256
 from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
@@ -114,7 +114,7 @@ def build_activation_attestation_plan(
 ) -> dict[str, object]:
     """Measure only public/local execution material for the consolidated gate."""
 
-    if not platform_security_backend_available():
+    if not hermetic_posix_primitives_available():
         return {
             "schema_version": _SCHEMA_VERSION,
             "status": "NOT_READY",

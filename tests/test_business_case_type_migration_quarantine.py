@@ -12,7 +12,10 @@ from pathlib import Path
 from unittest import mock
 
 from nac_bff.activation_security_backend import SecurityBoundaryError
-from nac_bff.activation_security_windows import WindowsSecureDirectorySession
+if os.name == "nt":
+    from nac_bff.activation_security_windows import WindowsSecureDirectorySession
+else:
+    WindowsSecureDirectorySession = None  # type: ignore[assignment,misc]
 
 from src.notary_kg import business_case_type_migration_quarantine as quarantine_module
 from src.notary_kg.business_case_type_migration_quarantine import (
