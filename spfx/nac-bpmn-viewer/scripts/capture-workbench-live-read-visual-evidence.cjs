@@ -69,6 +69,25 @@ function pngDimensions(file) {
   return { imageWidth: bytes.readUInt32BE(16), imageHeight: bytes.readUInt32BE(20) };
 }
 
+async function captureStableScreenshot(page, locator, output, caseId) {
+  await page.evaluate(async () => {
+    if (document.fonts) await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  let previousDigest;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const screenshot = await locator.screenshot({ animations: 'disabled', caret: 'hide' });
+    const digest = crypto.createHash('sha256').update(screenshot).digest('hex');
+    if (digest === previousDigest) {
+      fs.writeFileSync(output, screenshot, { mode: 0o600 });
+      return;
+    }
+    previousDigest = digest;
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+  }
+  throw new Error(caseId + ': NAC_WORKBENCH_LIVE_SCREENSHOT_UNSTABLE');
+}
+
 async function inspect(page, item) {
   return page.evaluate(expected => {
     const frame = document.querySelector('[data-nac-evidence-frame]');
@@ -148,7 +167,12 @@ async function run() {
       const inspection = await inspect(page, item);
       assertInspection(item, inspection);
       const output = path.join(outputRoot, item.file);
-      await page.locator('[data-nac-evidence-frame]').screenshot({ path: output });
+      await captureStableScreenshot(
+        page,
+        page.locator('[data-nac-evidence-frame]'),
+        output,
+        item.id
+      );
       evidence.push({
         id: item.id,
         state: item.state,

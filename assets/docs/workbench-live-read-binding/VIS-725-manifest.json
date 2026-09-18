@@ -136,7 +136,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs",
-      "sha256": "57e13033560f08f5b78bdf5cb247d964a75c91f8292458c474882a757353f216"
+      "sha256": "8b66ee2142762328ab2ecb1c78b2107c6848b68c4feb3c021764581474eb8470"
     },
     {
       "relativePath": "workflows/verification-contracts/workbench-live-read-binding.verification.json",
