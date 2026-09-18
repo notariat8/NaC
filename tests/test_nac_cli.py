@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -103,6 +104,38 @@ class NaCCliTests(unittest.TestCase):
         rc, output = run_cli("contracts", "verify")
 
         self.assertEqual(rc, 0, output)
+
+    def test_contracts_emit_canonical_failed_validator_ids(self) -> None:
+        def completed(command, **_kwargs):
+            script_name = Path(command[1]).name
+            return subprocess.CompletedProcess(
+                command,
+                1 if script_name == "validate_gnotkg_costs.py" else 0,
+                stdout="",
+                stderr="",
+            )
+
+        with patch("nac_cli.cli.subprocess.run", side_effect=completed):
+            rc, output = run_cli("contracts", "validate")
+        self.assertEqual(rc, 1)
+        self.assertIn(
+            "CONTRACT_VALIDATOR_FAILED:validate_gnotkg_costs",
+            output,
+        )
+
+        def called(command, **_kwargs):
+            return int(
+                Path(command[1]).name
+                == "validate_codex_agent_context_operating_model.py"
+            )
+
+        with patch("nac_cli.cli.subprocess.call", side_effect=called):
+            rc, output = run_cli("contracts", "verify")
+        self.assertEqual(rc, 1)
+        self.assertIn(
+            "CONTRACT_VALIDATOR_FAILED:validate_codex_agent_context_operating_model",
+            output,
+        )
 
     def test_kg_status_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli("kg", "status")

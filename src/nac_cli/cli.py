@@ -2101,6 +2101,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             if result.stderr:
                 print(result.stderr.rstrip())
             if result.returncode != 0:
+                print(f"CONTRACT_VALIDATOR_FAILED:{Path(script_name).stem}")
                 overall_rc = result.returncode
         return overall_rc
 
@@ -2134,6 +2135,7 @@ def command_contracts(args: argparse.Namespace) -> int:
         for script_name in validators:
             rc = run_script(repo_root, script_name, [])
             if rc != 0:
+                print(f"CONTRACT_VALIDATOR_FAILED:{Path(script_name).stem}")
                 overall_rc = rc
         return overall_rc
 

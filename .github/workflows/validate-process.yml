@@ -44,7 +44,11 @@ jobs:
             if [ -z "$failures" ]; then
               failures="UNCLASSIFIED_UNITTEST_FAILURE"
             fi
-            echo "::error title=Linux runtime fixture tests failed::failed_tests=$failures"
+            failed_validators="$(grep -Eo 'CONTRACT_VALIDATOR_FAILED:validate_[a-z0-9_]+' "$log_file" | cut -d: -f2 | sort -u | paste -sd, -)"
+            if [ -z "$failed_validators" ]; then
+              failed_validators="UNCLASSIFIED_CONTRACT_VALIDATOR_FAILURE"
+            fi
+            echo "::error title=Linux runtime fixture tests failed::failed_tests=$failures failed_validators=$failed_validators"
             exit 1
           fi
 
