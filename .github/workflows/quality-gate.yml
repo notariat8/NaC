@@ -110,7 +110,14 @@ jobs:
         shell: bash
         run: |
           log_file="$(mktemp)"
-          if git diff --exit-code -- assets/docs/generic-workbench assets/docs/workbench-live-read-binding >"$log_file" 2>&1; then
+          drift=0
+          if ! git diff --exit-code -- assets/docs/generic-workbench >"$log_file" 2>&1; then
+            drift=1
+          fi
+          if ! git diff --exit-code -- assets/docs/workbench-live-read-binding >>"$log_file" 2>&1; then
+            drift=1
+          fi
+          if [ "$drift" -eq 0 ]; then
             cat "$log_file"
           else
             changed_files="$(git diff --name-only -- assets/docs/generic-workbench assets/docs/workbench-live-read-binding | grep -E '^assets/docs/(generic-workbench|workbench-live-read-binding)/[A-Za-z0-9._/-]+$' | sort -u | paste -sd, -)"
