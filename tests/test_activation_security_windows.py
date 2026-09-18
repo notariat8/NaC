@@ -117,21 +117,55 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_requested_path_binding_accepts_case_but_rejects_other_target(self) -> None:
         requested = Path(r"C:\Private\Evidence.json")
-        with patch.object(
-            security_windows,
-            "_final_path",
-            return_value=r"\\?\c:\private\evidence.json",
+        with (
+            patch.object(
+                security_windows,
+                "_long_path_name",
+                return_value=r"C:\Private\Evidence.json",
+            ),
+            patch.object(
+                security_windows,
+                "_final_path",
+                return_value=r"\\?\c:\private\evidence.json",
+            ),
         ):
             security_windows._require_requested_path_binding(42, requested)
-        with patch.object(
-            security_windows,
-            "_final_path",
-            return_value=r"\\?\C:\Elsewhere\evidence.json",
+        with (
+            patch.object(
+                security_windows,
+                "_long_path_name",
+                return_value=r"C:\Private\Evidence.json",
+            ),
+            patch.object(
+                security_windows,
+                "_final_path",
+                return_value=r"\\?\C:\Elsewhere\evidence.json",
+            ),
         ):
             with self.assertRaisesRegex(
                 SecurityBoundaryError, "FINAL_PATH_BINDING_MISMATCH"
             ):
                 security_windows._require_requested_path_binding(42, requested)
+
+    def test_requested_path_binding_expands_dos_short_names(self) -> None:
+        requested = Path(r"C:\Users\RUNNER~1\AppData\Local\Temp\sealed")
+        with (
+            patch.object(
+                security_windows,
+                "_long_path_name",
+                return_value=(
+                    r"C:\Users\runneradmin\AppData\Local\Temp\sealed"
+                ),
+            ),
+            patch.object(
+                security_windows,
+                "_final_path",
+                return_value=(
+                    r"\\?\C:\Users\runneradmin\AppData\Local\Temp\sealed"
+                ),
+            ),
+        ):
+            security_windows._require_requested_path_binding(42, requested)
 
     def test_private_paths_are_bound_to_supported_fixed_local_volume(self) -> None:
         with _private_test_directory(self.backend) as root:

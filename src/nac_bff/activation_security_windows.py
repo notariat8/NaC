@@ -117,6 +117,12 @@ kernel32.GetFinalPathNameByHandleW.argtypes = (
     wintypes.DWORD,
 )
 kernel32.GetFinalPathNameByHandleW.restype = wintypes.DWORD
+kernel32.GetLongPathNameW.argtypes = (
+    wintypes.LPCWSTR,
+    wintypes.LPWSTR,
+    wintypes.DWORD,
+)
+kernel32.GetLongPathNameW.restype = wintypes.DWORD
 kernel32.CreateMutexW.argtypes = (wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR)
 kernel32.CreateMutexW.restype = wintypes.HANDLE
 kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
@@ -639,8 +645,24 @@ def _normalized_final_path(value: str) -> str:
     return value
 
 
+def _long_path_name(path: Path) -> str:
+    """Expand an existing DOS 8.3 path without resolving reparse points."""
+
+    value = str(path)
+    required = kernel32.GetLongPathNameW(value, None, 0)
+    if not required:
+        _raise_last_error("LONG_PATH_READ_FAILED")
+    buffer = ctypes.create_unicode_buffer(required + 1)
+    written = kernel32.GetLongPathNameW(value, buffer, len(buffer))
+    if not written or written >= len(buffer):
+        _raise_last_error("LONG_PATH_READ_FAILED")
+    return buffer.value
+
+
 def _require_requested_path_binding(handle: int, path: Path) -> None:
-    requested = os.path.normcase(os.path.abspath(path))
+    requested = os.path.normcase(
+        _normalized_final_path(_long_path_name(Path(os.path.abspath(path))))
+    )
     final = os.path.normcase(_normalized_final_path(_final_path(handle)))
     if requested != final:
         raise SecurityBoundaryError("FINAL_PATH_BINDING_MISMATCH")
