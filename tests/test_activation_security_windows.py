@@ -50,6 +50,28 @@ def _private_node(backend: WindowsActivationSecurityBackend):
         yield directory / "node.exe", snapshot.sha256, directory
 
 
+def _create_private_file(
+    backend: WindowsActivationSecurityBackend,
+    directory: Path,
+    name: str,
+    payload: bytes,
+) -> Path:
+    with backend.open_secure_directory(directory, create=False) as session:
+        session.create_exclusive(name, payload)
+    return directory / name
+
+
+def _create_private_directory(
+    backend: WindowsActivationSecurityBackend,
+    directory: Path,
+    name: str,
+) -> Path:
+    with backend.open_secure_directory(directory, create=False) as session:
+        with session.open_secure_child_directory(name, create=True):
+            pass
+    return directory / name
+
+
 @unittest.skipUnless(os.name == "nt", "native Windows security contract")
 class WindowsActivationSecurityBackendTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -57,9 +79,10 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_private_file_is_measured_from_bound_handle(self) -> None:
         with _private_test_directory(self.backend) as directory:
-            path = directory / "evidence.json"
             payload = b'{"synthetic":true}\n'
-            path.write_bytes(payload)
+            path = _create_private_file(
+                self.backend, directory, "evidence.json", payload
+            )
 
             snapshot = self.backend.inspect_private_path(path, purpose="test")
 
@@ -111,8 +134,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_private_paths_are_bound_to_supported_fixed_local_volume(self) -> None:
         with _private_test_directory(self.backend) as root:
-            path = root / "bound.txt"
-            path.write_text("synthetic", encoding="utf-8")
+            path = _create_private_file(
+                self.backend, root, "bound.txt", b"synthetic"
+            )
             self.assertRegex(
                 self.backend.validate_private_directory(root), r"^[0-9a-f]{64}$"
             )
@@ -123,8 +147,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_non_fixed_volume_is_rejected_before_file_use(self) -> None:
         with _private_test_directory(self.backend) as directory:
-            path = directory / "bound.txt"
-            path.write_text("synthetic", encoding="utf-8")
+            path = _create_private_file(
+                self.backend, directory, "bound.txt", b"synthetic"
+            )
             with patch(
                 "nac_bff.activation_security_windows._drive_type",
                 return_value=4,
@@ -208,8 +233,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_secure_child_directory_rejects_file_reparse_and_binding_drift(self) -> None:
         with _private_test_directory(self.backend) as root:
-            regular = root / "regular"
-            regular.write_text("synthetic", encoding="utf-8")
+            regular = _create_private_file(
+                self.backend, root, "regular", b"synthetic"
+            )
             target = root / "target"
             target.mkdir()
             junction = root / "junction"
@@ -226,8 +252,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                     SecurityBoundaryError, "REPARSE_POINT_REJECTED"
                 ):
                     parent.open_secure_child_directory("junction", create=False)
-                plain = root / "plain"
-                plain.mkdir()
+                plain = _create_private_directory(
+                    self.backend, root, "plain"
+                )
                 with patch.object(
                     security_windows,
                     "_require_requested_path_binding",
@@ -258,9 +285,12 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_secure_directory_session_rejects_renamed_ancestor(self) -> None:
         with _private_test_directory(self.backend) as root:
-            ancestor = root / "ancestor"
-            private = ancestor / "private"
-            private.mkdir(parents=True)
+            ancestor = _create_private_directory(
+                self.backend, root, "ancestor"
+            )
+            private = _create_private_directory(
+                self.backend, ancestor, "private"
+            )
             with self.backend.open_secure_directory(
                 private, create=False
             ) as session:
@@ -306,8 +336,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
         )
         try:
             with _private_test_directory(self.backend) as directory:
-                path = directory / "broad.txt"
-                path.write_text("synthetic", encoding="utf-8")
+                path = _create_private_file(
+                    self.backend, directory, "broad.txt", b"synthetic"
+                )
                 self.assertTrue(set_security(str(path), 0x00000004, descriptor))
                 with self.assertRaisesRegex(SecurityBoundaryError, "FILE_DACL_TOO_BROAD"):
                     self.backend.inspect_private_path(path, purpose="test")
@@ -316,8 +347,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_binding_drift_is_rejected(self) -> None:
         with _private_test_directory(self.backend) as directory:
-            path = directory / "evidence.json"
-            path.write_text("first", encoding="utf-8")
+            path = _create_private_file(
+                self.backend, directory, "evidence.json", b"first"
+            )
             snapshot = self.backend.inspect_private_path(path, purpose="test")
             path.write_text("second", encoding="utf-8")
             with self.assertRaisesRegex(SecurityBoundaryError, "FILE_BINDING_MISMATCH"):
@@ -437,14 +469,18 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
     def test_node_permission_guard_is_inherited_by_allowed_worker(self) -> None:
         with _private_node(self.backend) as (executable, executable_hash, root):
             destination = root / "worker-cache.json"
-            worker = root / "worker.cjs"
-            worker.write_text(
+            worker_source = (
                 "const {parentPort}=require('node:worker_threads');"
                 "const fs=require('node:fs');"
                 f"try{{fs.writeFileSync({str(destination)!r},'forbidden');"
                 "parentPort.postMessage('WRITTEN')}"
-                "catch(e){parentPort.postMessage(e.code)}",
-                encoding="utf-8",
+                "catch(e){parentPort.postMessage(e.code)}"
+            )
+            worker = _create_private_file(
+                self.backend,
+                root,
+                "worker.cjs",
+                worker_source.encode("utf-8"),
             )
             script = (
                 "const {Worker}=require('node:worker_threads');"
@@ -475,13 +511,17 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
 
     def test_m365_runner_is_windows_native_and_credential_write_free(self) -> None:
         with _private_node(self.backend) as (node, node_sha256, root):
-            runtime = root / "m365-runtime"
-            entrypoint = runtime / "dist" / "index.js"
-            entrypoint.parent.mkdir(parents=True)
-            home = root / "m365-home"
-            home.mkdir()
+            runtime = _create_private_directory(
+                self.backend, root, "m365-runtime"
+            )
+            dist = _create_private_directory(
+                self.backend, runtime, "dist"
+            )
+            home = _create_private_directory(
+                self.backend, root, "m365-home"
+            )
             cache = home / "refreshed-token.json"
-            entrypoint.write_text(
+            entrypoint_source = (
                 "const fs=require('node:fs');"
                 f"let blocked=false;try{{fs.writeFileSync({str(cache)!r},'x')}}"
                 "catch(e){blocked=e.code==='ERR_ACCESS_DENIED'};"
@@ -489,8 +529,13 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 "connectedAs:'operator@example.com',"
                 "appId:'11111111-1111-4111-8111-111111111111',"
                 "appTenant:'22222222-2222-4222-8222-222222222222',"
-                "cloudType:'Public',writeBlocked:blocked}));",
-                encoding="utf-8",
+                "cloudType:'Public',writeBlocked:blocked}));"
+            )
+            entrypoint = _create_private_file(
+                self.backend,
+                dist,
+                "index.js",
+                entrypoint_source.encode("utf-8"),
             )
             runtime_sha256 = build_node_runtime_manifest(runtime).digest
             runner = M365CliCommandRunner(
