@@ -12,6 +12,7 @@ if os.name != "nt":
 import ctypes
 import shutil
 import subprocess
+import time
 from contextlib import contextmanager
 from ctypes import wintypes
 from unittest.mock import patch
@@ -28,12 +29,24 @@ from nac_m365_graph.sealed_toolchain import sealed_payloads, sealed_toolchain
 def _private_test_directory(backend: WindowsActivationSecurityBackend):
     """Yield a backend-created owner-only directory below the host temp root."""
 
-    with tempfile.TemporaryDirectory() as directory:
-        private = Path(directory).resolve() / "private"
+    directory = Path(tempfile.mkdtemp()).resolve()
+    try:
+        private = directory / "private"
         with backend.open_secure_directory(private, create=True):
             pass
         backend.validate_private_directory(private)
         yield private
+    finally:
+        for attempt in range(10):
+            try:
+                shutil.rmtree(directory)
+                break
+            except FileNotFoundError:
+                break
+            except PermissionError as error:
+                if error.winerror != 32 or attempt == 9:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
 
 
 @contextmanager
