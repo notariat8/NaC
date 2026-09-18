@@ -64,6 +64,10 @@ from nac_bff.azure_activation_runner import (
     _sha256_json as _runner_sha256_json,
     run_azure_bff_live_activation,
 )
+from nac_bff.issue746_reconciliation_gate import (
+    Issue746ReconciliationAuthorization,
+    Issue746ReconciliationGateError,
+)
 from nac_bff.azure_live_commands import _validated_command
 from nac_bff.graph_activation import (
     GRAPH_APP_ID,
@@ -92,6 +96,12 @@ def _make_windows_file_broadly_writable(path: Path) -> None:
     )
     if completed.returncode != 0:
         raise AssertionError("failed to create broad Windows DACL fixture")
+
+
+def _issue746_authorization_mock() -> Mock:
+    authorization = Mock(spec=Issue746ReconciliationAuthorization)
+    authorization.verify.return_value = None
+    return authorization
 
 
 class _WindowsProcessBackendProxy:
@@ -5064,6 +5074,8 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "src/nac_bff/azure_activation_runner.py",
                 "src/nac_bff/azure_interruption_baseline.py",
                 "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/issue746_reconciliation_gate.py",
+                "src/nac_identity/governance_registry.py",
                 "src/nac_bff/azure_live_commands.py",
                 "src/nac_cli/cli.py",
             )
@@ -5146,6 +5158,8 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "src/nac_bff/azure_activation_runner.py",
                 "src/nac_bff/azure_interruption_baseline.py",
                 "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/issue746_reconciliation_gate.py",
+                "src/nac_identity/governance_registry.py",
                 "src/nac_bff/azure_live_commands.py",
                 "src/nac_cli/cli.py",
             )
@@ -5179,6 +5193,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             expected_commit=COMMIT,
             expected_tree=TREE,
             expected_toolchain_sha256="e" * 64,
+            issue746_authorization=_issue746_authorization_mock(),
         )
 
     def test_interruption_binding_rejects_commit_mismatch(self) -> None:
@@ -5285,12 +5300,14 @@ class AzureBffCompositionTests(unittest.TestCase):
                 side_effect=AssertionError("M365 must not initialize"),
             ) as m365,
         ):
+            issue746_authorization = _issue746_authorization_mock()
             ports = build_interruption_reconciliation_ports(
                 Path("/repo"),
                 request,
                 reconciler_commit=COMMIT,
                 reconciler_tree=TREE,
                 reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=False,
                 environ={"AZURE_CLIENT_SECRET": "excluded"},
             )
@@ -5317,6 +5334,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             expected_commit=COMMIT,
             expected_tree=TREE,
             expected_toolchain_sha256="e" * 64,
+            issue746_authorization=issue746_authorization,
         )
         observation.assert_called_once_with(
             azure.return_value, preflight=runtime_binding.return_value.verify
@@ -5324,6 +5342,36 @@ class AzureBffCompositionTests(unittest.TestCase):
         graph.assert_not_called()
         credentials.assert_not_called()
         m365.assert_not_called()
+
+    def test_issue746_authorization_blocks_before_azure_adapter(self) -> None:
+        request = SimpleNamespace(
+            azure_cli_toolchain_sha256=AZURE_CLI_TOOLCHAIN_SHA256,
+            gh_cli_sha256=GH_CLI_SHA256,
+        )
+        authorization = _issue746_authorization_mock()
+        authorization.verify.side_effect = Issue746ReconciliationGateError(
+            "tampered authorization"
+        )
+        with (
+            patch(
+                "nac_bff.azure_activation_composition.AzureCliAdapter"
+            ) as azure,
+            self.assertRaises(ActivationStepError) as raised,
+        ):
+            build_interruption_reconciliation_ports(
+                Path("/repo"),
+                request,
+                reconciler_commit=COMMIT,
+                reconciler_tree=TREE,
+                reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=authorization,
+                require_owner_verifier=False,
+                environ={},
+            )
+        self.assertEqual(
+            raised.exception.code, "ISSUE_746_RECONCILIATION_GATE_CLOSED"
+        )
+        azure.assert_not_called()
 
     def test_interruption_terminalization_factory_adds_issue717_verifier(
         self,
@@ -5348,12 +5396,14 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "nac_bff.azure_activation_composition.GitHubApprovalVerifier"
             ) as github,
         ):
+            issue746_authorization = _issue746_authorization_mock()
             ports = build_interruption_reconciliation_ports(
                 Path("/repo"),
                 request,
                 reconciler_commit=COMMIT,
                 reconciler_tree=TREE,
                 reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=True,
                 environ={},
             )

@@ -1,6 +1,6 @@
 # Windows-nativer Abschluss der partiellen M365-BFF-Aktivierung – Implementierungsplan
 
-Status: Plan nach freigegebener Spec überarbeitet; `plan -> review -> fix` lokal abgeschlossen; Owner-Planfreigabe ausstehend
+Status: Spec und Plan vom Owner freigegeben; `plan -> review -> fix` lokal abgeschlossen; Implementierung lokal validiert; operative Ausführung blockiert
 
 Datum: 17. September 2026
 
@@ -63,9 +63,9 @@ bleibt die bestehende Plattform-Sperre fail-closed aktiv.
 | Optionales Linux-Backend | neu `src/nac_bff/activation_security_linux.py` | vorhandene Linux-Semantik isolieren, ohne lokale Abhängigkeit zu erzeugen |
 | Runner/Recovery | `src/nac_bff/azure_activation_runner.py`, `src/nac_bff/azure_activation_facade.py` | Datei-, Lock-, State-, Evidence- und Recovery-Operationen über Backend führen |
 | Toolchain/Prozesse | `src/nac_bff/azure_activation_attestations.py`, `src/nac_bff/azure_live_commands.py`, `src/nac_bff/azure_live_commands_win.py`, `src/nac_m365_graph/sealed_toolchain.py` | vollständige Windows-Launcher-/Interpreter-/Paketbindung und sicherer Prozessstart |
-| Reconciliation | bestehende Function-Deployment- und Interruption-Reconciliation-Module | Windows-Preflight, doppelte read-only Snapshots und Null-Schreibgrenze |
-| CLI/Komposition | `src/nac_cli/cli.py`, `src/nac_m365_graph/mvp_test_environment_deploy.py`, `src/nac_bff/azure_activation_composition.py` | Windows-Backend nutzen; Plattform-Sperre nur bei fehlender Fähigkeit |
-| Resolver/Governance | Issue-#746-Validator und Verification Contract | SID-/DACL- statt POSIX-`0600`-Bindung; Principal-Regeln unverändert |
+| Reconciliation | bestehende Function-Deployment- und Interruption-Reconciliation-Module, neu `src/nac_bff/issue746_reconciliation_gate.py` | Windows-Preflight, produktives #746-Gate, doppelte read-only Snapshots und Null-Schreibgrenze |
+| CLI/Komposition | `src/nac_cli/cli.py`, `src/nac_m365_graph/mvp_test_environment_deploy.py`, `src/nac_bff/azure_activation_composition.py` | #746-Autorisierung vor Factory und erneut vor jedem Provider-Read erzwingen; Live und Recovery gesperrt halten |
+| Resolver/Governance | `src/nac_identity/governance_registry.py`, Issue-#746-Validator und Verification Contract | gemeinsame Principal-Logik, SID-/DACL- statt POSIX-`0600`-Bindung und keine Zweitkonto-Trennung |
 | Verträge | `workflows/contracts/m365-azure-bff-live-activation.contract.json`, beide M365-Verification-Contracts | Windows-Ziel, optionale Azure-Linux-Runtime, Gate- und Evidence-Matrix |
 | Tests | neue Backendtests sowie bestehende #632/#739/#744/#746-Tests | positive Windows-Pfade, Negativmatrix, Replay- und Crashfenster |
 | Entwicklerwerkzeuge | `scripts/startup_check.py`, Mindestvoraussetzungen, SBOM | funktionierendes Windows-Python `>=3.11` und Windows-Graft als Pflicht nachweisen |
@@ -263,22 +263,26 @@ Zielpaket oder optionalen Kompatibilitätstest gehören.
 - `src/nac_m365_graph/mvp_test_environment_deploy.py`;
 - vorhandene Runner-, CLI- und Kompositionstests.
 
-Die frühe Windows-Sperre wird erst entfernt, wenn `capabilities()` vollständig
-ist. Offline-Befehle bleiben unverändert importierbar. Live, Recovery,
-Interruption- und Function-Deployment-Reconciliation nutzen dasselbe Backend.
-Alle zwölf Schritte, ihre Reihenfolge, Zielressourcen und Readbacks bleiben
-unverändert.
+Offline-Befehle bleiben unverändert importierbar. Ausschließlich die gebundene
+read-only Interruption- und Function-Deployment-Reconciliation nutzt das
+Windows-Backend für Provider-Lesezugriffe. Live und Recovery bleiben unter #746
+auch bei vollständigen Backend-Fähigkeiten gesperrt. Alle zwölf Schritte, ihre
+Reihenfolge, Zielressourcen und Readbacks bleiben unverändert.
 
 ### 8. Credential-schreibfreie Reconciliation und zwei Snapshots
 
-**Dateien:** bestehende Reconciliation-Module, Verification Contract, Adapter-
-und Sentineltests.
+**Dateien:** `src/nac_bff/issue746_reconciliation_gate.py`, bestehende
+Reconciliation-Module, CLI/Komposition, Verification Contract, Adapter- und
+Sentineltests.
 
 Der echte Adapter erhält keinen impliziten Login- oder Refreshpfad. Vor dem
-ersten Provider-Read muss ein bereits bestehender Auth-Kontext nachweislich
-verfügbar sein. Kann der verwendete Kanal Credential- oder Cache-Schreibfreiheit
-nicht technisch garantieren, liefert er vor dem Providerzugriff
-`BLOCKED_AUTHENTICATION_REQUIRED`.
+ersten Provider-Read müssen Resolver, Operator-Principal, finaler HEAD/Tree, PR
+#747, alle Pflichtchecks und der unveränderte #746-`OWNER_SOLO_APPROVAL`-
+Kommentar dieselbe Autorisierung bilden. CLI und beide Port-Factories verlangen
+sie zwingend; der Runtime-Verifier prüft ihren kanonischen Digest vor jedem
+Provider-Subprozess erneut. Kann der verwendete Kanal Credential- oder
+Cache-Schreibfreiheit nicht technisch garantieren, blockiert er vor dem
+Providerzugriff.
 
 Synthetische Tests versuchen Login, Device Code, Refresh, Cache Create und
 Config Rewrite und erwarten Blockierung ohne Credentialmutation. Zwei
@@ -288,8 +292,8 @@ reduziert. Nur identische Hashes mit
 
 ### 9. Windows-Resolver und Approval-Bindings
 
-**Dateien:** Issue-#746-Validator, Verification Contract, Resolver-Fixtures und
-Tests.
+**Dateien:** `src/nac_identity/governance_registry.py`, produktives #746-Gate,
+Issue-#746-Validator, Verification Contract, Resolver-Fixtures und Tests.
 
 Der geschützte externe Resolver wird an kanonischen Pfad, Datei-/Volume-ID,
 SHA-256, Benutzer-SID und DACL gebunden. Öffentliche Evidence enthält nur
@@ -426,6 +430,11 @@ commands:
     platform: windows_native
     command: python -m unittest discover -s tests -p test_nac_bff_azure_*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: issue746_gate_tests
+    platform: windows_native
+    command: python -m unittest tests.test_issue746_reconciliation_gate
+    acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_business_case_regression_tests
     platform: windows_native

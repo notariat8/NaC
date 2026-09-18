@@ -8491,6 +8491,22 @@ def _add_bff_azure_owner_binding_arguments(
     parser.add_argument("--format", choices=["text", "json"], default="text")
 
 
+def _add_issue746_reconciliation_gate_arguments(
+    parser: argparse.ArgumentParser,
+) -> None:
+    parser.add_argument(
+        "--protected-identity-resolver-file",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument("--protected-identity-resolver-sha256", required=True)
+    parser.add_argument("--operator-account-id", required=True)
+    parser.add_argument(
+        "--issue-746-owner-solo-approval-reference",
+        required=True,
+    )
+
+
 def _live_activation_request_from_args(args: argparse.Namespace):
     from nac_bff.azure_activation_contract import LiveActivationRequest
 
@@ -8535,6 +8551,7 @@ def _run_bff_azure_activation_interruption_command(
     _add_bff_azure_owner_binding_arguments(
         parser, include_owner_gate=False
     )
+    _add_issue746_reconciliation_gate_arguments(parser)
     parser.add_argument("--reconciler-commit", required=True)
     parser.add_argument("--reconciler-tree", required=True)
     parser.add_argument("--reconciler-toolchain-sha256", required=True)
@@ -8645,6 +8662,8 @@ def _run_bff_azure_activation_interruption_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            GH_CLI_EXECUTION_PATH,
+            GitHubApprovalVerifier,
         )
         from nac_bff.azure_activation_facade import (
             build_interruption_reconciliation_ports,
@@ -8656,6 +8675,11 @@ def _run_bff_azure_activation_interruption_command(
             terminalize_azure_bff_step2_interruption,
         )
         from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
+        from nac_bff.issue746_reconciliation_gate import (
+            GATE_CLOSED as ISSUE746_RECONCILIATION_GATE_CLOSED,
+            Issue746ReconciliationGateError,
+            verify_issue746_readonly_reconciliation_gate,
+        )
     except Exception:
         return _emit_bff_azure_interruption_error(
             "INTERRUPTION_RUNTIME_UNAVAILABLE", args.format
@@ -8663,6 +8687,25 @@ def _run_bff_azure_activation_interruption_command(
     try:
         repo_root = resolve_repo_root(args.repo_root)
         request = _live_activation_request_from_args(args)
+        issue746_github_reader = GitHubApprovalVerifier(
+            binary=GH_CLI_EXECUTION_PATH,
+            expected_binary_sha256=request.gh_cli_sha256,
+            environ=dict(os.environ),
+        )
+        issue746_authorization = verify_issue746_readonly_reconciliation_gate(
+            repo_root=repo_root,
+            protected_identity_resolver_file=(
+                args.protected_identity_resolver_file
+            ),
+            protected_identity_resolver_sha256=(
+                args.protected_identity_resolver_sha256
+            ),
+            operator_account_id=args.operator_account_id,
+            owner_solo_approval_reference=(
+                args.issue_746_owner_solo_approval_reference
+            ),
+            github_reader=issue746_github_reader,
+        )
         binding = InterruptionReconcilerBinding(
             approved_commit=args.reconciler_commit,
             approved_tree=args.reconciler_tree,
@@ -8678,6 +8721,7 @@ def _run_bff_azure_activation_interruption_command(
                 reconciler_toolchain_sha256=(
                     args.reconciler_toolchain_sha256
                 ),
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=(
                     args.confirm_terminalize_and_release
                 ),
@@ -8746,6 +8790,10 @@ def _run_bff_azure_activation_interruption_command(
                 observation_port=observation_port,
                 output_root=DEFAULT_OUTPUT_ROOT,
             )
+    except Issue746ReconciliationGateError:
+        return _emit_bff_azure_interruption_error(
+            ISSUE746_RECONCILIATION_GATE_CLOSED, args.format
+        )
     except Exception:
         return _emit_bff_azure_interruption_error(
             "INTERRUPTION_EXECUTION_FAILED", args.format
@@ -8777,6 +8825,7 @@ def _run_bff_azure_function_deployment_command(
     _add_bff_azure_owner_binding_arguments(
         parser, include_owner_gate=False
     )
+    _add_issue746_reconciliation_gate_arguments(parser)
     parser.add_argument("--reconciler-commit", required=True)
     parser.add_argument("--reconciler-tree", required=True)
     parser.add_argument("--reconciler-toolchain-sha256", required=True)
@@ -8841,11 +8890,18 @@ def _run_bff_azure_function_deployment_command(
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            GH_CLI_EXECUTION_PATH,
+            GitHubApprovalVerifier,
         )
         from nac_bff.azure_activation_facade import (
             build_function_deployment_reconciliation_ports,
         )
         from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
+        from nac_bff.issue746_reconciliation_gate import (
+            GATE_CLOSED as ISSUE746_RECONCILIATION_GATE_CLOSED,
+            Issue746ReconciliationGateError,
+            verify_issue746_readonly_reconciliation_gate,
+        )
         from nac_bff.azure_function_deployment_reconciliation import (
             FunctionDeploymentReconcilerBinding,
             FunctionDeploymentReleaseApproval,
@@ -8859,6 +8915,25 @@ def _run_bff_azure_function_deployment_command(
     try:
         repo_root = resolve_repo_root(args.repo_root)
         request = _live_activation_request_from_args(args)
+        issue746_github_reader = GitHubApprovalVerifier(
+            binary=GH_CLI_EXECUTION_PATH,
+            expected_binary_sha256=request.gh_cli_sha256,
+            environ=dict(os.environ),
+        )
+        issue746_authorization = verify_issue746_readonly_reconciliation_gate(
+            repo_root=repo_root,
+            protected_identity_resolver_file=(
+                args.protected_identity_resolver_file
+            ),
+            protected_identity_resolver_sha256=(
+                args.protected_identity_resolver_sha256
+            ),
+            operator_account_id=args.operator_account_id,
+            owner_solo_approval_reference=(
+                args.issue_746_owner_solo_approval_reference
+            ),
+            github_reader=issue746_github_reader,
+        )
         binding = FunctionDeploymentReconcilerBinding(
             approved_commit=args.reconciler_commit,
             approved_tree=args.reconciler_tree,
@@ -8874,6 +8949,7 @@ def _run_bff_azure_function_deployment_command(
                 reconciler_toolchain_sha256=(
                     args.reconciler_toolchain_sha256
                 ),
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=args.confirm_release_quarantine,
                 environ=dict(os.environ),
             )
@@ -8936,6 +9012,10 @@ def _run_bff_azure_function_deployment_command(
                 observation_port=observation_port,
                 output_root=DEFAULT_OUTPUT_ROOT,
             )
+    except Issue746ReconciliationGateError:
+        return _emit_bff_azure_interruption_error(
+            ISSUE746_RECONCILIATION_GATE_CLOSED, args.format
+        )
     except Exception:
         return _emit_bff_azure_interruption_error(
             "FUNCTION_DEPLOYMENT_EXECUTION_FAILED", args.format

@@ -62,6 +62,7 @@ commands:
   - {id: ai_sbom, platform: windows_remote_ci, command: python scripts/validate_ai_sbom.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
   - {id: ai_sbom_export_mapping, platform: windows_native, command: python scripts/validate_ai_sbom_export_mapping.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
   - {id: issue746_windows_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_activation_security*.py', acceptance_ids: [AC-746-02, AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: issue746_gate_tests, platform: windows_native, command: python -m unittest tests.test_issue746_reconciliation_gate, acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: windows_bff_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_nac_bff_azure_*.py', acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: windows_business_case_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_business_case_type_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
   - {id: windows_m365_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_m365_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
@@ -292,17 +293,24 @@ status_counter_hash_cases:
   network_and_subprocess_counts_bounded: {required: true}
 
 windows_fail_closed_matrix:
-  live: &windows_edge
-    credential: &windows_guard {status: GUARDED, missing_capability_status: BLOCKED, reached_after_complete_preflight: true}
-    state: *windows_guard
-    lock: *windows_guard
-    network: *windows_guard
-    subprocess: *windows_guard
-    tenant: *windows_guard
-    provider: *windows_guard
-  recovery: *windows_edge
-  interruption_reconciliation: *windows_edge
-  function_deployment_reconciliation: *windows_edge
+  live: &windows_blocked_edge
+    credential: &windows_blocked {status: BLOCKED, missing_capability_status: BLOCKED, reached_after_complete_preflight: false, write_allowed: false, required_gate: not_authorized_by_issue746}
+    state: *windows_blocked
+    lock: *windows_blocked
+    network: *windows_blocked
+    subprocess: *windows_blocked
+    tenant: *windows_blocked
+    provider: *windows_blocked
+  recovery: *windows_blocked_edge
+  interruption_reconciliation: &windows_readonly_edge
+    credential: &windows_readonly {status: GUARDED_READ_ONLY, missing_capability_status: BLOCKED, reached_after_complete_preflight: true, write_allowed: false, required_gate: issue746_readonly_reconciliation}
+    state: *windows_readonly
+    lock: *windows_readonly
+    network: *windows_readonly
+    subprocess: *windows_readonly
+    tenant: *windows_readonly
+    provider: *windows_readonly
+  function_deployment_reconciliation: *windows_readonly_edge
 
 journal_crash_cases:
   before_first_append: {expected_status: BLOCKED, journal_states: [HELD, HELD, HELD], same_approval_may_resume: true}
@@ -369,6 +377,7 @@ pr_scope:
     - sbom/ai/nac-ai-sbom-draft.json
     - sbom/ai/nac-ai-sbom-export-mapping.json
     - scripts/onboarding_wizard.py
+    - scripts/privacy_lint.py
     - scripts/quality_gate.py
     - scripts/validate_agent_authentication_boundary.py
     - scripts/validate_business_case_type_azure_blob_worm.py
@@ -391,6 +400,7 @@ pr_scope:
     - src/nac_bff/approved_git_tree.py
     - src/nac_bff/azure_activation_attestations.py
     - src/nac_bff/azure_activation_composition.py
+    - src/nac_bff/issue746_reconciliation_gate.py
     - src/nac_bff/azure_activation_contract.py
     - src/nac_bff/azure_activation_provisioner_bootstrap.py
     - src/nac_bff/azure_activation_runner.py
@@ -408,6 +418,7 @@ pr_scope:
     - src/nac_bff/azure_performance_runtime.py
     - src/nac_bff/azure_performance_storage_ports.py
     - src/nac_cli/cli.py
+    - src/nac_identity/governance_registry.py
     - src/nac_m365_graph/business_case_type_production_adapters.py
     - src/nac_m365_graph/business_case_type_production_composition.py
     - src/nac_m365_graph/business_case_type_write_state.py
@@ -434,12 +445,14 @@ pr_scope:
     - tests/test_codex_agent_context_index_audit.py
     - tests/test_graft_context_layer.py
     - tests/test_identity_registry.py
+    - tests/test_issue746_reconciliation_gate.py
     - tests/test_m365_azure_bff_live_activation_contract.py
     - tests/test_m365_bff_failed_partial_safe_completion.py
     - tests/test_m365_mvp_test_environment_deploy.py
     - tests/test_m365_sharepoint_bpmn_viewer_adapter.py
     - tests/test_nac_bff_approved_git_tree.py
     - tests/test_nac_bff_azure_activation_attestations.py
+    - tests/test_nac_bff_azure_activation_cli.py
     - tests/test_nac_bff_azure_activation_composition.py
     - tests/test_nac_bff_azure_activation_owner_gate.py
     - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py

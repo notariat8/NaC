@@ -27,6 +27,9 @@ TEST_PATH = REPO_ROOT / "tests" / "test_m365_bff_failed_partial_safe_completion.
 RECONCILER_PATH = REPO_ROOT / "src" / "nac_bff" / "azure_function_deployment_reconciliation.py"
 RECONCILER_TEST_PATH = REPO_ROOT / "tests" / "test_nac_bff_azure_function_deployment_reconciliation.py"
 LIVE_COMMAND_TEST_PATH = REPO_ROOT / "tests" / "test_nac_bff_azure_live_commands.py"
+ISSUE746_GATE_PATH = REPO_ROOT / "src" / "nac_bff" / "issue746_reconciliation_gate.py"
+ACTIVATION_COMPOSITION_PATH = REPO_ROOT / "src" / "nac_bff" / "azure_activation_composition.py"
+CLI_PATH = REPO_ROOT / "src" / "nac_cli" / "cli.py"
 AI_SBOM_PATH = REPO_ROOT / "sbom" / "ai" / "nac-ai-sbom-draft.json"
 AI_SBOM_MAPPING_PATH = REPO_ROOT / "sbom" / "ai" / "nac-ai-sbom-export-mapping.json"
 QUALITY_GATE_PATH = REPO_ROOT / "scripts" / "quality_gate.py"
@@ -166,6 +169,7 @@ EXPECTED_PR_FILES = {
     "sbom/ai/nac-ai-sbom-draft.json",
     "sbom/ai/nac-ai-sbom-export-mapping.json",
     "scripts/onboarding_wizard.py",
+    "scripts/privacy_lint.py",
     "scripts/quality_gate.py",
     "scripts/validate_agent_authentication_boundary.py",
     "scripts/validate_business_case_type_azure_blob_worm.py",
@@ -188,6 +192,7 @@ EXPECTED_PR_FILES = {
     "src/nac_bff/approved_git_tree.py",
     "src/nac_bff/azure_activation_attestations.py",
     "src/nac_bff/azure_activation_composition.py",
+    "src/nac_bff/issue746_reconciliation_gate.py",
     "src/nac_bff/azure_activation_contract.py",
     "src/nac_bff/azure_activation_provisioner_bootstrap.py",
     "src/nac_bff/azure_activation_runner.py",
@@ -205,6 +210,7 @@ EXPECTED_PR_FILES = {
     "src/nac_bff/azure_performance_runtime.py",
     "src/nac_bff/azure_performance_storage_ports.py",
     "src/nac_cli/cli.py",
+    "src/nac_identity/governance_registry.py",
     "src/nac_m365_graph/business_case_type_production_adapters.py",
     "src/nac_m365_graph/business_case_type_production_composition.py",
     "src/nac_m365_graph/business_case_type_write_state.py",
@@ -231,12 +237,14 @@ EXPECTED_PR_FILES = {
     "tests/test_codex_agent_context_index_audit.py",
     "tests/test_graft_context_layer.py",
     "tests/test_identity_registry.py",
+    "tests/test_issue746_reconciliation_gate.py",
     "tests/test_m365_azure_bff_live_activation_contract.py",
     "tests/test_m365_bff_failed_partial_safe_completion.py",
     "tests/test_m365_mvp_test_environment_deploy.py",
     "tests/test_m365_sharepoint_bpmn_viewer_adapter.py",
     "tests/test_nac_bff_approved_git_tree.py",
     "tests/test_nac_bff_azure_activation_attestations.py",
+    "tests/test_nac_bff_azure_activation_cli.py",
     "tests/test_nac_bff_azure_activation_composition.py",
     "tests/test_nac_bff_azure_activation_owner_gate.py",
     "tests/test_nac_bff_azure_activation_provisioner_bootstrap.py",
@@ -386,6 +394,7 @@ EXPECTED_COMMANDS = {
     "ai_sbom": _command_signature("windows_remote_ci", "python scripts/validate_ai_sbom.py", ["AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_aggregate", "ci_read_or_synthetic"),
     "ai_sbom_export_mapping": _command_signature("windows_native", "python scripts/validate_ai_sbom_export_mapping.py", ["AC-746-07", "AC-746-08"], ["NaC Quality Gate / quality-gate"], "repository_aggregate", "local_read_or_synthetic"),
     "issue746_windows_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_activation_security*.py", ["AC-746-02", "AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
+    "issue746_gate_tests": _command_signature("windows_native", "python -m unittest tests.test_issue746_reconciliation_gate", ["AC-746-03", "AC-746-05", "AC-746-06", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_bff_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_nac_bff_azure_*.py", ["AC-746-03", "AC-746-05", "AC-746-06", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_business_case_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_business_case_type_*.py", ["AC-746-05", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
     "windows_m365_regression_tests": _command_signature("windows_native", "python -m unittest discover -s tests -p test_m365_*.py", ["AC-746-05", "AC-746-07", "AC-746-08"], ["NaC Windows Portability / windows-offline-cli"], "repository_static", "local_read_or_synthetic"),
@@ -866,12 +875,25 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
             if _keys(cases) != REQUIRED_WINDOWS_SIDE_EFFECTS:
                 errors.append(f"windows edge {edge} must cover every side-effect boundary")
                 continue
-            for side_effect, case in cases.items():
-                if not isinstance(case, dict) or case != {
-                    "status": "GUARDED",
+            expected_case = (
+                {
+                    "status": "BLOCKED",
+                    "missing_capability_status": "BLOCKED",
+                    "reached_after_complete_preflight": False,
+                    "write_allowed": False,
+                    "required_gate": "not_authorized_by_issue746",
+                }
+                if edge in {"live", "recovery"}
+                else {
+                    "status": "GUARDED_READ_ONLY",
                     "missing_capability_status": "BLOCKED",
                     "reached_after_complete_preflight": True,
-                }:
+                    "write_allowed": False,
+                    "required_gate": "issue746_readonly_reconciliation",
+                }
+            )
+            for side_effect, case in cases.items():
+                if not isinstance(case, dict) or case != expected_case:
                     errors.append(
                         f"windows {edge}/{side_effect} is not capability-gated"
                     )
@@ -949,6 +971,12 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     )
     if expected_windows_command not in WINDOWS_WORKFLOW_PATH.read_text(encoding="utf-8"):
         errors.append("Windows portability workflow does not execute the Issue #746 tests")
+    expected_gate_command = (
+        'python -m unittest discover -s tests -p '
+        '"test_issue746_reconciliation_gate.py"'
+    )
+    if expected_gate_command not in WINDOWS_WORKFLOW_PATH.read_text(encoding="utf-8"):
+        errors.append("Windows portability workflow does not execute the productive Issue #746 gate tests")
     context_index = json.loads(AGENT_CONTEXT_PATH.read_text(encoding="utf-8"))
     if "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml" not in context_index.get("verification_contracts", []):
         errors.append("agent-context verification-contract registry is missing Issue #746")
@@ -983,6 +1011,31 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     ):
         if marker not in reconciler_text:
             errors.append(f"existing #739 reconciler marker missing: {marker}")
+
+    gate_text = ISSUE746_GATE_PATH.read_text(encoding="utf-8")
+    for marker in (
+        "class Issue746ReconciliationAuthorization",
+        "def verify_issue746_readonly_reconciliation_gate(",
+        'AUTHORIZATION_SCOPE = "issue746_readonly_reconciliation"',
+        'GATE_CLOSED = "ISSUE_746_RECONCILIATION_GATE_CLOSED"',
+        "authorization.verify(expected_head=head, expected_tree=tree)",
+    ):
+        if marker not in gate_text:
+            errors.append(f"productive Issue #746 gate marker missing: {marker}")
+
+    composition_text = ACTIVATION_COMPOSITION_PATH.read_text(encoding="utf-8")
+    if composition_text.count(
+        "issue746_authorization: Issue746ReconciliationAuthorization"
+    ) < 4:
+        errors.append("Issue #746 authorization is not mandatory in both factories and runtime verifiers")
+    if composition_text.count("self._verify_issue746_authorization()") != 2:
+        errors.append("Issue #746 authorization is not revalidated on both provider-read paths")
+
+    cli_text = CLI_PATH.read_text(encoding="utf-8")
+    if cli_text.count("verify_issue746_readonly_reconciliation_gate(") != 2:
+        errors.append("both reconciliation CLI entries must execute the productive Issue #746 gate")
+    if cli_text.count("issue746_authorization=issue746_authorization") != 2:
+        errors.append("both reconciliation CLI entries must forward the Issue #746 authorization")
 
     _validate_ai_sbom(errors)
     return errors

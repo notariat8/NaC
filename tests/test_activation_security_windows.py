@@ -419,9 +419,9 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
                 f"let blocked=false;try{{fs.writeFileSync({str(cache)!r},'x')}}"
                 "catch(e){blocked=e.code==='ERR_ACCESS_DENIED'};"
                 "console.log(JSON.stringify({"
-                "connectedAs:'ofunk@funktion8.de',"
-                "appId:'c86dded6-9723-4b8d-91f2-e0fd70e25839',"
-                "appTenant:'870c862b-56f7-4c9b-b0d9-f1f7d32c835c',"
+                "connectedAs:'operator@example.com',"
+                "appId:'11111111-1111-4111-8111-111111111111',"
+                "appTenant:'22222222-2222-4222-8222-222222222222',"
                 "cloudType:'Public',writeBlocked:blocked}));",
                 encoding="utf-8",
             )
@@ -438,7 +438,21 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             payload = json.loads(result.stdout)
             self.assertEqual(result.returncode, 0)
             self.assertTrue(payload["writeBlocked"])
-            self.assertTrue(runner.check_readiness())
+            with (
+                patch(
+                    "nac_m365_graph.mvp_test_environment_deploy.EXPECTED_M365_CLI_USER",
+                    "operator@example.com",
+                ),
+                patch(
+                    "nac_m365_graph.mvp_test_environment_deploy.EXPECTED_M365_CLI_APP_ID",
+                    "11111111-1111-4111-8111-111111111111",
+                ),
+                patch(
+                    "nac_m365_graph.mvp_test_environment_deploy.EXPECTED_M365_TENANT_ID",
+                    "22222222-2222-4222-8222-222222222222",
+                ),
+            ):
+                self.assertTrue(runner.check_readiness())
             self.assertFalse(cache.exists())
 
 

@@ -736,9 +736,22 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             for side_effect in validator.REQUIRED_WINDOWS_SIDE_EFFECTS:
                 with self.subTest(edge=edge, side_effect=side_effect):
                     case = matrix[edge][side_effect]
-                    self.assertEqual(case["status"], "GUARDED")
                     self.assertEqual(case["missing_capability_status"], "BLOCKED")
-                    self.assertTrue(case["reached_after_complete_preflight"])
+                    self.assertFalse(case["write_allowed"])
+                    if edge in {"live", "recovery"}:
+                        self.assertEqual(case["status"], "BLOCKED")
+                        self.assertFalse(case["reached_after_complete_preflight"])
+                        self.assertEqual(
+                            case["required_gate"],
+                            "not_authorized_by_issue746",
+                        )
+                    else:
+                        self.assertEqual(case["status"], "GUARDED_READ_ONLY")
+                        self.assertTrue(case["reached_after_complete_preflight"])
+                        self.assertEqual(
+                            case["required_gate"],
+                            "issue746_readonly_reconciliation",
+                        )
 
     def test_crash_before_first_append_keeps_all_journals_held(self) -> None:
         with self.subTest(case_id="before_first_append"):

@@ -1,6 +1,6 @@
 # Sicherer Windows-Abschluss der partiellen M365-BFF-Aktivierung
 
-Status: Spec und Plan vom Owner freigegeben; lokale Windows-Implementierung in Arbeit; operative Ausführung blockiert
+Status: Spec und Plan vom Owner freigegeben; Windows-Implementierung lokal validiert; Push, Remote-CI und operative Ausführung blockiert
 
 Datum: 17. September 2026
 
@@ -45,6 +45,7 @@ affected_artifacts:
   - sbom/ai/nac-ai-sbom-draft.json
   - sbom/ai/nac-ai-sbom-export-mapping.json
   - scripts/onboarding_wizard.py
+  - scripts/privacy_lint.py
   - scripts/quality_gate.py
   - scripts/validate_agent_authentication_boundary.py
   - scripts/validate_business_case_type_azure_blob_worm.py
@@ -67,6 +68,7 @@ affected_artifacts:
   - src/nac_bff/approved_git_tree.py
   - src/nac_bff/azure_activation_attestations.py
   - src/nac_bff/azure_activation_composition.py
+  - src/nac_bff/issue746_reconciliation_gate.py
   - src/nac_bff/azure_activation_contract.py
   - src/nac_bff/azure_activation_provisioner_bootstrap.py
   - src/nac_bff/azure_activation_runner.py
@@ -84,6 +86,7 @@ affected_artifacts:
   - src/nac_bff/azure_performance_runtime.py
   - src/nac_bff/azure_performance_storage_ports.py
   - src/nac_cli/cli.py
+  - src/nac_identity/governance_registry.py
   - src/nac_m365_graph/business_case_type_production_adapters.py
   - src/nac_m365_graph/business_case_type_production_composition.py
   - src/nac_m365_graph/business_case_type_write_state.py
@@ -110,12 +113,14 @@ affected_artifacts:
   - tests/test_codex_agent_context_index_audit.py
   - tests/test_graft_context_layer.py
   - tests/test_identity_registry.py
+  - tests/test_issue746_reconciliation_gate.py
   - tests/test_m365_azure_bff_live_activation_contract.py
   - tests/test_m365_bff_failed_partial_safe_completion.py
   - tests/test_m365_mvp_test_environment_deploy.py
   - tests/test_m365_sharepoint_bpmn_viewer_adapter.py
   - tests/test_nac_bff_approved_git_tree.py
   - tests/test_nac_bff_azure_activation_attestations.py
+  - tests/test_nac_bff_azure_activation_cli.py
   - tests/test_nac_bff_azure_activation_composition.py
   - tests/test_nac_bff_azure_activation_owner_gate.py
   - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
@@ -490,10 +495,15 @@ kein Quellenbeleg.
   redigierte Snapshots und ausschließlich
   `FUNCTION_DEPLOYMENT_NOT_APPLIED` öffnen das separate #739-Gate; Provider-,
   Tenant- und Credential-Schreibzähler bleiben null.
-- **AC-746-05 – Vollständiges Windows-Sicherheitsbackend:** Live, Recovery und
-  Reconciliation sind auf Windows nur bei nachgewiesener Handle-, ACL-,
-  Reparse-, Toolchain-, Job-Object-, Mutex- und Journal-Sicherheit verfügbar.
-  Das bloße Entfernen der bisherigen Plattform-Sperre ist unzulässig.
+- **AC-746-05 – Vollständiges Windows-Sicherheitsbackend:** Read-only-
+  Reconciliation steht auf Windows nur nach dem produktiven final-HEAD-,
+  PR-#747-, Pflichtcheck-, Resolver-, Principal- und
+  `OWNER_SOLO_APPROVAL`-Gate sowie mit nachgewiesener Handle-, ACL-, Reparse-,
+  Toolchain-, Job-Object-, Mutex- und Journal-Sicherheit bereit. CLI,
+  Port-Factory und jeder Provider-Read erzwingen dieselbe Autorisierung. Live,
+  Recovery, Provider-Schreibzugriffe, Tenant-Schreibzugriffe,
+  Credential-Mutation und automatische Wiederholung bleiben durch #746
+  gesperrt; das bloße Entfernen einer Plattform-Sperre ist unzulässig.
 - **AC-746-06 – Replay- und Crash-Sicherheit:** Die drei Freigaben sind nicht
   austauschbar; falsche Issue-, Principal-, Commit-, Tree-, Contract-, Body-
   oder Artefaktbindung blockiert. Abandoned Mutex und Teil-Appends führen nie

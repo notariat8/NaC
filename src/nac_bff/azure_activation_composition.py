@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol, Sequence
 import urllib.parse
 import urllib.request
 import uuid
@@ -79,6 +79,11 @@ from .azure_activation_contract import (
     ActivationContext,
     ActivationStepError,
     LiveActivationRequest,
+)
+from .issue746_reconciliation_gate import (
+    GATE_CLOSED as ISSUE746_GATE_CLOSED,
+    Issue746ReconciliationAuthorization,
+    Issue746ReconciliationGateError,
 )
 from .azure_activation_approval import (
     APPROVAL_KEYS,
@@ -630,6 +635,11 @@ class GitHubApprovalVerifier:
         except (OSError, RuntimeError, subprocess.SubprocessError, json.JSONDecodeError):
             return None
         return value if isinstance(value, dict) else None
+
+    def read_json(self, argv: Sequence[str]) -> Mapping[str, Any] | None:
+        """Expose the attested, read-only transport for bounded governance reads."""
+
+        return self._gh_json(tuple(argv))
 
 
 class LocalBuildAdapter:
@@ -3234,6 +3244,8 @@ _RECONCILER_TOOLCHAIN_PATHS = (
     Path("src/nac_bff/azure_interruption_baseline.py"),
     Path("src/nac_bff/azure_activation_runner.py"),
     Path("src/nac_bff/azure_activation_composition.py"),
+    Path("src/nac_bff/issue746_reconciliation_gate.py"),
+    Path("src/nac_identity/governance_registry.py"),
     Path("src/nac_bff/azure_live_commands.py"),
     Path("src/nac_cli/cli.py"),
 )
@@ -3475,15 +3487,18 @@ class InterruptionRuntimeBindingVerifier:
         expected_commit: str,
         expected_tree: str,
         expected_toolchain_sha256: str,
+        issue746_authorization: Issue746ReconciliationAuthorization,
     ) -> None:
         self._repo_root = repo_root
         self._expected_commit = expected_commit
         self._expected_tree = expected_tree
         self._expected_toolchain_sha256 = expected_toolchain_sha256
+        self._issue746_authorization = issue746_authorization
 
     def verify(self) -> None:
         before = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(before)
+        self._verify_issue746_authorization()
         actual_toolchain_sha256 = (
             calculate_interruption_reconciler_toolchain_sha256(
                 self._repo_root,
@@ -3501,6 +3516,15 @@ class InterruptionRuntimeBindingVerifier:
             raise ActivationStepError(
                 "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH"
             )
+
+    def _verify_issue746_authorization(self) -> None:
+        try:
+            self._issue746_authorization.verify(
+                expected_head=self._expected_commit,
+                expected_tree=self._expected_tree,
+            )
+        except Issue746ReconciliationGateError as exc:
+            raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
         if snapshot.get("commit") != self._expected_commit:
@@ -3523,15 +3547,18 @@ class FunctionDeploymentRuntimeBindingVerifier:
         expected_commit: str,
         expected_tree: str,
         expected_toolchain_sha256: str,
+        issue746_authorization: Issue746ReconciliationAuthorization,
     ) -> None:
         self._repo_root = repo_root
         self._expected_commit = expected_commit
         self._expected_tree = expected_tree
         self._expected_toolchain_sha256 = expected_toolchain_sha256
+        self._issue746_authorization = issue746_authorization
 
     def verify(self) -> None:
         before = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(before)
+        self._verify_issue746_authorization()
         actual = calculate_function_deployment_reconciler_toolchain_sha256(
             self._repo_root,
             approved_commit=self._expected_commit,
@@ -3547,6 +3574,15 @@ class FunctionDeploymentRuntimeBindingVerifier:
             raise ActivationStepError(
                 "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_MISMATCH"
             )
+
+    def _verify_issue746_authorization(self) -> None:
+        try:
+            self._issue746_authorization.verify(
+                expected_head=self._expected_commit,
+                expected_tree=self._expected_tree,
+            )
+        except Issue746ReconciliationGateError as exc:
+            raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
         if snapshot.get("commit") != self._expected_commit:
@@ -3570,6 +3606,7 @@ def build_interruption_reconciliation_ports(
     reconciler_commit: str,
     reconciler_tree: str,
     reconciler_toolchain_sha256: str,
+    issue746_authorization: Issue746ReconciliationAuthorization,
     require_owner_verifier: bool,
     environ: Mapping[str, str] | None = None,
 ) -> tuple[
@@ -3578,6 +3615,14 @@ def build_interruption_reconciliation_ports(
     Callable[[], None],
 ]:
     """Build the read port and the optional #717 terminalization verifier."""
+
+    try:
+        issue746_authorization.verify(
+            expected_head=reconciler_commit,
+            expected_tree=reconciler_tree,
+        )
+    except Issue746ReconciliationGateError as exc:
+        raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     source = os.environ if environ is None else environ
     values = {
@@ -3605,6 +3650,7 @@ def build_interruption_reconciliation_ports(
         expected_commit=reconciler_commit,
         expected_tree=reconciler_tree,
         expected_toolchain_sha256=reconciler_toolchain_sha256,
+        issue746_authorization=issue746_authorization,
     )
     owner_verifier = (
         GitHubApprovalVerifier(
@@ -3631,6 +3677,7 @@ def build_function_deployment_reconciliation_ports(
     reconciler_commit: str,
     reconciler_tree: str,
     reconciler_toolchain_sha256: str,
+    issue746_authorization: Issue746ReconciliationAuthorization,
     require_owner_verifier: bool,
     environ: Mapping[str, str] | None = None,
 ) -> tuple[
@@ -3639,6 +3686,14 @@ def build_function_deployment_reconciliation_ports(
     Callable[[], None],
 ]:
     """Build the read-only step-7 observation and #739 approval ports."""
+
+    try:
+        issue746_authorization.verify(
+            expected_head=reconciler_commit,
+            expected_tree=reconciler_tree,
+        )
+    except Issue746ReconciliationGateError as exc:
+        raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     source = os.environ if environ is None else environ
     values = {
@@ -3666,6 +3721,7 @@ def build_function_deployment_reconciliation_ports(
         expected_commit=reconciler_commit,
         expected_tree=reconciler_tree,
         expected_toolchain_sha256=reconciler_toolchain_sha256,
+        issue746_authorization=issue746_authorization,
     )
     owner_verifier = (
         GitHubApprovalVerifier(

@@ -38,6 +38,7 @@ jobs:
           python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"
           python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"
           python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"
+          python -m unittest discover -s tests -p "test_issue746_reconciliation_gate.py"
           python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"
 
       - name: Verify Issue 746 and activation contracts

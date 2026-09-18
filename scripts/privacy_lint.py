@@ -14,11 +14,16 @@ SCAN_GLOBS = (
     "processes/**/*.json",
     "prompts/**/*.md",
     "policies/**/*.yaml",
+    "tests/test_activation_security_windows.py",
 )
 
 EMAIL_PATTERN = re.compile(r"\b([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
 SECRET_PATTERN = re.compile(
     r"(?i)(ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|api[_-]?key\s*[:=]|client[_-]?secret\s*[:=]|BEGIN PRIVATE KEY)"
+)
+UUID_PATTERN = re.compile(
+    r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
 )
 
 ALLOWED_EMAIL_DOMAINS = {
@@ -26,6 +31,15 @@ ALLOWED_EMAIL_DOMAINS = {
     "example.com",
     "example.org",
     "example.net",
+}
+
+SYNTHETIC_IDENTITY_FIXTURE_UUIDS = {
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222",
+}
+
+SYNTHETIC_IDENTITY_FIXTURE_FILES = {
+    Path("tests/test_activation_security_windows.py"),
 }
 
 EXCLUDE_FILES = {
@@ -54,6 +68,14 @@ def main() -> int:
                 violations.append(
                     f"{file_path.relative_to(REPO_ROOT)}: E-Mail-Domain {domain!r} ist nicht als Testdomain erlaubt"
                 )
+
+        relative_path = file_path.relative_to(REPO_ROOT)
+        if relative_path in SYNTHETIC_IDENTITY_FIXTURE_FILES:
+            for match in UUID_PATTERN.finditer(text):
+                if match.group(0).lower() not in SYNTHETIC_IDENTITY_FIXTURE_UUIDS:
+                    violations.append(
+                        f"{relative_path}: nicht-synthetische Identity-UUID im Windows-Sicherheitsfixture"
+                    )
 
     if violations:
         print("Privacy lint failed:")

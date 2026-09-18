@@ -1,6 +1,6 @@
 # Windows-Native Completion of the Partial M365 BFF Activation — Implementation Plan
 
-Status: plan revised after approved specification; local `plan -> review -> fix` completed; owner plan approval pending
+Status: specification and plan approved by the owner; local `plan -> review -> fix` completed; implementation validated locally; operational execution blocked
 
 Date: 17 September 2026
 
@@ -61,9 +61,9 @@ existing platform block remains fail-closed.
 | Optional Linux backend | new `src/nac_bff/activation_security_linux.py` | Isolate existing Linux semantics without creating a local dependency |
 | Runner/recovery | `src/nac_bff/azure_activation_runner.py`, `src/nac_bff/azure_activation_facade.py` | Route file, lock, state, evidence, and recovery operations through the backend |
 | Toolchain/processes | `src/nac_bff/azure_activation_attestations.py`, `src/nac_bff/azure_live_commands.py`, `src/nac_bff/azure_live_commands_win.py`, `src/nac_m365_graph/sealed_toolchain.py` | Complete Windows launcher/interpreter/package binding and secure process launch |
-| Reconciliation | existing Function-deployment and interruption-reconciliation modules | Windows preflight, double read-only snapshots, and zero-write boundary |
-| CLI/composition | `src/nac_cli/cli.py`, `src/nac_m365_graph/mvp_test_environment_deploy.py`, `src/nac_bff/azure_activation_composition.py` | Use Windows backend; block only when a capability is missing |
-| Resolver/governance | Issue #746 validator and verification contract | SID/DACL rather than POSIX `0600`; principal rules unchanged |
+| Reconciliation | existing Function-deployment and interruption-reconciliation modules, new `src/nac_bff/issue746_reconciliation_gate.py` | Windows preflight, productive #746 gate, double read-only snapshots, and zero-write boundary |
+| CLI/composition | `src/nac_cli/cli.py`, `src/nac_m365_graph/mvp_test_environment_deploy.py`, `src/nac_bff/azure_activation_composition.py` | Enforce #746 authorization before the factory and again before every provider read; keep live and recovery blocked |
+| Resolver/governance | `src/nac_identity/governance_registry.py`, Issue #746 validator, and verification contract | Shared principal logic, SID/DACL rather than POSIX `0600`, and no second-account separation |
 | Contracts | `workflows/contracts/m365-azure-bff-live-activation.contract.json`, both M365 verification contracts | Windows target, optional Azure Linux runtime, gate and evidence matrix |
 | Tests | new backend tests and existing #632/#739/#744/#746 tests | Positive Windows paths, negative matrix, replay, and crash windows |
 | Developer tooling | `scripts/startup_check.py`, minimum requirements, SBOM | Prove working Windows Python `>=3.11` and Windows Graft as mandatory |
@@ -261,21 +261,25 @@ package or optional compatibility test.
 - `src/nac_m365_graph/mvp_test_environment_deploy.py`;
 - existing runner, CLI, and composition tests.
 
-Remove the early Windows block only when `capabilities()` is complete. Offline
-commands remain importable unchanged. Live, recovery, interruption, and
-Function-deployment reconciliation use the same backend. All twelve steps,
-their order, target resources, and readbacks remain unchanged.
+Offline commands remain importable unchanged. Only bound read-only interruption
+and Function-deployment reconciliation uses the Windows backend for provider
+reads. Live and recovery remain blocked under #746 even when all backend
+capabilities exist. All twelve steps, their order, target resources, and
+readbacks remain unchanged.
 
 ### 8. Credential-write-free reconciliation and two snapshots
 
-**Files:** existing reconciliation modules, verification contract, adapter and
+**Files:** `src/nac_bff/issue746_reconciliation_gate.py`, existing
+reconciliation modules, CLI/composition, verification contract, adapter, and
 sentinel tests.
 
 The real adapter has no implicit login or refresh path. Before the first
-provider read, an existing authentication context must be demonstrably
-available. If the channel cannot technically guarantee freedom from credential
-or cache writes, it returns `BLOCKED_AUTHENTICATION_REQUIRED` before provider
-access.
+provider read, the resolver, operator principal, final HEAD/tree, PR #747, all
+required checks, and the unchanged #746 `OWNER_SOLO_APPROVAL` comment must form
+the same authorization. The CLI and both port factories require it, and the
+runtime verifier checks its canonical digest again before every provider
+subprocess. If the channel cannot technically guarantee freedom from credential
+or cache writes, it blocks before provider access.
 
 Synthetic tests attempt login, device code, refresh, cache creation, and config
 rewrite and expect blocking without credential mutation. Two provider responses
@@ -285,8 +289,8 @@ separate #739 gate.
 
 ### 9. Windows resolver and approval bindings
 
-**Files:** Issue #746 validator, verification contract, resolver fixtures, and
-tests.
+**Files:** `src/nac_identity/governance_registry.py`, productive #746 gate,
+Issue #746 validator, verification contract, resolver fixtures, and tests.
 
 Bind the protected external resolver to canonical path, file/volume ID,
 SHA-256, user SID, and DACL. Public evidence contains purpose-separated hashes
@@ -420,6 +424,11 @@ commands:
     platform: windows_native
     command: python -m unittest discover -s tests -p test_nac_bff_azure_*.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08]
+    remote_evidence: [NaC Windows Portability / windows-offline-cli]
+  - id: issue746_gate_tests
+    platform: windows_native
+    command: python -m unittest tests.test_issue746_reconciliation_gate
+    acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_business_case_regression_tests
     platform: windows_native

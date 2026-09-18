@@ -15,7 +15,8 @@ REQUIRED_AGENT_MARKERS = (
     "Frühere, einmalige, abgebrochene oder in einem anderen Task erteilte Login-Freigaben sind nicht wiederverwendbar",
     "Ein pauschales `Login jetzt` darf niemals GitHub- und Microsoft-/Entra-Anmeldung gemeinsam autorisieren",
     "Werte werden niemals gelesen, ausgegeben, kopiert, gehasht oder persistiert",
-    "Der read-only Issue-/PR-Abgleich darf keinen GitHub-Gerätecode und keinen Funktion8-/Entra-Browserlogin anfordern",
+    "Der read-only Issue-/PR-Abgleich und die Reconciliation dürfen keinen GitHub-Gerätecode und keinen Funktion8-/Entra-Browserlogin anfordern",
+    "Ausschließlich die final-HEAD-, PR-#747-, Check-, Resolver-, Principal- und `OWNER_SOLO_APPROVAL`-gebundene Read-only-Reconciliation",
 )
 
 EXPECTED_POLICY = {
@@ -29,7 +30,13 @@ EXPECTED_POLICY = {
     "token_value_inspection_allowed": False,
     "git_credential_to_api_token_conversion_allowed": False,
     "issue_746_windows_interactive_authentication_allowed": False,
-    "issue_746_windows_provider_access_allowed": False,
+    "issue_746_windows_read_only_reconciliation_allowed_after_bound_gate": True,
+    "issue_746_windows_live_access_allowed": False,
+    "issue_746_windows_recovery_access_allowed": False,
+    "issue_746_windows_provider_write_allowed": False,
+    "issue_746_windows_tenant_write_allowed": False,
+    "issue_746_windows_credential_mutation_allowed": False,
+    "issue_746_windows_automatic_retry_allowed": False,
     "unsupported_read_capability_action": "report_exact_capability_gap",
 }
 

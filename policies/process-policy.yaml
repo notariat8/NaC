@@ -430,7 +430,13 @@ github_authentication_boundary:
   token_value_inspection_allowed: false
   git_credential_to_api_token_conversion_allowed: false
   issue_746_windows_interactive_authentication_allowed: false
-  issue_746_windows_provider_access_allowed: false
+  issue_746_windows_read_only_reconciliation_allowed_after_bound_gate: true
+  issue_746_windows_live_access_allowed: false
+  issue_746_windows_recovery_access_allowed: false
+  issue_746_windows_provider_write_allowed: false
+  issue_746_windows_tenant_write_allowed: false
+  issue_746_windows_credential_mutation_allowed: false
+  issue_746_windows_automatic_retry_allowed: false
   unsupported_read_capability_action: report_exact_capability_gap
   enforced_by:
     - scripts/validate_agent_authentication_boundary.py

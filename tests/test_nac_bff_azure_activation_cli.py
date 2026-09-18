@@ -539,6 +539,14 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
             TREE,
             "--reconciler-toolchain-sha256",
             "e" * 64,
+            "--protected-identity-resolver-file",
+            "C:/protected/issue746-resolver.json",
+            "--protected-identity-resolver-sha256",
+            "f" * 64,
+            "--operator-account-id",
+            "github:owner-primary",
+            "--issue-746-owner-solo-approval-reference",
+            "https://github.com/notariat8/NaC/issues/746#issuecomment-123",
             *extra,
         ]
 
@@ -591,7 +599,20 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         )
         composition = types.ModuleType("nac_bff.azure_activation_composition")
         composition.CANONICAL_INTERRUPTION_OWNER_LOGIN = "ofunk"
+        composition.GH_CLI_EXECUTION_PATH = Path("C:/tools/gh.exe")
+        composition.GitHubApprovalVerifier = Mock(return_value=object())
         composition.build_interruption_reconciliation_ports = factory
+        gate = types.ModuleType("nac_bff.issue746_reconciliation_gate")
+        from nac_bff.issue746_reconciliation_gate import (
+            GATE_CLOSED,
+            Issue746ReconciliationGateError,
+        )
+
+        gate.GATE_CLOSED = GATE_CLOSED
+        gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
+        gate.verify_issue746_readonly_reconciliation_gate = Mock(
+            return_value=object()
+        )
         reconciliation = types.ModuleType(
             "nac_bff.azure_interruption_reconciliation"
         )
@@ -610,6 +631,7 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
             "nac_bff.azure_activation_composition": composition,
             "nac_bff.azure_interruption_reconciliation": reconciliation,
             "nac_bff.azure_activation_runner": runner,
+            "nac_bff.issue746_reconciliation_gate": gate,
         }, factory, inspect, terminalize, observation, verifier
 
     def _terminal_args(self) -> list[str]:
@@ -679,6 +701,23 @@ class AzureBffInterruptionReconciliationCliTests(unittest.TestCase):
         self.assertEqual(payload["provider_observation"]["read_count"], 2)
         self.assertNotIn("provider_secret", stdout.getvalue())
         self.assertNotIn("PROVISIONER_STATE", stdout.getvalue())
+
+    def test_issue746_gate_failure_blocks_before_interruption_factory(self) -> None:
+        modules, factory, inspect, terminalize, *_ = self._fake_modules()
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        gate.verify_issue746_readonly_reconciliation_gate.side_effect = (
+            gate.Issue746ReconciliationGateError("test drift")
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv("--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"], gate.GATE_CLOSED
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        terminalize.assert_not_called()
 
     def test_interruption_help_documents_632_binding_and_both_approvals(self) -> None:
         stdout = io.StringIO()
@@ -880,6 +919,14 @@ class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
             TREE,
             "--reconciler-toolchain-sha256",
             "e" * 64,
+            "--protected-identity-resolver-file",
+            "C:/protected/issue746-resolver.json",
+            "--protected-identity-resolver-sha256",
+            "f" * 64,
+            "--operator-account-id",
+            "github:owner-primary",
+            "--issue-746-owner-solo-approval-reference",
+            "https://github.com/notariat8/NaC/issues/746#issuecomment-123",
             *extra,
         ]
 
@@ -967,7 +1014,20 @@ class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
         })
         composition = types.ModuleType("nac_bff.azure_activation_composition")
         composition.CANONICAL_INTERRUPTION_OWNER_LOGIN = "ofunk"
+        composition.GH_CLI_EXECUTION_PATH = Path("C:/tools/gh.exe")
+        composition.GitHubApprovalVerifier = Mock(return_value=object())
         composition.build_function_deployment_reconciliation_ports = factory
+        gate = types.ModuleType("nac_bff.issue746_reconciliation_gate")
+        from nac_bff.issue746_reconciliation_gate import (
+            GATE_CLOSED,
+            Issue746ReconciliationGateError,
+        )
+
+        gate.GATE_CLOSED = GATE_CLOSED
+        gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
+        gate.verify_issue746_readonly_reconciliation_gate = Mock(
+            return_value=object()
+        )
         reconciliation = types.ModuleType(
             "nac_bff.azure_function_deployment_reconciliation"
         )
@@ -986,6 +1046,7 @@ class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
             "nac_bff.azure_activation_composition": composition,
             "nac_bff.azure_function_deployment_reconciliation": reconciliation,
             "nac_bff.azure_activation_runner": runner,
+            "nac_bff.issue746_reconciliation_gate": gate,
         }, factory, inspect, release, observation, verifier, runtime_revalidate
 
     def test_inspection_is_owner_free_and_forwards_read_only_port(self) -> None:
@@ -1007,6 +1068,23 @@ class AzureBffFunctionDeploymentReconciliationCliTests(unittest.TestCase):
             "FUNCTION_DEPLOYMENT_NOT_APPLIED",
         )
         self.assertNotIn("drop-me", stdout.getvalue())
+
+    def test_issue746_gate_failure_blocks_before_function_factory(self) -> None:
+        modules, factory, inspect, release, *_ = self._fake_modules()
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        gate.verify_issue746_readonly_reconciliation_gate.side_effect = (
+            gate.Issue746ReconciliationGateError("test drift")
+        )
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(self._argv("--format", "json"))
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["error"]["code"], gate.GATE_CLOSED
+        )
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        release.assert_not_called()
 
     def test_release_requires_confirmation_and_exact_issue739_binding(self) -> None:
         modules, factory, inspect, release, *_ = self._fake_modules()
