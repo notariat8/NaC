@@ -113,7 +113,11 @@ jobs:
           if git diff --exit-code -- assets/docs/generic-workbench assets/docs/workbench-live-read-binding >"$log_file" 2>&1; then
             cat "$log_file"
           else
-            echo "::error title=Workbench visual evidence drifted::WORKBENCH_VISUAL_EVIDENCE_DRIFT"
+            changed_files="$(git diff --name-only -- assets/docs/generic-workbench assets/docs/workbench-live-read-binding | grep -E '^assets/docs/(generic-workbench|workbench-live-read-binding)/[A-Za-z0-9._/-]+$' | sort -u | paste -sd, -)"
+            if [ -z "$changed_files" ]; then
+              changed_files="UNCLASSIFIED_EVIDENCE_DRIFT"
+            fi
+            echo "::error title=Workbench visual evidence drifted::WORKBENCH_VISUAL_EVIDENCE_DRIFT changed_files=$changed_files"
             exit 1
           fi
 
