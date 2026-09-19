@@ -1160,6 +1160,8 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         "S-1-5-32-544",
         "SetTokenInformation",
         "TOKEN_OWNER_CLASS",
+        "TOKEN_DEFAULT_DACL_CLASS",
+        "GetNamedSecurityInfoW",
         '"TEMP=$privateRoot"',
         '"TMP=$privateRoot"',
         '"PYTHONPATH=$privateRoot"',

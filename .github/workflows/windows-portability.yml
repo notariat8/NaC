@@ -60,6 +60,9 @@ jobs:
               TOKEN_QUERY = 0x0008
               TOKEN_USER_CLASS = 1
               TOKEN_OWNER_CLASS = 4
+              TOKEN_DEFAULT_DACL_CLASS = 6
+              SE_FILE_OBJECT = 1
+              DACL_SECURITY_INFORMATION = 0x00000004
 
               class SID_AND_ATTRIBUTES(ctypes.Structure):
                   _fields_ = [("Sid", ctypes.c_void_p), ("Attributes", wintypes.DWORD)]
@@ -70,12 +73,17 @@ jobs:
               class TOKEN_OWNER(ctypes.Structure):
                   _fields_ = [("Owner", ctypes.c_void_p)]
 
+              class TOKEN_DEFAULT_DACL(ctypes.Structure):
+                  _fields_ = [("DefaultDacl", ctypes.c_void_p)]
+
               advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
               kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
               kernel32.GetCurrentProcess.argtypes = []
               kernel32.GetCurrentProcess.restype = wintypes.HANDLE
               kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
               kernel32.CloseHandle.restype = wintypes.BOOL
+              kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+              kernel32.LocalFree.restype = ctypes.c_void_p
               advapi32.OpenProcessToken.argtypes = [
                   wintypes.HANDLE,
                   wintypes.DWORD,
@@ -97,6 +105,17 @@ jobs:
                   wintypes.DWORD,
               ]
               advapi32.SetTokenInformation.restype = wintypes.BOOL
+              advapi32.GetNamedSecurityInfoW.argtypes = [
+                  wintypes.LPWSTR,
+                  ctypes.c_uint,
+                  wintypes.DWORD,
+                  ctypes.c_void_p,
+                  ctypes.c_void_p,
+                  ctypes.POINTER(ctypes.c_void_p),
+                  ctypes.c_void_p,
+                  ctypes.POINTER(ctypes.c_void_p),
+              ]
+              advapi32.GetNamedSecurityInfoW.restype = wintypes.DWORD
               token = wintypes.HANDLE()
               if not advapi32.OpenProcessToken(
                   kernel32.GetCurrentProcess(),
@@ -129,6 +148,31 @@ jobs:
                       ctypes.sizeof(owner),
                   ):
                       raise SystemExit("WINDOWS_TEST_TOKEN_OWNER_FAILED")
+                  dacl = ctypes.c_void_p()
+                  descriptor = ctypes.c_void_p()
+                  status = advapi32.GetNamedSecurityInfoW(
+                      os.environ["TEMP"],
+                      SE_FILE_OBJECT,
+                      DACL_SECURITY_INFORMATION,
+                      None,
+                      None,
+                      ctypes.byref(dacl),
+                      None,
+                      ctypes.byref(descriptor),
+                  )
+                  if status != 0 or not dacl.value:
+                      raise SystemExit("WINDOWS_TEST_DACL_READ_FAILED")
+                  try:
+                      default_dacl = TOKEN_DEFAULT_DACL(dacl)
+                      if not advapi32.SetTokenInformation(
+                          token,
+                          TOKEN_DEFAULT_DACL_CLASS,
+                          ctypes.byref(default_dacl),
+                          ctypes.sizeof(default_dacl),
+                      ):
+                          raise SystemExit("WINDOWS_TEST_TOKEN_DACL_FAILED")
+                  finally:
+                      kernel32.LocalFree(descriptor)
               finally:
                   kernel32.CloseHandle(token)
           '@
