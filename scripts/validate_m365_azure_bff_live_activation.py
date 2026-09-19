@@ -1553,6 +1553,7 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_nac_bff_azure_live_commands",
     "tests.test_nac_bff_azure_interruption_baseline",
     "tests.test_nac_bff_azure_interruption_reconciliation",
+    "tests.test_nac_bff_azure_function_deployment_reconciliation",
     "tests.test_nac_bff_live_synthetic_workspace",
     "tests.test_nac_bff_azure_activation_cli",
     "tests.test_m365_spfx_site_deployment",
@@ -1566,6 +1567,7 @@ WINDOWS_BEHAVIOR_TEST_MODULES = (
     "tests.test_windows_offline_cli_portability",
     "tests.test_spfx_bff_catalog_readback_regression",
     "tests.test_m365_bff_failed_partial_safe_completion",
+    "tests.test_nac_bff_azure_function_deployment_reconciliation",
     "tests.test_nac_bff_azure_activation_cli",
 )
 
@@ -1691,7 +1693,17 @@ def _validate_windows_portability(
         'python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"',
         'python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"',
         'python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"',
+        'python -m unittest discover -s tests -p "test_issue746_reconciliation_gate.py"',
         'python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"',
+        'python scripts/validate_m365_azure_bff_live_activation.py',
+        'python scripts/validate_ai_sbom.py',
+        'python -m unittest discover -s tests -p "test_nac_bff_azure_*.py"',
+        'python -m unittest discover -s tests -p "test_business_case_type_*.py"',
+        'python -m unittest discover -s tests -p "test_m365_*.py"',
+        'python -m unittest discover -s tests -p "test_sqlite_evidence_staging_outbox.py"',
+        'graft build',
+        'graft check',
+        'python scripts/nac.py doctor --profile strict',
     )
     if not isinstance(workflow, dict) or workflow.get("name") != "NaC Windows Portability":
         errors.append("Windows portability workflow name differs")

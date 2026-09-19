@@ -153,6 +153,9 @@ identity_gate:
     duplicate_json_keys_rejected: true
     maximum_bytes: 131072
     expected_sha256_required: true
+    git_executable_absolute_path_required: true
+    git_executable_sha256_required: true
+    git_path_discovery_forbidden: true
     exact_known_account_binding_count: 3
     all_known_accounts_same_principal: true
     account_identifiers_must_not_enter_repository_or_evidence: true
@@ -258,6 +261,7 @@ approval_rebinding_cases:
   reconciler_tree: *approval_rebinding
   reconciler_toolchain_sha256: *approval_rebinding
   required_owner_login: *approval_rebinding
+  required_owner_principal_id_sha256: *approval_rebinding
 
 provider_decision_cases:
   stable_not_applied: {expected_status: FUNCTION_DEPLOYMENT_NOT_APPLIED, snapshots: 2, provider_write_count: 0, tenant_write_count: 0, credential_write_count: 0}
@@ -425,17 +429,27 @@ remote_checks:
 pr_scope:
   base_ref: origin/main
   exact_changed_files:
+    - .codex/agents/nac-docs-parity-reviewer.toml
+    - .codex/agents/nac-policy-reviewer.toml
+    - .codex/agents/nac-scope-mapper.toml
+    - .codex/agents/nac-validation-reviewer.toml
     - .github/workflows/governance-policy-sync.yml
     - .github/workflows/windows-portability.yml
+    - .pi/agents/nac-docs-parity-reviewer.md
+    - .pi/agents/nac-policy-reviewer.md
+    - .pi/agents/nac-scope-mapper.md
+    - .pi/agents/nac-validation-reviewer.md
     - agent-context/index.json
     - AGENTS.md
     - assets/docs/generic-workbench/VIS-721-manifest.json
     - docs/de/cli.md
+    - docs/de/START_HERE.md
     - docs/de/minimum-requirements.md
     - docs/de/role-model.md
     - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
     - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
     - docs/en/cli.md
+    - docs/en/START_HERE.md
     - docs/en/minimum-requirements.md
     - docs/en/role-model.md
     - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
@@ -471,6 +485,7 @@ pr_scope:
     - src/nac_bff/approved_git_tree.py
     - src/nac_bff/azure_activation_attestations.py
     - src/nac_bff/azure_activation_composition.py
+    - src/nac_bff/azure_function_deployment_reconciliation.py
     - src/nac_bff/issue746_reconciliation_gate.py
     - src/nac_bff/azure_activation_contract.py
     - src/nac_bff/azure_activation_provisioner_bootstrap.py

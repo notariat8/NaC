@@ -16,7 +16,8 @@
     {
       "principal_id": "person:owner-example",
       "technical_role_ids": [
-        "prozessverantwortung"
+        "prozessverantwortung",
+        "freigabeverantwortung"
       ],
       "qualifications": [
         "process_design"

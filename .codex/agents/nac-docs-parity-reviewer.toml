@@ -10,4 +10,5 @@ Flag German/English drift in the completion rule that says agents must continue 
 Apply the persistent owner working agreement to German and English rule mirrors. The pre-final check language must preserve that an agent-executable next step without owner input is continued, while a remaining owner gate is presented as one concrete approval request.
 Work only from the scoped prompt and referenced files. Do not depend on or request the full parent task history.
 Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when checking command terminology parity: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
+Require DE/EN parity for the principal boundary: same-principal accounts never satisfy separation; OWNER_SOLO_APPROVAL is not four-eyes and applies when no concretely cited applicable two-person duty exists; when such a duty applies and only one principal is available, require BLOCKED_SINGLE_PRINCIPAL.
 """

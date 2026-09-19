@@ -1,7 +1,15 @@
 # START HERE: Operational Entry Into NaC
 
 Status: binding start path
-Last content update: 2026-05-19
+Last content update: 2026-09-19
+
+Governance decisions use the stable principal, not the number of accounts it
+controls. Without a specifically cited external two-person duty,
+`OWNER_SOLO_APPROVAL` is permitted; when such a duty applies and only one
+principal is available, `BLOCKED_SINGLE_PRINCIPAL` blocks. On Windows, Issue
+#746 permits only separately bound read-only reconciliation; live activation
+and recovery remain blocked before credential, network, and provider access
+and do not start interactive authentication.
 
 ## Why This Document Exists Next To The README
 
@@ -80,6 +88,12 @@ repo-local skills and subagents from [.pi/](../../.pi) are loaded.
 
 NaC is developed as software. Concept work is complete only when it also updates
 at least one matching implementation surface:
+
+Provider authentication is authorized separately and for a specific action. A
+past, aborted, or other-task login authorization is not reused; GitHub and
+Microsoft/Entra authentication cannot be combined through a blanket approval.
+For Issue #746, the read-only path may use only an already established bound
+channel and must not start authentication.
 
 - runtime code under [src/](../../src)
 - scripts under [scripts/](../../scripts)

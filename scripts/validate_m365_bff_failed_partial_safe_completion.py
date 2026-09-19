@@ -106,7 +106,7 @@ REQUIRED_PREFLIGHT_CASES = {
 }
 REQUIRED_APPROVAL_REBINDING_CASES = {
     "reconciler_commit", "reconciler_tree", "reconciler_toolchain_sha256",
-    "required_owner_login",
+    "required_owner_login", "required_owner_principal_id_sha256",
 }
 REQUIRED_PROVIDER_BLOCK_CASES = {
     "deployment_applied", "missing_field", "unknown_field", "snapshot_drift",
@@ -147,17 +147,27 @@ REQUIRED_REMOTE_CONTEXTS = {
 FOUR_EYES_APPROVAL = "FOUR_EYES_APPROVAL"
 BLOCKED_REQUIREMENT_ASSESSMENT_INVALID = "BLOCKED_REQUIREMENT_ASSESSMENT_INVALID"
 EXPECTED_PR_FILES = {
+    ".codex/agents/nac-docs-parity-reviewer.toml",
+    ".codex/agents/nac-policy-reviewer.toml",
+    ".codex/agents/nac-scope-mapper.toml",
+    ".codex/agents/nac-validation-reviewer.toml",
     ".github/workflows/governance-policy-sync.yml",
     ".github/workflows/windows-portability.yml",
+    ".pi/agents/nac-docs-parity-reviewer.md",
+    ".pi/agents/nac-policy-reviewer.md",
+    ".pi/agents/nac-scope-mapper.md",
+    ".pi/agents/nac-validation-reviewer.md",
     "agent-context/index.json",
     "AGENTS.md",
     "assets/docs/generic-workbench/VIS-721-manifest.json",
     "docs/de/cli.md",
+    "docs/de/START_HERE.md",
     "docs/de/minimum-requirements.md",
     "docs/de/role-model.md",
     "docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md",
     "docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md",
     "docs/en/cli.md",
+    "docs/en/START_HERE.md",
     "docs/en/minimum-requirements.md",
     "docs/en/role-model.md",
     "docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md",
@@ -193,6 +203,7 @@ EXPECTED_PR_FILES = {
     "src/nac_bff/approved_git_tree.py",
     "src/nac_bff/azure_activation_attestations.py",
     "src/nac_bff/azure_activation_composition.py",
+    "src/nac_bff/azure_function_deployment_reconciliation.py",
     "src/nac_bff/issue746_reconciliation_gate.py",
     "src/nac_bff/azure_activation_contract.py",
     "src/nac_bff/azure_activation_provisioner_bootstrap.py",
@@ -742,6 +753,9 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
             "duplicate_json_keys_rejected": True,
             "maximum_bytes": 131072,
             "expected_sha256_required": True,
+            "git_executable_absolute_path_required": True,
+            "git_executable_sha256_required": True,
+            "git_path_discovery_forbidden": True,
             "exact_known_account_binding_count": 3,
             "all_known_accounts_same_principal": True,
             "account_identifiers_must_not_enter_repository_or_evidence": True,
@@ -1537,6 +1551,8 @@ def validate_protected_identity_resolver(
         "contract_id",
         "known_owner_account_count",
         "all_known_accounts_same_principal",
+        "external_two_person_requirement",
+        "git_attestation",
         "registry",
     }
     if set(payload) != expected_keys:
@@ -1554,6 +1570,17 @@ def validate_protected_identity_resolver(
         registry
     ):
         return None, ["protected identity resolver registry is invalid"]
+    git_attestation = payload.get("git_attestation")
+    if (
+        not isinstance(git_attestation, dict)
+        or set(git_attestation) != {"executable_path", "executable_sha256"}
+        or not isinstance(git_attestation.get("executable_path"), str)
+        or not Path(git_attestation["executable_path"]).is_absolute()
+        or not isinstance(git_attestation.get("executable_sha256"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", git_attestation["executable_sha256"])
+        is None
+    ):
+        return None, ["protected identity resolver Git attestation is invalid"]
     accounts = registry.get("accounts", [])
     active_accounts = [
         account
@@ -1587,8 +1614,28 @@ def validate_protected_identity_resolver(
         ]
     if "prozessverantwortung" not in operator.get("technical_role_ids", []):
         return None, ["protected identity resolver principal lacks the process role"]
+    if "freigabeverantwortung" not in operator.get("technical_role_ids", []):
+        return None, ["protected identity resolver principal lacks the approval role"]
     if "process_design" not in operator.get("qualifications", []):
         return None, ["protected identity resolver principal lacks the process qualification"]
+    requirement = payload.get("external_two_person_requirement")
+    if not isinstance(requirement, dict) or set(requirement) != {
+        "required", "citation", "scope", "source_sha256"
+    }:
+        return None, ["protected identity resolver external requirement binding is invalid"]
+    if requirement.get("scope") != "issue746_readonly_reconciliation":
+        return None, ["protected identity resolver external requirement scope is invalid"]
+    if requirement.get("required") is False:
+        if requirement.get("citation") is not None or requirement.get("source_sha256") is not None:
+            return None, ["protected identity resolver external requirement absence is invalid"]
+    elif requirement.get("required") is True:
+        citation = requirement.get("citation")
+        source_sha256 = requirement.get("source_sha256")
+        if not isinstance(citation, str) or not citation.strip() or not isinstance(source_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None:
+            return None, ["protected identity resolver external requirement evidence is invalid"]
+        return None, ["BLOCKED_SINGLE_PRINCIPAL"]
+    else:
+        return None, ["protected identity resolver external requirement decision is invalid"]
     return operator, []
 
 
@@ -1695,15 +1742,18 @@ def verify_pr_checks(
             f"unexpected={sorted(actual_files - EXPECTED_PR_FILES)}"
         )
     if github_reader is None:
-        return ["GITHUB_READ_CHANNEL_UNAVAILABLE"]
+        errors.append("GITHUB_READ_CHANNEL_UNAVAILABLE")
+        return errors
     try:
         payload = github_reader.read_pull_request(
             owner="notariat8", repository="NaC", number=expected_pr
         )
     except Exception:
-        return ["GITHUB_PR_READ_FAILED"]
+        errors.append("GITHUB_PR_READ_FAILED")
+        return errors
     if not isinstance(payload, dict):
-        return ["GITHUB_PR_RESPONSE_INVALID"]
+        errors.append("GITHUB_PR_RESPONSE_INVALID")
+        return errors
     errors.extend(
         validate_pr_payload(
             payload, expected_pr=expected_pr, expected_head=expected_head

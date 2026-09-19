@@ -15,7 +15,9 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Das Zielmodell ist `Notariat as Code`, der operative Änderungsfluss ist `Enterprise GitOps`.
 - NaC ist ausschließlich für Notariate und notarielle Vorgangsarten gedacht. Nicht-notarielle Produktpfade oder Beispiele sind keine gültigen NaC-Beispiele.
 - Fachliche Wahrheit entsteht durch versionierte Änderung + Review + Freigabe.
-- Sensible Schritte brauchen Vier-Augen-Freigabe.
+- Sensible Schritte brauchen die jeweils belegte Freigabeform: Ohne konkret
+  gebundene externe Zwei-Personen-Pflicht ist `OWNER_SOLO_APPROVAL` zulässig;
+  echte Vier-Augen-Freigabe erfordert zwei verschiedene natürliche Principals.
 - Prozessänderungen werden immer mit Begründung dokumentiert.
 - Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](docs/en/regelarchitektur.md).
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.

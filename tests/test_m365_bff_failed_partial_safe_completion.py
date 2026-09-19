@@ -151,6 +151,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             {
                 "principal_id": "person:second-reviewer",
                 "technical_role_ids": ["freigabeverantwortung"],
+                "qualifications": ["process_review"],
                 "active": True,
             }
         )
@@ -485,12 +486,25 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "contract_id": "issue-746-owner-account-principal-resolution",
             "known_owner_account_count": 3,
             "all_known_accounts_same_principal": True,
+            "external_two_person_requirement": {
+                "required": False,
+                "citation": None,
+                "scope": "issue746_readonly_reconciliation",
+                "source_sha256": None,
+            },
+            "git_attestation": {
+                "executable_path": "C:/Program Files/Git/cmd/git.exe",
+                "executable_sha256": "f" * 64,
+            },
             "registry": {
                 "version": 2,
                 "principals": [
                     {
                         "principal_id": "person:owner-example",
-                        "technical_role_ids": ["prozessverantwortung"],
+                        "technical_role_ids": [
+                            "prozessverantwortung",
+                            "freigabeverantwortung",
+                        ],
                         "qualifications": ["process_design"],
                         "active": True,
                     }
@@ -561,6 +575,18 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 declared_count_drift, "github:owner-example-primary"
             )[1]
         )
+
+        cited_requirement = copy.deepcopy(resolver)
+        cited_requirement["external_two_person_requirement"] = {
+            "required": True,
+            "citation": "binding-policy:section-4",
+            "scope": "issue746_readonly_reconciliation",
+            "source_sha256": "e" * 64,
+        }
+        _operator, requirement_errors = validator.validate_protected_identity_resolver(
+            cited_requirement, "github:owner-example-primary"
+        )
+        self.assertEqual(requirement_errors, ["BLOCKED_SINGLE_PRINCIPAL"])
 
     def test_owner_comment_loader_verifies_live_canonical_provenance(self) -> None:
         head = "a" * 40
@@ -663,6 +689,9 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "reconciler_tree": {"approved_tree": "0" * 40},
             "reconciler_toolchain_sha256": {"toolchain_sha256": "0" * 64},
             "required_owner_login": {"required_owner_login": "wrong-owner"},
+            "required_owner_principal_id_sha256": {
+                "required_owner_principal_id_sha256": "0" * 64
+            },
         }
         original = fixture.binding
         for case_id, changes in mutations.items():
@@ -1080,6 +1109,33 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             self.assertEqual(errors, [expected_code])
             self.assertNotIn(sentinel, "\n".join(errors))
 
+        scope_drift = "scope-drift.py"
+        for reader, expected_code in (
+            (None, "GITHUB_READ_CHANNEL_UNAVAILABLE"),
+            (Reader(error=PermissionError(sentinel)), "GITHUB_PR_READ_FAILED"),
+            (Reader(value=[]), "GITHUB_PR_RESPONSE_INVALID"),
+        ):
+            with self.subTest(expected_code=expected_code, scope="drift"), patch.object(
+                validator.subprocess,
+                "run",
+                side_effect=[
+                    ok_head,
+                    SimpleNamespace(returncode=0, stdout=scope_drift + "\n", stderr=""),
+                ],
+            ):
+                errors = validator.verify_pr_checks(
+                    expected_pr=747,
+                    expected_head_ref="HEAD",
+                    protected_identity_resolver_file="C:/protected/resolver.json",
+                    protected_identity_resolver_sha256="d" * 64,
+                    operator_account_id="github:owner-example-primary",
+                    owner_solo_approval_reference=None,
+                    github_reader=reader,
+                )
+            self.assertIn(expected_code, errors)
+            self.assertTrue(any("reviewed allowlist" in error for error in errors))
+            self.assertNotIn(sentinel, "\n".join(errors))
+
     def test_verify_pr_checks_cli_requires_and_forwards_all_identity_inputs(self) -> None:
         required = {
             "--protected-identity-resolver-file": "C:/protected/resolver.json",
@@ -1133,7 +1189,10 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "principals": [
                 {
                     "principal_id": principal_id,
-                    "technical_role_ids": ["prozessverantwortung"],
+                    "technical_role_ids": [
+                        "prozessverantwortung",
+                        "freigabeverantwortung",
+                    ],
                     "qualifications": ["process_design"],
                     "active": True,
                 }
@@ -1167,6 +1226,16 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "contract_id": "issue-746-owner-account-principal-resolution",
             "known_owner_account_count": 3,
             "all_known_accounts_same_principal": True,
+            "external_two_person_requirement": {
+                "required": False,
+                "citation": None,
+                "scope": "issue746_readonly_reconciliation",
+                "source_sha256": None,
+            },
+            "git_attestation": {
+                "executable_path": "C:/Program Files/Git/cmd/git.exe",
+                "executable_sha256": "f" * 64,
+            },
             "registry": registry,
         }
         body = (

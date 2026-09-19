@@ -1,12 +1,12 @@
 # Safe Windows Completion of the Partial M365 BFF Activation
 
-Status: specification and plan approved by the owner; Windows implementation validated locally; push, remote CI, and operational execution blocked
+Status: specification, plan, and complete P0/P1/P2 repair approved by the owner; implementation and review completed; implementation in the protected draft PR; operational execution and merge separately blocked
 
-Date: 17 September 2026
+Date: 19 September 2026
 
 Leading issue: [#746](https://github.com/notariat8/NaC/issues/746)
 
-Implementation plan to be revised: [Safe Completion of the Partial M365 BFF Activation](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
+Implementation plan: [Safe Completion of the Partial M365 BFF Activation](../plans/2026-09-15-m365-bff-failed-partial-safe-completion.md)
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -22,17 +22,27 @@ review_gates:
   - Platform
   - Security
 affected_artifacts:
+  - .codex/agents/nac-docs-parity-reviewer.toml
+  - .codex/agents/nac-policy-reviewer.toml
+  - .codex/agents/nac-scope-mapper.toml
+  - .codex/agents/nac-validation-reviewer.toml
   - .github/workflows/governance-policy-sync.yml
   - .github/workflows/windows-portability.yml
+  - .pi/agents/nac-docs-parity-reviewer.md
+  - .pi/agents/nac-policy-reviewer.md
+  - .pi/agents/nac-scope-mapper.md
+  - .pi/agents/nac-validation-reviewer.md
   - agent-context/index.json
   - AGENTS.md
   - assets/docs/generic-workbench/VIS-721-manifest.json
   - docs/de/cli.md
+  - docs/de/START_HERE.md
   - docs/de/minimum-requirements.md
   - docs/de/role-model.md
   - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
   - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
   - docs/en/cli.md
+  - docs/en/START_HERE.md
   - docs/en/minimum-requirements.md
   - docs/en/role-model.md
   - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
@@ -68,6 +78,7 @@ affected_artifacts:
   - src/nac_bff/approved_git_tree.py
   - src/nac_bff/azure_activation_attestations.py
   - src/nac_bff/azure_activation_composition.py
+  - src/nac_bff/azure_function_deployment_reconciliation.py
   - src/nac_bff/issue746_reconciliation_gate.py
   - src/nac_bff/azure_activation_contract.py
   - src/nac_bff/azure_activation_provisioner_bootstrap.py
@@ -249,9 +260,10 @@ separate roles:
 - [#743](https://github.com/notariat8/NaC/issues/743) is a different historical
   interruption and must not be used to reconstruct #739.
 - [#744](https://github.com/notariat8/NaC/issues/744) introduced the portable
-  Windows offline CLI and the current Linux-only live restriction. That
-  restriction remains fail-closed until the Windows implementation is
-  validated, but is no longer the target architecture.
+  Windows offline CLI and the Linux-only live restriction. Issue #746 extends
+  the native Windows development and read-only reconciliation path, but does
+  not lift the Windows live and recovery block even when the security backend
+  is available.
 - [#746](https://github.com/notariat8/NaC/issues/746) governs the secure Windows
   migration and later completion chain.
 
@@ -347,6 +359,10 @@ The repository-external identity resolver is no longer bound to POSIX mode
 `0600`; it is bound to the current user SID, a restrictive Windows DACL, its
 canonical path, and its SHA-256. Real account-to-principal mappings do not enter
 Git, public logs, or comments.
+The resolver additionally binds an absolute Git executable path and its
+expected SHA-256. HEAD, tree, and worktree are read only with this independently
+bound binary in a sanitized environment; `PATH` discovery before opening the
+gate is prohibited.
 
 State, ledger, evidence, and journals are written in the same protected
 directory, flushed, and atomically replaced or extended append-only.
@@ -424,8 +440,10 @@ WINDOWS_IMPLEMENTATION_READY
   -> ISSUE_739_QUARANTINE_RELEASE
   -> ISSUE_632_OFFLINE_PACKAGE
   -> ISSUE_632_LIVE_APPROVAL
-  -> ONE_WINDOWS_CONTROLLED_LIVE_RUN
-  -> READ_ONLY_POST_VERIFY
+  -> FUTURE_SEPARATELY_SPECIFIED_NON_WINDOWS_LIVE_PATH
+
+WINDOWS_LIVE_OR_RECOVERY_REQUEST
+  -> BLOCKED_ON_WINDOWS_BEFORE_EXTERNAL_ACCESS
 
 EXACT_ISSUE_739_ARTIFACTS_CONFIRMED_LOST
   -> BLOCKED(reason=FUNCTION_DEPLOYMENT_PROVENANCE_LOST,
@@ -479,6 +497,9 @@ append-only addition of a `RELEASED` record to the three local journals. The
 historical run remains `FAILED_PARTIAL`; state, evidence, and ledger are not
 rewritten. A partial append may be completed idempotently only with the same
 unchanged approval.
+`src/nac_bff/azure_function_deployment_reconciliation.py` additionally binds
+`required_owner_principal_id_sha256`; the transport login is not a governance
+identity, and a comment from a different principal blocks.
 
 ### Phase 5: new #632 offline package
 
@@ -493,10 +514,13 @@ A new Issue #632 comment binds the complete package and authorizes exactly one
 live run. #746 and #739 comments cannot be reused. Any code, contract,
 toolchain, or package change invalidates the approval.
 
-### Phase 7: exactly one Windows-controlled live run
+### Phase 7: future, separately approved live path
 
-The run starts on the Windows workstation. Azure may materialize the Function
-package internally as a Linux runtime. The controller repeats the prewrite
+Issue #746 implements no Windows live run. The Windows CLI blocks live
+activation and recovery regardless of backend availability before credential,
+network, or provider access. A future Issue #632 live path requires its own
+specification and approval. Azure may materialize a later Function package
+internally as a Linux runtime. The responsible controller then repeats the prewrite
 check, executes only the twelve bound steps, validates each readback, and stops
 at the first failure. There is no automatic retry.
 
@@ -640,12 +664,15 @@ A blocked run authorizes no retry.
 
 ## Review Gate
 
-The owner approved the four design sections: platform boundary, Windows
-security backend, completion chain, and scope and acceptance criteria. This
-written DE/EN specification must still be reviewed and approved separately
-before the implementation plan is revised or code changes begin.
+The owner approved the four design sections—platform boundary, Windows
+security backend, completion chain, and scope and acceptance criteria—as well
+as the written DE/EN specification, DE/EN plan, and P0/P1/P2 repair.
+`plan -> review -> fix` is complete; implementation is in
+`implement -> review -> fix` and requires fresh local and remote evidence
+before completion.
 
 Specification approval replaces neither the later final-head-bound Issue #746
 `OWNER_SOLO_APPROVAL`, the Issue #739 quarantine release, nor the Issue #632
-live approval. Until the complete Windows backend is implemented, the existing
-runtime block remains fail-closed.
+live approval. The implemented Windows backend does not lift the runtime block:
+live activation and recovery remain fail-closed before external access; #746
+authorizes only the separately bound read-only reconciliation.

@@ -1,8 +1,8 @@
 # Windows-nativer Abschluss der partiellen M365-BFF-Aktivierung – Implementierungsplan
 
-Status: Spec und Plan vom Owner freigegeben; `plan -> review -> fix` lokal abgeschlossen; Implementierung lokal validiert; operative Ausführung blockiert
+Status: Spec, Plan und P0-/P1-/P2-Reparatur vom Owner freigegeben; `plan -> review -> fix` und `implement -> review -> fix` abgeschlossen; Umsetzung im geschützten Draft-PR; operative Ausführung und Merge separat gesperrt
 
-Datum: 17. September 2026
+Datum: 19. September 2026
 
 Spec: [Sicherer Windows-Abschluss der partiellen M365-BFF-Aktivierung](../specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md)
 
@@ -33,8 +33,10 @@ ausdrücklicher Freigabe einen Push zu PR #747. Er autorisiert jetzt nicht:
 - Live-Aktivierung, Retry, Rollback, Delete oder Unlock;
 - Merge oder Force-Push.
 
-Bis das Windows-Sicherheitsbackend vollständig implementiert und validiert ist,
-bleibt die bestehende Plattform-Sperre fail-closed aktiv.
+Windows-Live-Aktivierung und Windows-Recovery bleiben unabhängig von der
+Verfügbarkeit des Windows-Sicherheitsbackends fail-closed gesperrt. Das Backend
+dient in Issue #746 ausschließlich der separat autorisierten Read-only-
+Reconciliation und den lokalen Sicherheitsprüfungen.
 
 ## Implementierungsprinzipien
 
@@ -85,7 +87,7 @@ werden; parallele Doppelimplementierungen sind nicht zulässig.
 
 | Phase | Eingabe | Zulässige Aktion | Erfolg | Blockiert bei | Mutation |
 | --- | --- | --- | --- | --- | --- |
-| 0 Implementierung | freigegebene Spec `8a51727c` und Planfreigabe | Code, Tests, Verträge, Docs, lokale Windows-Validierung | `WINDOWS_IMPLEMENTATION_READY` | rotem Pflicht-Gate | nur Repository |
+| 0 Implementierung | freigegebene Spec, Plan und Owner-Reparaturauftrag für den vollständigen `main...HEAD`-Diff | Code, Tests, Verträge, Docs, lokale Windows-Validierung | `WINDOWS_IMPLEMENTATION_READY` | rotem Pflicht-Gate | nur Repository |
 | 1 PR-Evidence | sauberer Implementierungscommit | Push nach gesonderter Freigabe, Windows-CI, vollständige PR-Diff | `WINDOWS_REMOTE_CI_READY` | fehlendem/rotem Check oder Scope-Drift | GitHub-Branch/PR |
 | 2 #746-Gate | finaler Commit/Tree, Contract-, Backend-, Toolchain-, Resolver- und Principal-Bindung | neue `OWNER_SOLO_APPROVAL` | `WINDOWS_RECONCILIATION_APPROVED` | Binding- oder Governancefehler | GitHub-Kommentar |
 | 3a Windows-Preflight | unveränderte #739-Artefakte | ausschließlich lokale Bindungen lesen | `WINDOWS_PREFLIGHT_READY` | Drift, ACL/Reparse/Lock/Toolchainfehler | keine |
@@ -94,7 +96,7 @@ werden; parallele Doppelimplementierungen sind nicht zulässig.
 | 5 #739-Gate | identische Snapshot-Hashes und neue exakte Freigabe | drei deterministische Journal-Appends | `LOCK_JOURNALS_RELEASED` | Replay, Tail-, Hash- oder Reihenfolgenfehler | nur drei lokale Appends |
 | 6 #632-Paket | sauberer gebundener Stand nach Phase 5 | Windows-native Offline-Paketierung | `ISSUE_632_PACKAGE_READY` | Build-/Bindingfehler | lokale Offline-Artefakte |
 | 7 #632-Gate | vollständiges Paket und neue exakte Freigabe | genau einen Live-Lauf autorisieren | `LIVE_RUN_APPROVED` | jeder Drift | GitHub-Kommentar |
-| 8 Live-Lauf | gültige #632-Freigabe | zwölf gebundene Schritte von Windows steuern | vorhandener Live-Vertragsstatus | erster Fehler | nur freigegebener Plan |
+| 8 zukünftiger Live-Pfad | gültige #632-Freigabe und eigene freigegebene Spezifikation | unter Issue #746 keine Windows-Ausführung; Windows blockiert vor externem Zugriff | `BLOCKED_ON_WINDOWS` | immer im #746-Windows-Pfad | keine |
 | 9 Post-Verify | terminaler Live-Status | read-only Zielzustand und Zugriffe prüfen | `PASSED` oder gebundener Fehler | unklarem Readback | redigierte Evidence |
 
 Im aktuellen Implementierungsturn werden nur Phase 0 und lokale synthetische
@@ -337,6 +339,9 @@ Der geschützte externe Resolver wird an kanonischen Pfad, Datei-/Volume-ID,
 SHA-256, Benutzer-SID und DACL gebunden. Öffentliche Evidence enthält nur
 zweckgetrennte Hashes. Die drei bekannten Accounts müssen weiterhin demselben
 Principal zugeordnet sein und können keine gegenseitige Freigabe bilden.
+Der Resolver bindet außerdem absoluten Pfad und erwarteten SHA-256 des Git-
+Executables. Das #746-Gate verwendet ausschließlich dieses Git mit bereinigter
+Umgebung; eine Suche über den ambienten `PATH` ist unzulässig.
 
 Replay-Tests decken falsches Issue, falsche Author-Association, anderen
 Principal, veränderten Body/Hash, Commit, Tree, Contract, Toolchain, Resolver,
@@ -370,12 +375,11 @@ die gepinnte Graft-CLI und die benötigten Buildwerkzeuge nach. Ein defekter
 Launcher, der seine Standardbibliothek oder Paketabhängigkeiten nicht auflösen
 kann, gilt als nicht verfügbar. Es gibt keinen Linux-Fallback.
 
-Die aktuelle lokale Graft-0.18.0-Installation ist wegen einer nicht auflösbaren
-`dotenv`-Abhängigkeit nicht lauffähig. Die Implementierung muss eine
-reproduzierbare funktionierende Windows-Installation beziehungsweise zentrale
-Toolauflösung herstellen und danach `graft build` und `graft check` nativ
-ausführen. Eine Neuinstallation oder Änderung außerhalb des Repositorys bleibt
-ein gesonderter Werkzeug-/Installationsschritt und wird nicht still vorgenommen.
+Die frühere lokale Graft-0.18.0-Installation war wegen einer nicht auflösbaren
+`dotenv`-Abhängigkeit nicht lauffähig. Die Windows-Installation wurde daraufhin
+als ausdrücklich freigegebene Grundvoraussetzung repariert. `graft build` und
+`graft check` werden nun lokal und im verpflichtenden Windows-Workflow nativ
+ausgeführt; ein Linux-Fallback bleibt ausgeschlossen.
 
 Remote verpflichtend:
 
@@ -471,7 +475,7 @@ commands:
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_gate_tests
     platform: windows_native
-    command: python -m unittest tests.test_issue746_reconciliation_gate
+    command: python -m unittest discover -s tests -p test_issue746_reconciliation_gate.py
     acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_business_case_regression_tests
@@ -491,7 +495,7 @@ commands:
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: issue746_windows_tests
     platform: windows_native
-    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_m365_bff_failed_partial_safe_completion tests.test_m365_azure_bff_live_activation_contract tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_activation_cli
+    command: python -m unittest discover -s tests -p test_m365_*.py
     acceptance_ids: [AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: activation_validator
@@ -526,7 +530,7 @@ commands:
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_ci_activation_tests
     platform: windows_remote_ci
-    command: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression tests.test_m365_bff_failed_partial_safe_completion tests.test_m365_azure_bff_live_activation_contract tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_activation_cli
+    command: python -m unittest discover -s tests -p test_m365_*.py
     acceptance_ids: [AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08]
     remote_evidence: [NaC Windows Portability / windows-offline-cli]
   - id: windows_ci_spfx_build

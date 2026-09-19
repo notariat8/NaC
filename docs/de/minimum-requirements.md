@@ -4,7 +4,7 @@
 
 | Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
 | --- | --- | --- |
-| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | nur mit verfügbarem Windows-Sicherheitsbackend und nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
+| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | Live-Aktivierung und Recovery für Issue #746 sind unabhängig vom Backend fail-closed gesperrt; nur die separat gebundene Read-only-Reconciliation ist zulässig |
 | Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
 
@@ -15,10 +15,11 @@ NTFS-Handle-/Datei-ID-Bindung, SID-/DACL- und Reparse-Prüfung, Named Mutex,
 Job Object, atomare Flush-Semantik sowie einen schreibfreien Credential-Guard
 für Azure CLI und M365/Node. Fehlt eine dieser Fähigkeiten, stoppt der Pfad mit
 `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` vor Credential-, Netzwerk- oder
-Providerzugriff.
+Providerzugriff. Das Vorhandensein des Backends hebt die ausdrückliche
+Windows-Sperre für Live-Aktivierung und Recovery nicht auf.
 
 Status: verbindliche Day-0-Baseline
-Letzte inhaltliche Anpassung: 2026-05-15
+Letzte inhaltliche Anpassung: 2026-09-19
 
 ## Zweck
 

@@ -73,6 +73,26 @@ class IdentityRegistryTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "BLOCKED_REQUIREMENT_CITATION_MISSING")
 
+    def test_principal_qualifications_must_be_unique_nonempty_strings(self) -> None:
+        for invalid in (
+            "process_design",
+            [],
+            ["process_design", "process_design"],
+            [""],
+            [False],
+        ):
+            with self.subTest(invalid=invalid):
+                registry = json.loads(json.dumps(self.registry))
+                registry["principals"][0]["qualifications"] = invalid
+                self.assertTrue(
+                    validate_identity_registry.validate_registry(registry)
+                )
+
+    def test_unknown_registry_fields_are_rejected(self) -> None:
+        registry = json.loads(json.dumps(self.registry))
+        registry["principals"][0]["unexpected"] = True
+        self.assertTrue(validate_identity_registry.validate_registry(registry))
+
     def test_different_principals_satisfy_four_eyes(self) -> None:
         registry = json.loads(json.dumps(self.registry))
         registry["principals"].append(

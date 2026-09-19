@@ -12,6 +12,18 @@ BLOCKED_SINGLE_PRINCIPAL = "BLOCKED_SINGLE_PRINCIPAL"
 
 def validate_registry(registry: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    allowed_registry_keys = {
+        "version",
+        "description",
+        "role_aliases",
+        "principals",
+        "accounts",
+    }
+    unknown_registry_keys = sorted(set(registry) - allowed_registry_keys)
+    if unknown_registry_keys:
+        errors.append(
+            "unknown registry fields: " + ", ".join(unknown_registry_keys)
+        )
     if registry.get("version") != 2:
         errors.append("registry version must be 2")
     if "users" in registry:
@@ -25,6 +37,18 @@ def validate_registry(registry: dict[str, Any]) -> list[str]:
     principal_ids: set[str] = set()
     for principal in principals:
         principal_id = principal.get("principal_id") if isinstance(principal, dict) else None
+        if not isinstance(principal, dict):
+            errors.append("principal entries must be objects")
+            continue
+        unknown_principal_keys = sorted(
+            set(principal)
+            - {"principal_id", "technical_role_ids", "qualifications", "active"}
+        )
+        if unknown_principal_keys:
+            errors.append(
+                f"principal {principal_id!r} has unknown fields: "
+                + ", ".join(unknown_principal_keys)
+            )
         if not isinstance(principal_id, str) or not PRINCIPAL_ID_RE.fullmatch(principal_id):
             errors.append(f"invalid principal_id: {principal_id!r}")
             continue
@@ -35,9 +59,21 @@ def validate_registry(registry: dict[str, Any]) -> list[str]:
             errors.append(f"principal {principal_id} must use technical_role_ids")
         roles = principal.get("technical_role_ids")
         if not isinstance(roles, list) or not roles or not all(
-            isinstance(role, str) for role in roles
+            isinstance(role, str) and bool(role.strip()) for role in roles
         ):
             errors.append(f"principal {principal_id} requires technical_role_ids")
+        elif len(set(roles)) != len(roles):
+            errors.append(f"principal {principal_id} technical_role_ids must be unique")
+        qualifications = principal.get("qualifications")
+        if not isinstance(qualifications, list) or not qualifications or not all(
+            isinstance(qualification, str) and bool(qualification.strip())
+            for qualification in qualifications
+        ):
+            errors.append(f"principal {principal_id} requires qualifications")
+        elif len(set(qualifications)) != len(qualifications):
+            errors.append(f"principal {principal_id} qualifications must be unique")
+        if not isinstance(principal.get("active"), bool):
+            errors.append(f"principal {principal_id} active must be boolean")
 
     account_ids: set[str] = set()
     provider_logins: set[tuple[str, str]] = set()
@@ -45,10 +81,25 @@ def validate_registry(registry: dict[str, Any]) -> list[str]:
         if not isinstance(account, dict):
             errors.append("account entries must be objects")
             continue
+        unknown_account_keys = sorted(
+            set(account)
+            - {"account_id", "provider", "login", "principal_id", "active"}
+        )
+        if unknown_account_keys:
+            errors.append(
+                f"account {account.get('account_id')!r} has unknown fields: "
+                + ", ".join(unknown_account_keys)
+            )
         account_id = account.get("account_id")
         provider = account.get("provider")
         login = account.get("login")
         principal_id = account.get("principal_id")
+        if not isinstance(provider, str) or not re.fullmatch(r"[a-z0-9-]+", provider):
+            errors.append(f"account {account_id!r} provider invalid")
+        if not isinstance(login, str) or not login or ":" in login:
+            errors.append(f"account {account_id!r} login invalid")
+        if not isinstance(account.get("active"), bool):
+            errors.append(f"account {account_id!r} active must be boolean")
         if not isinstance(account_id, str) or not ACCOUNT_ID_RE.fullmatch(account_id):
             errors.append(f"account_id must be provider-qualified: {account_id!r}")
         elif account_id != f"{provider}:{login}":

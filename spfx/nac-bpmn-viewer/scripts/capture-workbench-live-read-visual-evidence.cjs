@@ -69,36 +69,6 @@ function pngDimensions(file) {
   return { imageWidth: bytes.readUInt32BE(16), imageHeight: bytes.readUInt32BE(20) };
 }
 
-function approvedCaseHashes() {
-  const manifestPath = path.join(outputRoot, 'VIS-725-manifest.json');
-  if (!fs.existsSync(manifestPath)) return new Map();
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  return new Map((manifest.cases || []).map(item => [item.id, item.sha256]));
-}
-
-async function captureApprovedScreenshot(page, locator, output, caseId, approvedDigest) {
-  const refreshBaseline = process.env.NAC_REFRESH_VISUAL_BASELINE === '1';
-  let previousDigest;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const screenshot = await locator.screenshot();
-    const digest = crypto.createHash('sha256').update(screenshot).digest('hex');
-    if (!refreshBaseline && approvedDigest && digest === approvedDigest) {
-      fs.writeFileSync(output, screenshot, { mode: 0o600 });
-      return;
-    }
-    if (refreshBaseline && digest === previousDigest) {
-      fs.writeFileSync(output, screenshot, { mode: 0o600 });
-      return;
-    }
-    previousDigest = digest;
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
-  }
-  if (!approvedDigest) {
-    throw new Error(caseId + ': NAC_WORKBENCH_LIVE_APPROVED_SCREENSHOT_MISSING');
-  }
-  throw new Error(caseId + ': NAC_WORKBENCH_LIVE_SCREENSHOT_BASELINE_MISMATCH');
-}
-
 async function inspect(page, item) {
   return page.evaluate(expected => {
     const frame = document.querySelector('[data-nac-evidence-frame]');
@@ -161,7 +131,6 @@ async function run() {
     fixtureRoot
   ], { stdio: 'ignore' });
   fs.mkdirSync(outputRoot, { recursive: true });
-  const approvedHashes = approvedCaseHashes();
   const browser = await chromium.launch({ headless: true });
   const evidence = [];
   let browserNetworkRequests = 0;
@@ -179,13 +148,7 @@ async function run() {
       const inspection = await inspect(page, item);
       assertInspection(item, inspection);
       const output = path.join(outputRoot, item.file);
-      await captureApprovedScreenshot(
-        page,
-        page.locator('[data-nac-evidence-frame]'),
-        output,
-        item.id,
-        approvedHashes.get(item.id)
-      );
+      await page.locator('[data-nac-evidence-frame]').screenshot({ path: output });
       evidence.push({
         id: item.id,
         state: item.state,

@@ -157,8 +157,8 @@
           },
           {
             "component": "github_cli_gh",
-            "minimum": "installed and authenticated",
-            "purpose": "GitHub repository, pull request and Actions operations"
+            "minimum": "optional; use only when an already established task-authorized channel is available",
+            "purpose": "Optional GitHub repository, pull request and Actions operations; Issue #746 read-only reconciliation must not trigger authentication"
           },
           {
             "component": "python",

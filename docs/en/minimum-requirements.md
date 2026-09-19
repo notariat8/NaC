@@ -4,7 +4,7 @@
 
 | Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
 | --- | --- | --- |
-| Windows 11 with Python 3.11 and Node.js 24 | supported | supported only with the Windows security backend available and after every existing owner and security gate |
+| Windows 11 with Python 3.11 and Node.js 24 | supported | Issue #746 live activation and recovery remain fail-closed regardless of backend availability; only separately bound read-only reconciliation is permitted |
 | Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
 | Other or unknown platform | where the individual offline command is portable | blocked |
 
@@ -14,10 +14,11 @@ backend. The Windows live path requires NTFS handle/file-ID binding, SID/DACL
 and reparse checks, a named mutex, a Job Object, atomic flush semantics, and a
 credential-write guard for Azure CLI and M365/Node. If any capability is
 missing, the path stops with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` before
-credential, network, or provider access.
+credential, network, or provider access. Backend availability does not lift the
+explicit Windows block on live activation and recovery.
 
 Status: binding day-0 baseline
-Last content update: 2026-05-15
+Last content update: 2026-09-19
 
 ## Purpose
 

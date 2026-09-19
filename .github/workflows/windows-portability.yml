@@ -30,6 +30,9 @@ jobs:
       - name: Install NaC
         run: python -m pip install --disable-pip-version-check -e .
 
+      - name: Install Graft context layer CLI
+        run: npm install -g @nanonets/graft
+
       - name: Verify native Windows activation security and portability
         shell: pwsh
         run: |
@@ -56,3 +59,14 @@ jobs:
           python scripts/validate_m365_bff_failed_partial_safe_completion.py
           python scripts/validate_m365_azure_bff_live_activation.py
           python scripts/validate_spec_traceability.py
+
+      - name: Verify the complete Issue 746 Windows matrix
+        run: |
+          python scripts/validate_ai_sbom.py
+          python -m unittest discover -s tests -p "test_nac_bff_azure_*.py"
+          python -m unittest discover -s tests -p "test_business_case_type_*.py"
+          python -m unittest discover -s tests -p "test_m365_*.py"
+          python -m unittest discover -s tests -p "test_sqlite_evidence_staging_outbox.py"
+          graft build
+          graft check
+          python scripts/nac.py doctor --profile strict
