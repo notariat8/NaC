@@ -1158,8 +1158,11 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         "SetAccessRuleProtection($true, $false)",
         "S-1-5-18",
         "S-1-5-32-544",
+        "SetTokenInformation",
+        "TOKEN_OWNER_CLASS",
         '"TEMP=$privateRoot"',
         '"TMP=$privateRoot"',
+        '"PYTHONPATH=$privateRoot"',
     ):
         if marker not in windows_workflow:
             errors.append(

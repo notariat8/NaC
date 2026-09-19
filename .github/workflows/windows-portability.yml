@@ -50,8 +50,92 @@ jobs:
             $directorySecurity.AddAccessRule($rule) | Out-Null
           }
           Set-Acl -LiteralPath $privateRoot -AclObject $directorySecurity
+          $sitecustomize = @'
+          import ctypes
+          import os
+          from ctypes import wintypes
+
+          if os.name == "nt":
+              TOKEN_ADJUST_DEFAULT = 0x0080
+              TOKEN_QUERY = 0x0008
+              TOKEN_USER_CLASS = 1
+              TOKEN_OWNER_CLASS = 4
+
+              class SID_AND_ATTRIBUTES(ctypes.Structure):
+                  _fields_ = [("Sid", ctypes.c_void_p), ("Attributes", wintypes.DWORD)]
+
+              class TOKEN_USER(ctypes.Structure):
+                  _fields_ = [("User", SID_AND_ATTRIBUTES)]
+
+              class TOKEN_OWNER(ctypes.Structure):
+                  _fields_ = [("Owner", ctypes.c_void_p)]
+
+              advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+              kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+              kernel32.GetCurrentProcess.argtypes = []
+              kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+              kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+              kernel32.CloseHandle.restype = wintypes.BOOL
+              advapi32.OpenProcessToken.argtypes = [
+                  wintypes.HANDLE,
+                  wintypes.DWORD,
+                  ctypes.POINTER(wintypes.HANDLE),
+              ]
+              advapi32.OpenProcessToken.restype = wintypes.BOOL
+              advapi32.GetTokenInformation.argtypes = [
+                  wintypes.HANDLE,
+                  ctypes.c_uint,
+                  ctypes.c_void_p,
+                  wintypes.DWORD,
+                  ctypes.POINTER(wintypes.DWORD),
+              ]
+              advapi32.GetTokenInformation.restype = wintypes.BOOL
+              advapi32.SetTokenInformation.argtypes = [
+                  wintypes.HANDLE,
+                  ctypes.c_uint,
+                  ctypes.c_void_p,
+                  wintypes.DWORD,
+              ]
+              advapi32.SetTokenInformation.restype = wintypes.BOOL
+              token = wintypes.HANDLE()
+              if not advapi32.OpenProcessToken(
+                  kernel32.GetCurrentProcess(),
+                  TOKEN_ADJUST_DEFAULT | TOKEN_QUERY,
+                  ctypes.byref(token),
+              ):
+                  raise SystemExit("WINDOWS_TEST_TOKEN_OPEN_FAILED")
+              try:
+                  required = wintypes.DWORD()
+                  advapi32.GetTokenInformation(
+                      token, TOKEN_USER_CLASS, None, 0, ctypes.byref(required)
+                  )
+                  if not required.value:
+                      raise SystemExit("WINDOWS_TEST_TOKEN_USER_FAILED")
+                  buffer = ctypes.create_string_buffer(required.value)
+                  if not advapi32.GetTokenInformation(
+                      token,
+                      TOKEN_USER_CLASS,
+                      buffer,
+                      required.value,
+                      ctypes.byref(required),
+                  ):
+                      raise SystemExit("WINDOWS_TEST_TOKEN_USER_FAILED")
+                  user = ctypes.cast(buffer, ctypes.POINTER(TOKEN_USER)).contents
+                  owner = TOKEN_OWNER(user.User.Sid)
+                  if not advapi32.SetTokenInformation(
+                      token,
+                      TOKEN_OWNER_CLASS,
+                      ctypes.byref(owner),
+                      ctypes.sizeof(owner),
+                  ):
+                      raise SystemExit("WINDOWS_TEST_TOKEN_OWNER_FAILED")
+              finally:
+                  kernel32.CloseHandle(token)
+          '@
+          Set-Content -LiteralPath (Join-Path $privateRoot "sitecustomize.py") -Value $sitecustomize -Encoding utf8
           "TEMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "TMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PYTHONPATH=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install NaC
         run: python -m pip install --disable-pip-version-check -e .
