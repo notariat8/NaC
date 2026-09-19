@@ -201,9 +201,12 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
             exit_code=0,
             stdout=b"value\n",
         )
-        with patch(
-            "nac_bff.activation_security_backend.get_platform_security_backend",
-            return_value=backend,
+        with (
+            patch("nac_bff.issue746_reconciliation_gate.os.name", "nt"),
+            patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=backend,
+            ),
         ):
             self.assertEqual(
                 _git_read(
@@ -226,9 +229,12 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
     def test_git_snapshot_rejects_digest_not_bound_by_resolver(self) -> None:
         backend = Mock()
         backend.inspect_private_path.return_value = SimpleNamespace(sha256="e" * 64)
-        with patch(
-            "nac_bff.activation_security_backend.get_platform_security_backend",
-            return_value=backend,
+        with (
+            patch("nac_bff.issue746_reconciliation_gate.os.name", "nt"),
+            patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=backend,
+            ),
         ):
             with self.assertRaises(Issue746ReconciliationGateError):
                 _git_read(

@@ -15,6 +15,12 @@ from unittest.mock import patch
 from scripts import validate_m365_bff_failed_partial_safe_completion as validator
 
 
+def _synthetic_absolute_git_path() -> str:
+    if os.name == "nt":
+        return "C:/Program Files/Git/cmd/git.exe"
+    return "/usr/bin/git"
+
+
 class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -493,7 +499,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 "source_sha256": None,
             },
             "git_attestation": {
-                "executable_path": "C:/Program Files/Git/cmd/git.exe",
+                "executable_path": _synthetic_absolute_git_path(),
                 "executable_sha256": "f" * 64,
             },
             "registry": {
@@ -1233,7 +1239,7 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                 "source_sha256": None,
             },
             "git_attestation": {
-                "executable_path": "C:/Program Files/Git/cmd/git.exe",
+                "executable_path": _synthetic_absolute_git_path(),
                 "executable_sha256": "f" * 64,
             },
             "registry": registry,
