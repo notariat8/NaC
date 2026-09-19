@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from contextlib import ExitStack
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -24,9 +26,16 @@ from nac_bff.azure_activation_runner import (
 )
 from nac_bff.azure_function_deployment_reconciliation import (
     ACTION,
+    PROVENANCE_LOSS_ACTION,
+    PROVENANCE_LOSS_ARTIFACT_CATEGORIES,
+    PROVENANCE_LOSS_COUNTER_KEYS,
+    PROVENANCE_LOSS_RUN_ID,
+    FunctionDeploymentProvenanceLossConfirmation,
     FunctionDeploymentReconcilerBinding,
     FunctionDeploymentReleaseApproval,
+    classify_function_deployment_provenance_loss,
     inspect_azure_bff_function_deployment_failure,
+    load_function_deployment_provenance_loss_confirmation,
     release_azure_bff_function_deployment_quarantine,
 )
 
@@ -188,6 +197,8 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
             toolchain_sha256="3" * 64,
             required_owner_login="approved-owner",
         )
+        if "provenance_loss" in self._testMethodName:
+            return
         with self._patches():
             result = run_azure_bff_live_activation(
                 repo_root=self.root,
@@ -272,6 +283,289 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
             self.lock_root / f"{legacy}.lock",
             self.legacy_lock_root / f"{legacy}.lock",
         )
+
+    def _loss_confirmation(self, **overrides):
+        values = {
+            "owner_confirmed": True,
+            "issue": 739,
+            "action": PROVENANCE_LOSS_ACTION,
+            "run_id": PROVENANCE_LOSS_RUN_ID,
+            "activation_hash": ACTIVATION_HASH,
+            "correlation_id": PROVENANCE_LOSS_RUN_ID,
+            "canonical_run_relative_path": (
+                f"out/m365/teams-sharepoint/bff-live-activation/{ACTIVATION_HASH}"
+            ),
+            "expected_artifact_categories": PROVENANCE_LOSS_ARTIFACT_CATEGORIES,
+            "operator_account_id_sha256": "4" * 64,
+            "operator_principal_id_sha256": "5" * 64,
+            "identity_resolver_sha256": "6" * 64,
+            "target_lock_binding_sha256": _binding_sha256_json(
+                {"workspace_id": "notary_team_01"}
+            ),
+            "legacy_lock_binding_sha256": _sha256_json(
+                {"workspace_id": "notary_team_01"}
+            ),
+            "reconciler_commit": self.binding.approved_commit,
+            "reconciler_tree": self.binding.approved_tree,
+            "reconciler_toolchain_sha256": self.binding.toolchain_sha256,
+        }
+        values.update(overrides)
+        return FunctionDeploymentProvenanceLossConfirmation(**values)
+
+    def _classify_loss(self, confirmation=None, request=None) -> dict:
+        with self._runtime_patches():
+            return classify_function_deployment_provenance_loss(
+                repo_root=self.root,
+                request=request
+                or replace(_request(), correlation_id=PROVENANCE_LOSS_RUN_ID),
+                confirmation=confirmation or self._loss_confirmation(),
+                resolved_operator_account_id_sha256="4" * 64,
+                resolved_operator_principal_id_sha256="5" * 64,
+                resolved_identity_resolver_sha256="6" * 64,
+                reconciler_commit=self.binding.approved_commit,
+                reconciler_tree=self.binding.approved_tree,
+                reconciler_toolchain_sha256=self.binding.toolchain_sha256,
+                output_root=self.root / DEFAULT_OUTPUT_ROOT,
+            )
+
+    def test_total_provenance_loss_is_terminal_and_has_closed_zero_counters(
+        self,
+    ) -> None:
+        for path in self._lock_paths():
+            if path.exists():
+                path.unlink()
+
+        with patch(
+            "nac_bff.azure_activation_runner.build_azure_bff_activation_plan",
+            side_effect=AssertionError("activation plan must not be built"),
+        ), patch(
+            "nac_bff.azure_activation._build_function_package_bytes",
+            side_effect=AssertionError("function package must not be built"),
+        ), patch(
+            "subprocess.run",
+            side_effect=AssertionError("subprocess must not be started"),
+        ), patch.object(
+            Path,
+            "write_bytes",
+            side_effect=AssertionError("file must not be written"),
+        ), patch.object(
+            Path,
+            "write_text",
+            side_effect=AssertionError("text file must not be written"),
+        ), patch.object(
+            Path,
+            "open",
+            side_effect=AssertionError("path handle must not be opened"),
+        ), patch(
+            "builtins.open",
+            side_effect=AssertionError("file handle must not be opened"),
+        ), patch(
+            "os.open",
+            side_effect=AssertionError("descriptor must not be opened"),
+        ):
+            result = self._classify_loss()
+
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(
+            result["reason_code"], "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+        )
+        self.assertEqual(
+            result["error"]["code"], "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+        )
+        self.assertIs(result["terminal"], True)
+        self.assertIs(result["retry_allowed"], False)
+        self.assertIsNone(result["next_phase"])
+        self.assertEqual(
+            set(result["operation_counts"]), set(PROVENANCE_LOSS_COUNTER_KEYS)
+        )
+        self.assertTrue(
+            all(value == 0 for value in result["operation_counts"].values())
+        )
+        self.assertIs(result["writes_started"], False)
+
+    def test_provenance_loss_rejects_wrong_binding_or_partial_inventory(
+        self,
+    ) -> None:
+        cases = (
+            self._loss_confirmation(owner_confirmed=False),
+            self._loss_confirmation(issue=740),
+            self._loss_confirmation(action="WRONG_ACTION"),
+            self._loss_confirmation(activation_hash="0" * 64),
+            self._loss_confirmation(correlation_id="other-run"),
+            self._loss_confirmation(run_id="other-run"),
+            self._loss_confirmation(canonical_run_relative_path="wrong/path"),
+            self._loss_confirmation(
+                expected_artifact_categories=PROVENANCE_LOSS_ARTIFACT_CATEGORIES[:-1]
+            ),
+            self._loss_confirmation(operator_account_id_sha256="0" * 64),
+            self._loss_confirmation(operator_principal_id_sha256="0" * 64),
+            self._loss_confirmation(identity_resolver_sha256="0" * 64),
+            self._loss_confirmation(target_lock_binding_sha256="0" * 63),
+            self._loss_confirmation(reconciler_commit="0" * 40),
+            self._loss_confirmation(reconciler_tree="0" * 40),
+            self._loss_confirmation(reconciler_toolchain_sha256="0" * 64),
+            self._loss_confirmation(terminal_status="READY"),
+            self._loss_confirmation(terminal_reason_code="WRONG"),
+            self._loss_confirmation(terminal=False),
+            self._loss_confirmation(retry_allowed=True),
+            self._loss_confirmation(next_phase="issue739"),
+        )
+        for confirmation in cases:
+            with self.subTest(confirmation=confirmation):
+                result = self._classify_loss(confirmation=confirmation)
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertNotEqual(
+                    result["error"]["code"],
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+                )
+
+        self.run_dir.mkdir(parents=True)
+        result = self._classify_loss()
+        self.assertEqual(
+            result["error"]["code"],
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID",
+        )
+        self.run_dir.rmdir()
+        for lock_path in self._lock_paths():
+            with self.subTest(lock_path=lock_path):
+                lock_path.parent.mkdir(parents=True, exist_ok=True)
+                lock_path.write_bytes(b"original issue-739 lock evidence")
+                result = self._classify_loss()
+                self.assertEqual(
+                    result["error"]["code"],
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID",
+                )
+                lock_path.unlink()
+
+        with patch(
+            "nac_bff.azure_function_deployment_reconciliation._path_entry_exists",
+            side_effect=OSError("synthetic inaccessible path"),
+        ):
+            result = self._classify_loss()
+        self.assertEqual(
+            result["error"]["code"],
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE",
+        )
+
+    def test_provenance_loss_confirmation_loader_binds_hash_and_shape(
+        self,
+    ) -> None:
+        confirmation = self._loss_confirmation()
+        payload = {
+            "schema_version": (
+                "nac.issue739-function-deployment-provenance-loss-confirmation/v1"
+            ),
+            **{
+                field: getattr(confirmation, field)
+                for field in confirmation.__dataclass_fields__
+            },
+        }
+        payload["expected_artifact_categories"] = list(
+            payload["expected_artifact_categories"]
+        )
+        raw = json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+
+        class Backend:
+            def __init__(
+                self,
+                data: bytes,
+                *,
+                reported_size: int | None = None,
+                inspect_error: Exception | None = None,
+                open_error: Exception | None = None,
+            ) -> None:
+                self.data = data
+                self.reported_size = (
+                    len(data) if reported_size is None else reported_size
+                )
+                self.inspect_error = inspect_error
+                self.open_error = open_error
+
+            def inspect_private_path(self, path, purpose):
+                del path, purpose
+                if self.inspect_error is not None:
+                    raise self.inspect_error
+                return type("Binding", (), {"size": self.reported_size})()
+
+            def open_bound_read(self, path, binding):
+                del path, binding
+                if self.open_error is not None:
+                    raise self.open_error
+                return io.BytesIO(self.data)
+
+        confirmation_path = self.root.parent / "protected-loss-confirmation.json"
+
+        def load(data: bytes, *, backend=None, expected_sha256=None):
+            selected_backend = backend or Backend(data)
+            selected_hash = expected_sha256 or hashlib.sha256(data).hexdigest()
+            with patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=selected_backend,
+            ):
+                return load_function_deployment_provenance_loss_confirmation(
+                    repo_root=self.root,
+                    path=confirmation_path,
+                    expected_sha256=selected_hash,
+                )
+
+        loaded = load(raw)
+        self.assertEqual(loaded, confirmation)
+
+        with self.assertRaises(ValueError):
+            load(raw, expected_sha256="0" * 64)
+
+        invalid_payloads = {
+            "duplicate_json_key": (
+                b'{"schema_version":"first","schema_version":"second"}'
+            ),
+            "invalid_utf8": b"\xff",
+            "invalid_json": b"{",
+        }
+        missing_field = dict(payload)
+        missing_field.pop("issue")
+        invalid_payloads["missing_field"] = json.dumps(missing_field).encode("utf-8")
+        extra_field = dict(payload)
+        extra_field["unexpected"] = True
+        invalid_payloads["extra_field"] = json.dumps(extra_field).encode("utf-8")
+        wrong_schema = dict(payload)
+        wrong_schema["schema_version"] = "wrong-schema/v1"
+        invalid_payloads["wrong_schema"] = json.dumps(wrong_schema).encode("utf-8")
+        categories_not_list = dict(payload)
+        categories_not_list["expected_artifact_categories"] = "resume_state"
+        invalid_payloads["categories_not_list"] = json.dumps(
+            categories_not_list
+        ).encode("utf-8")
+        categories_non_string = dict(payload)
+        categories_non_string["expected_artifact_categories"] = ["resume_state", 1]
+        invalid_payloads["categories_non_string"] = json.dumps(
+            categories_non_string
+        ).encode("utf-8")
+        for case_id, invalid_raw in invalid_payloads.items():
+            with self.subTest(case_id=case_id), self.assertRaises(ValueError):
+                load(invalid_raw)
+
+        backend_failures = {
+            "oversized_binding": Backend(raw, reported_size=131073),
+            "oversized_read": Backend(b"x" * 131073, reported_size=131072),
+            "inspect_error": Backend(raw, inspect_error=OSError("inspect failed")),
+            "open_error": Backend(raw, open_error=OSError("open failed")),
+        }
+        for case_id, backend in backend_failures.items():
+            with self.subTest(case_id=case_id), self.assertRaises(ValueError):
+                load(backend.data, backend=backend)
+
+        for invalid_path in (
+            Path("relative-confirmation.json"),
+            self.root / "inside-repository.json",
+        ):
+            with self.subTest(invalid_path=invalid_path), self.assertRaises(ValueError):
+                load_function_deployment_provenance_loss_confirmation(
+                    repo_root=self.root,
+                    path=invalid_path,
+                    expected_sha256=hashlib.sha256(raw).hexdigest(),
+                )
 
     @staticmethod
     def _lock_marker(path: Path) -> dict | None:

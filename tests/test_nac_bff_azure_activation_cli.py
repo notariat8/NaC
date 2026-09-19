@@ -1015,6 +1015,19 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
             "9" * 64,
         ]
 
+    def _provenance_loss_args(self) -> list[str]:
+        return [
+            "--confirm-provenance-lost",
+            "--provenance-loss-action",
+            "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+            "--provenance-loss-issue",
+            "739",
+            "--provenance-loss-confirmation-file",
+            "C:/protected/issue739-provenance-loss.json",
+            "--provenance-loss-confirmation-sha256",
+            "1" * 64,
+        ]
+
     def _fake_modules(self):
         observation = object()
         verifier = object()
@@ -1083,6 +1096,13 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         gate.verify_issue746_readonly_reconciliation_gate = Mock(
             return_value=object()
         )
+        gate.identity_binding_sha256 = lambda kind, value: (
+            "4" * 64 if kind == "account-id" else "5" * 64
+        )
+        gate.load_protected_identity_resolver = Mock(return_value={})
+        gate.resolve_authorized_operator = Mock(
+            return_value={"principal_id": "person:synthetic-owner"}
+        )
         reconciliation = types.ModuleType(
             "nac_bff.azure_function_deployment_reconciliation"
         )
@@ -1094,6 +1114,49 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         )
         reconciliation.inspect_azure_bff_function_deployment_failure = inspect
         reconciliation.release_azure_bff_function_deployment_quarantine = release
+        reconciliation.load_function_deployment_provenance_loss_confirmation = Mock(
+            return_value=object()
+        )
+        reconciliation.classify_function_deployment_provenance_loss = Mock(
+            return_value={
+                "schema_version": (
+                    "nac.m365-azure-bff-function-deployment-reconciliation/v0.1"
+                ),
+                "status": "BLOCKED",
+                "reason_code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+                "error": {"code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"},
+                "terminal": True,
+                "retry_allowed": False,
+                "next_phase": None,
+                "writes_started": False,
+                "resume_enabled": False,
+                "operation_counts": {
+                    key: 0
+                    for key in (
+                        "github_read_count",
+                        "credential_access_count",
+                        "network_access_count",
+                        "subprocess_count",
+                        "provider_read_count",
+                        "provider_write_count",
+                        "tenant_write_count",
+                        "local_write_count",
+                        "journal_append_count",
+                        "quarantine_release_count",
+                        "package_build_count",
+                        "live_run_count",
+                        "recovery_count",
+                        "retry_count",
+                        "rollback_count",
+                        "deletion_count",
+                    )
+                },
+                "provider_write_count": 0,
+                "automatic_rollback_count": 0,
+                "automatic_deletion_count": 0,
+                "secret": "must-not-be-rendered",
+            }
+        )
         runner = types.ModuleType("nac_bff.azure_activation_runner")
         runner.DEFAULT_OUTPUT_ROOT = Path("out/default")
         runner.LiveActivationRequest = _FakeRequest
@@ -1137,6 +1200,86 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
             "FUNCTION_DEPLOYMENT_NOT_APPLIED",
         )
         self.assertNotIn("drop-me", stdout.getvalue())
+
+    def test_provenance_loss_is_local_terminal_before_github_or_factory(
+        self,
+    ) -> None:
+        modules, factory, inspect, release, *_ = self._fake_modules()
+        stdout = io.StringIO()
+        argv = self._argv(*self._provenance_loss_args(), "--format", "json")
+        for option in (
+            "--approval-reference",
+            "--approval-body-sha256",
+            "--approved-commit",
+            "--approved-tree",
+            "--azure-cli-toolchain-sha256",
+            "--m365-cli-sha256",
+            "--m365-node-sha256",
+            "--build-python-sha256",
+            "--build-node-sha256",
+            "--build-npm-cli-sha256",
+            "--gh-cli-sha256",
+            "--provisioner-certificate-sha256",
+            "--provisioner-bootstrap-binding-sha256",
+            "--reason",
+            "--issue-746-owner-solo-approval-reference",
+        ):
+            index = argv.index(option)
+            del argv[index : index + 2]
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(argv)
+
+        self.assertEqual(rc, 2)
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        gate.verify_issue746_readonly_reconciliation_gate.assert_not_called()
+        gate.load_protected_identity_resolver.assert_called_once()
+        gate.resolve_authorized_operator.assert_called_once()
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        release.assert_not_called()
+        reconciliation = modules[
+            "nac_bff.azure_function_deployment_reconciliation"
+        ]
+        reconciliation.load_function_deployment_provenance_loss_confirmation.assert_called_once()
+        reconciliation.classify_function_deployment_provenance_loss.assert_called_once()
+        self.assertEqual(
+            reconciliation.classify_function_deployment_provenance_loss.call_args.kwargs[
+                "resolved_identity_resolver_sha256"
+            ],
+            "f" * 64,
+        )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(
+            payload["reason_code"], "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+        )
+        self.assertIs(payload["terminal"], True)
+        self.assertIs(payload["retry_allowed"], False)
+        self.assertIsNone(payload["next_phase"])
+        self.assertTrue(all(value == 0 for value in payload["operation_counts"].values()))
+        self.assertNotIn("must-not-be-rendered", stdout.getvalue())
+
+    def test_provenance_loss_rejects_legacy_github_and_live_approval_arguments(
+        self,
+    ) -> None:
+        modules, factory, inspect, release, *_ = self._fake_modules()
+        stdout = io.StringIO()
+        with patch.dict(sys.modules, modules), redirect_stdout(stdout):
+            rc = nac_cli.main(
+                self._argv(*self._provenance_loss_args(), "--format", "json")
+            )
+
+        self.assertEqual(rc, 2)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(
+            payload["error"]["code"],
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_INVALID",
+        )
+        gate = modules["nac_bff.issue746_reconciliation_gate"]
+        gate.load_protected_identity_resolver.assert_not_called()
+        factory.assert_not_called()
+        inspect.assert_not_called()
+        release.assert_not_called()
 
     def test_issue746_gate_failure_blocks_before_function_factory(self) -> None:
         modules, factory, inspect, release, *_ = self._fake_modules()

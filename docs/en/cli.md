@@ -1147,6 +1147,27 @@ nac m365 teams-sharepoint business-case-type-live-write-smoke --database-path /t
 
 `bff-azure-function-deployment-reconcile` handles only the terminal step-7 case from Issue [#739](https://github.com/notariat8/NaC/issues/739): six steps are `PASSED`, `deploy_function_package` failed with `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`, and all three journals remain `HELD`. The owner-free inspection verifies the state, all 18 ledger events, evidence, prepared manifest, and Function ZIP byte for byte. Two identical ARM snapshots constrained to the exact target Function must prove `FUNCTION_DEPLOYMENT_NOT_APPLIED`. Only a new immutable `ofunk` comment in Issue #739 binding `RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` permits `--confirm-release-quarantine`. Release appends only `RELEASED` markers; the failed state, its evidence, and Azure remain unchanged.
 
+When the exactly bound #739 original artifacts are completely lost, use the
+standalone minimal provenance-loss invocation below. Old #632/#739 live
+approvals, `--approval-reference`, and
+`--issue-746-owner-solo-approval-reference` are invalid in this mode. The
+confirmation record and the required protected identity resolver are bound exclusively locally through
+Windows SID, DACL, and hashes. The check covers the complete expected inventory:
+state, evidence, ledger, three lock journals formed from the protected original
+lock bindings, prepared
+manifest, and Function package. Total loss is confirmed only when all of these
+artifacts are absent from the canonical location. A partial inventory or an
+uninspectable bound expected location produces a narrow binding/state error
+instead. This path runs before the GitHub gate and provider factory and returns
+exactly `status=BLOCKED`,
+`reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`,
+`retry_allowed=false`, and `next_phase=null` with exit `2`. It authorizes
+neither #739 release nor #632 packaging or live action.
+
+```powershell
+nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --correlation-id nac-bff-live-20260908-issue739-v4 --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --protected-identity-resolver-file <protected-absolute-json-file> --protected-identity-resolver-sha256 <64-lowercase-hex> --operator-account-id <provider:login> --confirm-provenance-lost --provenance-loss-action CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST --provenance-loss-issue 739 --provenance-loss-confirmation-file <protected-absolute-json-file> --provenance-loss-confirmation-sha256 <64-lowercase-hex> --format json
+```
+
 ```bash
 nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/739#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason "<non-empty-owner-reason>" --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --format json
 nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/739#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason "<non-empty-owner-reason>" --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --confirm-release-quarantine --release-action RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT --terminalization-approval-reference https://github.com/notariat8/NaC/issues/739#issuecomment-<id> --terminalization-approval-body-sha256 <64-lowercase-hex> --state-sha256 <64-lowercase-hex> --evidence-sha256 <64-lowercase-hex> --ledger-head-sha256 <64-lowercase-hex> --target-lock-sha256 <64-lowercase-hex> --legacy-lock-sha256 <64-lowercase-hex> --legacy-host-lock-sha256 <64-lowercase-hex> --provider-observation-sha256 <64-lowercase-hex> --failed-step deploy_function_package --failed-step-started-at-utc <UTC-timestamp> --prepared-inputs-manifest-sha256 <64-lowercase-hex> --function-package-sha256 <64-lowercase-hex> --format json

@@ -15,7 +15,7 @@ acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-0
 acceptance_status: BLOCKED
 acceptance_blockers:
   - protected_operational_provider_identity_resolution_pending
-  - issue739_hash_bound_provenance_evidence_pending
+  - issue739_original_provenance_lost_terminal
   - windows_remote_ci_evidence_pending
 
 provenance:
@@ -31,6 +31,7 @@ gates:
 
 phases:
   - {id: phase_0_offline, success: OFFLINE_PLAN_VERIFIED, mutation: repository_and_pr_artifacts_only}
+  - {id: phase_1b_terminal_provenance_loss, status: BLOCKED, reason_code: FUNCTION_DEPLOYMENT_PROVENANCE_LOST, terminal: true, retry_allowed: false, next_phase: null, mutation: none}
   - {id: phase_1_windows_preflight, success: WINDOWS_READY, mutation: none}
   - {id: phase_2_provider_inspection, success: FUNCTION_DEPLOYMENT_NOT_APPLIED, mutation: none}
   - {id: phase_3_local_release, success: LOCK_JOURNALS_RELEASED, mutation: three_append_only_RELEASED_records}
@@ -53,6 +54,63 @@ existing_reconciler_binding:
   resume_count: 0
   rollback_count: 0
   deletion_count: 0
+
+function_deployment_provenance_loss:
+  issue: 739
+  action: CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+  run_id: nac-bff-live-20260908-issue739-v4
+  confirmation_schema: nac.issue739-function-deployment-provenance-loss-confirmation/v1
+  confirmation_source: repository_external_windows_sid_dacl_bound_file
+  confirmation_sha256_required: true
+  identity_resolver_required: true
+  identity_resolver_access: local_read_only
+  identity_resolver_sha256_bound_in_confirmation: true
+  principal_mode: OWNER_SOLO_APPROVAL
+  owner_confirmation_evidence: protected_confirmation_record_only
+  legacy_github_approval_arguments_required: false
+  legacy_github_approval_arguments_allowed: false
+  ordinary_arguments_are_not_trusted_expected_values: true
+  canonical_run_path_source: fixed_output_root_plus_confirmed_activation_hash
+  original_lock_binding_source: protected_confirmation_record
+  activation_plan_build_allowed: false
+  expected_artifact_categories:
+    - resume_state
+    - activation_evidence
+    - ledger
+    - target_lock_journal
+    - legacy_lock_journal
+    - legacy_host_lock_journal
+    - prepared_inputs_manifest
+    - function_package
+  positive_condition: canonical_run_directory_and_all_three_confirmation_bound_original_lock_journals_absent
+  partial_expected_inventory: FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID
+  uninspectable_expected_inventory: FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE
+  exact_result:
+    status: BLOCKED
+    reason_code: FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+    terminal: true
+    retry_allowed: false
+    next_phase: null
+    cli_exit_code: 2
+  operation_counts_closed:
+    github_read_count: 0
+    credential_access_count: 0
+    network_access_count: 0
+    subprocess_count: 0
+    provider_read_count: 0
+    provider_write_count: 0
+    tenant_write_count: 0
+    local_write_count: 0
+    journal_append_count: 0
+    quarantine_release_count: 0
+    package_build_count: 0
+    live_run_count: 0
+    recovery_count: 0
+    retry_count: 0
+    rollback_count: 0
+    deletion_count: 0
+  forbidden_sources: [model_knowledge, issue_text, provider_state]
+  opens_gates: []
 
 commands:
   - {id: spec_traceability, platform: windows_native, command: python scripts/validate_spec_traceability.py, acceptance_ids: [AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
@@ -234,6 +292,14 @@ credential_boundary_cases:
   host_metadata_changed: *credential_block
 
 stable_error_codes_exact:
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_REQUIRED
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_BINDING_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_REQUIRED
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE
   - FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED
   - FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED
   - FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID
@@ -311,6 +377,7 @@ windows_fail_closed_matrix:
     tenant: *windows_readonly
     provider: *windows_readonly
   function_deployment_reconciliation: *windows_readonly_edge
+  function_deployment_provenance_loss: *windows_blocked_edge
 
 journal_crash_cases:
   before_first_append: {expected_status: BLOCKED, journal_states: [HELD, HELD, HELD], same_approval_may_resume: true}
@@ -323,6 +390,10 @@ journal_crash_cases:
   same_approval_replay: {expected_status: LOCK_JOURNALS_RELEASED, journal_states: [RELEASED, RELEASED, RELEASED], same_approval_may_resume: true}
 
 required_existing_regressions:
+  - test_total_provenance_loss_is_terminal_and_has_closed_zero_counters
+  - test_provenance_loss_rejects_wrong_binding_or_partial_inventory
+  - test_provenance_loss_confirmation_loader_binds_hash_and_shape
+  - test_provenance_loss_is_local_terminal_before_github_or_factory
   - test_exact_approval_releases_locks_without_changing_failed_run
   - test_wrong_owner_or_hash_never_releases_a_lock
   - test_crash_after_lock_append_is_recovered_idempotently
@@ -484,8 +555,8 @@ pr_scope:
 ai_sbom:
   component_id: m365-bff-failed-partial-safe-completion-contract
   human_review_owner: owner_solo_approval_source_bound
-  provider_boundary: read_only_contract_only
-  evidence_binding: protected_resolver_sha256_and_canonical_hashes
+  provider_boundary: local_terminal_classification_before_provider_access
+  evidence_binding: protected_confirmation_resolver_principal_and_original_lock_hashes
   privacy_boundary: synthetic_public_registry_real_mapping_repo_external
   release_export_enabled: false
 

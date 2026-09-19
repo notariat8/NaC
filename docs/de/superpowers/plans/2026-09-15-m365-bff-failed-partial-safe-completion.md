@@ -53,6 +53,10 @@ bleibt die bestehende Plattform-Sperre fail-closed aktiv.
    Journal-Artefakte werden weder umgeschrieben noch rekonstruiert.
 7. **Ein Gate pro Wirkung:** #746-Reconciliation, #739-Journalfreigabe und
    #632-Live-Lauf bleiben nicht austauschbar.
+8. **Verlust ist terminal:** Sind die exakt gebundenen #739-Originalartefakte
+   vollständig verloren, endet der lokale Pfad mit
+   `FUNCTION_DEPLOYMENT_PROVENANCE_LOST`; kein Providerabgleich und keine
+   Freigabephase darf folgen.
 
 ## Änderungsflächen
 
@@ -84,7 +88,8 @@ werden; parallele Doppelimplementierungen sind nicht zulässig.
 | 0 Implementierung | freigegebene Spec `8a51727c` und Planfreigabe | Code, Tests, Verträge, Docs, lokale Windows-Validierung | `WINDOWS_IMPLEMENTATION_READY` | rotem Pflicht-Gate | nur Repository |
 | 1 PR-Evidence | sauberer Implementierungscommit | Push nach gesonderter Freigabe, Windows-CI, vollständige PR-Diff | `WINDOWS_REMOTE_CI_READY` | fehlendem/rotem Check oder Scope-Drift | GitHub-Branch/PR |
 | 2 #746-Gate | finaler Commit/Tree, Contract-, Backend-, Toolchain-, Resolver- und Principal-Bindung | neue `OWNER_SOLO_APPROVAL` | `WINDOWS_RECONCILIATION_APPROVED` | Binding- oder Governancefehler | GitHub-Kommentar |
-| 3 Windows-Preflight | unveränderte #739-Artefakte | ausschließlich lokale Bindungen lesen | `WINDOWS_PREFLIGHT_READY` | Drift, ACL/Reparse/Lock/Toolchainfehler | keine |
+| 3a Windows-Preflight | unveränderte #739-Artefakte | ausschließlich lokale Bindungen lesen | `WINDOWS_PREFLIGHT_READY` | Drift, ACL/Reparse/Lock/Toolchainfehler | keine |
+| 3b terminaler Provenienzverlust | DACL-/SID-geschützter lokaler Owner-Datensatz, geschützter Resolver, stabiler Principal, exakte Issue-/Aktions-/Run-/Hash-/Correlation-/Pfad-/Inventarbindung und vollständige Abwesenheit am Sollort | ausschließlich lokale Existenz- und Bindungsprüfung | `status=BLOCKED`, `reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`, `retry_allowed=false`, `next_phase=null`, Exit `2` | jeder Abweichung, Teilbestand, unprüfbarer Ablage oder vorhandenen Artefakten an den gebundenen Sollorten | keine; geschlossen enumerierte operative Zähler `0` |
 | 4 Provider-Inspection | erfolgreicher Preflight, bestehender nicht schreibender Auth-Kontext | genau zwei gebundene read-only Snapshots | `FUNCTION_DEPLOYMENT_NOT_APPLIED` | Authbedarf, Drift, unbekannter Ausgabe, Deployment | keine |
 | 5 #739-Gate | identische Snapshot-Hashes und neue exakte Freigabe | drei deterministische Journal-Appends | `LOCK_JOURNALS_RELEASED` | Replay, Tail-, Hash- oder Reihenfolgenfehler | nur drei lokale Appends |
 | 6 #632-Paket | sauberer gebundener Stand nach Phase 5 | Windows-native Offline-Paketierung | `ISSUE_632_PACKAGE_READY` | Build-/Bindingfehler | lokale Offline-Artefakte |
@@ -94,6 +99,8 @@ werden; parallele Doppelimplementierungen sind nicht zulässig.
 
 Im aktuellen Implementierungsturn werden nur Phase 0 und lokale synthetische
 Prüfungen ausgeführt. Jede spätere Phase besitzt ein eigenes Gate.
+Phase 3b ist kein Ersatz-Gate für Phase 3a, sondern ein terminaler Endzustand;
+sie kann keine Phase 4 bis 9 öffnen.
 
 ## Zielvertrag des Windows-Sicherheitsbackends
 
@@ -289,6 +296,37 @@ Config Rewrite und erwarten Blockierung ohne Credentialmutation. Zwei
 Providerantworten werden sofort auf dieselbe allowlistete kanonische Projektion
 reduziert. Nur identische Hashes mit
 `FUNCTION_DEPLOYMENT_NOT_APPLIED` öffnen das separate #739-Gate.
+
+**Terminaler Verlustpfad:** Vor dem produktiven #746-Gate und vor der Port-
+Factory liest ein eigener lokaler CLI-Pfad einen repository-externen, per
+Windows-SID/DACL und SHA-256 gebundenen Owner-Bestätigungsdatensatz sowie den
+bereits geschützten Identitätsresolver. Der Resolver muss das bestätigende
+Konto auf einen aktiven `OWNER_SOLO_APPROVAL`-Principal mit Prozessrolle und
+Qualifikation abbilden. Der Datensatz bindet den verwendeten Resolver-Hash und
+ist selbst der einzige Owner-Bestätigungsnachweis dieses terminalen Pfads; alte
+#632-/#739- oder #746-Kommentare sind dafür weder erforderlich noch ausreichend.
+Der Datensatz ist die vertrauenswürdige Sollquelle und
+bindet Aktion `CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, Issue `739`, Run-ID
+`nac-bff-live-20260908-issue739-v4`, Activation Hash, Correlation ID,
+kanonischen Laufpfad, die ursprünglichen Target-/Legacy-Lock-Binding-Hashes,
+vollständiges erwartetes Artefaktinventar, Resolver-, Operator-Account- und
+Principal-Hash sowie den exakten Terminalvertrag. Die
+normalen Laufargumente sind nur ein zweiter Vergleichskanal und dürfen Sollwerte
+oder Sollpfad nicht bestimmen.
+
+Der Pfad prüft ausschließlich lokal: alle Datensatz-/Resolver-/Principal- und
+Laufbindungen; die Abwesenheit des kanonischen Hash-Verzeichnisses; sowie die
+Abwesenheit der drei aus den im Bestätigungsdatensatz gebundenen ursprünglichen
+Target-/Legacy-Lock-Hashes gebildeten Lock-Journale. Er baut weder einen
+aktuellen Aktivierungsplan noch ein Function-Paket und startet keinen
+Unterprozess. Nur der vollständige Sollbestand gilt als gebundenes Inventar;
+Teilbestand, unprüfbare Ablage an den gebundenen Sollorten und jede Abweichung liefern
+einen engen Binding-/State-Fehler. Positive und negative Tests beweisen das
+exakte Ergebnis `BLOCKED` plus Reason, Terminal-/Retry-/Next-Phase-Felder und
+Exit `2`. Sentinel-Tests verbieten jeden GitHub-, DNS-/HTTP-/Netzwerk-,
+Subprozess-, Credential-, Provider-, Tenant-, Live-, Recovery-, Retry-,
+Paketierungs-, #739-Release-, #632-Autorisierungs-, Datei- und Journalpfad.
+Der Contract enumeriert diese Zähler geschlossen; jeder bleibt `0`.
 
 ### 9. Windows-Resolver und Approval-Bindings
 
@@ -533,13 +571,13 @@ Der Verification Contract ergänzt jeden Eintrag um `scope` und
 | AC | Hauptartefakte | Positivnachweis | Negativnachweis | Erwartung |
 | --- | --- | --- | --- | --- |
 | AC-746-01 | DE/EN-Spec und Plan, Contract | Paritätsvalidator und normalisierte Gate-Tabelle | fehlender/abweichender Abschnitt | `BLOCKED` |
-| AC-746-02 | Provenienz- und Approval-Matrix | getrennte #620/#632/#739/#743/#744/#746-Rollen | Cross-Issue-Replay | `BLOCKED` |
+| AC-746-02 | Provenienz- und Approval-Matrix, geschützter lokaler Bestätigungsdatensatz | exakter #739-Run, Principal und vollständiger Sollbestand fehlen an den gebundenen Sollorten | Teilbestand oder unprüfbare Ablage an den Sollorten, falscher Principal, Run, Issue, Aktion, Hash, Correlation ID oder Pfad | `BLOCKED` + `FUNCTION_DEPLOYMENT_PROVENANCE_LOST` nur im exakten bestätigten Verlustfall |
 | AC-746-03 | Windows-Backend, Runner, Preflight | vollständige Bindung vor Netzwerk | Drift je Feld, ACL, Reparse, Lock | alle Seitenzähler `0` |
 | AC-746-04 | Reconciler und Snapshotprojektion | zwei identische `NOT_APPLIED`-Snapshots | Drift, Redirect, Authbedarf, unbekanntes Feld | Null-Schreibzähler |
 | AC-746-05 | Backend, Toolchain, Job Object | vollständige Windows-Capabilities | fehlende Einzelcapability | `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` oder enger Windows-Code |
 | AC-746-06 | Gate-, Mutex- und Journaltests | identische Freigabe setzt echten Präfix fort | anderer Hash, Tail, Reihenfolge, abandoned lock | kein Retry |
 | AC-746-07 | Traceability, Tooling, CI | Windows-Gates und vollständige Matrix grün | fehlender Windows-Check oder Linux-only-Pflicht | `BLOCKED` |
-| AC-746-08 | Side-effect-Zähler und PR-Diff | Implementierung ausschließlich lokal/synthetisch | Login-, Provider-, Tenant-, Credential- oder Livekante | alle operativen Zähler `0` |
+| AC-746-08 | geschlossenes Zählerschema und PR-Diff | terminales Ergebnis mit `next_phase=null`, Exit `2` und allen Zählern `0` | Aufruf von GitHub, Netzwerk/DNS/HTTP, Subprozess, Credential, Provider, Tenant, Live, Recovery/Retry, Paketierung, #739-Release, #632-Autorisierung, Datei- oder Journal-Write | `BLOCKED`, terminal, keine Folgephase |
 
 ## Geplante Commitfolge
 

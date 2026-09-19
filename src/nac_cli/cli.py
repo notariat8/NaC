@@ -8470,39 +8470,42 @@ def _bff_azure_function_deployment_command_index(
 
 
 def _add_bff_azure_owner_binding_arguments(
-    parser: argparse.ArgumentParser, *, include_owner_gate: bool = True
+    parser: argparse.ArgumentParser,
+    *,
+    include_owner_gate: bool = True,
+    required: bool = True,
 ) -> None:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
     if include_owner_gate:
         parser.add_argument("--owner-approved", action="store_true")
-    parser.add_argument("--expected-activation-hash", required=True)
+    parser.add_argument("--expected-activation-hash", required=required)
     parser.add_argument(
         "--approval-reference",
-        required=True,
+        required=required,
         help=(
             "Original immutable live approval reference from issue #632 "
             "or #739."
         ),
     )
-    parser.add_argument("--approval-body-sha256", required=True)
-    parser.add_argument("--approved-commit", required=True)
-    parser.add_argument("--approved-tree", required=True)
-    parser.add_argument("--azure-cli-toolchain-sha256", required=True)
-    parser.add_argument("--m365-cli-sha256", required=True)
-    parser.add_argument("--m365-node-sha256", required=True)
-    parser.add_argument("--build-python-sha256", required=True)
-    parser.add_argument("--build-node-sha256", required=True)
-    parser.add_argument("--build-npm-cli-sha256", required=True)
-    parser.add_argument("--gh-cli-sha256", required=True)
-    parser.add_argument("--provisioner-certificate-sha256", required=True)
-    parser.add_argument("--provisioner-bootstrap-binding-sha256", required=True)
-    parser.add_argument("--reason", required=True)
-    parser.add_argument("--correlation-id", required=True)
+    parser.add_argument("--approval-body-sha256", required=required)
+    parser.add_argument("--approved-commit", required=required)
+    parser.add_argument("--approved-tree", required=required)
+    parser.add_argument("--azure-cli-toolchain-sha256", required=required)
+    parser.add_argument("--m365-cli-sha256", required=required)
+    parser.add_argument("--m365-node-sha256", required=required)
+    parser.add_argument("--build-python-sha256", required=required)
+    parser.add_argument("--build-node-sha256", required=required)
+    parser.add_argument("--build-npm-cli-sha256", required=required)
+    parser.add_argument("--gh-cli-sha256", required=required)
+    parser.add_argument("--provisioner-certificate-sha256", required=required)
+    parser.add_argument("--provisioner-bootstrap-binding-sha256", required=required)
+    parser.add_argument("--reason", required=required)
+    parser.add_argument("--correlation-id", required=required)
     parser.add_argument("--format", choices=["text", "json"], default="text")
 
 
 def _add_issue746_reconciliation_gate_arguments(
-    parser: argparse.ArgumentParser,
+    parser: argparse.ArgumentParser, *, owner_approval_required: bool = True
 ) -> None:
     parser.add_argument(
         "--protected-identity-resolver-file",
@@ -8513,7 +8516,7 @@ def _add_issue746_reconciliation_gate_arguments(
     parser.add_argument("--operator-account-id", required=True)
     parser.add_argument(
         "--issue-746-owner-solo-approval-reference",
-        required=True,
+        required=owner_approval_required,
     )
 
 
@@ -8836,12 +8839,19 @@ def _run_bff_azure_function_deployment_command(
         ),
     )
     _add_bff_azure_owner_binding_arguments(
-        parser, include_owner_gate=False
+        parser, include_owner_gate=False, required=False
     )
-    _add_issue746_reconciliation_gate_arguments(parser)
+    _add_issue746_reconciliation_gate_arguments(
+        parser, owner_approval_required=False
+    )
     parser.add_argument("--reconciler-commit", required=True)
     parser.add_argument("--reconciler-tree", required=True)
     parser.add_argument("--reconciler-toolchain-sha256", required=True)
+    parser.add_argument("--confirm-provenance-lost", action="store_true")
+    parser.add_argument("--provenance-loss-action")
+    parser.add_argument("--provenance-loss-issue", type=int)
+    parser.add_argument("--provenance-loss-confirmation-file", type=Path)
+    parser.add_argument("--provenance-loss-confirmation-sha256")
     parser.add_argument("--confirm-release-quarantine", action="store_true")
     parser.add_argument("--release-action")
     parser.add_argument("--terminalization-approval-reference")
@@ -8876,6 +8886,72 @@ def _run_bff_azure_function_deployment_command(
         "function_package_sha256",
     )
     supplied = any(getattr(args, field) is not None for field in approval_fields)
+    provenance_loss_fields = (
+        "provenance_loss_action",
+        "provenance_loss_issue",
+        "provenance_loss_confirmation_file",
+        "provenance_loss_confirmation_sha256",
+    )
+    provenance_loss_supplied = any(
+        getattr(args, field) is not None for field in provenance_loss_fields
+    )
+    legacy_approval_fields = (
+        "approval_reference",
+        "approval_body_sha256",
+        "approved_commit",
+        "approved_tree",
+        "azure_cli_toolchain_sha256",
+        "m365_cli_sha256",
+        "m365_node_sha256",
+        "build_python_sha256",
+        "build_node_sha256",
+        "build_npm_cli_sha256",
+        "gh_cli_sha256",
+        "provisioner_certificate_sha256",
+        "provisioner_bootstrap_binding_sha256",
+        "reason",
+        "issue_746_owner_solo_approval_reference",
+    )
+    if provenance_loss_supplied and not args.confirm_provenance_lost:
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_REQUIRED",
+            args.format,
+        )
+    if args.confirm_provenance_lost and (
+        any(getattr(args, field) is None for field in provenance_loss_fields)
+        or args.expected_activation_hash is None
+        or args.correlation_id is None
+    ):
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_REQUIRED",
+            args.format,
+        )
+    if args.confirm_provenance_lost and (
+        args.provenance_loss_action
+        != "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+        or args.provenance_loss_issue != 739
+        or args.confirm_release_quarantine
+        or supplied
+        or any(
+            getattr(args, field) is not None
+            for field in legacy_approval_fields
+        )
+    ):
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_INVALID",
+            args.format,
+        )
+    normal_reconciliation_fields = (
+        "expected_activation_hash",
+        "correlation_id",
+        *legacy_approval_fields,
+    )
+    if not args.confirm_provenance_lost and any(
+        getattr(args, field) is None for field in normal_reconciliation_fields
+    ):
+        return _emit_bff_azure_interruption_error(
+            "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED", args.format
+        )
     if supplied and not args.confirm_release_quarantine:
         return _emit_bff_azure_interruption_error(
             "FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED", args.format
@@ -8900,6 +8976,68 @@ def _run_bff_azure_function_deployment_command(
         return _emit_bff_azure_interruption_error(
             "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID", args.format
         )
+    if args.confirm_provenance_lost:
+        try:
+            from nac_bff.azure_activation_runner import DEFAULT_OUTPUT_ROOT
+            from nac_bff.azure_function_deployment_reconciliation import (
+                classify_function_deployment_provenance_loss,
+                load_function_deployment_provenance_loss_confirmation,
+            )
+            from nac_bff.issue746_reconciliation_gate import (
+                identity_binding_sha256,
+                load_protected_identity_resolver,
+                resolve_authorized_operator,
+            )
+
+            repo_root = resolve_repo_root(args.repo_root)
+            request = _live_activation_request_from_args(args)
+            resolver = load_protected_identity_resolver(
+                repo_root=repo_root,
+                path=args.protected_identity_resolver_file,
+                expected_sha256=args.protected_identity_resolver_sha256,
+            )
+            operator = resolve_authorized_operator(
+                resolver, args.operator_account_id
+            )
+            principal_id = operator.get("principal_id")
+            if not isinstance(principal_id, str):
+                raise ValueError("operator principal unresolved")
+            confirmation = (
+                load_function_deployment_provenance_loss_confirmation(
+                    repo_root=repo_root,
+                    path=args.provenance_loss_confirmation_file,
+                    expected_sha256=(
+                        args.provenance_loss_confirmation_sha256
+                    ),
+                )
+            )
+            result = classify_function_deployment_provenance_loss(
+                repo_root=repo_root,
+                request=request,
+                confirmation=confirmation,
+                resolved_operator_account_id_sha256=identity_binding_sha256(
+                    "account-id", args.operator_account_id
+                ),
+                resolved_operator_principal_id_sha256=identity_binding_sha256(
+                    "principal-id", principal_id
+                ),
+                resolved_identity_resolver_sha256=(
+                    args.protected_identity_resolver_sha256
+                ),
+                reconciler_commit=args.reconciler_commit,
+                reconciler_tree=args.reconciler_tree,
+                reconciler_toolchain_sha256=(
+                    args.reconciler_toolchain_sha256
+                ),
+                output_root=DEFAULT_OUTPUT_ROOT,
+            )
+        except Exception:
+            return _emit_bff_azure_interruption_error(
+                "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID",
+                args.format,
+            )
+        _print_bff_azure_interruption_result(result, args.format)
+        return 2
     try:
         from nac_bff.azure_activation_composition import (
             CANONICAL_INTERRUPTION_OWNER_LOGIN,
@@ -9232,6 +9370,9 @@ def _redact_bff_azure_interruption_result(
     scalar_keys = (
         "schema_version",
         "status",
+        "reason_code",
+        "terminal",
+        "retry_allowed",
         "writes_started",
         "running_step",
         "failed_step",
@@ -9258,6 +9399,35 @@ def _redact_bff_azure_interruption_result(
     error = result.get("error")
     if isinstance(error, dict) and isinstance(error.get("code"), str):
         redacted["error"] = {"code": error["code"]}
+    if "next_phase" in result and result.get("next_phase") is None:
+        redacted["next_phase"] = None
+    operation_counts = result.get("operation_counts")
+    provenance_loss_counter_keys = {
+        "github_read_count",
+        "credential_access_count",
+        "network_access_count",
+        "subprocess_count",
+        "provider_read_count",
+        "provider_write_count",
+        "tenant_write_count",
+        "local_write_count",
+        "journal_append_count",
+        "quarantine_release_count",
+        "package_build_count",
+        "live_run_count",
+        "recovery_count",
+        "retry_count",
+        "rollback_count",
+        "deletion_count",
+    }
+    if (
+        isinstance(operation_counts, dict)
+        and set(operation_counts) == provenance_loss_counter_keys
+        and all(type(value) is int and value == 0 for value in operation_counts.values())
+    ):
+        redacted["operation_counts"] = {
+            key: operation_counts[key] for key in sorted(operation_counts)
+        }
 
     provider = result.get("provider_observation")
     if isinstance(provider, dict):

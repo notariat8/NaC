@@ -730,6 +730,53 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             validator.required_stable_error_codes(),
         )
 
+    def test_provenance_loss_is_terminal_without_follow_on_authority(self) -> None:
+        loss = self.contract["function_deployment_provenance_loss"]
+        self.assertEqual(loss["issue"], 739)
+        self.assertEqual(
+            loss["action"], "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+        )
+        self.assertEqual(loss["opens_gates"], [])
+        self.assertTrue(
+            loss["identity_resolver_sha256_bound_in_confirmation"]
+        )
+        self.assertEqual(
+            loss["owner_confirmation_evidence"],
+            "protected_confirmation_record_only",
+        )
+        self.assertFalse(loss["legacy_github_approval_arguments_required"])
+        self.assertFalse(loss["legacy_github_approval_arguments_allowed"])
+        self.assertEqual(
+            loss["original_lock_binding_source"],
+            "protected_confirmation_record",
+        )
+        self.assertFalse(loss["activation_plan_build_allowed"])
+        self.assertEqual(
+            loss["partial_expected_inventory"],
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID",
+        )
+        self.assertEqual(
+            loss["uninspectable_expected_inventory"],
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE",
+        )
+        self.assertEqual(
+            loss["exact_result"],
+            {
+                "status": "BLOCKED",
+                "reason_code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+                "terminal": True,
+                "retry_allowed": False,
+                "next_phase": None,
+                "cli_exit_code": 2,
+            },
+        )
+        self.assertTrue(
+            all(
+                type(value) is int and value == 0
+                for value in loss["operation_counts_closed"].values()
+            )
+        )
+
     def test_windows_matrix_blocks_before_every_side_effect_edge(self) -> None:
         matrix = self.contract["windows_fail_closed_matrix"]
         for edge in validator.REQUIRED_WINDOWS_EDGES:
@@ -738,7 +785,11 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
                     case = matrix[edge][side_effect]
                     self.assertEqual(case["missing_capability_status"], "BLOCKED")
                     self.assertFalse(case["write_allowed"])
-                    if edge in {"live", "recovery"}:
+                    if edge in {
+                        "live",
+                        "recovery",
+                        "function_deployment_provenance_loss",
+                    }:
                         self.assertEqual(case["status"], "BLOCKED")
                         self.assertFalse(case["reached_after_complete_preflight"])
                         self.assertEqual(
@@ -1249,6 +1300,9 @@ class M365BffFailedPartialSafeCompletionTests(unittest.TestCase):
             "live_gate_releases_local": lambda data: data["gates"]["ISSUE_632_NEW_LIVE_RUN"].__setitem__("authorizes", "three_local_append_only_release_records_only"),
             "missing_gate_authorization": lambda data: data["gates"]["SPEC_746_APPROVAL"].pop("authorizes"),
             "unknown_gate_authorization": lambda data: data["gates"]["SPEC_746_APPROVAL"].__setitem__("authorizes", "unknown"),
+            "provenance_unknown_field": lambda data: data[
+                "function_deployment_provenance_loss"
+            ].__setitem__("unexpected_field", "rejected"),
         }
         for case_id, mutate in mutations.items():
             with self.subTest(case_id=case_id):

@@ -1213,6 +1213,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "--provider-observation-sha256",
         "--provider-classification",
         "--baseline-expectation-sha256",
+        "--confirm-provenance-lost",
+        "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+        "load_function_deployment_provenance_loss_confirmation",
     ),
     M365_RUNNER_PATH: (
         "_safe_bff_http_denial", "Request failed with status code 403",
@@ -1283,6 +1286,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_stable_observation",
         "_repair_partial_release",
         "provider_write_count",
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+        "classify_function_deployment_provenance_loss",
+        "PROVENANCE_LOSS_COUNTER_KEYS",
     ),
     FUNCTION_DEPLOYMENT_RECONCILIATION_TEST_PATH: (
         "test_inspection_is_local_read_only_and_double_reads",
@@ -1290,6 +1296,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_exact_approval_releases_locks_without_changing_failed_run",
         "test_wrong_owner_or_hash_never_releases_a_lock",
         "test_crash_after_lock_append_is_recovered_idempotently",
+        "test_total_provenance_loss_is_terminal_and_has_closed_zero_counters",
+        "test_provenance_loss_rejects_wrong_binding_or_partial_inventory",
+        "test_provenance_loss_confirmation_loader_binds_hash_and_shape",
     ),
     INTERRUPTION_CONTRACT_PATH: (
         "RESOURCE_GROUP_ONLY",
@@ -2183,6 +2192,132 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         "domain",
         errors,
     )
+    provenance_loss = domain.get("function_deployment_provenance_loss")
+    expected_loss_counters = {
+        "github_read_count",
+        "credential_access_count",
+        "network_access_count",
+        "subprocess_count",
+        "provider_read_count",
+        "provider_write_count",
+        "tenant_write_count",
+        "local_write_count",
+        "journal_append_count",
+        "quarantine_release_count",
+        "package_build_count",
+        "live_run_count",
+        "recovery_count",
+        "retry_count",
+        "rollback_count",
+        "deletion_count",
+    }
+    expected_provenance_loss_keys = {
+        "issue",
+        "action",
+        "run_id",
+        "confirmation_schema",
+        "confirmation_source",
+        "confirmation_sha256_required",
+        "identity_resolver_required",
+        "identity_resolver_access",
+        "identity_resolver_sha256_bound_in_confirmation",
+        "principal_mode",
+        "owner_confirmation_evidence",
+        "legacy_github_approval_arguments_required",
+        "legacy_github_approval_arguments_allowed",
+        "ordinary_arguments_are_not_trusted_expected_values",
+        "canonical_run_path_source",
+        "original_lock_binding_source",
+        "activation_plan_build_allowed",
+        "expected_artifact_categories",
+        "positive_condition",
+        "partial_expected_inventory",
+        "uninspectable_expected_inventory",
+        "exact_result",
+        "operation_counts_closed",
+        "forbidden_sources",
+        "opens_gates",
+    }
+    if not isinstance(provenance_loss, dict):
+        errors.append("domain function deployment provenance-loss contract missing")
+    else:
+        if set(provenance_loss) != expected_provenance_loss_keys:
+            errors.append("domain function deployment provenance-loss keys differ")
+        _require_values(
+            provenance_loss,
+            {
+                "issue": 739,
+                "action": "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+                "run_id": "nac-bff-live-20260908-issue739-v4",
+                "confirmation_schema": (
+                    "nac.issue739-function-deployment-provenance-loss-confirmation/v1"
+                ),
+                "confirmation_source": (
+                    "repository_external_windows_sid_dacl_bound_file"
+                ),
+                "confirmation_sha256_required": True,
+                "identity_resolver_required": True,
+                "identity_resolver_access": "local_read_only",
+                "identity_resolver_sha256_bound_in_confirmation": True,
+                "principal_mode": "OWNER_SOLO_APPROVAL",
+                "owner_confirmation_evidence": (
+                    "protected_confirmation_record_only"
+                ),
+                "legacy_github_approval_arguments_required": False,
+                "legacy_github_approval_arguments_allowed": False,
+                "ordinary_arguments_are_not_trusted_expected_values": True,
+                "original_lock_binding_source": (
+                    "protected_confirmation_record"
+                ),
+                "activation_plan_build_allowed": False,
+                "canonical_run_path_source": (
+                    "fixed_output_root_plus_confirmed_activation_hash"
+                ),
+                "positive_condition": (
+                    "canonical_run_directory_and_all_three_confirmation_bound_original_lock_journals_absent"
+                ),
+                "partial_expected_inventory": (
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID"
+                ),
+                "uninspectable_expected_inventory": (
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE"
+                ),
+                "expected_artifact_categories": [
+                    "resume_state",
+                    "activation_evidence",
+                    "ledger",
+                    "target_lock_journal",
+                    "legacy_lock_journal",
+                    "legacy_host_lock_journal",
+                    "prepared_inputs_manifest",
+                    "function_package",
+                ],
+                "forbidden_sources": [
+                    "model_knowledge",
+                    "issue_text",
+                    "provider_state",
+                ],
+                "opens_gates": [],
+            },
+            "domain function deployment provenance loss",
+            errors,
+        )
+        if provenance_loss.get("exact_result") != {
+            "status": "BLOCKED",
+            "reason_code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+            "terminal": True,
+            "retry_allowed": False,
+            "next_phase": None,
+            "cli_exit_code": 2,
+        }:
+            errors.append("domain function deployment provenance-loss result differs")
+        counters = provenance_loss.get("operation_counts_closed")
+        if (
+            not isinstance(counters, dict)
+            or set(counters) != expected_loss_counters
+            or any(type(value) is not int or value != 0 for value in counters.values())
+        ):
+            errors.append("domain function deployment provenance-loss counters differ")
     steps = domain.get("steps")
     actual_steps = [
         (step.get("order"), step.get("id"))
@@ -3498,6 +3633,13 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP"
     ):
         errors.append("verification resume error code must be RESUME_DISABLED_FOR_MVP")
+    if failure_behavior.get("terminal_step_7_original_provenance_lost") != (
+        "return_local_BLOCKED_FUNCTION_DEPLOYMENT_PROVENANCE_LOST_with_"
+        "terminal_true_retry_false_next_phase_null_and_all_closed_operation_"
+        "counts_zero_without_github_credential_network_subprocess_provider_"
+        "tenant_journal_package_recovery_retry_or_live_access"
+    ):
+        errors.append("verification function provenance-loss behavior differs")
 
 
 def _validate_negative_assertions(

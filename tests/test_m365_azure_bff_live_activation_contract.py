@@ -69,6 +69,41 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             validator.validate(self.root),
         )
 
+    def test_function_provenance_loss_cannot_open_a_follow_on_gate(self) -> None:
+        payload = self._domain()
+        loss = payload["function_deployment_provenance_loss"]
+        loss["opens_gates"] = ["ISSUE_739_QUARANTINE_RELEASE"]
+        loss["exact_result"]["retry_allowed"] = True
+        loss["operation_counts_closed"]["provider_read_count"] = 1
+        self._write_domain(payload)
+
+        errors = validator.validate(self.root)
+
+        self.assertIn(
+            "domain function deployment provenance loss opens_gates must equal []",
+            errors,
+        )
+        self.assertIn(
+            "domain function deployment provenance-loss result differs",
+            errors,
+        )
+        self.assertIn(
+            "domain function deployment provenance-loss counters differ",
+            errors,
+        )
+
+    def test_function_provenance_loss_rejects_unknown_contract_fields(self) -> None:
+        payload = self._domain()
+        payload["function_deployment_provenance_loss"]["unexpected_field"] = (
+            "rejected"
+        )
+        self._write_domain(payload)
+
+        self.assertIn(
+            "domain function deployment provenance-loss keys differ",
+            validator.validate(self.root),
+        )
+
     def test_interruption_cli_owner_gate_mutation_fails(self) -> None:
         path = self.root / validator.CLI_PATH
         source = path.read_text(encoding="utf-8")

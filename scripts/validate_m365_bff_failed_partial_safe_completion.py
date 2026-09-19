@@ -133,6 +133,7 @@ REQUIRED_STATUS_COUNTER_HASH_CASES = {
 REQUIRED_WINDOWS_EDGES = {
     "live", "recovery", "interruption_reconciliation",
     "function_deployment_reconciliation",
+    "function_deployment_provenance_loss",
 }
 REQUIRED_WINDOWS_SIDE_EFFECTS = {
     "credential", "state", "lock", "network", "subprocess", "tenant", "provider",
@@ -275,6 +276,10 @@ EXPECTED_PR_FILES = {
     "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
 }
 REQUIRED_EXISTING_REGRESSIONS = {
+    "test_total_provenance_loss_is_terminal_and_has_closed_zero_counters",
+    "test_provenance_loss_rejects_wrong_binding_or_partial_inventory",
+    "test_provenance_loss_confirmation_loader_binds_hash_and_shape",
+    "test_provenance_loss_is_local_terminal_before_github_or_factory",
     "test_exact_approval_releases_locks_without_changing_failed_run",
     "test_wrong_owner_or_hash_never_releases_a_lock",
     "test_crash_after_lock_append_is_recovered_idempotently",
@@ -294,6 +299,7 @@ REQUIRED_ADAPTER_BOUNDARY_REGRESSIONS = {
     "test_adapter_forwards_bound_artifacts_with_per_call_timeout",
 }
 REQUIRED_NEW_TEST_METHODS = {
+    "test_provenance_loss_is_terminal_without_follow_on_authority",
     "test_contract_maps_every_acceptance_id_to_platform_command_and_evidence",
     "test_provenance_roles_are_distinct_and_not_runtime_state",
     "test_approval_replay_matrix_blocks_before_mutation",
@@ -319,6 +325,14 @@ REQUIRED_NEW_TEST_METHODS = {
     "test_ai_sbom_registers_issue746_agentic_contract_without_release_export",
 }
 _STABLE_ERROR_CODES = {
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_INVALID",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_REQUIRED",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_BINDING_INVALID",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_REQUIRED",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID",
+    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE",
     "FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED",
     "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED",
     "FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID",
@@ -457,12 +471,21 @@ def _reconciler_literal_error_codes() -> set[str]:
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
-            and node.func.id == "_blocked"
+            and node.func.id in {"_blocked", "_provenance_loss_blocked"}
             and node.args
             and isinstance(node.args[0], ast.Constant)
             and isinstance(node.args[0].value, str)
         ):
             codes.add(node.args[0].value)
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_provenance_loss_blocked"
+            and node.args
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == "PROVENANCE_LOSS"
+        ):
+            codes.add("FUNCTION_DEPLOYMENT_PROVENANCE_LOST")
         if (
             isinstance(node, ast.Assign)
             and any(
@@ -540,8 +563,12 @@ def _validate_ai_sbom(errors: list[str]) -> None:
         "approval_mode": "OWNER_SOLO_APPROVAL",
         "four_eyes_satisfied": False,
         "external_two_person_requirement": "not_applicable_no_cited_source_for_issue_746",
-        "provider_boundary": "read_only_contract_only",
-        "evidence_binding": "protected_resolver_sha256_and_canonical_hashes",
+        "provider_boundary": (
+            "local_terminal_classification_before_provider_access"
+        ),
+        "evidence_binding": (
+            "protected_confirmation_resolver_principal_and_original_lock_hashes"
+        ),
         "privacy_boundary": "synthetic_public_registry_real_mapping_repo_external",
         "release_export_enabled": False,
     }
@@ -603,7 +630,7 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("acceptance_ids must contain AC-746-01 through AC-746-08 in order")
     expected_blockers = {
         "protected_operational_provider_identity_resolution_pending",
-        "issue739_hash_bound_provenance_evidence_pending",
+        "issue739_original_provenance_lost_terminal",
         "windows_remote_ci_evidence_pending",
     }
     if contract.get("acceptance_status") != "BLOCKED":
@@ -865,6 +892,17 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
             "stable_error_codes_exact misses reconciler codes: "
             + ", ".join(sorted(missing_runtime_codes))
         )
+    missing_provenance_runtime_codes = {
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_BINDING_INVALID",
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID",
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE",
+    } - _reconciler_literal_error_codes()
+    if missing_provenance_runtime_codes:
+        errors.append(
+            "terminal provenance-loss runtime codes are missing: "
+            + ", ".join(sorted(missing_provenance_runtime_codes))
+        )
 
     windows = contract.get("windows_fail_closed_matrix")
     if _keys(windows) != REQUIRED_WINDOWS_EDGES:
@@ -883,7 +921,10 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
                     "write_allowed": False,
                     "required_gate": "not_authorized_by_issue746",
                 }
-                if edge in {"live", "recovery"}
+                if edge in {
+                    "live", "recovery",
+                    "function_deployment_provenance_loss",
+                }
                 else {
                     "status": "GUARDED_READ_ONLY",
                     "missing_capability_status": "BLOCKED",
@@ -940,9 +981,129 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     if contract.get("existing_reconciler_binding") != expected_reconciler_binding:
         errors.append("existing #739 reconciler binding differs")
 
+    provenance_loss = contract.get("function_deployment_provenance_loss")
+    expected_loss_counters = {
+        "github_read_count",
+        "credential_access_count",
+        "network_access_count",
+        "subprocess_count",
+        "provider_read_count",
+        "provider_write_count",
+        "tenant_write_count",
+        "local_write_count",
+        "journal_append_count",
+        "quarantine_release_count",
+        "package_build_count",
+        "live_run_count",
+        "recovery_count",
+        "retry_count",
+        "rollback_count",
+        "deletion_count",
+    }
+    expected_provenance_loss_keys = {
+        "issue",
+        "action",
+        "run_id",
+        "confirmation_schema",
+        "confirmation_source",
+        "confirmation_sha256_required",
+        "identity_resolver_required",
+        "identity_resolver_access",
+        "identity_resolver_sha256_bound_in_confirmation",
+        "principal_mode",
+        "owner_confirmation_evidence",
+        "legacy_github_approval_arguments_required",
+        "legacy_github_approval_arguments_allowed",
+        "ordinary_arguments_are_not_trusted_expected_values",
+        "canonical_run_path_source",
+        "original_lock_binding_source",
+        "activation_plan_build_allowed",
+        "expected_artifact_categories",
+        "positive_condition",
+        "partial_expected_inventory",
+        "uninspectable_expected_inventory",
+        "exact_result",
+        "operation_counts_closed",
+        "forbidden_sources",
+        "opens_gates",
+    }
+    if not isinstance(provenance_loss, dict):
+        errors.append("terminal #739 provenance-loss contract is missing")
+    else:
+        if set(provenance_loss) != expected_provenance_loss_keys:
+            errors.append("terminal #739 provenance-loss keys differ")
+        if (
+            provenance_loss.get("issue") != 739
+            or provenance_loss.get("action")
+            != "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+            or provenance_loss.get("run_id")
+            != "nac-bff-live-20260908-issue739-v4"
+            or provenance_loss.get("principal_mode") != "OWNER_SOLO_APPROVAL"
+            or provenance_loss.get(
+                "identity_resolver_sha256_bound_in_confirmation"
+            )
+            is not True
+            or provenance_loss.get("owner_confirmation_evidence")
+            != "protected_confirmation_record_only"
+            or provenance_loss.get("legacy_github_approval_arguments_required")
+            is not False
+            or provenance_loss.get("legacy_github_approval_arguments_allowed")
+            is not False
+            or provenance_loss.get("original_lock_binding_source")
+            != "protected_confirmation_record"
+            or provenance_loss.get("activation_plan_build_allowed") is not False
+            or provenance_loss.get("confirmation_sha256_required") is not True
+            or provenance_loss.get("identity_resolver_required") is not True
+            or provenance_loss.get("canonical_run_path_source")
+            != "fixed_output_root_plus_confirmed_activation_hash"
+            or provenance_loss.get("positive_condition")
+            != "canonical_run_directory_and_all_three_confirmation_bound_original_lock_journals_absent"
+            or provenance_loss.get("partial_expected_inventory")
+            != "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID"
+            or provenance_loss.get("uninspectable_expected_inventory")
+            != "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE"
+            or provenance_loss.get("expected_artifact_categories")
+            != [
+                "resume_state",
+                "activation_evidence",
+                "ledger",
+                "target_lock_journal",
+                "legacy_lock_journal",
+                "legacy_host_lock_journal",
+                "prepared_inputs_manifest",
+                "function_package",
+            ]
+            or provenance_loss.get("forbidden_sources")
+            != ["model_knowledge", "issue_text", "provider_state"]
+            or provenance_loss.get("ordinary_arguments_are_not_trusted_expected_values")
+            is not True
+            or provenance_loss.get("opens_gates") != []
+        ):
+            errors.append("terminal #739 provenance-loss binding differs")
+        if provenance_loss.get("exact_result") != {
+            "status": "BLOCKED",
+            "reason_code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+            "terminal": True,
+            "retry_allowed": False,
+            "next_phase": None,
+            "cli_exit_code": 2,
+        }:
+            errors.append("terminal #739 provenance-loss result differs")
+        counters = provenance_loss.get("operation_counts_closed")
+        if (
+            not isinstance(counters, dict)
+            or set(counters) != expected_loss_counters
+            or any(type(value) is not int or value != 0 for value in counters.values())
+        ):
+            errors.append("terminal #739 provenance-loss counters are not closed zero")
+
     if set(contract.get("required_existing_regressions", [])) != REQUIRED_EXISTING_REGRESSIONS:
         errors.append("required existing #739 regressions are incomplete")
-    elif not REQUIRED_EXISTING_REGRESSIONS.issubset(_method_names(RECONCILER_TEST_PATH)):
+    elif not REQUIRED_EXISTING_REGRESSIONS.issubset(
+        _method_names(RECONCILER_TEST_PATH) | _method_names(
+            REPO_ROOT / "tests" / "test_nac_bff_azure_activation_cli.py"
+        )
+    ):
         errors.append("required existing #739 regression methods are missing")
     if set(contract.get("required_adapter_boundary_regressions", [])) != REQUIRED_ADAPTER_BOUNDARY_REGRESSIONS:
         errors.append("required adapter-boundary regressions are incomplete")
@@ -1007,6 +1168,8 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
         'ACTION = "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT"',
         'FAILURE_CODE = "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"',
         'NOT_APPLIED = "FUNCTION_DEPLOYMENT_NOT_APPLIED"',
+        'PROVENANCE_LOSS = "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"',
+        "def classify_function_deployment_provenance_loss(",
         "_OBSERVATION_ERROR_CODES = frozenset",
     ):
         if marker not in reconciler_text:

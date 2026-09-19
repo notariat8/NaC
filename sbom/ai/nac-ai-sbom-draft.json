@@ -51,15 +51,15 @@
       {
         "id": "m365-bff-failed-partial-safe-completion-contract",
         "type": "agentic-verification-contract",
-        "description": "Offline verification contract for Issue #746; it does not execute reconciliation, release, authentication, tenant, provider, or live actions.",
+        "description": "Offline verification and local terminal-classification contract for Issue #746; the provenance-loss path executes before reconciliation ports and does not execute release, authentication, tenant, provider, package-build, subprocess, or live actions.",
         "artifact": "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
         "leading_issue": "https://github.com/notariat8/NaC/issues/746",
         "human_review_owner": "owner_solo_approval_source_bound",
         "approval_mode": "OWNER_SOLO_APPROVAL",
         "four_eyes_satisfied": false,
         "external_two_person_requirement": "not_applicable_no_cited_source_for_issue_746",
-        "provider_boundary": "read_only_contract_only",
-        "evidence_binding": "protected_resolver_sha256_and_canonical_hashes",
+        "provider_boundary": "local_terminal_classification_before_provider_access",
+        "evidence_binding": "protected_confirmation_resolver_principal_and_original_lock_hashes",
         "privacy_boundary": "synthetic_public_registry_real_mapping_repo_external",
         "release_export_enabled": false
       }
@@ -341,8 +341,8 @@
       {
         "id": "m365-bff-failed-partial-safe-completion-boundary",
         "component_ref": "m365-bff-failed-partial-safe-completion-contract",
-        "control": "Three non-interchangeable approval gates; source-bound OWNER_SOLO_APPROVAL is never four-eyes; the public registry is synthetic-only; a repository-external protected resolver binds exactly three known accounts to one principal and binds its SHA-256 to the approval; cited external two-person duties fail closed with BLOCKED_SINGLE_PRINCIPAL unless distinct qualified principals approve; Windows process execution is capability-gated and credential writes are blocked; provider and tenant writes remain separately hash-bound; evidence is canonical and redacted.",
-        "status": "acceptance_blocked_pending_protected_resolver_provenance_and_remote_ci"
+        "control": "Three non-interchangeable approval gates; source-bound OWNER_SOLO_APPROVAL is never four-eyes; the public registry is synthetic-only; a repository-external protected resolver binds exactly three known accounts to one principal; the local protected provenance-loss confirmation binds that resolver hash, the owner principal, the exact #739 run, and the original lock-binding hashes; the terminal classifier runs before subprocess, package-build, credential, network, or provider access and opens no #739 or #632 gate; cited external two-person duties fail closed with BLOCKED_SINGLE_PRINCIPAL unless distinct qualified principals approve; provider and tenant writes remain separately hash-bound; evidence is canonical and redacted.",
+        "status": "acceptance_blocked_issue739_provenance_lost_terminal_pending_remote_ci"
       }
     ],
     "key_performance_indicators": [

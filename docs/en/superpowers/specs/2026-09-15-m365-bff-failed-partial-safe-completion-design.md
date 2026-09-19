@@ -166,6 +166,10 @@ validation_commands:
   - python scripts/validate_m365_bff_failed_partial_safe_completion.py
   - python scripts/validate_m365_azure_bff_live_activation.py
   - python -m unittest discover -s tests -p test_activation_security*.py
+  - python -m unittest discover -s tests -p test_nac_bff_azure_function_deployment_reconciliation.py
+  - python -m unittest discover -s tests -p test_nac_bff_azure_activation_cli.py
+  - python -m unittest discover -s tests -p test_m365_azure_bff_live_activation_contract.py
+  - python -m unittest discover -s tests -p test_m365_bff_failed_partial_safe_completion.py
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -251,9 +255,44 @@ separate roles:
 - [#746](https://github.com/notariat8/NaC/issues/746) governs the secure Windows
   migration and later completion chain.
 
-Old evidence or old comments are not current approval. Local and provider state
-remains `UNVERIFIED` and therefore `BLOCKED` until the new Windows preflight and
-double read-only inspection freshly pass.
+Old evidence or old comments are not current approval. When the unchanged
+local #739 original artifacts exist, local and provider state remains
+`UNVERIFIED` and therefore `BLOCKED` until the new Windows preflight and double
+read-only inspection freshly pass.
+
+When the original artifacts of the exactly bound #739 run are completely lost
+and the owner explicitly confirms that loss, the chain instead ends locally
+and fail-closed. The trusted source of expected values is a repository-external
+confirmation record bound to the current Windows user SID and a restrictive
+DACL. The existing equally protected identity resolver maps the account bound
+in that record to the same stable approval-authorized principal in
+`OWNER_SOLO_APPROVAL` mode. The record binds the hash of the resolver in use
+and is itself the sole owner-confirmation evidence for this terminal
+disposition; old #632/#739 or #746 comments are neither required nor
+sufficient. The record binds exactly Issue `739`, action
+`CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, known run
+`nac-bff-live-20260908-issue739-v4`, activation hash, correlation ID, the
+canonical run path derived only from the hash, the original target and legacy
+lock-binding hashes, the expected artifact-category inventory, and the
+terminal effect. Its SHA-256 is supplied independently as a CLI binding;
+expected values, expected path, and original lock bindings never originate in
+the ordinary run arguments or a newly built activation plan.
+
+Only when the confirmation record, resolver including its hash, principal, and
+ordinary run arguments match field by field, the canonical run path and all
+three lock journals formed from the confirmed original lock-binding hashes are
+absent, and therefore none of the bound artifact categories exists at its
+expected location, is the
+single result exactly `status=BLOCKED`,
+`reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`,
+`retry_allowed=false`, `next_phase=null`; the CLI exit code is `2`. The path
+reconstructs nothing from model knowledge, issue text, or provider state,
+starts no GitHub, credential, network, subprocess, package build, tenant, live,
+recovery, or provider access, writes no file, and leaves every contract-enumerated
+operational counter at zero. A partial or uninspectable artifact set at the
+exactly bound expected locations, a
+different run identifier, hash, path, principal, or correlation ID remains a
+narrow binding or state error and is never classified as provenance loss.
 
 ## Evaluated Approaches
 
@@ -387,9 +426,19 @@ WINDOWS_IMPLEMENTATION_READY
   -> ISSUE_632_LIVE_APPROVAL
   -> ONE_WINDOWS_CONTROLLED_LIVE_RUN
   -> READ_ONLY_POST_VERIFY
+
+EXACT_ISSUE_739_ARTIFACTS_CONFIRMED_LOST
+  -> BLOCKED(reason=FUNCTION_DEPLOYMENT_PROVENANCE_LOST,
+             terminal=true, retry_allowed=false, next_phase=null)
 ```
 
 Each phase authorizes only the next phase. A blocked run authorizes no retry.
+
+The second path is exclusively local and terminal. It neither satisfies nor
+replaces a successful Windows preflight; it ends the chain because that
+preflight's bound input is demonstrably no longer available. It opens no later
+phase and, in particular, authorizes neither the #739 quarantine release nor
+#632 packaging or live action.
 
 ### Phase 0: Windows implementation
 
@@ -478,7 +527,10 @@ source evidence.
   conditions, and separate gates.
 - **AC-746-02 — Provenance separation:** #620, #632, #739, #743, #744, and #746
   remain separate; old evidence and comments are neither current state nor new
-  approval.
+  approval. Completely lost original artifacts of the exactly bound #739 run
+  produce only the terminal local state
+  `FUNCTION_DEPLOYMENT_PROVENANCE_LOST`; reconstruction or derivation from
+  GitHub or provider data is prohibited.
 - **AC-746-03 — Windows preflight:** All local bindings, SID and ACL checks, and
   reparse-point checks run on Windows before network access. Every deliberate
   drift returns `BLOCKED` with zero side-effect counters.
@@ -512,6 +564,9 @@ source evidence.
   perform no quarantine release, login, provider, tenant, credential, or live
   action. #739 and #632 remain separate hash-bound owner gates.
   A channel failure or HTTP 401 starts neither authentication nor a retry.
+  The terminal provenance-loss path runs before every GitHub, credential,
+  network, or provider port, writes no local evidence or journal, leaves every
+  operational counter at zero, and can authorize neither #739 nor #632.
 
 ## Validation Model
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -21,6 +22,40 @@ ACTION = "RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT"
 FAILED_STEP_ID = "deploy_function_package"
 FAILURE_CODE = "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS"
 NOT_APPLIED = "FUNCTION_DEPLOYMENT_NOT_APPLIED"
+PROVENANCE_LOSS = "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+PROVENANCE_LOSS_ACTION = "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+PROVENANCE_LOSS_RUN_ID = "nac-bff-live-20260908-issue739-v4"
+PROVENANCE_LOSS_CONFIRMATION_SCHEMA_VERSION = (
+    "nac.issue739-function-deployment-provenance-loss-confirmation/v1"
+)
+PROVENANCE_LOSS_ARTIFACT_CATEGORIES = (
+    "resume_state",
+    "activation_evidence",
+    "ledger",
+    "target_lock_journal",
+    "legacy_lock_journal",
+    "legacy_host_lock_journal",
+    "prepared_inputs_manifest",
+    "function_package",
+)
+PROVENANCE_LOSS_COUNTER_KEYS = (
+    "github_read_count",
+    "credential_access_count",
+    "network_access_count",
+    "subprocess_count",
+    "provider_read_count",
+    "provider_write_count",
+    "tenant_write_count",
+    "local_write_count",
+    "journal_append_count",
+    "quarantine_release_count",
+    "package_build_count",
+    "live_run_count",
+    "recovery_count",
+    "retry_count",
+    "rollback_count",
+    "deletion_count",
+)
 _APPROVAL_REFERENCE_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/739"
     r"#issuecomment-[1-9][0-9]*$"
@@ -127,6 +162,204 @@ class FunctionDeploymentReleaseApproval:
     reconciler_tree: str
     reconciler_toolchain_sha256: str
     required_owner_login: str
+
+
+@dataclass(frozen=True, slots=True)
+class FunctionDeploymentProvenanceLossConfirmation:
+    owner_confirmed: bool
+    issue: int
+    action: str
+    run_id: str
+    activation_hash: str
+    correlation_id: str
+    canonical_run_relative_path: str
+    expected_artifact_categories: tuple[str, ...]
+    operator_account_id_sha256: str
+    operator_principal_id_sha256: str
+    identity_resolver_sha256: str
+    target_lock_binding_sha256: str
+    legacy_lock_binding_sha256: str
+    reconciler_commit: str
+    reconciler_tree: str
+    reconciler_toolchain_sha256: str
+    terminal_status: str = "BLOCKED"
+    terminal_reason_code: str = PROVENANCE_LOSS
+    terminal: bool = True
+    retry_allowed: bool = False
+    next_phase: None = None
+
+
+def load_function_deployment_provenance_loss_confirmation(
+    *, repo_root: Path, path: Path, expected_sha256: str
+) -> FunctionDeploymentProvenanceLossConfirmation:
+    if not path.is_absolute() or not runner._SHA256_RE.fullmatch(expected_sha256):
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    normalized = Path(os.path.abspath(path))
+    try:
+        normalized.relative_to(repo_root.resolve())
+    except ValueError:
+        pass
+    else:
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    try:
+        from .activation_security_backend import get_platform_security_backend
+
+        backend = get_platform_security_backend()
+        binding = backend.inspect_private_path(
+            normalized, purpose="provenance-loss-confirmation"
+        )
+        if binding.size > 131072:
+            raise ValueError(
+                "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID"
+            )
+        with backend.open_bound_read(normalized, binding) as handle:
+            payload_bytes = handle.read(131073)
+    except ValueError:
+        raise
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID"
+        ) from exc
+    if (
+        len(payload_bytes) > 131072
+        or hashlib.sha256(payload_bytes).hexdigest() != expected_sha256
+    ):
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    try:
+        payload = json.loads(
+            payload_bytes.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID"
+        ) from exc
+    expected_keys = {
+        "schema_version",
+        "owner_confirmed",
+        "issue",
+        "action",
+        "run_id",
+        "activation_hash",
+        "correlation_id",
+        "canonical_run_relative_path",
+        "expected_artifact_categories",
+        "operator_account_id_sha256",
+        "operator_principal_id_sha256",
+        "identity_resolver_sha256",
+        "target_lock_binding_sha256",
+        "legacy_lock_binding_sha256",
+        "reconciler_commit",
+        "reconciler_tree",
+        "reconciler_toolchain_sha256",
+        "terminal_status",
+        "terminal_reason_code",
+        "terminal",
+        "retry_allowed",
+        "next_phase",
+    }
+    if not isinstance(payload, dict) or set(payload) != expected_keys:
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    if payload.pop("schema_version") != PROVENANCE_LOSS_CONFIRMATION_SCHEMA_VERSION:
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    categories = payload.get("expected_artifact_categories")
+    if not isinstance(categories, list) or not all(
+        isinstance(item, str) for item in categories
+    ):
+        raise ValueError("FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID")
+    payload["expected_artifact_categories"] = tuple(categories)
+    try:
+        return FunctionDeploymentProvenanceLossConfirmation(**payload)
+    except TypeError as exc:
+        raise ValueError(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID"
+        ) from exc
+
+
+def classify_function_deployment_provenance_loss(
+    *,
+    repo_root: Path,
+    request: runner.LiveActivationRequest,
+    confirmation: FunctionDeploymentProvenanceLossConfirmation,
+    resolved_operator_account_id_sha256: str,
+    resolved_operator_principal_id_sha256: str,
+    resolved_identity_resolver_sha256: str,
+    reconciler_commit: str,
+    reconciler_tree: str,
+    reconciler_toolchain_sha256: str,
+    output_root: Path = runner.DEFAULT_OUTPUT_ROOT,
+) -> dict[str, Any]:
+    expected_relative = (
+        f"{runner.DEFAULT_OUTPUT_ROOT.as_posix()}/{request.expected_activation_hash}"
+    )
+    binding_valid = (
+        confirmation.owner_confirmed is True
+        and confirmation.issue == 739
+        and confirmation.action == PROVENANCE_LOSS_ACTION
+        and confirmation.run_id == PROVENANCE_LOSS_RUN_ID
+        and request.correlation_id == PROVENANCE_LOSS_RUN_ID
+        and confirmation.correlation_id == request.correlation_id
+        and confirmation.activation_hash == request.expected_activation_hash
+        and confirmation.canonical_run_relative_path == expected_relative
+        and confirmation.expected_artifact_categories
+        == PROVENANCE_LOSS_ARTIFACT_CATEGORIES
+        and confirmation.operator_account_id_sha256
+        == resolved_operator_account_id_sha256
+        and confirmation.operator_principal_id_sha256
+        == resolved_operator_principal_id_sha256
+        and confirmation.identity_resolver_sha256
+        == resolved_identity_resolver_sha256
+        and confirmation.reconciler_commit == reconciler_commit
+        and confirmation.reconciler_tree == reconciler_tree
+        and confirmation.reconciler_toolchain_sha256
+        == reconciler_toolchain_sha256
+        and confirmation.terminal_status == "BLOCKED"
+        and confirmation.terminal_reason_code == PROVENANCE_LOSS
+        and confirmation.terminal is True
+        and confirmation.retry_allowed is False
+        and confirmation.next_phase is None
+        and runner._SHA256_RE.fullmatch(request.expected_activation_hash)
+        and runner._COMMIT_RE.fullmatch(reconciler_commit)
+        and runner._COMMIT_RE.fullmatch(reconciler_tree)
+        and runner._SHA256_RE.fullmatch(reconciler_toolchain_sha256)
+        and runner._SHA256_RE.fullmatch(resolved_operator_account_id_sha256)
+        and runner._SHA256_RE.fullmatch(resolved_operator_principal_id_sha256)
+        and runner._SHA256_RE.fullmatch(resolved_identity_resolver_sha256)
+        and runner._SHA256_RE.fullmatch(
+            confirmation.target_lock_binding_sha256
+        )
+        and runner._SHA256_RE.fullmatch(
+            confirmation.legacy_lock_binding_sha256
+        )
+    )
+    if not binding_valid:
+        return _provenance_loss_blocked(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_BINDING_INVALID"
+        )
+    run_dir, error = interruption._resolve_run_dir(
+        repo_root, output_root, request.expected_activation_hash
+    )
+    if error or run_dir is None:
+        return _provenance_loss_blocked(error or "OUTPUT_SCOPE_REJECTED")
+    paths = (
+        run_dir,
+        runner._HOST_LOCK_ROOT.expanduser().absolute()
+        / f"{confirmation.target_lock_binding_sha256}.lock",
+        runner._HOST_LOCK_ROOT.expanduser().absolute()
+        / f"{confirmation.legacy_lock_binding_sha256}.lock",
+        runner._LEGACY_HOST_LOCK_ROOT.expanduser().absolute()
+        / f"{confirmation.legacy_lock_binding_sha256}.lock",
+    )
+    try:
+        if any(_path_entry_exists(path) for path in paths):
+            return _provenance_loss_blocked(
+                "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID"
+            )
+    except OSError:
+        return _provenance_loss_blocked(
+            "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE"
+        )
+    return _provenance_loss_blocked(PROVENANCE_LOSS, terminal=True)
 
 
 def inspect_azure_bff_function_deployment_failure(
@@ -1267,6 +1500,48 @@ def _checkpoint(
 ) -> None:
     if fault_injector is not None:
         fault_injector(point)
+
+
+def _reject_duplicate_json_keys(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _path_entry_exists(path: Path) -> bool:
+    try:
+        os.lstat(path)
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def _provenance_loss_blocked(
+    code: str, *, terminal: bool = False
+) -> dict[str, Any]:
+    safe_code = runner._safe_error_code(code)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "status": "BLOCKED",
+        "reason_code": safe_code,
+        "error": {"code": safe_code},
+        "terminal": terminal,
+        "retry_allowed": False,
+        "next_phase": None,
+        "writes_started": False,
+        "resume_enabled": False,
+        "operation_counts": {
+            key: 0 for key in PROVENANCE_LOSS_COUNTER_KEYS
+        },
+        "provider_write_count": 0,
+        "automatic_rollback_count": 0,
+        "automatic_deletion_count": 0,
+    }
 
 
 def _blocked(code: str, *, writes_started: bool = False) -> dict[str, Any]:

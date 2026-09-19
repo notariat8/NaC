@@ -51,6 +51,10 @@ existing platform block remains fail-closed.
    artifacts are neither rewritten nor reconstructed.
 7. **One gate per effect:** #746 reconciliation, #739 journal release, and #632
    live run remain non-interchangeable.
+8. **Loss is terminal:** When the exactly bound #739 original artifacts are
+   completely lost, the local path ends with
+   `FUNCTION_DEPLOYMENT_PROVENANCE_LOST`; no provider reconciliation or
+   approval phase may follow.
 
 ## Change Surfaces
 
@@ -82,7 +86,8 @@ duplicate implementations are prohibited.
 | 0 Implementation | approved specification `8a51727c` and plan approval | code, tests, contracts, docs, local Windows validation | `WINDOWS_IMPLEMENTATION_READY` | red mandatory gate | repository only |
 | 1 PR evidence | clean implementation commit | push after separate approval, Windows CI, complete PR diff | `WINDOWS_REMOTE_CI_READY` | missing/red check or scope drift | GitHub branch/PR |
 | 2 #746 gate | final commit/tree, contract, backend, toolchain, resolver, and principal binding | new `OWNER_SOLO_APPROVAL` | `WINDOWS_RECONCILIATION_APPROVED` | binding or governance error | GitHub comment |
-| 3 Windows preflight | unchanged #739 artifacts | read local bindings only | `WINDOWS_PREFLIGHT_READY` | drift, ACL/reparse/lock/toolchain error | none |
+| 3a Windows preflight | unchanged #739 artifacts | read local bindings only | `WINDOWS_PREFLIGHT_READY` | drift, ACL/reparse/lock/toolchain error | none |
+| 3b terminal provenance loss | DACL/SID-protected local owner record, protected resolver, stable principal, exact issue/action/run/hash/correlation/path/inventory binding, and complete absence at the expected locations | local existence and binding checks only | `status=BLOCKED`, `reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`, `retry_allowed=false`, `next_phase=null`, exit `2` | any mismatch, partial inventory, uninspectable storage, or existing artifacts at the bound expected locations | none; closed enumerated operational counters `0` |
 | 4 Provider inspection | successful preflight, existing non-writing auth context | exactly two bound read-only snapshots | `FUNCTION_DEPLOYMENT_NOT_APPLIED` | auth requirement, drift, unknown output, deployment | none |
 | 5 #739 gate | identical snapshot hashes and new exact approval | three deterministic journal appends | `LOCK_JOURNALS_RELEASED` | replay, tail, hash, or order error | three local appends only |
 | 6 #632 package | clean bound state after phase 5 | Windows-native offline packaging | `ISSUE_632_PACKAGE_READY` | build or binding error | local offline artifacts |
@@ -92,6 +97,8 @@ duplicate implementations are prohibited.
 
 Only phase 0 and local synthetic validation run in the current implementation
 turn. Every later phase has its own gate.
+Phase 3b is not an alternative gate for phase 3a but a terminal end state; it
+cannot open phases 4 through 9.
 
 ## Target Contract of the Windows Security Backend
 
@@ -286,6 +293,35 @@ rewrite and expect blocking without credential mutation. Two provider responses
 are immediately reduced to the same allowlisted canonical projection. Only
 identical hashes classified as `FUNCTION_DEPLOYMENT_NOT_APPLIED` open the
 separate #739 gate.
+
+**Terminal loss path:** Before the productive #746 gate and before the port
+factory, a dedicated local CLI path reads a repository-external owner
+confirmation record bound by Windows SID/DACL and SHA-256 plus the existing
+protected identity resolver. The resolver must map the confirming account to
+an active `OWNER_SOLO_APPROVAL` principal with the process role and
+qualification. The record binds the resolver hash in use and is itself the sole
+owner-confirmation evidence for this terminal path; old #632/#739 or #746
+comments are neither required nor sufficient. The record is the trusted source
+of expected values and binds
+action `CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, Issue `739`, run ID
+`nac-bff-live-20260908-issue739-v4`, activation hash, correlation ID, canonical
+run path, the original target/legacy lock-binding hashes, complete expected
+artifact inventory, resolver, operator account, and principal hashes, and the
+exact terminal contract. The ordinary run arguments are only a
+second comparison channel and must not determine expected values or path.
+
+The path verifies only local facts: every record, resolver, principal, and run
+binding; absence of the canonical hash directory; and absence of the three
+lock journals formed from the original target/legacy lock hashes bound in the
+confirmation record. It builds neither a current activation plan nor a Function
+package and starts no subprocess. Only the complete expected inventory counts
+as bound; a partial or uninspectable inventory at the bound expected locations
+and any mismatch yield a narrow binding or state error. Positive and
+negative tests prove the exact `BLOCKED` result plus reason, terminal, retry,
+next-phase fields, and exit `2`. Sentinel tests forbid every GitHub, DNS/HTTP/
+network, subprocess, credential, provider, tenant, live, recovery, retry,
+packaging, #739 release, #632 authorization, file-write, and journal path. The
+contract enumerates those counters as a closed set; every counter remains `0`.
 
 ### 9. Windows resolver and approval bindings
 
@@ -527,13 +563,13 @@ validation command has live authority.
 | AC | Primary artifacts | Positive evidence | Negative evidence | Expected result |
 | --- | --- | --- | --- | --- |
 | AC-746-01 | DE/EN specification and plan, contract | parity validator and normalized gate table | missing or changed section | `BLOCKED` |
-| AC-746-02 | provenance and approval matrix | separate #620/#632/#739/#743/#744/#746 roles | cross-issue replay | `BLOCKED` |
+| AC-746-02 | provenance and approval matrix, protected local confirmation record | exact #739 run, principal, and complete expected inventory absent from bound expected locations | partial or uninspectable inventory at those locations, wrong principal, run, issue, action, hash, correlation ID, or path | `BLOCKED` + `FUNCTION_DEPLOYMENT_PROVENANCE_LOST` only for the exact confirmed loss case |
 | AC-746-03 | Windows backend, runner, preflight | complete binding before network | drift per field, ACL, reparse, lock | all side-effect counters `0` |
 | AC-746-04 | reconciler and snapshot projection | two identical `NOT_APPLIED` snapshots | drift, redirect, auth requirement, unknown field | zero write counters |
 | AC-746-05 | backend, toolchain, Job Object | complete Windows capabilities | missing individual capability | `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` or narrow Windows code |
 | AC-746-06 | gate, mutex, and journal tests | identical approval completes true prefix | different hash, tail, order, abandoned lock | no retry |
 | AC-746-07 | traceability, tooling, CI | Windows gates and complete matrix pass | missing Windows check or Linux-only requirement | `BLOCKED` |
-| AC-746-08 | side-effect counters and PR diff | implementation local and synthetic only | login, provider, tenant, credential, or live edge | all operational counters `0` |
+| AC-746-08 | closed counter schema and PR diff | terminal result with `next_phase=null`, exit `2`, and every counter `0` | call to GitHub, network/DNS/HTTP, subprocess, credential, provider, tenant, live, recovery/retry, packaging, #739 release, #632 authorization, file, or journal write | `BLOCKED`, terminal, no next phase |
 
 ## Planned Commit Sequence
 
