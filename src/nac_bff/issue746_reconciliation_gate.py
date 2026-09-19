@@ -417,7 +417,7 @@ def _git_read(
         }
     )
     try:
-        if os.name == "nt":
+        if _is_windows():
             from .activation_security_backend import (
                 ProcessSpec,
                 get_platform_security_backend,
@@ -472,6 +472,10 @@ def _git_read(
     if return_code != 0:
         raise Issue746ReconciliationGateError("git snapshot unavailable")
     return output.rstrip("\n")
+
+
+def _is_windows() -> bool:
+    return os.name == "nt"
 
 
 def read_clean_git_snapshot(

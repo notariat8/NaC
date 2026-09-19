@@ -196,13 +196,17 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
 
     def test_git_snapshot_uses_attested_binary_and_neutral_configuration(self) -> None:
         backend = Mock()
+        executable = (REPO_ROOT / "synthetic-git.exe").resolve()
         backend.inspect_private_path.return_value = SimpleNamespace(sha256="f" * 64)
         backend.launch_attested_process.return_value = SimpleNamespace(
             exit_code=0,
             stdout=b"value\n",
         )
         with (
-            patch("nac_bff.issue746_reconciliation_gate.os.name", "nt"),
+            patch(
+                "nac_bff.issue746_reconciliation_gate._is_windows",
+                return_value=True,
+            ),
             patch(
                 "nac_bff.activation_security_backend.get_platform_security_backend",
                 return_value=backend,
@@ -213,7 +217,7 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
                     REPO_ROOT,
                     "rev-parse",
                     "HEAD",
-                    executable=Path("C:/Git/git.exe"),
+                    executable=executable,
                     executable_sha256="f" * 64,
                 ),
                 "value",
@@ -228,9 +232,13 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
 
     def test_git_snapshot_rejects_digest_not_bound_by_resolver(self) -> None:
         backend = Mock()
+        executable = (REPO_ROOT / "synthetic-git.exe").resolve()
         backend.inspect_private_path.return_value = SimpleNamespace(sha256="e" * 64)
         with (
-            patch("nac_bff.issue746_reconciliation_gate.os.name", "nt"),
+            patch(
+                "nac_bff.issue746_reconciliation_gate._is_windows",
+                return_value=True,
+            ),
             patch(
                 "nac_bff.activation_security_backend.get_platform_security_backend",
                 return_value=backend,
@@ -241,7 +249,7 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
                     REPO_ROOT,
                     "rev-parse",
                     "HEAD",
-                    executable=Path("C:/Git/git.exe"),
+                    executable=executable,
                     executable_sha256="f" * 64,
                 )
         backend.launch_attested_process.assert_not_called()
