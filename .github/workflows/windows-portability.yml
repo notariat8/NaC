@@ -30,26 +30,45 @@ jobs:
       - name: Configure private Windows test workspace
         shell: pwsh
         run: |
+          $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+          function Set-PrivateAcl {
+            param(
+              [Parameter(Mandatory = $true)][string]$LiteralPath,
+              [Parameter(Mandatory = $true)][bool]$Directory
+            )
+            $security = if ($Directory) {
+              [System.Security.AccessControl.DirectorySecurity]::new()
+            } else {
+              [System.Security.AccessControl.FileSecurity]::new()
+            }
+            $security.SetOwner($currentIdentity.User)
+            $security.SetAccessRuleProtection($true, $false)
+            $inheritance = if ($Directory) {
+              [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+            } else {
+              [System.Security.AccessControl.InheritanceFlags]::None
+            }
+            foreach ($sidValue in @($currentIdentity.User.Value, "S-1-5-18", "S-1-5-32-544")) {
+              $sid = [System.Security.Principal.SecurityIdentifier]::new($sidValue)
+              $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+                $sid,
+                [System.Security.AccessControl.FileSystemRights]::FullControl,
+                $inheritance,
+                [System.Security.AccessControl.PropagationFlags]::None,
+                [System.Security.AccessControl.AccessControlType]::Allow
+              )
+              $security.AddAccessRule($rule) | Out-Null
+            }
+            Set-Acl -LiteralPath $LiteralPath -AclObject $security
+          }
+          $workspaceEntries = Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force -Recurse | Sort-Object { $_.FullName.Length } -Descending
+          foreach ($entry in $workspaceEntries) {
+            Set-PrivateAcl -LiteralPath $entry.FullName -Directory $entry.PSIsContainer
+          }
+          Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true
           $privateRoot = Join-Path $env:RUNNER_TEMP "nac-private-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           New-Item -ItemType Directory -Path $privateRoot -Force | Out-Null
-          $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-          $directorySecurity = [System.Security.AccessControl.DirectorySecurity]::new()
-          $directorySecurity.SetOwner($currentIdentity.User)
-          $directorySecurity.SetAccessRuleProtection($true, $false)
-          $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-          $propagation = [System.Security.AccessControl.PropagationFlags]::None
-          foreach ($sidValue in @($currentIdentity.User.Value, "S-1-5-18", "S-1-5-32-544")) {
-            $sid = [System.Security.Principal.SecurityIdentifier]::new($sidValue)
-            $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
-              $sid,
-              [System.Security.AccessControl.FileSystemRights]::FullControl,
-              $inheritance,
-              $propagation,
-              [System.Security.AccessControl.AccessControlType]::Allow
-            )
-            $directorySecurity.AddAccessRule($rule) | Out-Null
-          }
-          Set-Acl -LiteralPath $privateRoot -AclObject $directorySecurity
+          Set-PrivateAcl -LiteralPath $privateRoot -Directory $true
           $sitecustomize = @'
           import ctypes
           import os

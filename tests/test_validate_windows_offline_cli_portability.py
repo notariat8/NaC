@@ -222,6 +222,25 @@ class WindowsPortabilityValidatorTests(unittest.TestCase):
             "Windows portability workflow contains forbidden secret expression", errors
         )
 
+    def test_private_checkout_acl_binding_removal_is_rejected(self) -> None:
+        temporary, root = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        workflow = root / ".github/workflows/windows-portability.yml"
+        workflow.write_text(
+            workflow.read_text(encoding="utf-8").replace(
+                "Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true",
+                "Write-Output 'checkout ACL binding removed'",
+            ),
+            encoding="utf-8",
+        )
+        errors: list[str] = []
+        _validate_windows_portability(root, errors)
+        self.assertIn(
+            "Windows portability private checkout binding missing: "
+            "Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true",
+            errors,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

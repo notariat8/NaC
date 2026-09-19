@@ -1731,6 +1731,14 @@ def _validate_windows_portability(
         errors.append("Windows portability read-only permissions missing")
     if "persist-credentials: false" not in workflow_text:
         errors.append("Windows portability checkout credentials must not persist")
+    for marker in (
+        "function Set-PrivateAcl",
+        "Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true",
+    ):
+        if marker not in workflow_text:
+            errors.append(
+                f"Windows portability private checkout binding missing: {marker}"
+            )
     forbidden_markers = (
         "continue-on-error",
         "secrets.",
