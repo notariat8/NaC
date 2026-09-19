@@ -1054,6 +1054,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             "user": {"login": "ofunk"},
             "author_association": "OWNER",
             "html_url": APPROVAL_REFERENCE,
+            "issue_url": "https://api.github.com/repos/notariat8/NaC/issues/632",
             "created_at": "2026-07-14T10:00:00Z",
             "updated_at": "2026-07-14T10:00:00Z",
             "body": body,
@@ -1133,6 +1134,37 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
         )
 
+    def test_live_approval_rejects_issue_739_before_github_read(self) -> None:
+        temporary, request, context, plan, _comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        request = replace(
+            request,
+            owner_approval_reference=(
+                "https://github.com/notariat8/NaC/issues/739"
+                "#issuecomment-123456789"
+            ),
+        )
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        with patch.object(verifier, "_gh_json") as github:
+            result = verifier.verify(request, context, plan)
+        self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
+        github.assert_not_called()
+
+    def test_live_approval_requires_issue_632_api_binding(self) -> None:
+        temporary, request, context, plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        comment["issue_url"] = "https://api.github.com/repos/notariat8/NaC/issues/739"
+        result = self._verify(request, context, plan, comment)
+        self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_MISMATCH")
+
     def test_exact_immutable_owner_comment_verification_is_generic(self) -> None:
         temporary, _request, context, _plan, comment = self._fixture()
         self.addCleanup(temporary.cleanup)
@@ -1149,6 +1181,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
         comment.update(
             body=expected_body,
             html_url=TERMINALIZATION_APPROVAL_REFERENCE,
+            issue_url="https://api.github.com/repos/notariat8/NaC/issues/717",
         )
         expected_sha256 = _sha256_text(expected_body)
         with patch.object(verifier, "_gh_json", return_value=comment):
@@ -1173,6 +1206,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             "#issuecomment-987654322"
         )
         comment["html_url"] = baseline_reference
+        comment["issue_url"] = "https://api.github.com/repos/notariat8/NaC/issues/719"
         with patch.object(verifier, "_gh_json", return_value=comment):
             baseline_result = verifier.verify_owner_comment(
                 reference=baseline_reference,
@@ -1203,6 +1237,83 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             )
         self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
         github.assert_not_called()
+
+    def test_function_deployment_owner_comment_accepts_only_issue_739(self) -> None:
+        temporary, _request, context, _plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+            owner_comment_issue_numbers=(739,),
+        )
+        expected_body = "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASE_APPROVAL\n{}"
+        reference = (
+            "https://github.com/notariat8/NaC/issues/739"
+            "#issuecomment-987654321"
+        )
+        comment.update(
+            body=expected_body,
+            html_url=reference,
+            issue_url="https://api.github.com/repos/notariat8/NaC/issues/739",
+        )
+        expected_sha256 = _sha256_text(expected_body)
+        with patch.object(verifier, "_gh_json", return_value=comment) as github:
+            result = verifier.verify_owner_comment(
+                reference=reference,
+                expected_body=expected_body,
+                expected_body_sha256=expected_sha256,
+            )
+        self.assertEqual(result["status"], "VERIFIED")
+        github.assert_called_once()
+        for rejected_issue in (632, 717, 719):
+            rejected = (
+                f"https://github.com/notariat8/NaC/issues/{rejected_issue}"
+                "#issuecomment-987654321"
+            )
+            with self.subTest(issue=rejected_issue), patch.object(
+                verifier, "_gh_json"
+            ) as forbidden:
+                blocked = verifier.verify_owner_comment(
+                    reference=rejected,
+                    expected_body=expected_body,
+                    expected_body_sha256=expected_sha256,
+                )
+            self.assertEqual(blocked["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
+            forbidden.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows credential-write guard")
+    def test_windows_github_read_enforces_credential_write_guard(self) -> None:
+        temporary, _request, context, _plan, _comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh.exe"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        backend = Mock()
+        backend.inspect_private_path.return_value = SimpleNamespace(
+            sha256=hashlib.sha256(gh.read_bytes()).hexdigest()
+        )
+        backend.launch_attested_process.return_value = SimpleNamespace(
+            exit_code=0,
+            stdout=b"{}",
+            stderr=b"",
+        )
+        with patch(
+            "nac_bff.activation_security_backend.get_platform_security_backend",
+            return_value=backend,
+        ):
+            self.assertEqual(verifier._gh_json(("api", "synthetic")), {})
+        spec = backend.launch_attested_process.call_args.args[0]
+        self.assertTrue(spec.credential_write_guard)
 
 
     def test_valid_organization_member_snapshot_passes(self) -> None:
@@ -5420,6 +5531,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=GH_CLI_SHA256,
             environ={},
+            owner_comment_issue_numbers=(717, 719),
         )
         azure.assert_called_once()
 

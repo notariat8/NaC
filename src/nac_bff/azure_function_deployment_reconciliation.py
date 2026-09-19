@@ -107,6 +107,7 @@ _APPROVAL_BINDING_KEYS = {
     "reconciler_tree",
     "reconciler_toolchain_sha256",
     "required_owner_login",
+    "required_owner_principal_id_sha256",
 }
 
 
@@ -138,6 +139,7 @@ class FunctionDeploymentReconcilerBinding:
     approved_tree: str
     toolchain_sha256: str
     required_owner_login: str
+    required_owner_principal_id_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +164,7 @@ class FunctionDeploymentReleaseApproval:
     reconciler_tree: str
     reconciler_toolchain_sha256: str
     required_owner_login: str
+    required_owner_principal_id_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -492,7 +495,7 @@ def release_azure_bff_function_deployment_quarantine(
             if not _approval_matches(approval, inspection):
                 return _blocked("FUNCTION_DEPLOYMENT_APPROVAL_MISMATCH")
             owner_comment = inspection["owner_comment"]
-            if not interruption._verify_owner_comment(
+            if not _verify_function_owner_comment(
                 owner_comment_verifier,
                 reconciler_binding,
                 approval.owner_approval_reference,
@@ -532,7 +535,7 @@ def release_azure_bff_function_deployment_quarantine(
                 return _blocked(
                     "FUNCTION_DEPLOYMENT_APPROVAL_MISMATCH", writes_started=True
                 )
-            if not interruption._verify_owner_comment(
+            if not _verify_function_owner_comment(
                 owner_comment_verifier,
                 reconciler_binding,
                 approval.owner_approval_reference,
@@ -644,6 +647,9 @@ def _inspect_locked(
         "reconciler_tree": reconciler_binding.approved_tree,
         "reconciler_toolchain_sha256": reconciler_binding.toolchain_sha256,
         "required_owner_login": reconciler_binding.required_owner_login,
+        "required_owner_principal_id_sha256": (
+            reconciler_binding.required_owner_principal_id_sha256
+        ),
     }
     body = (
         "NAC_BFF_FUNCTION_DEPLOYMENT_RECONCILIATION_APPROVAL\n"
@@ -1312,6 +1318,8 @@ def _marker_is_valid(
         or bindings.get("reconciler_toolchain_sha256")
         != binding.toolchain_sha256
         or bindings.get("required_owner_login") != binding.required_owner_login
+        or bindings.get("required_owner_principal_id_sha256")
+        != binding.required_owner_principal_id_sha256
         or not isinstance(initial, dict)
         or set(initial) != set(_LOCK_NAMES)
     ):
@@ -1355,6 +1363,9 @@ def _approval_shape_is_valid(
         and approval.failed_step == FAILED_STEP_ID
         and _valid_timestamp(approval.failed_step_started_at_utc)
         and _OWNER_RE.fullmatch(approval.required_owner_login)
+        and runner._SHA256_RE.fullmatch(
+            approval.required_owner_principal_id_sha256
+        )
         and all(
             runner._SHA256_RE.fullmatch(value)
             for value in (
@@ -1427,6 +1438,9 @@ def _approval_bindings(
         "reconciler_tree": approval.reconciler_tree,
         "reconciler_toolchain_sha256": approval.reconciler_toolchain_sha256,
         "required_owner_login": approval.required_owner_login,
+        "required_owner_principal_id_sha256": (
+            approval.required_owner_principal_id_sha256
+        ),
     }
 
 
@@ -1442,9 +1456,52 @@ def _validate_bindings(
         or not runner._COMMIT_RE.fullmatch(binding.approved_tree)
         or not runner._SHA256_RE.fullmatch(binding.toolchain_sha256)
         or not _OWNER_RE.fullmatch(binding.required_owner_login)
+        or not runner._SHA256_RE.fullmatch(
+            binding.required_owner_principal_id_sha256
+        )
     ):
         return "FUNCTION_DEPLOYMENT_RECONCILER_BINDING_INVALID"
     return None
+
+
+def _verify_function_owner_comment(
+    verifier: ImmutableOwnerCommentVerifier,
+    binding: FunctionDeploymentReconcilerBinding,
+    reference: str,
+    body: str,
+    body_sha256: str,
+) -> bool:
+    if hashlib.sha256(body.encode("utf-8")).hexdigest() != body_sha256:
+        return False
+    try:
+        result = verifier.verify_owner_comment(
+            reference=reference,
+            expected_body=body,
+            expected_body_sha256=body_sha256,
+        )
+    except Exception:
+        return False
+    return bool(
+        isinstance(result, dict)
+        and set(result)
+        == {
+            "status",
+            "owner_login",
+            "owner_principal_id_sha256",
+            "immutable",
+            "reference",
+            "body",
+            "body_sha256",
+        }
+        and result.get("status") == "VERIFIED"
+        and result.get("owner_login") == binding.required_owner_login
+        and result.get("owner_principal_id_sha256")
+        == binding.required_owner_principal_id_sha256
+        and result.get("immutable") is True
+        and result.get("reference") == reference
+        and result.get("body") == body
+        and result.get("body_sha256") == body_sha256
+    )
 
 
 def _inspection_paths(

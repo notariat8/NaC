@@ -283,10 +283,13 @@ else:
 
     @unittest.skipUnless(os.name == "nt", "native Windows contract")
     def test_live_edges_require_bound_inputs_before_backends(self) -> None:
+        windows_block_codes = {
+            "bff-azure-activate-live": "ISSUE746_WINDOWS_LIVE_ACCESS_BLOCKED",
+            "bff-azure-activation-recovery": "ISSUE746_WINDOWS_RECOVERY_ACCESS_BLOCKED",
+        }
         for command in LIVE_COMMANDS:
             with self.subTest(command=command):
                 stdout = StringIO()
-                sys.modules.pop("nac_cli.cli", None)
                 from nac_cli import cli
                 if command in {
                     "bff-azure-activation-interruption-reconcile",
@@ -305,7 +308,7 @@ else:
                 self.assertEqual(result, 2)
                 self.assertEqual(
                     json.loads(stdout.getvalue())["error"],
-                    {"code": "OWNER_GATE_CLOSED"},
+                    {"code": windows_block_codes[command]},
                 )
 
     @unittest.skipUnless(os.name == "nt", "native Windows contract")
@@ -401,7 +404,13 @@ else:
                     self.assertEqual(result.returncode, 2, result.stderr)
                     self.assertEqual(
                         json.loads(result.stdout)["error"],
-                        {"code": "OWNER_GATE_CLOSED"},
+                        {
+                            "code": (
+                                "ISSUE746_WINDOWS_LIVE_ACCESS_BLOCKED"
+                                if command == "bff-azure-activate-live"
+                                else "ISSUE746_WINDOWS_RECOVERY_ACCESS_BLOCKED"
+                            )
+                        },
                     )
                     self._assert_child_import_trace_is_offline(environment)
 

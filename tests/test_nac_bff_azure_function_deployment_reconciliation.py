@@ -45,6 +45,7 @@ COMMIT = "b" * 40
 TREE = "d" * 40
 BODY_HASH = "e" * 64
 PERMISSION_HASH = "f" * 64
+OWNER_PRINCIPAL_SHA256 = "9" * 64
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
 )
@@ -168,8 +169,14 @@ class _ObservationPort:
 
 
 class _OwnerVerifier:
-    def __init__(self, *, owner: str = "approved-owner") -> None:
+    def __init__(
+        self,
+        *,
+        owner: str = "approved-owner",
+        principal_sha256: str = OWNER_PRINCIPAL_SHA256,
+    ) -> None:
         self.owner = owner
+        self.principal_sha256 = principal_sha256
 
     def verify_owner_comment(
         self, *, reference, expected_body, expected_body_sha256
@@ -177,6 +184,7 @@ class _OwnerVerifier:
         return {
             "status": "VERIFIED",
             "owner_login": self.owner,
+            "owner_principal_id_sha256": self.principal_sha256,
             "immutable": True,
             "reference": reference,
             "body": expected_body,
@@ -196,6 +204,7 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
             approved_tree="2" * 40,
             toolchain_sha256="3" * 64,
             required_owner_login="approved-owner",
+            required_owner_principal_id_sha256=OWNER_PRINCIPAL_SHA256,
         )
         if "provenance_loss" in self._testMethodName:
             return
@@ -613,6 +622,7 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
         port: _ObservationPort | None = None,
         approval: FunctionDeploymentReleaseApproval | None = None,
         owner: str = "approved-owner",
+        principal_sha256: str = OWNER_PRINCIPAL_SHA256,
         fault_injector=None,
     ) -> dict:
         with self._runtime_patches():
@@ -621,7 +631,9 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
                 request=_request(),
                 reconciler_binding=self.binding,
                 observation_port=port or _ObservationPort(),
-                owner_comment_verifier=_OwnerVerifier(owner=owner),
+                owner_comment_verifier=_OwnerVerifier(
+                    owner=owner, principal_sha256=principal_sha256
+                ),
                 approval=approval or self._approval(inspection),
                 pre_mutation_revalidate=lambda: None,
                 output_root=self.root / DEFAULT_OUTPUT_ROOT,
@@ -693,13 +705,16 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
         wrong_hash = self._approval(
             inspection, provider_observation_sha256="0" * 64
         )
-        for approval, owner in (
-            (wrong_hash, "approved-owner"),
-            (self._approval(inspection), "different-owner"),
+        for approval, owner, principal_sha256 in (
+            (wrong_hash, "approved-owner", OWNER_PRINCIPAL_SHA256),
+            (self._approval(inspection), "different-owner", "0" * 64),
         ):
             with self.subTest(owner=owner):
                 result = self._release(
-                    inspection, approval=approval, owner=owner
+                    inspection,
+                    approval=approval,
+                    owner=owner,
+                    principal_sha256=principal_sha256,
                 )
                 self.assertEqual(result["status"], "BLOCKED")
                 for path in self._lock_paths():
@@ -707,6 +722,21 @@ class FunctionDeploymentReconciliationTests(unittest.TestCase):
                         self._lock_marker(path),
                         {"activation_hash": ACTIVATION_HASH, "status": "HELD"},
                     )
+
+    def test_different_owner_login_with_same_principal_never_releases_a_lock(self) -> None:
+        inspection = self._inspect()
+        result = self._release(
+            inspection,
+            approval=self._approval(inspection),
+            owner="different-owner",
+            principal_sha256=OWNER_PRINCIPAL_SHA256,
+        )
+        self.assertEqual(result["status"], "BLOCKED")
+        for path in self._lock_paths():
+            self.assertEqual(
+                self._lock_marker(path),
+                {"activation_hash": ACTIVATION_HASH, "status": "HELD"},
+            )
 
     def test_crash_after_lock_append_is_recovered_idempotently(self) -> None:
         inspection = self._inspect()

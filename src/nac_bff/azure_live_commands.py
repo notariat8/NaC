@@ -1447,14 +1447,7 @@ def build_azure_cli_env(
         if system_root:
             child["SystemRoot"] = system_root
             child["WINDIR"] = system_root
-        child["PATH"] = os.pathsep.join(
-            part
-            for part in (
-                str(Path(sys.executable).resolve().parent),
-                source.get("PATH", ""),
-            )
-            if part
-        )
+        child["PATH"] = str(Path(sys.executable).resolve().parent)
     else:
         child["PATH"] = "/usr/bin:/bin"
     child["AZURE_CORE_COLLECT_TELEMETRY"] = "0"
@@ -1696,6 +1689,15 @@ def _run_azure_cli(
 
                 command_line = runtime.command(bound_argv)
                 executable = Path(command_line[0])
+                process_environment = build_azure_cli_env(environ)
+                runtime_root = runtime.attestation.runtime_root
+                if runtime_root is None:
+                    raise OSError("AZURE_CLI_RUNTIME_BINDING_FAILED")
+                process_environment["PATH"] = os.pathsep.join(
+                    str(path)
+                    for path in (runtime_root, runtime_root / "DLLs")
+                    if path.is_dir()
+                )
                 executable_sha256 = get_platform_security_backend().inspect_private_path(
                     executable, purpose="toolchain-executable"
                 ).sha256
@@ -1705,7 +1707,7 @@ def _run_azure_cli(
                             executable=executable,
                             arguments=tuple(command_line[1:]),
                             cwd=Path.cwd().resolve(),
-                            environment=build_azure_cli_env(environ),
+                            environment=process_environment,
                             executable_sha256=executable_sha256,
                             timeout_seconds=float(timeout_seconds),
                             maximum_output_bytes=8 * 1024 * 1024,
@@ -2710,8 +2712,11 @@ class _WindowsAzureCliRuntime:
             package_root = self.attestation.package_root
             if package_root is None:
                 raise SealedToolchainError("AZURE_CLI_RUNTIME_BINDING_FAILED")
+            runtime_root = self.attestation.runtime_root
+            if runtime_root is None:
+                raise SealedToolchainError("AZURE_CLI_RUNTIME_BINDING_FAILED")
             for current, directories, filenames in os.walk(
-                package_root, followlinks=False
+                runtime_root, followlinks=False
             ):
                 current_path = Path(current)
                 directories.sort(key=str.casefold)
@@ -2724,6 +2729,9 @@ class _WindowsAzureCliRuntime:
                     stack.enter_context(
                         backend.open_bound_read(module_path, binding)
                     )
+            measured, _code = _windows_toolchain_attestation(self.wrapper)
+            if measured is None or measured.digest != self.attestation.digest:
+                raise SealedToolchainError("AZURE_CLI_RUNTIME_BINDING_FAILED")
         except BaseException:
             stack.close()
             raise
@@ -2780,6 +2788,8 @@ class _ToolchainAttestation:
     interpreter_digest: str | None = None
     package_root: Path | None = None
     package_digest: str | None = None
+    runtime_root: Path | None = None
+    runtime_digest: str | None = None
     runtime_uids: frozenset[int] = frozenset()
 
 
@@ -2820,6 +2830,10 @@ def _windows_toolchain_attestation(
         package_digest = _windows_tree_digest(package_root)
         if package_digest is None:
             return None, "AZURE_CLI_BINARY_UNTRUSTED"
+        runtime_root = interpreter.parent
+        runtime_digest = _windows_tree_digest(runtime_root)
+        if runtime_digest is None:
+            return None, "AZURE_CLI_BINARY_UNTRUSTED"
         digest = _attestation_digest(
             ("schema", _ATTESTATION_SCHEMA),
             ("kind", "windows-python-package"),
@@ -2829,6 +2843,8 @@ def _windows_toolchain_attestation(
             ("interpreter_content", interpreter_binding.sha256),
             ("package_root", str(package_root)),
             ("package_tree", package_digest),
+            ("runtime_root", str(runtime_root)),
+            ("runtime_tree", runtime_digest),
         )
         return (
             _ToolchainAttestation(
@@ -2838,6 +2854,8 @@ def _windows_toolchain_attestation(
                 interpreter_digest=interpreter_binding.sha256,
                 package_root=package_root,
                 package_digest=package_digest,
+                runtime_root=runtime_root,
+                runtime_digest=runtime_digest,
             ),
             "AZURE_CLI_BINARY_TRUSTED",
         )

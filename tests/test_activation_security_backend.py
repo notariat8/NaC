@@ -36,21 +36,18 @@ class PlatformSecurityBackendSelectionTests(unittest.TestCase):
         self.assertTrue(capabilities.complete, capabilities.missing)
         self.assertEqual(capabilities.missing, ())
 
-    def test_posix_primitives_do_not_enable_complete_live_backend(self) -> None:
+    def test_linux_uses_existing_hermetic_posix_security_boundary(self) -> None:
         with (
             mock.patch.object(contract.os, "name", "posix"),
             mock.patch.object(contract.sys, "platform", "linux"),
             mock.patch.object(
                 contract,
-                "get_platform_security_backend",
-                side_effect=PlatformSecurityBackendUnavailable(),
+                "hermetic_posix_primitives_available",
+                return_value=True,
             ),
         ):
-            self.assertFalse(contract.platform_security_backend_available())
-            with self.assertRaisesRegex(
-                ActivationStepError, "^PLATFORM_SECURITY_BACKEND_UNAVAILABLE$"
-            ):
-                contract.require_platform_security_backend()
+            self.assertTrue(contract.platform_security_backend_available())
+            contract.require_platform_security_backend()
 
     def test_every_live_facade_edge_stops_at_complete_backend_gate(self) -> None:
         edges = (

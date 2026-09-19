@@ -1301,9 +1301,12 @@ class AzureBffInterruptionReconciliationTests(unittest.TestCase):
                 output_root=self.root / DEFAULT_OUTPUT_ROOT,
             )
 
-        self.assertEqual(
-            result["error"]["code"], "INTERRUPTION_LOCK_SET_CHANGED"
+        expected_code = (
+            "INTERRUPTION_RECONCILER_REVALIDATION_FAILED"
+            if os.name == "nt"
+            else "INTERRUPTION_LOCK_SET_CHANGED"
         )
+        self.assertEqual(result["error"]["code"], expected_code)
         marker_path = (
             self.root
             / DEFAULT_OUTPUT_ROOT

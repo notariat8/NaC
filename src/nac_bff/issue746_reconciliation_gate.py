@@ -11,6 +11,7 @@ import subprocess
 from typing import Any, Mapping, Protocol
 
 from nac_identity.governance_registry import (
+    BLOCKED_SINGLE_PRINCIPAL,
     OWNER_SOLO_APPROVAL,
     evaluate_approval_mode,
     resolve_principal,
@@ -256,6 +257,8 @@ def _resolve_authorized_operator_binding(
         "contract_id",
         "known_owner_account_count",
         "all_known_accounts_same_principal",
+        "external_two_person_requirement",
+        "git_attestation",
         "registry",
     }:
         raise Issue746ReconciliationGateError("protected resolver shape invalid")
@@ -270,6 +273,16 @@ def _resolve_authorized_operator_binding(
     registry = resolver.get("registry")
     if not isinstance(registry, dict) or validate_registry(registry):
         raise Issue746ReconciliationGateError("protected resolver registry invalid")
+    git_attestation = resolver.get("git_attestation")
+    if (
+        not isinstance(git_attestation, Mapping)
+        or set(git_attestation) != {"executable_path", "executable_sha256"}
+        or not isinstance(git_attestation.get("executable_path"), str)
+        or not Path(str(git_attestation.get("executable_path"))).is_absolute()
+        or not isinstance(git_attestation.get("executable_sha256"), str)
+        or not _HEX_64_RE.fullmatch(str(git_attestation.get("executable_sha256")))
+    ):
+        raise Issue746ReconciliationGateError("git attestation binding invalid")
     accounts = registry.get("accounts", [])
     active_accounts = [
         account
@@ -300,15 +313,61 @@ def _resolve_authorized_operator_binding(
         raise Issue746ReconciliationGateError("operator account id invalid") from exc
     if operator is None or operator.get("principal_id") not in principal_ids:
         raise Issue746ReconciliationGateError("operator principal unresolved")
-    if "prozessverantwortung" not in operator.get("technical_role_ids", []):
-        raise Issue746ReconciliationGateError("operator process role missing")
+    operator_roles = operator.get("technical_role_ids", [])
+    if not all(
+        role in operator_roles
+        for role in ("prozessverantwortung", "freigabeverantwortung")
+    ):
+        raise Issue746ReconciliationGateError("operator change-control roles missing")
     if "process_design" not in operator.get("qualifications", []):
         raise Issue746ReconciliationGateError("operator qualification missing")
+    requirement = resolver.get("external_two_person_requirement")
+    if not isinstance(requirement, Mapping) or set(requirement) != {
+        "required",
+        "citation",
+        "scope",
+        "source_sha256",
+    }:
+        raise Issue746ReconciliationGateError(
+            "external two-person requirement binding invalid"
+        )
+    requirement_required = requirement.get("required")
+    requirement_citation = requirement.get("citation")
+    requirement_scope = requirement.get("scope")
+    requirement_source_sha256 = requirement.get("source_sha256")
+    if (
+        not isinstance(requirement_required, bool)
+        or requirement_scope != AUTHORIZATION_SCOPE
+        or (
+            requirement_required
+            and (
+                not isinstance(requirement_citation, str)
+                or not requirement_citation.strip()
+                or not isinstance(requirement_source_sha256, str)
+                or not _HEX_64_RE.fullmatch(requirement_source_sha256)
+            )
+        )
+        or (
+            not requirement_required
+            and (
+                requirement_citation is not None
+                or requirement_source_sha256 is not None
+            )
+        )
+    ):
+        raise Issue746ReconciliationGateError(
+            "external two-person requirement binding invalid"
+        )
     decision = evaluate_approval_mode(
         registry,
         operator_account_id=operator_account_id,
-        external_two_person_required=False,
+        external_two_person_required=requirement_required,
+        requirement_citation=requirement_citation,
     )
+    if decision.get("status") == BLOCKED_SINGLE_PRINCIPAL:
+        raise Issue746ReconciliationGateError(
+            "bound two-person requirement blocks single principal"
+        )
     if (
         decision.get("status") != OWNER_SOLO_APPROVAL
         or decision.get("four_eyes_satisfied") != "false"
@@ -317,30 +376,112 @@ def _resolve_authorized_operator_binding(
     return operator_account, operator
 
 
-def _git_read(repo_root: Path, *args: str) -> str:
+def _git_read(
+    repo_root: Path,
+    *args: str,
+    executable: Path,
+    executable_sha256: str,
+) -> str:
+    executable = executable.resolve()
+    if not executable.is_absolute() or not _HEX_64_RE.fullmatch(executable_sha256):
+        raise Issue746ReconciliationGateError("git attestation binding invalid")
+    expected_executable_sha256 = executable_sha256
+    safe_arguments = (
+        "--no-optional-locks",
+        "--no-replace-objects",
+        "-c",
+        f"core.hooksPath={os.devnull}",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "maintenance.auto=false",
+        "-C",
+        str(repo_root.resolve()),
+        *args,
+    )
+    safe_environment = {
+        key: os.environ[key]
+        for key in ("SystemRoot", "TEMP")
+        if key in os.environ and os.environ[key]
+    }
+    safe_environment.update(
+        {
+            "GIT_ATTR_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_PAGER": "cat",
+            "GIT_TERMINAL_PROMPT": "0",
+            "LC_ALL": "C",
+        }
+    )
     try:
-        result = subprocess.run(
-            ["git", *args],
-            cwd=repo_root,
-            check=False,
-            capture_output=True,
-            text=True,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            timeout=30,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
+        if os.name == "nt":
+            from .activation_security_backend import (
+                ProcessSpec,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            measured_executable_sha256 = backend.inspect_private_path(
+                executable, purpose="toolchain-executable"
+            ).sha256
+            if measured_executable_sha256 != expected_executable_sha256:
+                raise OSError("git executable digest mismatch")
+            completed = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=executable,
+                    arguments=safe_arguments,
+                    cwd=repo_root.resolve(),
+                    environment=safe_environment,
+                    executable_sha256=expected_executable_sha256,
+                    timeout_seconds=30,
+                    maximum_output_bytes=4 * 1024 * 1024,
+                    allowed_exit_codes=tuple(range(256)),
+                    credential_write_guard=True,
+                )
+            )
+            return_code = completed.exit_code
+            output = completed.stdout.decode("utf-8", errors="strict")
+        else:
+            metadata = executable.stat()
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_uid != 0
+                or metadata.st_mode & 0o022
+            ):
+                raise OSError("untrusted git executable")
+            if hashlib.sha256(executable.read_bytes()).hexdigest() != executable_sha256:
+                raise OSError("git executable digest mismatch")
+            completed_process = subprocess.run(
+                [str(executable), *safe_arguments],
+                cwd=repo_root.resolve(),
+                check=False,
+                capture_output=True,
+                text=True,
+                shell=False,
+                stdin=subprocess.DEVNULL,
+                timeout=30,
+                env=safe_environment,
+            )
+            return_code = completed_process.returncode
+            output = completed_process.stdout
+    except (OSError, RuntimeError, UnicodeDecodeError, subprocess.SubprocessError) as exc:
         raise Issue746ReconciliationGateError("git snapshot unavailable") from exc
-    if result.returncode != 0:
+    if return_code != 0:
         raise Issue746ReconciliationGateError("git snapshot unavailable")
-    return result.stdout.rstrip("\n")
+    return output.rstrip("\n")
 
 
-def read_clean_git_snapshot(repo_root: Path) -> tuple[str, str]:
-    head = _git_read(repo_root, "rev-parse", "--verify", "HEAD^{commit}")
-    tree = _git_read(repo_root, "rev-parse", "--verify", f"{head}^{{tree}}")
+def read_clean_git_snapshot(
+    repo_root: Path, *, executable: Path, executable_sha256: str
+) -> tuple[str, str]:
+    git = {"executable": executable, "executable_sha256": executable_sha256}
+    head = _git_read(repo_root, "rev-parse", "--verify", "HEAD^{commit}", **git)
+    tree = _git_read(repo_root, "rev-parse", "--verify", f"{head}^{{tree}}", **git)
     dirty = _git_read(
-        repo_root, "status", "--porcelain=v1", "--untracked-files=all"
+        repo_root, "status", "--porcelain=v1", "--untracked-files=all", **git
     )
     if dirty:
         raise Issue746ReconciliationGateError("worktree is not clean")
@@ -404,7 +545,12 @@ def verify_issue746_readonly_reconciliation_gate(
         resolver, operator_account_id
     )
     principal_id = str(operator.get("principal_id"))
-    head, tree = read_clean_git_snapshot(repo_root)
+    git_attestation = resolver["git_attestation"]
+    head, tree = read_clean_git_snapshot(
+        repo_root,
+        executable=Path(str(git_attestation["executable_path"])),
+        executable_sha256=str(git_attestation["executable_sha256"]),
+    )
 
     if github_reader is None:
         raise Issue746ReconciliationGateError(GITHUB_READ_CHANNEL_UNAVAILABLE)

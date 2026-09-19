@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from contextlib import nullcontext
 from datetime import UTC, datetime
 import hashlib
 import inspect
@@ -1706,9 +1707,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             if system_root:
                 expected_env["SystemRoot"] = system_root
                 expected_env["WINDIR"] = system_root
-            expected_env["PATH"] = os.pathsep.join(
-                [str(Path(sys.executable).resolve().parent), source_env["PATH"]]
-            )
+            expected_env["PATH"] = str(binary.resolve().parent.parent)
         else:
             expected_env["PATH"] = "/usr/bin:/bin"
         self.assertEqual(process_kwargs["env"], expected_env)
@@ -2436,6 +2435,73 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
 
         self.assertEqual(result["code"], "AZURE_CLI_BINARY_UNTRUSTED")
         process.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows runtime closure")
+    def test_windows_runtime_digest_binds_stdlib_and_native_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            runtime_root = binary.parent.parent
+            stdlib = runtime_root / "Lib" / "os.py"
+            stdlib.parent.mkdir(exist_ok=True)
+            stdlib.write_text("BOUND = 1\n", encoding="utf-8")
+            native = runtime_root / "DLLs" / "runtime.dll"
+            native.parent.mkdir(exist_ok=True)
+            native.write_bytes(b"native-v1")
+            first = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(first)
+            stdlib.write_text("BOUND = 2\n", encoding="utf-8")
+            second = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(second)
+            self.assertNotEqual(first, second)
+            native.write_bytes(b"native-v2")
+            third = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(third)
+            self.assertNotEqual(second, third)
+
+    def test_windows_runtime_remeasures_after_all_handles_are_pinned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wrapper = root / "az.cmd"
+            interpreter = root / "python.exe"
+            package_root = root / "Lib" / "site-packages"
+            runtime_root = root
+            wrapper.write_bytes(b"wrapper")
+            interpreter.write_bytes(b"python")
+            package_root.mkdir(parents=True)
+            (package_root / "module.py").write_bytes(b"module")
+            attestation = azure_live_commands._ToolchainAttestation(
+                digest="a" * 64,
+                requires_expected=True,
+                interpreter_path=interpreter,
+                interpreter_digest="b" * 64,
+                package_root=package_root,
+                package_digest="c" * 64,
+                runtime_root=runtime_root,
+                runtime_digest="d" * 64,
+            )
+            backend = Mock()
+            backend.inspect_private_path.return_value = SimpleNamespace()
+            backend.open_bound_read.side_effect = lambda *_args: nullcontext()
+            changed = azure_live_commands._ToolchainAttestation(
+                digest="e" * 64,
+                requires_expected=True,
+            )
+            with (
+                patch(
+                    "nac_bff.activation_security_backend.get_platform_security_backend",
+                    return_value=backend,
+                ),
+                patch.object(
+                    azure_live_commands,
+                    "_windows_toolchain_attestation",
+                    return_value=(changed, "AZURE_CLI_BINARY_TRUSTED"),
+                ),
+            ):
+                with self.assertRaises(azure_live_commands.SealedToolchainError):
+                    with azure_live_commands._WindowsAzureCliRuntime(
+                        wrapper, attestation
+                    ):
+                        self.fail("runtime mutation must block before process launch")
 
     def test_symlinked_package_path_component_is_untrusted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

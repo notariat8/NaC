@@ -148,7 +148,10 @@ def hermetic_posix_primitives_available() -> bool:
 
 
 def platform_security_backend_available() -> bool:
-    """Report only a complete platform backend suitable for live boundaries."""
+    """Report a complete native backend or the established Linux primitives."""
+
+    if os.name == "posix" and sys.platform == "linux":
+        return hermetic_posix_primitives_available()
 
     try:
         get_platform_security_backend()

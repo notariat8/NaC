@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import os
+from pathlib import Path
+import shutil
+from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
@@ -10,6 +14,7 @@ from nac_bff.issue746_reconciliation_gate import (
     Issue746ReconciliationAuthorization,
     Issue746ReconciliationGateError,
     identity_binding_sha256,
+    _git_read,
     resolve_authorized_operator,
     verify_issue746_readonly_reconciliation_gate,
 )
@@ -21,6 +26,7 @@ RESOLVER_SHA256 = "c" * 64
 ACCOUNT_ID = "github:owner-primary"
 PRINCIPAL_ID = "person:owner"
 REFERENCE = "https://github.com/notariat8/NaC/issues/746#issuecomment-123"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _resolver() -> dict:
@@ -29,12 +35,25 @@ def _resolver() -> dict:
         "contract_id": "issue-746-owner-account-principal-resolution",
         "known_owner_account_count": 3,
         "all_known_accounts_same_principal": True,
+        "external_two_person_requirement": {
+            "required": False,
+            "citation": None,
+            "scope": "issue746_readonly_reconciliation",
+            "source_sha256": None,
+        },
+        "git_attestation": {
+            "executable_path": str(Path(shutil.which("git") or "C:/Git/git.exe").resolve()),
+            "executable_sha256": "f" * 64,
+        },
         "registry": {
             "version": 2,
             "principals": [
                 {
                     "principal_id": PRINCIPAL_ID,
-                    "technical_role_ids": ["prozessverantwortung"],
+                    "technical_role_ids": [
+                        "prozessverantwortung",
+                        "freigabeverantwortung",
+                    ],
                     "qualifications": ["process_design"],
                     "active": True,
                 }
@@ -156,6 +175,70 @@ class Issue746ReconciliationGateTests(unittest.TestCase):
     def test_same_principal_accounts_never_satisfy_four_eyes(self) -> None:
         operator = resolve_authorized_operator(_resolver(), ACCOUNT_ID)
         self.assertEqual(operator["principal_id"], PRINCIPAL_ID)
+
+    def test_bound_external_two_person_requirement_blocks_single_principal(self) -> None:
+        resolver = _resolver()
+        resolver["external_two_person_requirement"] = {
+            "required": True,
+            "citation": "binding-policy:section-4",
+            "scope": "issue746_readonly_reconciliation",
+            "source_sha256": "e" * 64,
+        }
+        with self.assertRaises(Issue746ReconciliationGateError) as raised:
+            resolve_authorized_operator(resolver, ACCOUNT_ID)
+        self.assertIn("single principal", raised.exception.reason)
+
+    def test_malformed_qualification_string_is_rejected(self) -> None:
+        resolver = _resolver()
+        resolver["registry"]["principals"][0]["qualifications"] = "process_design"
+        with self.assertRaises(Issue746ReconciliationGateError):
+            resolve_authorized_operator(resolver, ACCOUNT_ID)
+
+    def test_git_snapshot_uses_attested_binary_and_neutral_configuration(self) -> None:
+        backend = Mock()
+        backend.inspect_private_path.return_value = SimpleNamespace(sha256="f" * 64)
+        backend.launch_attested_process.return_value = SimpleNamespace(
+            exit_code=0,
+            stdout=b"value\n",
+        )
+        with patch(
+            "nac_bff.activation_security_backend.get_platform_security_backend",
+            return_value=backend,
+        ):
+            self.assertEqual(
+                _git_read(
+                    REPO_ROOT,
+                    "rev-parse",
+                    "HEAD",
+                    executable=Path("C:/Git/git.exe"),
+                    executable_sha256="f" * 64,
+                ),
+                "value",
+            )
+        spec = backend.launch_attested_process.call_args.args[0]
+        self.assertIn("--no-replace-objects", spec.arguments)
+        self.assertIn("core.fsmonitor=false", spec.arguments)
+        self.assertEqual(spec.environment["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(spec.environment["GIT_CONFIG_GLOBAL"], os.devnull)
+        self.assertNotIn("PATH", spec.environment)
+        self.assertTrue(spec.credential_write_guard)
+
+    def test_git_snapshot_rejects_digest_not_bound_by_resolver(self) -> None:
+        backend = Mock()
+        backend.inspect_private_path.return_value = SimpleNamespace(sha256="e" * 64)
+        with patch(
+            "nac_bff.activation_security_backend.get_platform_security_backend",
+            return_value=backend,
+        ):
+            with self.assertRaises(Issue746ReconciliationGateError):
+                _git_read(
+                    REPO_ROOT,
+                    "rev-parse",
+                    "HEAD",
+                    executable=Path("C:/Git/git.exe"),
+                    executable_sha256="f" * 64,
+                )
+        backend.launch_attested_process.assert_not_called()
 
     def test_missing_remote_check_blocks(self) -> None:
         with self.assertRaises(Issue746ReconciliationGateError) as raised:

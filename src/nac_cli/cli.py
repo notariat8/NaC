@@ -7965,12 +7965,38 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
         print(f"ERROR: {error}")
 
 
+def _issue746_windows_mutating_path_blocked() -> bool:
+    """Keep Windows live and recovery mutations closed under Issue #746."""
+
+    return os.name == "nt"
+
+
+def _requested_output_format(argv: list[str]) -> str:
+    return "json" if any(
+        argv[index : index + 2] == ["--format", "json"]
+        for index in range(len(argv) - 1)
+    ) else "text"
+
+
 def main(
     argv: list[str] | None = None,
     *,
     issue746_github_reader: Any | None = None,
 ) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
+    recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
+    if _issue746_windows_mutating_path_blocked():
+        if live_activation_index is not None:
+            return _emit_bff_azure_activation_error(
+                "ISSUE746_WINDOWS_LIVE_ACCESS_BLOCKED",
+                _requested_output_format(effective_argv),
+            )
+        if recovery_index is not None:
+            return _emit_bff_azure_activation_error(
+                "ISSUE746_WINDOWS_RECOVERY_ACCESS_BLOCKED",
+                _requested_output_format(effective_argv),
+            )
     if any(
         command_index(effective_argv) is not None
         for command_index in (
@@ -8010,7 +8036,6 @@ def main(
         return _run_bff_performance_acceptance_plan_command(
             effective_argv, performance_plan_index
         )
-    live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
     if live_activation_index is not None:
         return _run_bff_azure_activate_live_command(effective_argv, live_activation_index)
     interruption_index = _bff_azure_activation_interruption_command_index(
@@ -8031,7 +8056,6 @@ def main(
             function_deployment_index,
             issue746_github_reader=issue746_github_reader,
         )
-    recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if recovery_index is not None:
         return _run_bff_azure_activation_recovery_command(
             effective_argv, recovery_index
@@ -9084,6 +9108,9 @@ def _run_bff_azure_function_deployment_command(
             approved_tree=args.reconciler_tree,
             toolchain_sha256=args.reconciler_toolchain_sha256,
             required_owner_login=CANONICAL_INTERRUPTION_OWNER_LOGIN,
+            required_owner_principal_id_sha256=(
+                issue746_authorization.operator_principal_id_sha256
+            ),
         )
         observation_port, owner_verifier, runtime_revalidate = (
             build_function_deployment_reconciliation_ports(
@@ -9138,6 +9165,9 @@ def _run_bff_azure_function_deployment_command(
                     args.reconciler_toolchain_sha256
                 ),
                 required_owner_login=CANONICAL_INTERRUPTION_OWNER_LOGIN,
+                required_owner_principal_id_sha256=(
+                    issue746_authorization.operator_principal_id_sha256
+                ),
             )
             result = release_azure_bff_function_deployment_quarantine(
                 repo_root=repo_root,

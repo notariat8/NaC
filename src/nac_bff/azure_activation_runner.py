@@ -1135,19 +1135,42 @@ def _acquire_existing_lock_for_recovery(
     path: Path,
 ) -> tuple[int | None, str | None]:
     if os.name == "nt":
+        lock = None
+        descriptor: int | None = None
         try:
             backend = get_platform_security_backend()
-            backend.inspect_private_path(path, purpose="activation-lock")
             lock = backend.acquire_run_lock(_sha256(str(path.resolve()).casefold()))
             if lock.status == "abandoned":
                 lock.close()
+                lock = None
                 return None, "RECOVERY_REQUIRED"
-            descriptor = os.open(path, os.O_RDWR | getattr(os, "O_BINARY", 0))
+            with backend.open_secure_directory(path.parent, create=False) as session:
+                expected = session.inspect_optional_child(
+                    path.name, purpose="activation-lock"
+                )
+                if expected is None:
+                    raise FileNotFoundError(path)
+                descriptor = session.open_regular_descriptor(path.name, create=False)
+                if descriptor < 0:
+                    raise FileNotFoundError(path)
+                opened = backend.inspect_open_file_descriptor(
+                    descriptor, purpose="activation-lock"
+                )
+                if opened != expected:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_BINDING_MISMATCH")
             _WINDOWS_RUN_LOCKS[descriptor] = lock
             return descriptor, None
         except FileNotFoundError:
+            if descriptor is not None:
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
             return None, "FINALIZATION_LOCK_NOT_HELD"
         except (OSError, SecurityBoundaryError):
+            if descriptor is not None:
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
             return None, "ACTIVATION_LOCK_INVALID"
     descriptor: int | None = None
     try:
@@ -1887,14 +1910,23 @@ def _acquire_lock(path: Path, activation_hash: str) -> int | None:
             lock = backend.acquire_run_lock(_sha256(str(path.resolve()).casefold()))
             if lock.status == "abandoned":
                 lock.close()
+                lock = None
                 raise ActivationStepError("RECOVERY_REQUIRED")
-            created = not path.exists()
-            flags = os.O_RDWR | getattr(os, "O_BINARY", 0)
-            if created:
-                flags |= os.O_CREAT | os.O_EXCL
-            else:
-                backend.inspect_private_path(path, purpose="activation-lock")
-            descriptor = os.open(path, flags, 0o600)
+            with backend.open_secure_directory(path.parent, create=True) as session:
+                expected = session.inspect_optional_child(
+                    path.name, purpose="activation-lock"
+                )
+                created = expected is None
+                if created:
+                    expected = session.create_exclusive(path.name, b"")
+                descriptor = session.open_regular_descriptor(path.name, create=False)
+                if descriptor < 0:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_OPEN_FAILED")
+                opened = backend.inspect_open_file_descriptor(
+                    descriptor, purpose="activation-lock"
+                )
+                if opened != expected:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_BINDING_MISMATCH")
             _WINDOWS_RUN_LOCKS[descriptor] = lock
             if created:
                 if os.fstat(descriptor).st_size != 0:

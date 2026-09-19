@@ -56,6 +56,31 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
     def test_structured_fixture_passes(self) -> None:
         self.assertEqual(validator.validate(self.root), [])
 
+    def test_windows_workflow_enforces_every_promised_issue746_command(self) -> None:
+        workflow = self.root / ".github" / "workflows" / "windows-portability.yml"
+        original = workflow.read_text(encoding="utf-8")
+        required_commands = (
+            "python scripts/validate_ai_sbom.py",
+            'python -m unittest discover -s tests -p "test_issue746_reconciliation_gate.py"',
+            'python -m unittest discover -s tests -p "test_nac_bff_azure_*.py"',
+            'python -m unittest discover -s tests -p "test_business_case_type_*.py"',
+            'python -m unittest discover -s tests -p "test_m365_*.py"',
+            'python -m unittest discover -s tests -p "test_sqlite_evidence_staging_outbox.py"',
+            "graft build",
+            "graft check",
+            "python scripts/nac.py doctor --profile strict",
+            "python scripts/validate_m365_azure_bff_live_activation.py",
+        )
+        for command in required_commands:
+            with self.subTest(command=command):
+                workflow.write_text(original.replace(command, ""), encoding="utf-8")
+                errors = validator.validate(self.root)
+                self.assertTrue(
+                    any(command in error for error in errors),
+                    errors,
+                )
+        workflow.write_text(original, encoding="utf-8")
+
     def test_windows_native_contract_weakening_fails_closed(self) -> None:
         payload = self._domain()
         windows = payload["consolidated_owner_gate"][

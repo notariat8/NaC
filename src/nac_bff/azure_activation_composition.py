@@ -84,6 +84,7 @@ from .issue746_reconciliation_gate import (
     GATE_CLOSED as ISSUE746_GATE_CLOSED,
     Issue746ReconciliationAuthorization,
     Issue746ReconciliationGateError,
+    identity_binding_sha256,
 )
 from .azure_activation_approval import (
     APPROVAL_KEYS,
@@ -289,11 +290,11 @@ _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
 )
-_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-([1-9][0-9]*)$"
+_LIVE_APPROVAL_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
 )
-_TERMINALIZATION_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/(?:717|719)"
+_OWNER_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/([1-9][0-9]*)"
     r"#issuecomment-([1-9][0-9]*)$"
 )
 _PERFORMANCE_ACCEPTANCE_COMMENT_RE = re.compile(
@@ -411,6 +412,9 @@ class GitHubApprovalVerifier:
         binary: str | os.PathLike[str] = "/usr/bin/gh",
         expected_binary_sha256: str | None = None,
         environ: Mapping[str, str] | None = None,
+        owner_comment_issue_numbers: tuple[int, ...] = (717, 719),
+        owner_account_id_sha256: str | None = None,
+        owner_principal_id_sha256: str | None = None,
     ) -> None:
         source = os.environ if environ is None else environ
         self._binary = _trusted_regular_file(
@@ -431,6 +435,25 @@ class GitHubApprovalVerifier:
             }
             and value
         }
+        if (
+            not owner_comment_issue_numbers
+            or len(set(owner_comment_issue_numbers)) != len(owner_comment_issue_numbers)
+            or not all(
+                isinstance(number, int) and number > 0
+                for number in owner_comment_issue_numbers
+            )
+        ):
+            raise ValueError("owner comment issue allowlist invalid")
+        self._owner_comment_issue_numbers = frozenset(owner_comment_issue_numbers)
+        if (owner_account_id_sha256 is None) != (owner_principal_id_sha256 is None):
+            raise ValueError("owner principal binding incomplete")
+        if owner_account_id_sha256 is not None and (
+            not re.fullmatch(r"[0-9a-f]{64}", owner_account_id_sha256)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(owner_principal_id_sha256))
+        ):
+            raise ValueError("owner principal binding invalid")
+        self._owner_account_id_sha256 = owner_account_id_sha256
+        self._owner_principal_id_sha256 = owner_principal_id_sha256
 
     def verify(
         self,
@@ -438,7 +461,7 @@ class GitHubApprovalVerifier:
         context: ActivationContext,
         plan: Mapping[str, Any],
     ) -> dict[str, Any]:
-        match = _COMMENT_RE.fullmatch(request.owner_approval_reference)
+        match = _LIVE_APPROVAL_COMMENT_RE.fullmatch(request.owner_approval_reference)
         if self._binary is None or match is None:
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         comment = self._gh_json(
@@ -458,6 +481,8 @@ class GitHubApprovalVerifier:
             return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
         if (
             comment.get("html_url") != request.owner_approval_reference
+            or comment.get("issue_url")
+            != "https://api.github.com/repos/notariat8/NaC/issues/632"
             or comment.get("created_at") != comment.get("updated_at")
             or not isinstance(body, str)
             or _sha256_text(body) != request.approval_body_sha256
@@ -505,43 +530,66 @@ class GitHubApprovalVerifier:
     ) -> dict[str, Any]:
         """Verify an exact immutable owner comment without interpreting its body."""
 
-        match = _TERMINALIZATION_COMMENT_RE.fullmatch(reference)
+        match = _OWNER_COMMENT_RE.fullmatch(reference)
         if (
             self._binary is None
             or match is None
+            or int(match.group(1)) not in self._owner_comment_issue_numbers
             or not isinstance(expected_body, str)
             or _sha256_text(expected_body) != expected_body_sha256
         ):
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         comment = self._gh_json(
-            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}")
+            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(2)}")
         )
         if comment is None:
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         author = comment.get("user")
         body = comment.get("body")
+        author_login = author.get("login") if isinstance(author, dict) else None
+        author_is_bound = (
+            isinstance(author_login, str)
+            and (
+                identity_binding_sha256(
+                    "account-id", f"github:{author_login}"
+                )
+                == self._owner_account_id_sha256
+                if self._owner_account_id_sha256 is not None
+                else author_login == _APPROVED_OWNER_LOGIN
+            )
+        )
         if (
             not isinstance(author, dict)
-            or author.get("login") != _APPROVED_OWNER_LOGIN
+            or not author_is_bound
             or comment.get("author_association")
             not in _APPROVED_OWNER_ASSOCIATIONS
         ):
             return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
         if (
             comment.get("html_url") != reference
+            or comment.get("issue_url")
+            != (
+                "https://api.github.com/repos/notariat8/NaC/issues/"
+                f"{match.group(1)}"
+            )
             or comment.get("created_at") != comment.get("updated_at")
             or body != expected_body
             or _sha256_text(body) != expected_body_sha256
         ):
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_MISMATCH"}
-        return {
+        verified = {
             "status": "VERIFIED",
-            "owner_login": _APPROVED_OWNER_LOGIN,
+            "owner_login": author_login,
             "immutable": True,
             "reference": reference,
             "body": body,
             "body_sha256": expected_body_sha256,
         }
+        if self._owner_principal_id_sha256 is not None:
+            verified["owner_principal_id_sha256"] = (
+                self._owner_principal_id_sha256
+            )
+        return verified
 
     def verify_performance_owner_comment(
         self,
@@ -612,6 +660,7 @@ class GitHubApprovalVerifier:
                         timeout_seconds=30,
                         maximum_output_bytes=2 * 1024 * 1024,
                         allowed_exit_codes=tuple(range(256)),
+                        credential_write_guard=True,
                     )
                 )
                 result = subprocess.CompletedProcess(
@@ -3657,6 +3706,7 @@ def build_interruption_reconciliation_ports(
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=request.gh_cli_sha256,
             environ=values,
+            owner_comment_issue_numbers=(717, 719),
         )
         if require_owner_verifier
         else None
@@ -3728,6 +3778,13 @@ def build_function_deployment_reconciliation_ports(
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=request.gh_cli_sha256,
             environ=values,
+            owner_comment_issue_numbers=(739,),
+            owner_account_id_sha256=(
+                issue746_authorization.operator_account_id_sha256
+            ),
+            owner_principal_id_sha256=(
+                issue746_authorization.operator_principal_id_sha256
+            ),
         )
         if require_owner_verifier
         else None

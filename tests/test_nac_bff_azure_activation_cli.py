@@ -72,6 +72,53 @@ class _CompleteBackendTestCase(unittest.TestCase):
         )
         platform_gate.start()
         self.addCleanup(platform_gate.stop)
+        windows_mutation_gate = patch(
+            "nac_cli.cli._issue746_windows_mutating_path_blocked",
+            return_value=False,
+        )
+        windows_mutation_gate.start()
+        self.addCleanup(windows_mutation_gate.stop)
+
+
+class WindowsIssue746MutationBoundaryTests(unittest.TestCase):
+    def test_windows_live_and_recovery_block_before_runtime_imports(self) -> None:
+        cases = {
+            "bff-azure-activate-live": "ISSUE746_WINDOWS_LIVE_ACCESS_BLOCKED",
+            "bff-azure-activation-recovery": (
+                "ISSUE746_WINDOWS_RECOVERY_ACCESS_BLOCKED"
+            ),
+        }
+        for command, expected_code in cases.items():
+            with self.subTest(command=command):
+                stdout = io.StringIO()
+                forbidden = types.ModuleType("nac_bff.azure_activation_facade")
+                forbidden.__getattr__ = lambda _name: (_ for _ in ()).throw(
+                    AssertionError("Windows mutation runtime must remain unreachable")
+                )
+                with (
+                    patch(
+                        "nac_cli.cli._issue746_windows_mutating_path_blocked",
+                        return_value=True,
+                    ),
+                    patch.dict(
+                        sys.modules,
+                        {"nac_bff.azure_activation_facade": forbidden},
+                    ),
+                    redirect_stdout(stdout),
+                ):
+                    rc = nac_cli.main(
+                        ["m365", "teams-sharepoint", command, "--format", "json"]
+                    )
+                self.assertEqual(rc, 2)
+                self.assertEqual(
+                    json.loads(stdout.getvalue()),
+                    {
+                        "schema_version": "nac.m365-azure-bff-live-activation-cli/v1",
+                        "status": "BLOCKED",
+                        "error": {"code": expected_code},
+                        "writes_started": False,
+                    },
+                )
 
 
 class AzureBffLiveActivationCliTests(_CompleteBackendTestCase):
@@ -481,7 +528,7 @@ class AzureBffLiveActivationCliTests(_CompleteBackendTestCase):
         with patch.dict(sys.modules, modules), redirect_stdout(stdout):
             rc = nac_cli.main(self._argv("--format", "json"))
 
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 0, stdout.getvalue())
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["summary"], summary)
         self.assertEqual(payload["toolchain_attestations_sha256"], "8" * 64)
@@ -625,7 +672,9 @@ class AzureBffInterruptionReconciliationCliTests(_CompleteBackendTestCase):
         )
         gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
         gate.verify_issue746_readonly_reconciliation_gate = Mock(
-            return_value=object()
+            return_value=types.SimpleNamespace(
+                operator_principal_id_sha256="5" * 64
+            )
         )
         reconciliation = types.ModuleType(
             "nac_bff.azure_interruption_reconciliation"
@@ -1082,6 +1131,8 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         composition.GH_CLI_EXECUTION_PATH = Path("C:/tools/gh.exe")
         composition.GitHubApprovalVerifier = Mock(return_value=object())
         composition.build_function_deployment_reconciliation_ports = factory
+        facade = types.ModuleType("nac_bff.azure_activation_facade")
+        facade.build_function_deployment_reconciliation_ports = factory
         gate = types.ModuleType("nac_bff.issue746_reconciliation_gate")
         from nac_bff.issue746_reconciliation_gate import (
             GATE_CLOSED,
@@ -1094,7 +1145,9 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         )
         gate.Issue746ReconciliationGateError = Issue746ReconciliationGateError
         gate.verify_issue746_readonly_reconciliation_gate = Mock(
-            return_value=object()
+            return_value=types.SimpleNamespace(
+                operator_principal_id_sha256="5" * 64
+            )
         )
         gate.identity_binding_sha256 = lambda kind, value: (
             "4" * 64 if kind == "account-id" else "5" * 64
@@ -1162,6 +1215,7 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
         runner.LiveActivationRequest = _FakeRequest
         return {
             "nac_bff.azure_activation_composition": composition,
+            "nac_bff.azure_activation_facade": facade,
             "nac_bff.azure_function_deployment_reconciliation": reconciliation,
             "nac_bff.azure_activation_runner": runner,
             "nac_bff.issue746_reconciliation_gate": gate,
@@ -1179,7 +1233,7 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
                 issue746_github_reader=github_reader,
             )
 
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 0, stdout.getvalue())
         self.assertFalse(factory.call_args.kwargs["require_owner_verifier"])
         self.assertIs(inspect.call_args.kwargs["observation_port"], observation)
         self.assertFalse(inspect.call_args.kwargs["request"].owner_approved)
@@ -1348,7 +1402,7 @@ class AzureBffFunctionDeploymentReconciliationCliTests(_CompleteBackendTestCase)
                 self._argv(*self._release_args(), "--format", "json")
             )
 
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 0, stdout.getvalue())
         self.assertTrue(factory.call_args.kwargs["require_owner_verifier"])
         inspect.assert_not_called()
         kwargs = release.call_args.kwargs
