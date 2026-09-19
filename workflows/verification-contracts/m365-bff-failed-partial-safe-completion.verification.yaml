@@ -1,0 +1,582 @@
+schema_version: nac.m365-bff-failed-partial-safe-completion/v0.2
+contract_id: m365-bff-failed-partial-safe-completion
+existing_domain_contract: workflows/contracts/m365-azure-bff-live-activation.contract.json
+existing_verification_contract: workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
+leading_issue: https://github.com/notariat8/NaC/issues/746
+delivery_mode: Protected PR
+risk_gate: Human Approval
+specifications:
+  de: docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+  en: docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+plans:
+  de: docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+  en: docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08]
+acceptance_status: BLOCKED
+acceptance_blockers:
+  - protected_operational_provider_identity_resolution_pending
+  - issue739_original_provenance_lost_terminal
+  - windows_remote_ci_evidence_pending
+
+provenance:
+  issue620_parent: {issue: 620, role: parent_environment_trail, runtime_state_source: false}
+  issue632_live_contract: {issue: 632, role: future_live_gate_contract, runtime_state_source: false}
+  issue739_current_trail: {issue: 739, role: latest_documented_failed_partial_trail, runtime_state_source: false}
+  issue743_historical_interruption: {issue: 743, role: separate_historical_interruption, runtime_state_source: false}
+
+gates:
+  SPEC_746_APPROVAL: {issue: 746, authorizes: specification_and_offline_implementation_only}
+  ISSUE_739_QUARANTINE_RELEASE: {issue: 739, authorizes: three_local_append_only_release_records_only}
+  ISSUE_632_NEW_LIVE_RUN: {issue: 632, authorizes: one_separately_hash_bound_live_run_only}
+
+phases:
+  - {id: phase_0_offline, success: OFFLINE_PLAN_VERIFIED, mutation: repository_and_pr_artifacts_only}
+  - {id: phase_1b_terminal_provenance_loss, status: BLOCKED, reason_code: FUNCTION_DEPLOYMENT_PROVENANCE_LOST, terminal: true, retry_allowed: false, next_phase: null, mutation: none}
+  - {id: phase_1_windows_preflight, success: WINDOWS_READY, mutation: none}
+  - {id: phase_2_provider_inspection, success: FUNCTION_DEPLOYMENT_NOT_APPLIED, mutation: none}
+  - {id: phase_3_local_release, success: LOCK_JOURNALS_RELEASED, mutation: three_append_only_RELEASED_records}
+  - {id: phase_4_new_offline_gate, success: NEW_OFFLINE_OWNER_GATE_REQUIRED, mutation: local_offline_evidence}
+  - {id: phase_5_live, success: existing_live_contract_states, mutation: separately_approved_only}
+
+existing_reconciler_binding:
+  command: nac m365 teams-sharepoint bff-azure-function-deployment-reconcile
+  terminal_state: FAILED_PARTIAL
+  failed_step: deploy_function_package
+  failure_code: AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS
+  inspection_status: FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED
+  eligible_classification: FUNCTION_DEPLOYMENT_NOT_APPLIED
+  provider_read_snapshot_count: 2
+  inspection_local_mutation_count: 0
+  provider_write_count: 0
+  confirmation_argument: --confirm-release-quarantine
+  release_action: RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT
+  release_journal_order: [target, legacy, legacy_host]
+  resume_count: 0
+  rollback_count: 0
+  deletion_count: 0
+
+function_deployment_provenance_loss:
+  issue: 739
+  action: CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+  run_id: nac-bff-live-20260908-issue739-v4
+  confirmation_schema: nac.issue739-function-deployment-provenance-loss-confirmation/v1
+  confirmation_source: repository_external_windows_sid_dacl_bound_file
+  confirmation_sha256_required: true
+  identity_resolver_required: true
+  identity_resolver_access: local_read_only
+  identity_resolver_sha256_bound_in_confirmation: true
+  principal_mode: OWNER_SOLO_APPROVAL
+  owner_confirmation_evidence: protected_confirmation_record_only
+  legacy_github_approval_arguments_required: false
+  legacy_github_approval_arguments_allowed: false
+  ordinary_arguments_are_not_trusted_expected_values: true
+  canonical_run_path_source: fixed_output_root_plus_confirmed_activation_hash
+  original_lock_binding_source: protected_confirmation_record
+  activation_plan_build_allowed: false
+  expected_artifact_categories:
+    - resume_state
+    - activation_evidence
+    - ledger
+    - target_lock_journal
+    - legacy_lock_journal
+    - legacy_host_lock_journal
+    - prepared_inputs_manifest
+    - function_package
+  positive_condition: canonical_run_directory_and_all_three_confirmation_bound_original_lock_journals_absent
+  partial_expected_inventory: FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID
+  uninspectable_expected_inventory: FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE
+  exact_result:
+    status: BLOCKED
+    reason_code: FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+    terminal: true
+    retry_allowed: false
+    next_phase: null
+    cli_exit_code: 2
+  operation_counts_closed:
+    github_read_count: 0
+    credential_access_count: 0
+    network_access_count: 0
+    subprocess_count: 0
+    provider_read_count: 0
+    provider_write_count: 0
+    tenant_write_count: 0
+    local_write_count: 0
+    journal_append_count: 0
+    quarantine_release_count: 0
+    package_build_count: 0
+    live_run_count: 0
+    recovery_count: 0
+    retry_count: 0
+    rollback_count: 0
+    deletion_count: 0
+  forbidden_sources: [model_knowledge, issue_text, provider_state]
+  opens_gates: []
+
+commands:
+  - {id: spec_traceability, platform: windows_native, command: python scripts/validate_spec_traceability.py, acceptance_ids: [AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: language_parity, platform: windows_native, command: python scripts/validate_language_parity.py, acceptance_ids: [AC-746-01], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: doc_links, platform: windows_native, command: python scripts/validate_doc_links.py, acceptance_ids: [AC-746-01, AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: issue746_validator, platform: windows_native, command: python scripts/validate_m365_bff_failed_partial_safe_completion.py, acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: ai_sbom, platform: windows_remote_ci, command: python scripts/validate_ai_sbom.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: ci_read_or_synthetic}
+  - {id: ai_sbom_export_mapping, platform: windows_native, command: python scripts/validate_ai_sbom_export_mapping.py, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Quality Gate / quality-gate], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: issue746_windows_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_activation_security*.py', acceptance_ids: [AC-746-02, AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: issue746_gate_tests, platform: windows_native, command: python -m unittest discover -s tests -p test_issue746_reconciliation_gate.py, acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_bff_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_nac_bff_azure_*.py', acceptance_ids: [AC-746-03, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_business_case_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_business_case_type_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_m365_regression_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_m365_*.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: windows_sqlite_outbox_tests, platform: windows_native, command: 'python -m unittest discover -s tests -p test_sqlite_evidence_staging_outbox.py', acceptance_ids: [AC-746-05, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: azure_runtime_compatibility, platform: azure_linux_runtime_optional, command: python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py, acceptance_ids: [AC-746-07], remote_evidence: [NaC Quality Gate / quality-gate], scope: azure_target_compatibility, side_effect_class: ci_read_or_synthetic}
+  - {id: activation_validator, platform: windows_native, command: python scripts/validate_m365_azure_bff_live_activation.py, acceptance_ids: [AC-746-03, AC-746-04, AC-746-05, AC-746-06], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_static, side_effect_class: local_read_or_synthetic}
+  - {id: graft_build, platform: windows_native, command: graft build, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: graft_check, platform: windows_native, command: graft check, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: strict_doctor, platform: windows_native, command: python scripts/nac.py doctor --profile strict, acceptance_ids: [AC-746-01, AC-746-02, AC-746-03, AC-746-04, AC-746-05, AC-746-06, AC-746-07, AC-746-08], remote_evidence: [NaC Windows Portability / windows-offline-cli], scope: repository_aggregate, side_effect_class: local_read_or_synthetic}
+  - {id: fetch_main, platform: post_pr_remote, command: git fetch --no-tags --prune origin main, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [fresh origin/main], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: diff_files, platform: post_pr_remote, command: git diff --name-status origin/main...HEAD, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [complete file list], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: diff_commits, platform: post_pr_remote, command: git log --oneline origin/main..HEAD, acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [complete commit list], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: diff_patch, platform: post_pr_remote, command: git diff origin/main...HEAD, acceptance_ids: [AC-746-01, AC-746-07, AC-746-08], remote_evidence: [complete base...head patch], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: diff_whitespace, platform: post_pr_remote, command: git diff --check origin/main...HEAD, acceptance_ids: [AC-746-07], remote_evidence: [complete base...head whitespace check], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: pr_checks_watch, platform: post_pr_remote, command: 'github-connector read notariat8/NaC PR 747 checks --expected-head HEAD', acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [Privacy and Secrets Guard / secret-scan, Privacy and Secrets Guard / privacy-lint, NaC Quality Gate / quality-gate, NaC Windows Portability / windows-offline-cli], scope: pr_747_expected_head, side_effect_class: github_read_only}
+  - {id: pr_checks_enforced, platform: post_pr_remote, command: 'python-api scripts.validate_m365_bff_failed_partial_safe_completion:main(argv, github_reader=trusted_github_connector_port)', acceptance_ids: [AC-746-07, AC-746-08], remote_evidence: [exact required check names and successful states], scope: pr_747_expected_head, side_effect_class: github_read_only}
+
+identity_gate:
+  registry: policies/github-identity-registry.json
+  public_registry_scope: synthetic_examples_only
+  protected_identity_resolver:
+    required: true
+    schema_version: nac.protected-identity-resolver/v1
+    contract_id: issue-746-owner-account-principal-resolution
+    repository_external: true
+    platform: windows_sid_dacl_backend
+    required_owner_binding: current_user_sid
+    required_dacl: current_user_system_administrators_no_broad_write
+    nofollow_atomic_open_required: true
+    duplicate_json_keys_rejected: true
+    maximum_bytes: 131072
+    expected_sha256_required: true
+    git_executable_absolute_path_required: true
+    git_executable_sha256_required: true
+    git_path_discovery_forbidden: true
+    exact_known_account_binding_count: 3
+    all_known_accounts_same_principal: true
+    account_identifiers_must_not_enter_repository_or_evidence: true
+  required_owner_login_is_transport_only: true
+  governance_authority_field: principal_id
+  separation_key: principal_id
+  owner_solo_authority: {role: prozessverantwortung, qualification: process_design}
+  four_eyes_roles: {operator: prozessverantwortung, approver: freigabeverantwortung}
+  same_principal_accounts_satisfy_four_eyes: false
+  selected_approval_status: OWNER_SOLO_APPROVAL
+  owner_solo_recorded_as_four_eyes: false
+  acceptance_requires_second_qualified_principal: false
+  role_name_alone_proves_two_person_requirement: false
+  external_two_person_requirement:
+    applies: false
+    applicable: false
+    active: false
+    requires_distinct_natural_persons: false
+    source_type: null
+    source_id: null
+    citation: null
+    version: null
+    canonical_digest: null
+    scope: issue-746-safe-completion
+    absence_reason: no_applicable_cited_external_two_person_requirement
+  allowed_external_source_types: [statutory, regulatory, contractual, security_binding]
+  binding_external_requirement_single_principal_status: BLOCKED_SINGLE_PRINCIPAL
+  distinct_qualified_principals_status: FOUR_EYES_APPROVAL
+  invalid_requirement_assessment_status: BLOCKED_REQUIREMENT_ASSESSMENT_INVALID
+  operator_account_source: explicit_cli_argument
+  operator_account_required: true
+  owner_solo_evidence:
+    required: true
+    source: protected_identity_resolver_and_live_github_owner_comment
+    public_registry_is_synthetic_only: true
+    protected_identity_resolver_required: true
+    protected_identity_resolver_sha256_bound_to_approval: true
+    approval_reference_required: true
+    approval_body_sha256_required: true
+    provider_qualified_account_input_required: true
+    account_id_sha256_bound_to_approval: true
+    principal_id_sha256_bound_to_approval: true
+    identity_digest_domain_separation: nac-issue-746-<kind>-v1-null-prefix
+    raw_resolver_identity_values_in_evidence: false
+    author_association: OWNER
+    issue: 746
+    pr: 747
+    bind_to_final_head: true
+    approval_mode: OWNER_SOLO_APPROVAL
+    four_eyes_satisfied: false
+
+identity_gate_cases:
+  missing_process_role: {expected_status: BLOCKED}
+  missing_approval_role: {expected_status: BLOCKED}
+  inactive_identity: {expected_status: BLOCKED}
+  login_registry_mismatch: {expected_status: BLOCKED}
+  missing_operator: {expected_status: BLOCKED}
+  no_external_requirement_single_principal: {expected_status: OWNER_SOLO_APPROVAL, four_eyes_satisfied: false}
+  binding_external_requirement_single_principal: {expected_status: BLOCKED_SINGLE_PRINCIPAL, mutation_count: 0}
+  binding_external_requirement_same_principal_accounts: {expected_status: BLOCKED_SINGLE_PRINCIPAL, mutation_count: 0}
+  binding_external_requirement_distinct_principals: {expected_status: FOUR_EYES_APPROVAL, four_eyes_satisfied: true}
+  incomplete_requirement_assessment: {expected_status: BLOCKED_REQUIREMENT_ASSESSMENT_INVALID, mutation_count: 0}
+  unsupported_requirement_source_type: {expected_status: BLOCKED_REQUIREMENT_ASSESSMENT_INVALID, mutation_count: 0}
+  association_only: {expected_status: BLOCKED}
+
+approval_replay_cases:
+  old_632_comment: {expected_status: BLOCKED, mutation_count: 0}
+  old_739_comment: {expected_status: BLOCKED, mutation_count: 0}
+  spec_746_comment: {expected_status: BLOCKED, mutation_count: 0}
+  wrong_issue: {expected_status: BLOCKED, mutation_count: 0}
+  wrong_login: {expected_status: BLOCKED, mutation_count: 0}
+  wrong_author_association: {expected_status: BLOCKED, mutation_count: 0}
+  changed_body: {expected_status: BLOCKED, mutation_count: 0}
+  changed_hash: {expected_status: BLOCKED, mutation_count: 0}
+  cross_issue_replay: {expected_status: BLOCKED, mutation_count: 0}
+  owner_approved: {expected_status: BLOCKED, mutation_count: 0}
+  owner_approval_reference: {expected_status: BLOCKED, mutation_count: 0}
+  approval_body_sha256: {expected_status: BLOCKED, mutation_count: 0}
+
+preflight_binding_cases:
+  action: &preflight_block {expected_status: BLOCKED, provider_read_snapshot_count: 0, total_write_count: 0}
+  activation_hash: *preflight_block
+  state_sha256: *preflight_block
+  evidence_sha256: *preflight_block
+  ledger_head_sha256: *preflight_block
+  target_lock_sha256: *preflight_block
+  legacy_lock_sha256: *preflight_block
+  legacy_host_lock_sha256: *preflight_block
+  provider_observation_sha256: *preflight_block
+  failed_step: *preflight_block
+  failed_step_started_at_utc: *preflight_block
+  prepared_inputs_manifest_sha256: *preflight_block
+  function_package_sha256: *preflight_block
+  correlation_id: *preflight_block
+  target: *preflight_block
+  binary: *preflight_block
+  owner_permissions: *preflight_block
+  nofollow_path: *preflight_block
+  concurrent_lock: *preflight_block
+
+approval_rebinding_cases:
+  reconciler_commit: &approval_rebinding {expected_status: FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED, provider_read_snapshot_count: 2, current_operation_write_count: 0, new_owner_approval_required: true}
+  reconciler_tree: *approval_rebinding
+  reconciler_toolchain_sha256: *approval_rebinding
+  required_owner_login: *approval_rebinding
+  required_owner_principal_id_sha256: *approval_rebinding
+
+provider_decision_cases:
+  stable_not_applied: {expected_status: FUNCTION_DEPLOYMENT_NOT_APPLIED, snapshots: 2, provider_write_count: 0, tenant_write_count: 0, credential_write_count: 0}
+  deployment_applied: &provider_block {expected_status: BLOCKED, provider_write_count: 0, tenant_write_count: 0, credential_write_count: 0}
+  missing_field: *provider_block
+  unknown_field: *provider_block
+  snapshot_drift: *provider_block
+  redirect: *provider_block
+  auth_error: *provider_block
+  network_block: *provider_block
+  timeout: *provider_block
+  non_redactable: *provider_block
+
+redaction_sentinel_cases:
+  provider_response: &redaction_block {sentinel_reaches_sink: false, unknown_field_status: BLOCKED}
+  exception: *redaction_block
+  stdout: *redaction_block
+  stderr: *redaction_block
+  log: *redaction_block
+  temporary_artifact: *redaction_block
+  approval_text: *redaction_block
+  telemetry: *redaction_block
+  shell_history: *redaction_block
+
+credential_boundary_cases:
+  interactive_login: &credential_block {expected_status: BLOCKED, credential_write_count: 0, host_state_unchanged: true}
+  device_code: *credential_block
+  token_refresh: *credential_block
+  cache_create: *credential_block
+  config_rewrite: *credential_block
+  host_bytes_changed: *credential_block
+  host_metadata_changed: *credential_block
+
+stable_error_codes_exact:
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOST
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_ARGUMENTS_REQUIRED
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_BINDING_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_CONFIRMATION_REQUIRED
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID
+  - FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE
+  - FUNCTION_DEPLOYMENT_CONFIRMATION_REQUIRED
+  - FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_REQUIRED
+  - FUNCTION_DEPLOYMENT_APPROVAL_ARGUMENTS_INVALID
+  - FUNCTION_DEPLOYMENT_APPROVAL_INVALID
+  - FUNCTION_DEPLOYMENT_APPROVAL_MISMATCH
+  - FUNCTION_DEPLOYMENT_RECONCILIATION_UNSUPPORTED
+  - FUNCTION_DEPLOYMENT_PROVIDER_OBSERVATION_DRIFT
+  - AZURE_FUNCTION_DEPLOYMENT_NOT_APPLIED_NOT_PROVEN
+  - FUNCTION_DEPLOYMENT_LOCAL_ARTIFACT_CHANGED
+  - FUNCTION_DEPLOYMENT_LOCK_SET_CHANGED
+  - OWNER_COMMENT_VERIFICATION_FAILED
+  - PLATFORM_SECURITY_BACKEND_UNAVAILABLE
+  - AZURE_FUNCTION_RECONCILIATION_ACCOUNT_MISMATCH
+  - AZURE_FUNCTION_RECONCILIATION_DEPLOYMENTS_INVALID
+  - AZURE_FUNCTION_RECONCILIATION_READ_FAILED
+  - AZURE_FUNCTION_RECONCILIATION_READ_FORBIDDEN
+  - AZURE_FUNCTION_RECONCILIATION_SITE_INVALID
+  - AZURE_FUNCTION_RECONCILIATION_TARGET_MISMATCH
+  - AZURE_FUNCTION_RECONCILIATION_TIME_INVALID
+  - FUNCTION_DEPLOYMENT_ARTIFACT_INVALID
+  - FUNCTION_DEPLOYMENT_INSPECTION_LOCAL_WRITE_DETECTED
+  - FUNCTION_DEPLOYMENT_LOCAL_SNAPSHOT_INVALID
+  - FUNCTION_DEPLOYMENT_LOCK_NOT_HELD
+  - FUNCTION_DEPLOYMENT_LOCK_REPLACED
+  - FUNCTION_DEPLOYMENT_LOCK_SET_INVALID
+  - FUNCTION_DEPLOYMENT_MARKER_INVALID
+  - FUNCTION_DEPLOYMENT_RELEASE_FAILED
+  - FUNCTION_DEPLOYMENT_RELEASE_PROGRESS_INVALID
+  - FUNCTION_DEPLOYMENT_STATE_CHANGED
+  - FUNCTION_DEPLOYMENT_STATE_INVALID
+  - FUNCTION_DEPLOYMENT_ARTIFACT_STATE_INVALID
+  - FUNCTION_DEPLOYMENT_EVIDENCE_INVALID
+  - FUNCTION_DEPLOYMENT_LEDGER_INVALID
+  - FUNCTION_DEPLOYMENT_PACKAGE_BINDING_INVALID
+  - FUNCTION_DEPLOYMENT_PREPARED_INPUTS_INVALID
+  - FUNCTION_DEPLOYMENT_PROVIDER_OBSERVATION_INVALID
+  - FUNCTION_DEPLOYMENT_RECONCILER_BINDING_INVALID
+  - FUNCTION_DEPLOYMENT_RUNTIME_REVALIDATION_FAILED
+
+status_counter_hash_cases:
+  historic_writes_started_not_current_write: {historic_writes_started: true, current_invocation_local_mutation_count: 0}
+  inspection_required_status: {status: FUNCTION_DEPLOYMENT_RECONCILIATION_REQUIRED}
+  not_applied_classification: {classification: FUNCTION_DEPLOYMENT_NOT_APPLIED}
+  stable_contract_codes_exact: {foreign_codes_allowed: false}
+  observation_codes_exact: {foreign_codes_allowed: false}
+  all_blocked_branches_case_bound: {required: true}
+  foreign_code_rejected: {expected_status: BLOCKED}
+  error_platform_backend_unavailable: {error_code: PLATFORM_SECURITY_BACKEND_UNAVAILABLE}
+  preflight_all_counters_zero: {all_counters: 0}
+  inspection_two_snapshots_zero_mutations: {provider_read_snapshot_count: 2, current_invocation_local_mutation_count: 0}
+  release_three_local_appends_only: {current_invocation_local_mutation_count: 3, write_scope: lock_journals_only}
+  state_hash_unchanged: {required: true}
+  evidence_hash_unchanged: {required: true}
+  ledger_hash_unchanged: {required: true}
+  marker_hash_expected: {required: true}
+  three_journal_hashes_expected: {required: true}
+  network_and_subprocess_counts_bounded: {required: true}
+
+windows_fail_closed_matrix:
+  live: &windows_blocked_edge
+    credential: &windows_blocked {status: BLOCKED, missing_capability_status: BLOCKED, reached_after_complete_preflight: false, write_allowed: false, required_gate: not_authorized_by_issue746}
+    state: *windows_blocked
+    lock: *windows_blocked
+    network: *windows_blocked
+    subprocess: *windows_blocked
+    tenant: *windows_blocked
+    provider: *windows_blocked
+  recovery: *windows_blocked_edge
+  interruption_reconciliation: &windows_readonly_edge
+    credential: &windows_readonly {status: GUARDED_READ_ONLY, missing_capability_status: BLOCKED, reached_after_complete_preflight: true, write_allowed: false, required_gate: issue746_readonly_reconciliation}
+    state: *windows_readonly
+    lock: *windows_readonly
+    network: *windows_readonly
+    subprocess: *windows_readonly
+    tenant: *windows_readonly
+    provider: *windows_readonly
+  function_deployment_reconciliation: *windows_readonly_edge
+  function_deployment_provenance_loss: *windows_blocked_edge
+
+journal_crash_cases:
+  before_first_append: {expected_status: BLOCKED, journal_states: [HELD, HELD, HELD], same_approval_may_resume: true}
+  after_first_append: {expected_status: BLOCKED, journal_states: [RELEASED, HELD, HELD], same_approval_may_resume: true}
+  after_second_append: {expected_status: BLOCKED, journal_states: [RELEASED, RELEASED, HELD], same_approval_may_resume: true}
+  changed_approval: {expected_status: BLOCKED, same_approval_may_resume: false}
+  unknown_tail: {expected_status: BLOCKED, same_approval_may_resume: false}
+  wrong_order: {expected_status: BLOCKED, same_approval_may_resume: false}
+  after_third_append_before_return: {expected_status: LOCK_JOURNALS_RELEASED, journal_states: [RELEASED, RELEASED, RELEASED], same_approval_may_resume: true}
+  same_approval_replay: {expected_status: LOCK_JOURNALS_RELEASED, journal_states: [RELEASED, RELEASED, RELEASED], same_approval_may_resume: true}
+
+required_existing_regressions:
+  - test_total_provenance_loss_is_terminal_and_has_closed_zero_counters
+  - test_provenance_loss_rejects_wrong_binding_or_partial_inventory
+  - test_provenance_loss_confirmation_loader_binds_hash_and_shape
+  - test_provenance_loss_is_local_terminal_before_github_or_factory
+  - test_exact_approval_releases_locks_without_changing_failed_run
+  - test_wrong_owner_or_hash_never_releases_a_lock
+  - test_crash_after_lock_append_is_recovered_idempotently
+
+required_adapter_boundary_regressions:
+  - test_function_reconciliation_rest_reads_are_exactly_bounded
+  - test_function_reconciliation_observation_projects_not_applied
+  - test_function_reconciliation_observation_rejects_applied_signal
+  - test_failures_expose_stable_codes_without_raw_output
+  - test_invalid_json_is_redacted
+  - test_duplicate_json_keys_are_rejected_and_redacted
+  - test_bound_artifact_hash_mismatch_stops_before_provider
+  - test_minimal_env_does_not_copy_credential_variables
+  - test_custom_cloud_config_is_rejected_before_subprocess
+  - test_group_writable_azure_config_root_is_rejected
+  - test_unauthenticated_cli_state_fails_closed_without_output
+  - test_adapter_forwards_bound_artifacts_with_per_call_timeout
+
+remote_checks:
+  expected_pr: 747
+  expected_head_source: local_git_HEAD
+  exact_contexts:
+    - Privacy and Secrets Guard / secret-scan
+    - Privacy and Secrets Guard / privacy-lint
+    - NaC Quality Gate / quality-gate
+    - NaC Windows Portability / windows-offline-cli
+  missing_skipped_cancelled_renamed_or_duplicate: BLOCKED
+
+pr_scope:
+  base_ref: origin/main
+  exact_changed_files:
+    - .codex/agents/nac-docs-parity-reviewer.toml
+    - .codex/agents/nac-policy-reviewer.toml
+    - .codex/agents/nac-scope-mapper.toml
+    - .codex/agents/nac-validation-reviewer.toml
+    - .github/workflows/governance-policy-sync.yml
+    - .github/workflows/windows-portability.yml
+    - .pi/agents/nac-docs-parity-reviewer.md
+    - .pi/agents/nac-policy-reviewer.md
+    - .pi/agents/nac-scope-mapper.md
+    - .pi/agents/nac-validation-reviewer.md
+    - agent-context/index.json
+    - AGENTS.md
+    - assets/docs/generic-workbench/VIS-721-manifest.json
+    - docs/de/cli.md
+    - docs/de/START_HERE.md
+    - docs/de/minimum-requirements.md
+    - docs/de/role-model.md
+    - docs/de/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+    - docs/de/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+    - docs/en/cli.md
+    - docs/en/START_HERE.md
+    - docs/en/minimum-requirements.md
+    - docs/en/role-model.md
+    - docs/en/superpowers/plans/2026-09-15-m365-bff-failed-partial-safe-completion.md
+    - docs/en/superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md
+    - policies/access-control-policy.yaml
+    - policies/github-identity-registry.json
+    - policies/github-identity-registry.schema.json
+    - policies/process-policy.yaml
+    - policies/role-model-policy.yaml
+    - sbom/ai/nac-ai-sbom-draft.json
+    - sbom/ai/nac-ai-sbom-export-mapping.json
+    - scripts/onboarding_wizard.py
+    - scripts/privacy_lint.py
+    - scripts/quality_gate.py
+    - scripts/validate_agent_authentication_boundary.py
+    - scripts/validate_business_case_type_azure_blob_worm.py
+    - scripts/validate_business_case_type_graph_write_edge.py
+    - scripts/validate_generic_workbench_foundation.py
+    - scripts/validate_graft_context_layer.py
+    - scripts/validate_identity_registry.py
+    - scripts/validate_m365_azure_bff_live_activation.py
+    - scripts/validate_m365_azure_bff_performance_acceptance.py
+    - scripts/validate_m365_bff_failed_partial_safe_completion.py
+    - scripts/validate_m365_release_readiness_gate.py
+    - scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+    - scripts/validate_microsoft_first_onprem_target_architecture.py
+    - scripts/validate_notarial_application_interface_inventory.py
+    - scripts/validate_xnotar_xjustiz_package_boundary.py
+    - src/nac_ai_sbom/export_mapping.py
+    - src/nac_bff/activation_security_backend.py
+    - src/nac_bff/activation_security_linux.py
+    - src/nac_bff/activation_security_windows.py
+    - src/nac_bff/approved_git_tree.py
+    - src/nac_bff/azure_activation_attestations.py
+    - src/nac_bff/azure_activation_composition.py
+    - src/nac_bff/azure_function_deployment_reconciliation.py
+    - src/nac_bff/issue746_reconciliation_gate.py
+    - src/nac_bff/azure_activation_contract.py
+    - src/nac_bff/azure_activation_provisioner_bootstrap.py
+    - src/nac_bff/azure_activation_runner.py
+    - src/nac_bff/azure_activation.py
+    - src/nac_bff/azure_interruption_baseline.py
+    - src/nac_bff/azure_interruption_reconciliation.py
+    - src/nac_bff/azure_live_commands_win.py
+    - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_performance_acceptance.py
+    - src/nac_bff/azure_performance_authorization.py
+    - src/nac_bff/azure_performance_infrastructure_safety.py
+    - src/nac_bff/azure_performance_lease_broker_auth.py
+    - src/nac_bff/azure_performance_lease.py
+    - src/nac_bff/azure_performance_owner_gate.py
+    - src/nac_bff/azure_performance_runtime.py
+    - src/nac_bff/azure_performance_storage_ports.py
+    - src/nac_cli/cli.py
+    - src/nac_identity/governance_registry.py
+    - src/nac_m365_graph/business_case_type_production_adapters.py
+    - src/nac_m365_graph/business_case_type_production_composition.py
+    - src/nac_m365_graph/business_case_type_write_state.py
+    - src/nac_m365_graph/mvp_test_environment_deploy.py
+    - src/nac_m365_graph/node_runtime_integrity.py
+    - src/nac_m365_graph/sealed_toolchain.py
+    - src/nac_m365_graph/spfx_site_deployment.py
+    - src/nac_runtime/platform_file_lock.py
+    - src/nac_runtime/sqlite_evidence_staging_outbox.py
+    - src/notary_kg/business_case_type_migration_quarantine.py
+    - src/notary_kg/business_case_type_migration_runner.py
+    - src/notary_kg/pilot_checklist.py
+    - src/notary_kg/workflow_contract.py
+    - tests/test_activation_security_backend.py
+    - tests/test_activation_security_windows.py
+    - tests/test_agent_authentication_boundary.py
+    - tests/test_business_case_type_graph_write_composition.py
+    - tests/test_business_case_type_graph_write_crash_recovery.py
+    - tests/test_business_case_type_graph_write_state_store.py
+    - tests/test_business_case_type_migration_cli.py
+    - tests/test_business_case_type_migration_quarantine.py
+    - tests/test_business_case_type_production_adapters.py
+    - tests/test_business_case_type_production_composition.py
+    - tests/test_codex_agent_context_index_audit.py
+    - tests/test_graft_context_layer.py
+    - tests/test_identity_registry.py
+    - tests/test_issue746_reconciliation_gate.py
+    - tests/test_m365_azure_bff_live_activation_contract.py
+    - tests/test_m365_bff_failed_partial_safe_completion.py
+    - tests/test_m365_mvp_test_environment_deploy.py
+    - tests/test_m365_sharepoint_bpmn_viewer_adapter.py
+    - tests/test_nac_bff_approved_git_tree.py
+    - tests/test_nac_bff_azure_activation_attestations.py
+    - tests/test_nac_bff_azure_activation_cli.py
+    - tests/test_nac_bff_azure_activation_composition.py
+    - tests/test_nac_bff_azure_activation_owner_gate.py
+    - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
+    - tests/test_nac_bff_azure_activation_runner.py
+    - tests/test_nac_bff_azure_function_deployment_reconciliation.py
+    - tests/test_nac_bff_azure_interruption_baseline.py
+    - tests/test_nac_bff_azure_interruption_reconciliation.py
+    - tests/test_nac_bff_azure_live_commands.py
+    - tests/test_nac_bff_azure_performance_acceptance.py
+    - tests/test_nac_bff_azure_performance_authorization.py
+    - tests/test_nac_bff_azure_performance_infrastructure_safety.py
+    - tests/test_nac_bff_azure_performance_lease_broker_auth.py
+    - tests/test_nac_bff_azure_performance_owner_gate.py
+    - tests/test_nac_bff_azure_performance_runtime.py
+    - tests/test_nac_bff_azure_performance_storage_ports.py
+    - tests/test_nac_m365_node_runtime_integrity.py
+    - tests/test_nac_m365_sealed_toolchain.py
+    - tests/test_notarkammer_demo_runtime_seed.py
+    - tests/test_notary_kg.py
+    - tests/test_platform_file_lock.py
+    - tests/test_sqlite_evidence_staging_outbox.py
+    - tests/test_validate_generic_workbench_foundation.py
+    - tests/test_validate_windows_offline_cli_portability.py
+    - tests/test_windows_offline_cli_portability.py
+    - tests/test_xnotar_xjustiz_package_boundary.py
+    - workflows/contracts/m365-azure-bff-live-activation.contract.json
+    - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
+    - workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml
+ai_sbom:
+  component_id: m365-bff-failed-partial-safe-completion-contract
+  human_review_owner: owner_solo_approval_source_bound
+  provider_boundary: local_terminal_classification_before_provider_access
+  evidence_binding: protected_confirmation_resolver_principal_and_original_lock_hashes
+  privacy_boundary: synthetic_public_registry_real_mapping_repo_external
+  release_export_enabled: false
+
+side_effect_boundary:
+  tenant_write_count: 0
+  provider_write_count: 0
+  credential_write_count: 0
+  live_run_count: 0

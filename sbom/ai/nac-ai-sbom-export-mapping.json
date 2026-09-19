@@ -2,9 +2,10 @@
   "schema_version": "nac.ai-sbom-export-mapping/v0.1",
   "artifact_id": "nac-ai-sbom-cyclonedx-spdx-export-mapping",
   "status": "mapping_selected_no_release_export",
-  "last_update": "2026-06-30",
+  "last_update": "2026-09-16",
   "source_documents": {
     "ai_sbom_baseline": "sbom/ai/nac-ai-sbom-draft.json",
+    "issue_746_verification_contract": "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
     "sbom_for_ai_de": "docs/de/sbom-for-ai.md",
     "sbom_for_ai_en": "docs/en/sbom-for-ai.md",
     "sbom_products_de": "docs/de/sbom-products.md",

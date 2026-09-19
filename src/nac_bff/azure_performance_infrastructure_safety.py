@@ -18,6 +18,8 @@ import sys
 from typing import Any
 from uuid import UUID
 
+from .activation_security_backend import SecurityBoundaryError, SecureDirectorySession
+
 from .azure_activation_attestations import (
     AZURE_CLI_EXECUTION_PATH,
     TOOLCHAIN_ATTESTATION_FIELDS,
@@ -1038,6 +1040,12 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             "PYTHONNOUSERSITE": "1",
             "PYTHONSAFEPATH": "1",
         }
+        if os.name == "nt":
+            system_root = os.environ.get("SystemRoot") or os.environ.get("WINDIR")
+            if system_root:
+                self._environment["SystemRoot"] = system_root
+                self._environment["WINDIR"] = system_root
+                self._environment["PATH"] = str(Path(system_root) / "System32")
         self._environment_sha256 = hashlib.sha256(
             _canonical_json_bytes(self._environment)
         ).hexdigest()
@@ -1475,16 +1483,54 @@ class AzurePerformanceInfrastructureReadbackAdapter:
             _fail("AZURE_CLI_RUNTIME_BINDING_FAILED")
         try:
             with runtime:
-                completed = subprocess.run(
-                    runtime.command(list(argv[1:])),
-                    check=False,
-                    capture_output=True,
-                    env=dict(self._environment),
-                    stdin=subprocess.DEVNULL,
-                    timeout=30,
-                    shell=False,
-                    pass_fds=runtime.pass_fds,
-                )
+                command = runtime.command(list(argv[1:]))
+                if os.name == "nt":
+                    from .activation_security_backend import (
+                        ProcessSpec,
+                        SecurityBoundaryError,
+                        get_platform_security_backend,
+                    )
+
+                    backend = get_platform_security_backend()
+                    executable = Path(command[0])
+                    executable_sha256 = backend.inspect_private_path(
+                        executable, purpose="toolchain-executable"
+                    ).sha256
+                    try:
+                        result = backend.launch_attested_process(
+                            ProcessSpec(
+                                executable=executable,
+                                arguments=tuple(command[1:]),
+                                cwd=Path.cwd().resolve(),
+                                environment=dict(self._environment),
+                                executable_sha256=executable_sha256,
+                                timeout_seconds=30.0,
+                                maximum_output_bytes=8 * 1024 * 1024,
+                                allowed_exit_codes=tuple(range(256)),
+                                credential_write_guard=True,
+                            )
+                        )
+                    except SecurityBoundaryError as exc:
+                        if exc.code == "PROCESS_TIMEOUT":
+                            raise subprocess.TimeoutExpired(command, 30) from exc
+                        raise OSError(exc.code) from exc
+                    completed = subprocess.CompletedProcess(
+                        command,
+                        result.exit_code,
+                        result.stdout,
+                        result.stderr,
+                    )
+                else:
+                    completed = subprocess.run(
+                        command,
+                        check=False,
+                        capture_output=True,
+                        env=dict(self._environment),
+                        stdin=subprocess.DEVNULL,
+                        timeout=30,
+                        shell=False,
+                        pass_fds=runtime.pass_fds,
+                    )
         except (OSError, subprocess.SubprocessError):
             _fail("SEALED_AZURE_READ_EXECUTION_FAILED")
         if completed.returncode != 0 or not isinstance(completed.stdout, bytes):
@@ -5636,6 +5682,16 @@ def _record_readback_session_claim(
             "schema_version": READBACK_SESSION_SCHEMA,
         }
     ) + b"\n"
+    if not isinstance(directory, int):
+        try:
+            directory.create_exclusive(name, record)
+        except SecurityBoundaryError as exc:
+            if exc.code == "SECURE_CHILD_ALREADY_EXISTS":
+                _fail("READBACK_SESSION_REPLAYED")
+            _fail("READBACK_REPLAY_LEDGER_INVALID")
+        finally:
+            directory.close()
+        return
     try:
         descriptor = os.open(
             name,
@@ -5682,6 +5738,21 @@ def _read_restart_receipt(directory: Path, name: str) -> dict[str, Any] | None:
     )
     if directory_descriptor is None:
         return None
+    if not isinstance(directory_descriptor, int):
+        try:
+            raw = directory_descriptor.read_bounded(name, 64 * 1024)
+            if raw is None:
+                return None
+            if not raw or not raw.endswith(b"\n"):
+                _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+            value = json.loads(raw)
+            if not isinstance(value, dict):
+                _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+            return value
+        except (SecurityBoundaryError, UnicodeDecodeError, json.JSONDecodeError):
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        finally:
+            directory_descriptor.close()
     descriptor = -1
     try:
         try:
@@ -5733,6 +5804,16 @@ def _create_restart_receipt(
         _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
     descriptor = -1
     raw = _canonical_json_bytes(value) + b"\n"
+    if not isinstance(directory_descriptor, int):
+        try:
+            directory_descriptor.create_exclusive(name, raw)
+        except SecurityBoundaryError as exc:
+            if exc.code == "SECURE_CHILD_ALREADY_EXISTS":
+                _fail("INFRASTRUCTURE_RESTART_RECEIPT_ALREADY_EXISTS")
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+        finally:
+            directory_descriptor.close()
+        return
     try:
         descriptor = os.open(
             name,
@@ -5770,9 +5851,20 @@ def _create_restart_receipt(
 
 def _open_private_restart_receipt_directory(
     path: Path, *, create: bool
-) -> int | None:
+) -> int | SecureDirectorySession | None:
     if not isinstance(path, Path) or not path.is_absolute() or ".." in path.parts:
         _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
+    if os.name == "nt":
+        from .activation_security_backend import get_platform_security_backend
+
+        try:
+            return get_platform_security_backend().open_secure_directory(
+                path, create=create
+            )
+        except SecurityBoundaryError as exc:
+            if not create and exc.code.endswith(("_2", "_3")):
+                return None
+            _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
     flags = (
         os.O_RDONLY
         | getattr(os, "O_DIRECTORY", 0)
@@ -5820,10 +5912,19 @@ def _open_private_restart_receipt_directory(
         _fail("INFRASTRUCTURE_RESTART_RECEIPT_STORAGE_INVALID")
 
 
-def _open_private_replay_ledger_directory() -> int:
+def _open_private_replay_ledger_directory() -> int | SecureDirectorySession:
     path = _READBACK_REPLAY_LEDGER_DIRECTORY
     if not isinstance(path, Path) or not path.is_absolute() or ".." in path.parts:
         _fail("READBACK_REPLAY_LEDGER_INVALID")
+    if os.name == "nt":
+        from .activation_security_backend import get_platform_security_backend
+
+        try:
+            return get_platform_security_backend().open_secure_directory(
+                path, create=True
+            )
+        except SecurityBoundaryError:
+            _fail("READBACK_REPLAY_LEDGER_INVALID")
     flags = (
         os.O_RDONLY
         | getattr(os, "O_DIRECTORY", 0)
@@ -5979,28 +6080,7 @@ def _valid_sealed_operation(
                 != capability.executable_sha256
             )
         )
-        or not isinstance(environment, Mapping)
-        or set(environment)
-        != {
-            "AZURE_CONFIG_DIR",
-            "AZURE_CORE_COLLECT_TELEMETRY",
-            "HOME",
-            "LANG",
-            "LC_ALL",
-            "PATH",
-            "PYTHONNOUSERSITE",
-            "PYTHONSAFEPATH",
-        }
-        or environment.get("AZURE_CORE_COLLECT_TELEMETRY") != "no"
-        or environment.get("LANG") != "C.UTF-8"
-        or environment.get("LC_ALL") != "C.UTF-8"
-        or environment.get("PYTHONNOUSERSITE") != "1"
-        or environment.get("PYTHONSAFEPATH") != "1"
-        or environment.get("PATH")
-        != "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        or not Path(str(environment.get("HOME", ""))).is_absolute()
-        or not Path(str(environment.get("AZURE_CONFIG_DIR", ""))).is_absolute()
-        or any(not isinstance(item, str) or not item for item in environment.values())
+        or not _valid_sealed_environment(environment)
         or operation.get("environment_sha256")
         != hashlib.sha256(_canonical_json_bytes(environment)).hexdigest()
         or not isinstance(raw, str)
@@ -6011,6 +6091,48 @@ def _valid_sealed_operation(
     except (ValueError, TypeError):
         return False
     return hashlib.sha256(response_bytes).hexdigest() == operation["response_sha256"]
+
+
+def _valid_sealed_environment(value: object) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    base_keys = {
+        "AZURE_CONFIG_DIR",
+        "AZURE_CORE_COLLECT_TELEMETRY",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "PATH",
+        "PYTHONNOUSERSITE",
+        "PYTHONSAFEPATH",
+    }
+    keys = set(value)
+    if keys == base_keys:
+        path_valid = (
+            value.get("PATH")
+            == "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        )
+    elif keys == base_keys | {"SystemRoot", "WINDIR"}:
+        system_root = value.get("SystemRoot")
+        path_valid = (
+            isinstance(system_root, str)
+            and Path(system_root).is_absolute()
+            and value.get("WINDIR") == system_root
+            and value.get("PATH") == str(Path(system_root) / "System32")
+        )
+    else:
+        return False
+    return bool(
+        path_valid
+        and value.get("AZURE_CORE_COLLECT_TELEMETRY") == "no"
+        and value.get("LANG") == "C.UTF-8"
+        and value.get("LC_ALL") == "C.UTF-8"
+        and value.get("PYTHONNOUSERSITE") == "1"
+        and value.get("PYTHONSAFEPATH") == "1"
+        and Path(str(value.get("HOME", ""))).is_absolute()
+        and Path(str(value.get("AZURE_CONFIG_DIR", ""))).is_absolute()
+        and all(isinstance(item, str) and item for item in value.values())
+    )
 
 
 def _expected_operation_for_envelope(

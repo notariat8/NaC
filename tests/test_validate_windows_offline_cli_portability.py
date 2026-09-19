@@ -20,9 +20,14 @@ class WindowsPortabilityValidatorTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         root = Path(temporary.name)
         for relative in (
+            "src/nac_bff/activation_security_backend.py",
+            "src/nac_bff/activation_security_windows.py",
             "src/nac_bff/azure_activation_contract.py",
             "src/nac_bff/azure_activation_facade.py",
+            "src/nac_m365_graph/mvp_test_environment_deploy.py",
+            "tests/test_activation_security_windows.py",
             "tests/test_windows_offline_cli_portability.py",
+            "tests/test_m365_bff_failed_partial_safe_completion.py",
             ".github/workflows/windows-portability.yml",
         ):
             destination = root / relative
@@ -215,6 +220,25 @@ class WindowsPortabilityValidatorTests(unittest.TestCase):
         _validate_windows_portability(root, errors)
         self.assertIn(
             "Windows portability workflow contains forbidden secret expression", errors
+        )
+
+    def test_private_checkout_acl_binding_removal_is_rejected(self) -> None:
+        temporary, root = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        workflow = root / ".github/workflows/windows-portability.yml"
+        workflow.write_text(
+            workflow.read_text(encoding="utf-8").replace(
+                "Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true",
+                "Write-Output 'checkout ACL binding removed'",
+            ),
+            encoding="utf-8",
+        )
+        errors: list[str] = []
+        _validate_windows_portability(root, errors)
+        self.assertIn(
+            "Windows portability private checkout binding missing: "
+            "Set-PrivateAcl -LiteralPath $env:GITHUB_WORKSPACE -Directory $true",
+            errors,
         )
 
 

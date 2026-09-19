@@ -90,14 +90,19 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
         combined = "\n".join([json.dumps(contract, sort_keys=True), german, english])
 
         self.assertEqual(contract["schema_version"], "nac.demo-runtime-seed/v0.1")
-        self.assertEqual(contract["source_fixture"], str(FIXTURE.relative_to(REPO_ROOT)))
+        self.assertEqual(
+            contract["source_fixture"], FIXTURE.relative_to(REPO_ROOT).as_posix()
+        )
         self.assertEqual(contract["data_model_slice"]["id"], "runtime_graph_metadata_v0")
         self.assertTrue(contract["writes"]["process_events"])
         self.assertEqual(contract["graph_projection"]["contract"], "nac.runtime-graph-projection/v0.2")
         self.assertEqual(contract["graph_projection"]["legacy_contract"], "nac.atp-runtime-graph-projection/v0.1")
         self.assertEqual(contract["data_model_slice"]["contract"], "nac.m365-sharepoint-runtime-metadata/v0.1")
         self.assertEqual(contract["data_model_slice"]["legacy_contract"], "nac.atp-runtime-storage/v0.1")
-        self.assertEqual(contract["runtime_event_profile"]["source"], str(FIXTURE.relative_to(REPO_ROOT)) + "#runtime_event_profile")
+        self.assertEqual(
+            contract["runtime_event_profile"]["source"],
+            FIXTURE.relative_to(REPO_ROOT).as_posix() + "#runtime_event_profile",
+        )
         self.assertTrue(contract["runtime_event_profile"]["dependencies"])
         self.assertTrue(contract["runtime_event_profile"]["critical_path"])
         self.assertFalse(contract["guardrails"]["mandate_data"])

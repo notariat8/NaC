@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 from nac_bff import azure_performance_acceptance as acceptance
 from nac_bff import azure_performance_authorization as authorization
+from nac_bff.activation_security_backend import get_platform_security_backend
 from nac_bff.azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureSafetyVerification,
 )
@@ -616,8 +617,23 @@ class AzurePerformanceAuthorizationTests(unittest.TestCase):
             )
             persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
             self.assertEqual(persisted["used"][authorization.TARGET_GET], 1)
-            self.assertEqual(stat.S_IMODE(ledger_path.parent.stat().st_mode), 0o700)
-            self.assertEqual(stat.S_IMODE(ledger_path.stat().st_mode), 0o600)
+            if os.name == "nt":
+                with get_platform_security_backend().open_secure_directory(
+                    ledger_path.parent, create=False
+                ) as session:
+                    binding = session.inspect_optional_child(
+                        ledger_path.name, "authorization-ledger"
+                    )
+                    self.assertIsNotNone(binding)
+                    assert binding is not None
+                    self.assertFalse(binding.reparse_point)
+                    self.assertRegex(binding.owner_sid_sha256, r"^[0-9a-f]{64}$")
+                    self.assertRegex(binding.dacl_sha256, r"^[0-9a-f]{64}$")
+            else:
+                self.assertEqual(
+                    stat.S_IMODE(ledger_path.parent.stat().st_mode), 0o700
+                )
+                self.assertEqual(stat.S_IMODE(ledger_path.stat().st_mode), 0o600)
 
             forged = object.__new__(authorization.VerifiedLiveActionCapability)
             forged._nonce = capability._nonce

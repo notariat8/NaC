@@ -8,6 +8,8 @@ on:
       - "AGENTS.md"
       - ".codex/agents/**"
       - "scripts/validate_governance_sync.py"
+      - "scripts/validate_identity_registry.py"
+      - "tests/test_identity_registry.py"
   workflow_dispatch:
 
 jobs:
@@ -26,3 +28,6 @@ jobs:
 
       - name: Validate governance policy sync
         run: python scripts/validate_governance_sync.py
+
+      - name: Validate account and principal identity registry
+        run: python -m unittest tests.test_identity_registry

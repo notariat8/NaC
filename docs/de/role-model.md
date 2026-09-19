@@ -15,6 +15,18 @@ Dieses Modell stellt sicher, dass:
 - Selbst lösen darf jede Rolle nur innerhalb ihrer freigegebenen Kompetenz.
 - Fachkritische Entscheidungen brauchen qualifizierte Rollen und ggf.
   Vier-Augen-Freigabe.
+- Accounts werden provider-qualifiziert als `<provider>:<login>` geführt und
+  auf stabile `principal_id`-Werte abgebildet. Rollen und Qualifikationen gehören
+  zum Principal. Für das Vier-Augen-Prinzip müssen die `principal_id`-Werte
+  verschieden sein; verschiedene Logins desselben Principals zählen nicht als
+  verschiedene Personen.
+- Ohne konkret zitierte gesetzliche, regulatorische, vertragliche oder
+  verbindliche Security-Policy, die für den Vorgang zwei natürliche Personen
+  verlangt, ist `OWNER_SOLO_APPROVAL` zulässig und ausdrücklich keine
+  Vier-Augen-Freigabe. Ist eine solche Quelle anwendbar und nur ein Principal
+  verfügbar, blockiert `BLOCKED_SINGLE_PRINCIPAL` fail-closed.
+  Eine Rollenbezeichnung oder ein abstraktes `four_eyes`-Merkmal allein ist
+  kein Quellenbeleg für eine externe Zwei-Personen-Pflicht.
 
 Beispiel: Wenn ein Arbeitsplatz-Gate fehlschlägt, muss niemand Notar sein, um
 das zu melden. Eine notarielle Freigabe bleibt aber bei der qualifizierten

@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime
-import fcntl
 import hashlib
 import os
 from pathlib import Path
@@ -11,6 +10,12 @@ import re
 import stat
 from typing import Any, Callable, Protocol, cast
 
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
+
+from .activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 from .azure_activation import LOCATION, RESOURCE_GROUP, SUBSCRIPTION_ID, TENANT_ID
 from .azure_interruption_baseline import (
     BICEP_BASELINE_EXACT,
@@ -1929,6 +1934,7 @@ def _descriptors_match_paths(
 
 
 def _descriptor_bytes(descriptor: int) -> bytes | None:
+    original_offset: int | None = None
     try:
         before = os.fstat(descriptor)
         if (
@@ -1937,7 +1943,20 @@ def _descriptor_bytes(descriptor: int) -> bytes | None:
             or before.st_size > _MAX_LOCK_ARTIFACT_BYTES
         ):
             return None
-        raw = os.pread(descriptor, before.st_size, 0)
+        if hasattr(os, "pread"):
+            raw = os.pread(descriptor, before.st_size, 0)
+        else:
+            original_offset = os.lseek(descriptor, 0, os.SEEK_CUR)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            chunks: list[bytes] = []
+            remaining = before.st_size
+            while remaining:
+                chunk = os.read(descriptor, remaining)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            raw = b"".join(chunks)
         after = os.fstat(descriptor)
         if (
             len(raw) != before.st_size
@@ -1947,6 +1966,12 @@ def _descriptor_bytes(descriptor: int) -> bytes | None:
         return raw
     except OSError:
         return None
+    finally:
+        if original_offset is not None:
+            try:
+                os.lseek(descriptor, original_offset, os.SEEK_SET)
+            except OSError:
+                pass
 
 
 def _descriptor_sha256(descriptor: int) -> str | None:
@@ -1988,6 +2013,26 @@ def _open_lock_set_read_only(
     descriptors: list[int] = []
     try:
         for path in paths:
+            if os.name == "nt":
+                backend = get_platform_security_backend()
+                expected = backend.inspect_private_path(
+                    path, purpose="interruption-lock"
+                )
+                descriptor = os.open(
+                    path, os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                )
+                descriptors.append(descriptor)
+                opened = backend.inspect_open_file_descriptor(
+                    descriptor, purpose="interruption-lock"
+                )
+                if (
+                    opened.volume_serial != expected.volume_serial
+                    or opened.file_id != expected.file_id
+                    or opened.sha256 != expected.sha256
+                ):
+                    return None, "INTERRUPTION_LOCK_SET_INVALID"
+                lock_exclusive(descriptor, nonblocking=True)
+                continue
             metadata = path.lstat()
             if (
                 not stat.S_ISREG(metadata.st_mode)
@@ -2002,11 +2047,11 @@ def _open_lock_set_read_only(
             opened = os.fstat(descriptor)
             if opened.st_ino != metadata.st_ino or opened.st_dev != metadata.st_dev:
                 return None, "INTERRUPTION_LOCK_SET_INVALID"
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_exclusive(descriptor, nonblocking=True)
         return tuple(descriptors), None  # type: ignore[return-value]
     except BlockingIOError:
         return None, "INTERRUPTION_LOCK_ACTIVE"
-    except OSError:
+    except (OSError, SecurityBoundaryError):
         return None, "INTERRUPTION_LOCK_SET_INVALID"
     finally:
         if len(descriptors) != 3:
@@ -2032,7 +2077,10 @@ def _open_lock_set_for_terminalization(
 def _close_lock_set(descriptors: tuple[int, ...]) -> None:
     for descriptor in reversed(descriptors):
         try:
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            if os.name == "nt" and descriptor in runner._WINDOWS_RUN_LOCKS:
+                runner._release_descriptor_lock(descriptor)
+            else:
+                unlock(descriptor)
         finally:
             os.close(descriptor)
 

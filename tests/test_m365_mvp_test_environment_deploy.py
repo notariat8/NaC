@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from nac_mvp_test_environment import (
     BPMN_PROCESS_KEY,
@@ -40,6 +40,11 @@ from nac_bff.bpmn_asset import (
     CANONICAL_BPMN_MODEL_KEY,
     CANONICAL_BPMN_SHA256,
 )
+from nac_bff.activation_security_backend import (
+    ProcessResult,
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 
 
 PASSED_ROLE_CHECKS = [
@@ -48,6 +53,52 @@ PASSED_ROLE_CHECKS = [
     {"scenario": "deny", "expected": "DENY", "actual": "DENY", "passed": True},
 ]
 _DEFAULT_RUNNER = object()
+
+
+class _WindowsProcessBackendProxy:
+    def __init__(self, delegate) -> None:
+        self._delegate = delegate
+
+    def __getattr__(self, name: str):
+        return getattr(self._delegate, name)
+
+    def launch_attested_process(self, spec) -> ProcessResult:
+        if spec.arguments == ("--version",):
+            return ProcessResult(
+                exit_code=0,
+                stdout=b"v24.14.0\n",
+                stderr=b"",
+                image_sha256=spec.executable_sha256,
+                job_object_assigned=True,
+            )
+        if isinstance(subprocess.run, Mock):
+            try:
+                completed = subprocess.run(
+                    [str(spec.executable), *spec.arguments],
+                    cwd=spec.cwd,
+                    shell=False,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    env=dict(spec.environment),
+                    timeout=spec.timeout_seconds,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise SecurityBoundaryError("PROCESS_TIMEOUT") from exc
+            stdout = (completed.stdout or "").encode("utf-8")
+            stderr = (completed.stderr or "").encode("utf-8")
+            returncode = completed.returncode
+        else:
+            stdout = b"{}"
+            stderr = b""
+            returncode = 0
+        return ProcessResult(
+            exit_code=returncode,
+            stdout=stdout,
+            stderr=stderr,
+            image_sha256=spec.executable_sha256,
+            job_object_assigned=True,
+        )
 
 
 def _file_sha256(path: Path) -> str:
@@ -60,7 +111,7 @@ def _write_user_toolchain(root: Path) -> tuple[Path, Path, str, str]:
     binary.parent.mkdir(parents=True)
     node_bin.mkdir()
     binary.write_text("#!/bin/sh\n", encoding="utf-8")
-    node = node_bin / "node"
+    node = node_bin / ("node.exe" if os.name == "nt" else "node")
     node.write_text("#!/bin/sh\n", encoding="utf-8")
     binary.chmod(0o700)
     node.chmod(0o700)
@@ -69,6 +120,24 @@ def _write_user_toolchain(root: Path) -> tuple[Path, Path, str, str]:
 
 
 class MvpTestEnvironmentDeployTests(unittest.TestCase):
+    def setUp(self) -> None:
+        platform_gate = patch(
+            "nac_m365_graph.mvp_test_environment_deploy."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
+        if os.name != "nt":
+            return
+        proxy = _WindowsProcessBackendProxy(get_platform_security_backend())
+        backend_patch = patch(
+            "nac_bff.activation_security_backend.get_platform_security_backend",
+            return_value=proxy,
+        )
+        backend_patch.start()
+        self.addCleanup(backend_patch.stop)
+
     def test_owner_gate_and_workspace_scope_block_before_plan(self) -> None:
         with patch(
             "nac_m365_graph.mvp_test_environment_deploy.build_spfx_site_deployment_plan"
@@ -397,10 +466,19 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         call = run.call_args
         process_argv = call.args[0]
-        self.assertRegex(process_argv[0], r"^/proc/self/fd/[0-9]+$")
-        self.assertEqual(
-            process_argv[1:3], ["--preserve-symlinks", "--require"]
-        )
+        if os.name == "nt":
+            self.assertEqual(process_argv[0], str(node_bin / "node.exe"))
+            self.assertEqual(
+                process_argv[1:4],
+                ["--permission", "--allow-fs-read=*", "--allow-worker"],
+            )
+            self.assertNotIn("pass_fds", call.kwargs)
+        else:
+            self.assertRegex(process_argv[0], r"^/proc/self/fd/[0-9]+$")
+            self.assertEqual(
+                process_argv[1:3], ["--preserve-symlinks", "--require"]
+            )
+            self.assertEqual(len(call.kwargs["pass_fds"]), 4)
         self.assertEqual(
             process_argv[-4:],
             [str(binary), "status", "--output", "json"],
@@ -408,38 +486,57 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertFalse(call.kwargs["shell"])
         self.assertEqual(call.kwargs["cwd"], binary.parent)
         self.assertEqual(call.kwargs["timeout"], 17.0)
-        self.assertEqual(len(call.kwargs["pass_fds"]), 4)
         environment = call.kwargs["env"]
-        self.assertRegex(
-            environment["NAC_NODE_RUNTIME_MANIFEST"],
-            r"^/proc/self/fd/[0-9]+$",
-        )
-        self.assertEqual(
-            {
-                key: value
-                for key, value in environment.items()
-                if key not in {
-                    "NAC_NODE_RUNTIME_MANIFEST",
-                    "NAC_NODE_RUNTIME_PRELOADER",
-                    "NAC_NODE_RUNTIME_ESM_LOADER",
-                }
-            },
-            {
-                "HOME": str(home),
-                "LANG": "de_DE.UTF-8",
-                "LC_ALL": "C.UTF-8",
-                "PATH": os.pathsep.join(("/usr/bin", "/bin")),
-                "TZ": "UTC",
-                "CLIMICROSOFT365_NOUPDATE": "1",
-                "NODE": process_argv[0],
-            },
-        )
-        self.assertEqual(
-            environment["NAC_NODE_RUNTIME_PRELOADER"], process_argv[3]
-        )
-        self.assertEqual(
-            environment["NAC_NODE_RUNTIME_ESM_LOADER"], process_argv[5]
-        )
+        if os.name == "nt":
+            self.assertTrue(
+                Path(environment["NAC_NODE_RUNTIME_MANIFEST"]).is_absolute()
+            )
+            self.assertEqual(environment["PATH"], str(node_bin))
+            self.assertEqual(environment["NODE"], process_argv[0])
+            self.assertEqual(environment["HOME"], str(home))
+            self.assertEqual(environment["CLIMICROSOFT365_NOUPDATE"], "1")
+            for forbidden in (
+                "NODE_OPTIONS",
+                "NODE_EXTRA_CA_CERTS",
+                "HTTP_PROXY",
+                "HTTPS_PROXY",
+                "M365_RUNTIME_CLIENT_SECRET",
+                "M365_PROVISIONER_PRIVATE_KEY",
+                "AZURE_CLIENT_SECRET",
+                "GRAPH_ACCESS_TOKEN",
+            ):
+                self.assertNotIn(forbidden, environment)
+        else:
+            self.assertRegex(
+                environment["NAC_NODE_RUNTIME_MANIFEST"],
+                r"^/proc/self/fd/[0-9]+$",
+            )
+            self.assertEqual(
+                {
+                    key: value
+                    for key, value in environment.items()
+                    if key not in {
+                        "NAC_NODE_RUNTIME_MANIFEST",
+                        "NAC_NODE_RUNTIME_PRELOADER",
+                        "NAC_NODE_RUNTIME_ESM_LOADER",
+                    }
+                },
+                {
+                    "HOME": str(home),
+                    "LANG": "de_DE.UTF-8",
+                    "LC_ALL": "C.UTF-8",
+                    "PATH": os.pathsep.join(("/usr/bin", "/bin")),
+                    "TZ": "UTC",
+                    "CLIMICROSOFT365_NOUPDATE": "1",
+                    "NODE": process_argv[0],
+                },
+            )
+            self.assertEqual(
+                environment["NAC_NODE_RUNTIME_PRELOADER"], process_argv[3]
+            )
+            self.assertEqual(
+                environment["NAC_NODE_RUNTIME_ESM_LOADER"], process_argv[5]
+            )
 
     @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
     def test_m365_runner_reattests_cli_immediately_before_subprocess(self, run) -> None:
@@ -476,7 +573,7 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
                 expected_node_sha256=node_sha256,
                 environ={},
             )
-            node = node_bin / "node"
+            node = node_bin / ("node.exe" if os.name == "nt" else "node")
             node.write_text("#!/bin/sh\n# replaced\n", encoding="utf-8")
             node.chmod(0o700)
 
@@ -718,15 +815,20 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
             ):
                 M365CliCommandRunner(environ={"PATH": str(path_binary.parent)})
 
-    def test_m365_runner_rejects_world_writable_binary(self) -> None:
+    def test_m365_runner_rejects_unsafe_binary_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = Path(tmp) / "m365-runtime/dist/index.js"
             binary.parent.mkdir(parents=True)
             binary.write_text("#!/bin/sh\n", encoding="utf-8")
-            binary.chmod(0o777)
+            if os.name == "nt":
+                os.link(binary, Path(tmp) / "binary-hardlink")
+                expected_error = "^M365_CLI_RUNTIME_BUNDLE_MISMATCH$"
+            else:
+                binary.chmod(0o777)
+                expected_error = "^M365_CLI_BINARY_MODE_UNSAFE$"
             with self.assertRaisesRegex(
                 M365CliReadinessError,
-                "^M365_CLI_BINARY_MODE_UNSAFE$",
+                expected_error,
             ):
                 M365CliCommandRunner(
                     binary=binary,
@@ -737,11 +839,31 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
     def test_m365_runner_rejects_binary_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            target = root / "m365-real"
+            target_directory = root / "target-directory"
+            target_directory.mkdir()
+            target = target_directory / "m365-real"
             target.write_text("#!/bin/sh\n", encoding="utf-8")
             target.chmod(0o700)
-            binary = root / "m365"
-            binary.symlink_to(target)
+            if os.name == "nt":
+                link = root / "linked-directory"
+                subprocess.run(
+                    [
+                        "cmd.exe",
+                        "/d",
+                        "/c",
+                        "mklink",
+                        "/J",
+                        str(link),
+                        str(target_directory),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                binary = link / target.name
+            else:
+                binary = root / "m365"
+                binary.symlink_to(target)
             with self.assertRaisesRegex(
                 M365CliReadinessError,
                 "^M365_CLI_BINARY_SYMLINK_REJECTED$",
@@ -944,14 +1066,16 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertEqual(result.stderr, "M365_CLI_COMMAND_FAILED")
 
     def test_m365_runner_rejects_unavailable_explicit_binary(self) -> None:
-        with self.assertRaisesRegex(
-            M365CliReadinessError,
-            "^M365_CLI_BINARY_UNAVAILABLE$",
-        ):
-            M365CliCommandRunner(
-                binary="/missing/nac-m365",
-                environ={},
-            )
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp).resolve() / "missing" / "nac-m365"
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_BINARY_UNAVAILABLE$",
+            ):
+                M365CliCommandRunner(
+                    binary=missing,
+                    environ={},
+                )
 
     def test_modified_state_is_rejected_before_plan_readiness_or_any_write(self) -> None:
         canonical = json.loads(DEFAULT_PROVISIONED_STATE.read_text(encoding="utf-8"))
@@ -1153,10 +1277,17 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         provider_argv = run.call_args.args[0]
-        self.assertNotIn(str(package), provider_argv)
         file_path = provider_argv[provider_argv.index("--filePath") + 1]
-        self.assertRegex(file_path, r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer[.]sppkg$")
-        self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 5)
+        if os.name == "nt":
+            self.assertEqual(file_path, str(package))
+            self.assertNotIn("pass_fds", run.call_args.kwargs)
+        else:
+            self.assertNotIn(str(package), provider_argv)
+            self.assertRegex(
+                file_path,
+                r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer[.]sppkg$",
+            )
+            self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 5)
         self.assertEqual(observed, {"basename": "nac-bpmn-viewer.sppkg", "payload": b"approved-package"})
 
     def test_spfx_app_add_allowlist_accepts_attested_and_spfx_package_paths(self) -> None:
@@ -1261,9 +1392,15 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         provider_argv = run.call_args.args[0]
-        self.assertNotIn(str(package), provider_argv)
         file_path = provider_argv[provider_argv.index("--filePath") + 1]
-        self.assertRegex(file_path, r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer-715[.]sppkg$")
+        if os.name == "nt":
+            self.assertEqual(file_path, str(package))
+        else:
+            self.assertNotIn(str(package), provider_argv)
+            self.assertRegex(
+                file_path,
+                r"^/proc/self/fd/[0-9]+/nac-bpmn-viewer-715[.]sppkg$",
+            )
         self.assertEqual(
             observed,
             {"basename": "nac-bpmn-viewer-715.sppkg", "payload": b"attested-package"},

@@ -8,6 +8,8 @@ import re
 import sys
 from typing import Any, Protocol
 
+from .activation_security_backend import get_platform_security_backend
+
 
 PLATFORM_SECURITY_BACKEND_UNAVAILABLE = (
     "PLATFORM_SECURITY_BACKEND_UNAVAILABLE"
@@ -103,44 +105,59 @@ class ActivationContext:
     approved_tree: str
 
 
-def platform_security_backend_available() -> bool:
-    """Return true only for the complete, trusted Linux security backend."""
-    if os.name != "posix" or sys.platform != "linux":
-        return False
-    if not Path("/proc/self/fd").is_dir():
-        return False
-    required_os_capabilities = (
-        "geteuid",
-        "memfd_create",
-        "MFD_ALLOW_SEALING",
-        "O_CLOEXEC",
-        "O_NOFOLLOW",
-    )
-    if any(not hasattr(os, name) for name in required_os_capabilities):
-        return False
-    try:
-        import fcntl
-        import pwd
-        libc = ctypes.CDLL(None, use_errno=True)
-    except (ImportError, OSError):
-        return False
-    return all(
-        hasattr(fcntl, name)
-        for name in (
-            "F_ADD_SEALS",
-            "F_GET_SEALS",
-            "F_SEAL_WRITE",
-            "F_SEAL_GROW",
-            "F_SEAL_SHRINK",
-            "F_SEAL_SEAL",
-            "LOCK_EX",
-            "LOCK_NB",
-            "LOCK_UN",
-            "flock",
+def hermetic_posix_primitives_available() -> bool:
+    """Report local POSIX primitives without authorizing a live backend."""
+
+    if os.name == "posix" and sys.platform == "linux":
+        if not Path("/proc/self/fd").is_dir():
+            return False
+        required_os_capabilities = (
+            "geteuid",
+            "memfd_create",
+            "MFD_ALLOW_SEALING",
+            "O_CLOEXEC",
+            "O_NOFOLLOW",
         )
-    ) and callable(getattr(pwd, "getpwuid", None)) and all(
-        hasattr(libc, name) for name in ("mount", "prctl", "unshare")
-    )
+        if any(not hasattr(os, name) for name in required_os_capabilities):
+            return False
+        try:
+            import fcntl
+            import pwd
+
+            libc = ctypes.CDLL(None, use_errno=True)
+        except (ImportError, OSError):
+            return False
+        return all(
+            hasattr(fcntl, name)
+            for name in (
+                "F_ADD_SEALS",
+                "F_GET_SEALS",
+                "F_SEAL_WRITE",
+                "F_SEAL_GROW",
+                "F_SEAL_SHRINK",
+                "F_SEAL_SEAL",
+                "LOCK_EX",
+                "LOCK_NB",
+                "LOCK_UN",
+                "flock",
+            )
+        ) and callable(getattr(pwd, "getpwuid", None)) and all(
+            hasattr(libc, name) for name in ("mount", "prctl", "unshare")
+        )
+    return platform_security_backend_available()
+
+
+def platform_security_backend_available() -> bool:
+    """Report a complete native backend or the established Linux primitives."""
+
+    if os.name == "posix" and sys.platform == "linux":
+        return hermetic_posix_primitives_available()
+
+    try:
+        get_platform_security_backend()
+    except (ImportError, OSError, RuntimeError):
+        return False
+    return True
 
 
 def require_platform_security_backend() -> None:
@@ -155,6 +172,7 @@ __all__ = [
     "LiveActivationRequest",
     "PLATFORM_BOUNDARY_SCHEMA_VERSION",
     "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
+    "hermetic_posix_primitives_available",
     "platform_security_backend_available",
     "require_platform_security_backend",
 ]

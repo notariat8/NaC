@@ -229,10 +229,12 @@ def _read_json(path: Path, errors: list[str]) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        errors.append(f"cannot read {path.relative_to(REPO_ROOT)}: {exc}")
+        errors.append(f"cannot read {path.relative_to(REPO_ROOT).as_posix()}: {exc}")
         return {}
     if not isinstance(value, dict):
-        errors.append(f"{path.relative_to(REPO_ROOT)} must contain a JSON object")
+        errors.append(
+            f"{path.relative_to(REPO_ROOT).as_posix()} must contain a JSON object"
+        )
         return {}
     return value
 
@@ -241,13 +243,15 @@ def _read_documents(errors: list[str]) -> dict[str, str]:
     documents: dict[str, str] = {}
     for path in (DOC_DE, DOC_EN, SPEC_DE, SPEC_EN, PLAN_DE, PLAN_EN):
         try:
-            relative = str(path.relative_to(REPO_ROOT))
+            relative = path.relative_to(REPO_ROOT).as_posix()
             text = path.read_text(encoding="utf-8")
             if not text.strip():
                 errors.append(f"{relative} must not be empty")
             documents[relative] = text
         except OSError as exc:
-            errors.append(f"cannot read {path.relative_to(REPO_ROOT)}: {exc}")
+            errors.append(
+                f"cannot read {path.relative_to(REPO_ROOT).as_posix()}: {exc}"
+            )
     return documents
 
 

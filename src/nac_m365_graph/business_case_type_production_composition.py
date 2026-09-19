@@ -360,6 +360,12 @@ def _valid_runtime_layout(
     root = mutation_database_path.parent
     if _looks_synced(root):
         return False
+    if os.name == "nt":
+        return _valid_windows_runtime_layout(
+            root,
+            mutation_database_path,
+            evidence_database_path,
+        )
     try:
         canonical_root = root.resolve(strict=True)
         if canonical_root != root or root.is_symlink():
@@ -406,6 +412,46 @@ def _valid_runtime_layout(
         and evidence_resolved.parent == canonical_root
         and (mutation.st_dev, mutation.st_ino)
         != (evidence.st_dev, evidence.st_ino)
+    )
+
+
+def _valid_windows_runtime_layout(
+    root: Path,
+    mutation_database_path: Path,
+    evidence_database_path: Path,
+) -> bool:
+    try:
+        from nac_bff.activation_security_backend import (
+            get_platform_security_backend,
+        )
+
+        backend = get_platform_security_backend()
+        with backend.open_secure_directory(
+            root,
+            create=False,
+            require_current_owner=True,
+            require_restrictive_dacl=True,
+        ) as directory:
+            mutation = directory.inspect_optional_child(
+                mutation_database_path.name,
+                "business-case-mutation-database",
+            )
+            evidence = directory.inspect_optional_child(
+                evidence_database_path.name,
+                "business-case-evidence-database",
+            )
+    except (OSError, RuntimeError):
+        return False
+    if (mutation is None) != (evidence is None):
+        return False
+    if mutation is None:
+        return True
+    return (
+        mutation.volume_serial,
+        mutation.file_id,
+    ) != (
+        evidence.volume_serial,
+        evidence.file_id,
     )
 
 

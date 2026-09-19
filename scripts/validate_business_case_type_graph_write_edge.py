@@ -1038,7 +1038,10 @@ def _load_provisioned_field_schema() -> dict[str, Any]:
         return {}
 
     return {
-        "source_paths_exact": [str(MVP_SCHEMA_PATH), str(FOUNDATION_SCHEMA_PATH)],
+        "source_paths_exact": [
+            MVP_SCHEMA_PATH.as_posix(),
+            FOUNDATION_SCHEMA_PATH.as_posix(),
+        ],
         "text_fields_by_list_exact": text_fields,
         "choice_fields_by_list_exact": choice_fields,
         "date_time_fields_by_list_exact": date_time_fields,

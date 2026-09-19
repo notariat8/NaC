@@ -52,3 +52,16 @@ change_control:
     - freigabeverantwortung
   mandatory_review_count: 1
   require_pull_request: true
+
+governance_identity:
+  account_id_format: provider:login
+  stable_identity_field: principal_id
+  roles_bind_to: principal
+  qualifications_bind_to: principal
+  forbid_raw_login_as_governance_identity: true
+  four_eyes_comparison_field: principal_id
+  same_principal_accounts_are_distinct_people: false
+  solo_owner_decision: OWNER_SOLO_APPROVAL
+  single_principal_external_two_person_block: BLOCKED_SINGLE_PRINCIPAL
+  external_two_person_requirement_needs_citation: true
+  role_name_alone_proves_two_person_requirement: false

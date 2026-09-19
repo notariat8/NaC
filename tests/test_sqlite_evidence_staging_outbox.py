@@ -6,6 +6,9 @@ import stat
 import sys
 import tempfile
 import unittest
+import ctypes
+from contextlib import contextmanager
+from ctypes import wintypes
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +58,67 @@ IDENTIFIER_REGISTRY = typed_identifier_registry(
     business_case_type_ids=REGISTERED_BUSINESS_CASE_TYPE_IDS,
     catalog_versions=REGISTERED_CATALOG_VERSIONS,
 )
+
+
+def _execute_sql(path: Path, statement: str, parameters: tuple[Any, ...] = ()) -> None:
+    connection = sqlite3.connect(path)
+    try:
+        with connection:
+            connection.execute(statement, parameters)
+    finally:
+        connection.close()
+
+
+@contextmanager
+def _broad_write_access(path: Path):
+    if os.name != "nt":
+        original = stat.S_IMODE(path.stat().st_mode)
+        path.chmod(0o770 if path.is_dir() else 0o660)
+        try:
+            yield
+        finally:
+            path.chmod(original)
+        return
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_security = advapi32.GetFileSecurityW
+    get_security.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    get_security.restype = wintypes.BOOL
+    set_security = advapi32.SetFileSecurityW
+    set_security.argtypes = (wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPVOID)
+    set_security.restype = wintypes.BOOL
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    convert.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.LPVOID),
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    convert.restype = wintypes.BOOL
+    required = wintypes.DWORD()
+    get_security(str(path), 0x4, None, 0, ctypes.byref(required))
+    original = ctypes.create_string_buffer(required.value)
+    if not get_security(
+        str(path), 0x4, original, required.value, ctypes.byref(required)
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+    broad = wintypes.LPVOID()
+    broad_size = wintypes.DWORD()
+    if not convert("D:P(A;;GA;;;WD)", 1, ctypes.byref(broad), ctypes.byref(broad_size)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        if not set_security(str(path), 0x4, broad):
+            raise ctypes.WinError(ctypes.get_last_error())
+        yield
+    finally:
+        set_security(str(path), 0x4, original)
+        kernel32.LocalFree(broad)
 
 
 def _event(
@@ -235,15 +299,15 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
         self,
     ) -> None:
         _append(self.outbox, "intent")
-        with sqlite3.connect(self.database_path) as connection:
-            connection.execute(
-                """
+        _execute_sql(
+            self.database_path,
+            """
                 UPDATE evidence_staging_outbox
                 SET event_json = ?
                 WHERE correlation_id = ? AND sequence = 1
-                """,
-                (b"{}", CORRELATION_ID),
-            )
+            """,
+            (b"{}", CORRELATION_ID),
+        )
 
         with self.assertRaisesRegex(
             ImmutableEvidenceError,
@@ -267,11 +331,11 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
         )
         for column, tampered, original in mutations:
             with self.subTest(column=column):
-                with sqlite3.connect(self.database_path) as connection:
-                    connection.execute(
-                        f"UPDATE evidence_staging_outbox SET {column} = ?",
-                        (tampered,),
-                    )
+                _execute_sql(
+                    self.database_path,
+                    f"UPDATE evidence_staging_outbox SET {column} = ?",
+                    (tampered,),
+                )
                 for correlation_id in (CORRELATION_ID, "tampered-correlation"):
                     with self.assertRaisesRegex(
                         ImmutableEvidenceError,
@@ -283,11 +347,11 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
                     r"^staged evidence routing is invalid$",
                 ):
                     SqliteEvidenceStagingOutbox(self.database_path)
-                with sqlite3.connect(self.database_path) as connection:
-                    connection.execute(
-                        f"UPDATE evidence_staging_outbox SET {column} = ?",
-                        (original,),
-                    )
+                _execute_sql(
+                    self.database_path,
+                    f"UPDATE evidence_staging_outbox SET {column} = ?",
+                    (original,),
+                )
                 self.assertEqual(
                     self.outbox.records(CORRELATION_ID),
                     (record,),
@@ -297,8 +361,7 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
         self,
     ) -> None:
         sensitive_path = str(self.database_path)
-        with sqlite3.connect(self.database_path) as connection:
-            connection.execute("DROP TABLE evidence_staging_outbox")
+        _execute_sql(self.database_path, "DROP TABLE evidence_staging_outbox")
 
         with self.assertRaises(ImmutableEvidenceError) as captured:
             self.outbox.records(CORRELATION_ID)
@@ -313,12 +376,32 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
         metadata = self.database_path.stat()
 
         self.assertTrue(stat.S_ISREG(metadata.st_mode))
-        self.assertEqual(stat.S_IMODE(metadata.st_mode), 0o600)
-        self.assertEqual(metadata.st_uid, os.getuid())
+        if os.name == "nt":
+            from nac_bff.activation_security_backend import (
+                get_platform_security_backend,
+            )
+
+            snapshot = get_platform_security_backend().inspect_private_path(
+                self.database_path, purpose="sqlite-evidence-staging"
+            )
+            self.assertFalse(snapshot.reparse_point)
+            self.assertRegex(snapshot.owner_sid_sha256, r"^[0-9a-f]{64}$")
+            self.assertRegex(snapshot.dacl_sha256, r"^[0-9a-f]{64}$")
+        else:
+            self.assertEqual(stat.S_IMODE(metadata.st_mode), 0o600)
+            self.assertEqual(metadata.st_uid, os.getuid())
 
     def test_database_with_non_exact_permissions_is_rejected(
         self,
     ) -> None:
+        if os.name == "nt":
+            with _broad_write_access(self.database_path):
+                with self.assertRaisesRegex(
+                    ImmutableEvidenceError,
+                    r"^local evidence staging outbox is unavailable$",
+                ):
+                    self.outbox.records(CORRELATION_ID)
+            return
         for mode in (0o640, 0o700, 0o400):
             with self.subTest(mode=oct(mode)):
                 os.chmod(self.database_path, mode)
@@ -332,7 +415,10 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
 
     def test_symlink_database_is_rejected(self) -> None:
         symlink_path = self.directory / "symlink.sqlite3"
-        symlink_path.symlink_to(self.database_path)
+        if os.name == "nt":
+            os.link(self.database_path, symlink_path)
+        else:
+            symlink_path.symlink_to(self.database_path)
 
         with self.assertRaisesRegex(
             ImmutableEvidenceError,
@@ -344,24 +430,26 @@ class SqliteEvidenceStagingOutboxTests(unittest.TestCase):
         insecure_parent = self.directory / "insecure"
         insecure_parent.mkdir(mode=0o700)
         insecure_database = insecure_parent / "staging.sqlite3"
-        os.chmod(insecure_parent, 0o770)
-        self.addCleanup(os.chmod, insecure_parent, 0o700)
-
-        with self.assertRaisesRegex(
-            ValueError,
-            r"^database_parent_invalid$",
-        ):
-            SqliteEvidenceStagingOutbox(insecure_database)
+        with _broad_write_access(insecure_parent):
+            with self.assertRaisesRegex(
+                ValueError,
+                r"^database_parent_invalid$",
+            ):
+                SqliteEvidenceStagingOutbox(insecure_database)
 
     def test_parent_directory_requires_exact_owner_only_mode(self) -> None:
         insecure_parent = self.directory / "readable-by-group"
         insecure_parent.mkdir(mode=0o700)
         insecure_database = insecure_parent / "staging.sqlite3"
-        os.chmod(insecure_parent, 0o750)
-        self.addCleanup(os.chmod, insecure_parent, 0o700)
-
-        with self.assertRaisesRegex(ValueError, r"^database_parent_invalid$"):
-            SqliteEvidenceStagingOutbox(insecure_database)
+        if os.name == "nt":
+            with _broad_write_access(insecure_parent):
+                with self.assertRaisesRegex(ValueError, r"^database_parent_invalid$"):
+                    SqliteEvidenceStagingOutbox(insecure_database)
+        else:
+            os.chmod(insecure_parent, 0o750)
+            self.addCleanup(os.chmod, insecure_parent, 0o700)
+            with self.assertRaisesRegex(ValueError, r"^database_parent_invalid$"):
+                SqliteEvidenceStagingOutbox(insecure_database)
 
     def test_capabilities_and_public_api_cannot_complete_promote_or_cleanup(
         self,

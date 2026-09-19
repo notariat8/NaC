@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 import tempfile
 import unittest
@@ -638,7 +639,12 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
     def test_world_readable_prepared_input_is_rejected(self):
         _prepared(self.run_dir)
         template_path = self.run_dir / "prepared" / "main.json"
-        template_path.chmod(0o644)
+        if os.name == "nt":
+            original = template_path.with_name("main-original.json")
+            template_path.rename(original)
+            os.link(original, template_path)
+        else:
+            template_path.chmod(0o644)
 
         expectation, error = _load_expectation(
             self.run_dir, self.state, self.request
@@ -696,7 +702,14 @@ class AzureInterruptionBaselineTests(unittest.TestCase):
         prepared = self.run_dir / "prepared"
         actual = self.run_dir / "prepared-real"
         prepared.rename(actual)
-        prepared.symlink_to(actual, target_is_directory=True)
+        if os.name == "nt":
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(prepared), str(actual)],
+                check=True,
+                capture_output=True,
+            )
+        else:
+            prepared.symlink_to(actual, target_is_directory=True)
 
         expectation, error = _load_expectation(
             self.run_dir, self.state, self.request

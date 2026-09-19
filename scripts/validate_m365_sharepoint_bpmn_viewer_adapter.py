@@ -760,7 +760,11 @@ def _validate_bpmn_test_fixture() -> list[str]:
     errors: list[str] = []
     if not CANONICAL_BPMN.is_file():
         return ["canonical BPMN source is missing"]
-    if SPFX_BPMN_TEST_FIXTURE.is_symlink():
+    if (
+        SPFX_BPMN_TEST_FIXTURE.is_symlink()
+        or SPFX_BPMN_TEST_FIXTURE.exists()
+        and SPFX_BPMN_TEST_FIXTURE.lstat().st_nlink != 1
+    ):
         return ["SPFx BPMN test fixture must not be a symlink"]
     if not SPFX_BPMN_TEST_FIXTURE.is_file():
         return ["SPFx BPMN test fixture is missing"]

@@ -232,16 +232,22 @@ def _verify_manifest_entries(
         if path.is_file():
             _verify_digest(path, digest, errors)
         elif require_present:
-            errors.append(f"visual evidence file missing: {path.relative_to(REPO_ROOT)}")
+            errors.append(
+                f"visual evidence file missing: {path.relative_to(REPO_ROOT).as_posix()}"
+            )
 
 
 def _verify_digest(path: Path, expected: object, errors: list[str]) -> None:
     if path.is_symlink() or not path.is_file():
-        errors.append(f"visual evidence file missing: {path.relative_to(REPO_ROOT)}")
+        errors.append(
+            f"visual evidence file missing: {path.relative_to(REPO_ROOT).as_posix()}"
+        )
         return
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     if expected != actual:
-        errors.append(f"visual evidence digest drift: {path.relative_to(REPO_ROOT)}")
+        errors.append(
+            f"visual evidence digest drift: {path.relative_to(REPO_ROOT).as_posix()}"
+        )
 
 
 def _json(path: Path, errors: list[str]) -> dict:

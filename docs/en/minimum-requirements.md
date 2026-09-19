@@ -4,16 +4,21 @@
 
 | Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
 | --- | --- | --- |
-| Windows 11 with Python 3.11 | supported | blocked with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` |
+| Windows 11 with Python 3.11 and Node.js 24 | supported | Issue #746 live activation and recovery remain fail-closed regardless of backend availability; only separately bound read-only reconciliation is permitted |
 | Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
 | Other or unknown platform | where the individual offline command is portable | blocked |
 
 Platform detection uses trusted runtime properties only. CLI arguments,
-environment variables and configuration cannot enable live execution on
-Windows.
+environment variables and configuration cannot bypass a missing security
+backend. The Windows live path requires NTFS handle/file-ID binding, SID/DACL
+and reparse checks, a named mutex, a Job Object, atomic flush semantics, and a
+credential-write guard for Azure CLI and M365/Node. If any capability is
+missing, the path stops with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` before
+credential, network, or provider access. Backend availability does not lift the
+explicit Windows block on live activation and recovery.
 
 Status: binding day-0 baseline
-Last content update: 2026-05-15
+Last content update: 2026-09-19
 
 ## Purpose
 
@@ -38,7 +43,7 @@ The base workspace is the minimum environment for repository work:
 | --- | --- | --- |
 | Operating system | Windows 11 or another current maintained developer OS | Local development and GitOps work |
 | Git | installed and available in `PATH` | versioning, branches, pull requests |
-| GitHub CLI `gh` | installed and authenticated | PR, Actions and repository operations |
+| GitHub read channel | authenticated GitHub connector preferred; `gh` optional | PR and Actions reads; Git/GCM remains limited to Git transport |
 | Python | `>= 3.11` | deterministic checks, KG runtime, workflow runtime |
 | Codex | required | agent-assisted contribution |
 | `pandoc` | recommended | later document export |

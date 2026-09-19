@@ -441,6 +441,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_azure_bff_live_activation.py"],
                 ),
                 (
+                    "m365_bff_failed_partial_safe_completion",
+                    "M365 BFF Failed Partial Safe Completion",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_bff_failed_partial_safe_completion.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [

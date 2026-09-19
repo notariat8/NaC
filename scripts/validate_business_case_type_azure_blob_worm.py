@@ -757,17 +757,18 @@ def _validate_compiled_bicep(errors: list[str]) -> None:
 def _validate_docs(errors: list[str]) -> None:
     for path in DOCS:
         text = _read(path, errors)
+        repository_path = path.relative_to(ROOT).as_posix()
         _expect(all(identifier in text for identifier in EXPECTED_ACCEPTANCE), f"acceptance traceability missing: {path.relative_to(ROOT)}", errors)
         _expect(S6B_STATUS in text and LIVE_STATUS in text, f"status boundary missing: {path.relative_to(ROOT)}", errors)
         markers = ["3653", "version_id", "versionid", "ETag", "CMK"]
-        if "/specs/" in str(path):
+        if "/specs/" in f"/{repository_path}":
             markers.extend(
                 [
-                    "Owner-approved" if "/de/" in str(path) else "owner-approved",
-                    "frischen" if "/de/" in str(path) else "fresh",
+                    "Owner-approved" if "/de/" in f"/{repository_path}" else "owner-approved",
+                    "frischen" if "/de/" in f"/{repository_path}" else "fresh",
                     (
                         "Deployment-Attestation"
-                        if "/de/" in str(path)
+                        if "/de/" in f"/{repository_path}"
                         else "deployment attestation"
                     ),
                 ]

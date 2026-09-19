@@ -25,6 +25,11 @@ from nac_bff.azure_activation_contract import (
     PLATFORM_SECURITY_BACKEND_UNAVAILABLE,
     platform_security_backend_available,
 )
+from nac_bff.activation_security_backend import (
+    ProcessSpec,
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 
 from .auth import (
     CertificateClientCredentialsTokenProvider,
@@ -160,27 +165,46 @@ class GhCliIssueCommentPort:
             raise ProductionAdapterError(
                 PLATFORM_SECURITY_BACKEND_UNAVAILABLE
             )
-        descriptor = _open_trusted_executable(binary, expected_binary_sha256)
-        os.close(descriptor)
+        _validate_trusted_executable(binary, expected_binary_sha256)
         self._binary = binary
         self._expected_binary_sha256 = expected_binary_sha256
         source = os.environ if environ is None else environ
         self._env = {
             key: value
             for key, value in source.items()
-            if key in {"GH_CONFIG_DIR", "HOME", "LANG"} and value
+            if key
+            in {
+                "GH_CONFIG_DIR",
+                "HOME",
+                "LANG",
+                "LOCALAPPDATA",
+                "SystemRoot",
+                "TEMP",
+                "TMP",
+                "USERPROFILE",
+            }
+            and value
         }
         self._runner = runner or _run_bounded_process
 
     def comments(self) -> tuple[Mapping[str, Any], ...]:
         descriptor: int | None = None
         try:
-            descriptor = _open_trusted_executable(
-                self._binary, self._expected_binary_sha256
-            )
+            if os.name == "nt":
+                _validate_trusted_executable(
+                    self._binary, self._expected_binary_sha256
+                )
+                executable = str(self._binary)
+                pass_fds: tuple[int, ...] = ()
+            else:
+                descriptor = _open_trusted_executable(
+                    self._binary, self._expected_binary_sha256
+                )
+                executable = f"/proc/self/fd/{descriptor}"
+                pass_fds = (descriptor,)
             result = self._runner(
                 [
-                    f"/proc/self/fd/{descriptor}",
+                    executable,
                     "api",
                     "--paginate",
                     "--slurp",
@@ -191,8 +215,11 @@ class GhCliIssueCommentPort:
                 stdin=subprocess.DEVNULL,
                 timeout=30,
                 env=self._env,
-                pass_fds=(descriptor,),
+                pass_fds=pass_fds,
                 max_stdout_bytes=_MAX_GITHUB_OUTPUT_BYTES,
+                executable_sha256=(
+                    self._expected_binary_sha256 if os.name == "nt" else None
+                ),
             )
             if result.returncode != 0:
                 raise ProductionAdapterError(
@@ -650,6 +677,27 @@ def _open_trusted_executable(path: Path, expected_sha256: str) -> int:
     return sealed_descriptor
 
 
+def _validate_trusted_executable(path: Path, expected_sha256: str) -> None:
+    if os.name != "nt":
+        descriptor = _open_trusted_executable(path, expected_sha256)
+        os.close(descriptor)
+        return
+    if (
+        not isinstance(path, Path)
+        or not path.is_absolute()
+        or not _is_sha256(expected_sha256)
+    ):
+        raise ValueError("github_cli_binding_invalid")
+    try:
+        binding = get_platform_security_backend().inspect_private_path(
+            path, purpose="toolchain-executable"
+        )
+    except SecurityBoundaryError:
+        raise ValueError("github_cli_binding_invalid") from None
+    if binding.sha256 != expected_sha256 or binding.size > 128 * 1024 * 1024:
+        raise ValueError("github_cli_binding_invalid")
+
+
 def _canonical_graph_path(path: str) -> bool:
     if "\\" in path or "//" in path:
         return False
@@ -682,6 +730,25 @@ def _canonical_graph_path(path: str) -> bool:
 def _read_bound_credential(path: Path, expected_sha256: str) -> bytes:
     if not isinstance(path, Path) or not path.is_absolute():
         raise ProductionAdapterError("write_identity_credential_rejected")
+    if os.name == "nt":
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(path, purpose="credential")
+            if binding.size > 1024 * 1024:
+                raise SecurityBoundaryError("CREDENTIAL_SIZE_INVALID")
+            with backend.open_bound_read(path, binding) as stream:
+                result = stream.read(1024 * 1024 + 1)
+        except (OSError, SecurityBoundaryError):
+            raise ProductionAdapterError(
+                "write_identity_credential_rejected"
+            ) from None
+        if (
+            not result
+            or len(result) > 1024 * 1024
+            or hashlib.sha256(result).hexdigest() != expected_sha256
+        ):
+            raise ProductionAdapterError("write_identity_credential_rejected")
+        return result
     try:
         descriptor = os.open(
             path,
@@ -738,8 +805,42 @@ def _run_bounded_process(
     env: Mapping[str, str],
     pass_fds: tuple[int, ...],
     max_stdout_bytes: int,
+    executable_sha256: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     del check
+    if os.name == "nt":
+        if (
+            pass_fds
+            or shell
+            or stdin != subprocess.DEVNULL
+            or not command
+            or not _is_sha256(executable_sha256)
+        ):
+            raise ProductionAdapterError("owner_comment_snapshot_unavailable")
+        try:
+            result = get_platform_security_backend().launch_attested_process(
+                ProcessSpec(
+                    executable=Path(command[0]),
+                    arguments=tuple(command[1:]),
+                    cwd=Path.cwd().resolve(),
+                    environment=dict(env),
+                    executable_sha256=executable_sha256,
+                    timeout_seconds=float(timeout),
+                    maximum_output_bytes=max_stdout_bytes,
+                    allowed_exit_codes=(0,),
+                    credential_write_guard=True,
+                )
+            )
+        except SecurityBoundaryError:
+            raise ProductionAdapterError(
+                "owner_comment_snapshot_unavailable"
+            ) from None
+        return subprocess.CompletedProcess(
+            command,
+            result.exit_code,
+            result.stdout.decode("utf-8"),
+            "",
+        )
     process = subprocess.Popen(
         command,
         shell=shell,

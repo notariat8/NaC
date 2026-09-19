@@ -21,6 +21,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_bff.activation_security_backend import SecurityBoundaryError  # noqa: E402
 from nac_m365_graph.auth import CertificateGraphConfig  # noqa: E402
 from nac_m365_graph.business_case_type_live_write_boundary import (  # noqa: E402
     principal_binding_sha256,
@@ -354,6 +355,15 @@ class GraphHttpAdapterTests(unittest.TestCase):
 
 
 class GitHubOwnerVerifierTests(unittest.TestCase):
+    def setUp(self) -> None:
+        platform_gate = mock.patch(
+            "nac_m365_graph.business_case_type_production_adapters."
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
+
     def test_exact_single_canonical_owner_comment_is_verified_without_body(
         self,
     ) -> None:
@@ -543,11 +553,16 @@ class GitHubOwnerVerifierTests(unittest.TestCase):
 
             def runner(*args: object, **kwargs: object) -> Any:
                 command = args[0]
-                descriptor = kwargs["pass_fds"][0]
-                self.assertEqual(
-                    command[0], f"/proc/self/fd/{descriptor}"
-                )
-                self.assertEqual(kwargs["pass_fds"], (descriptor,))
+                if os.name == "nt":
+                    self.assertEqual(command[0], str(binary))
+                    self.assertEqual(kwargs["pass_fds"], ())
+                    self.assertEqual(kwargs["executable_sha256"], digest)
+                else:
+                    descriptor = kwargs["pass_fds"][0]
+                    self.assertEqual(
+                        command[0], f"/proc/self/fd/{descriptor}"
+                    )
+                    self.assertEqual(kwargs["pass_fds"], (descriptor,))
                 return subprocess.CompletedProcess(
                     args=[],
                     returncode=1,
@@ -617,13 +632,21 @@ class GitHubOwnerVerifierTests(unittest.TestCase):
             executed_payloads: list[bytes] = []
 
             def runner(*args: object, **kwargs: object) -> Any:
-                descriptor = kwargs["pass_fds"][0]
-                binary.write_bytes(b"mutated-in-place-after-sealing")
-                os.chmod(binary, 0o700)
-                os.lseek(descriptor, 0, os.SEEK_SET)
-                executed_payloads.append(os.read(descriptor, len(original) + 64))
-                with self.assertRaises(OSError):
-                    os.write(descriptor, b"x")
+                if os.name == "nt":
+                    self.assertEqual(args[0][0], str(binary))
+                    self.assertEqual(kwargs["pass_fds"], ())
+                    self.assertEqual(kwargs["executable_sha256"], digest)
+                    executed_payloads.append(binary.read_bytes())
+                else:
+                    descriptor = kwargs["pass_fds"][0]
+                    binary.write_bytes(b"mutated-in-place-after-sealing")
+                    os.chmod(binary, 0o700)
+                    os.lseek(descriptor, 0, os.SEEK_SET)
+                    executed_payloads.append(
+                        os.read(descriptor, len(original) + 64)
+                    )
+                    with self.assertRaises(OSError):
+                        os.write(descriptor, b"x")
                 return subprocess.CompletedProcess(
                     args=[],
                     returncode=0,
@@ -645,6 +668,36 @@ class GitHubOwnerVerifierTests(unittest.TestCase):
     def test_bounded_runner_reads_only_limit_plus_one_and_reaps_process(
         self,
     ) -> None:
+        if os.name == "nt":
+            backend = mock.Mock()
+            backend.launch_attested_process.side_effect = SecurityBoundaryError(
+                "PROCESS_OUTPUT_LIMIT_EXCEEDED"
+            )
+            with mock.patch(
+                "nac_m365_graph.business_case_type_production_adapters."
+                "get_platform_security_backend",
+                return_value=backend,
+            ), self.assertRaisesRegex(
+                ProductionAdapterError,
+                r"^owner_comment_snapshot_unavailable$",
+            ):
+                _run_bounded_process(
+                    [str(Path(sys.executable).resolve()), "-c", "print('x')"],
+                    check=False,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=5,
+                    env={"SystemRoot": os.environ["SystemRoot"]},
+                    pass_fds=(),
+                    max_stdout_bytes=1024,
+                    executable_sha256="a" * 64,
+                )
+            spec = backend.launch_attested_process.call_args.args[0]
+            self.assertEqual(spec.maximum_output_bytes, 1024)
+            self.assertEqual(spec.timeout_seconds, 5.0)
+            self.assertEqual(spec.executable_sha256, "a" * 64)
+            self.assertTrue(spec.credential_write_guard)
+            return
         original_read = os.read
         read_sizes: list[int] = []
         captured_processes: list[Any] = []

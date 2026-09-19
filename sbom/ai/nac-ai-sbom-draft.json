@@ -25,7 +25,17 @@
       "version": "0.1.0",
       "owner": "NaC Maintainers",
       "lifecycle_state": "planning",
-      "release_binding": "draft only until first AI-enabled release package"
+      "release_binding": "draft only until first AI-enabled release package",
+      "component_extensions": [
+        {
+          "id": "m365-bff-failed-partial-safe-completion-contract",
+          "version": "0.1",
+          "lifecycle_state": "offline_verification_only",
+          "human_review_owner": "owner_solo_approval_source_bound",
+          "approval_mode": "OWNER_SOLO_APPROVAL",
+          "release_readiness": "blocked"
+        }
+      ]
     },
     "system_level_properties": [
       {
@@ -37,6 +47,21 @@
         "id": "codex-parallel-review-workflow",
         "type": "agentic-review-harness",
         "description": "Repository-local Codex agent profiles and workflow contract for explicit read-only parallel review of NaC changes."
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-contract",
+        "type": "agentic-verification-contract",
+        "description": "Offline verification and local terminal-classification contract for Issue #746; the provenance-loss path executes before reconciliation ports and does not execute release, authentication, tenant, provider, package-build, subprocess, or live actions.",
+        "artifact": "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
+        "leading_issue": "https://github.com/notariat8/NaC/issues/746",
+        "human_review_owner": "owner_solo_approval_source_bound",
+        "approval_mode": "OWNER_SOLO_APPROVAL",
+        "four_eyes_satisfied": false,
+        "external_two_person_requirement": "not_applicable_no_cited_source_for_issue_746",
+        "provider_boundary": "local_terminal_classification_before_provider_access",
+        "evidence_binding": "protected_confirmation_resolver_principal_and_original_lock_hashes",
+        "privacy_boundary": "synthetic_public_registry_real_mapping_repo_external",
+        "release_export_enabled": false
       }
     ],
     "models": [
@@ -53,6 +78,15 @@
         "purpose": "Read-only parallel review harness for repository artifacts; no production mandate data allowed.",
         "personal_data_allowed": false,
         "review_required_before_external_use": true
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-no-model-runtime",
+        "provider": "none",
+        "purpose": "Issue #746 validates repository contracts and synthetic fixtures only; it invokes no model runtime.",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "personal_data_allowed": false,
+        "review_required_before_external_use": true,
+        "status": "not_applicable_offline_contract"
       }
     ],
     "datasets": [
@@ -61,6 +95,14 @@
         "source": "synthetic-or-placeholder-only-until-approved",
         "personal_data_allowed": false,
         "professional_secret_allowed": false
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-synthetic-fixtures",
+        "source": "repository-synthetic-contract-matrices-and-fake-ports-only",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "personal_data_allowed": false,
+        "professional_secret_allowed": false,
+        "status": "active_synthetic_only"
       }
     ],
     "infrastructure": [
@@ -72,6 +114,31 @@
           "de": "docs/de/minimum-requirements.md",
           "en": "docs/en/minimum-requirements.md"
         }
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-offline-runtime",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "processing_mode": "local_and_ci_offline_validation",
+        "external_service_use": "github_metadata_read_only_only_after_explicit_post_pr_flag",
+        "provider_runtime_access": false,
+        "credential_access": false,
+        "release_export_enabled": false
+      },
+      {
+        "id": "m365-bff-windows-security-backend",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "processing_mode": "windows_native_capability_gated",
+        "minimum_runtime": "Windows 11, Python 3.11, Node.js 24",
+        "security_capabilities": [
+          "ntfs_handle_and_file_id_binding",
+          "sid_dacl_and_reparse_validation",
+          "named_mutex_and_job_object",
+          "atomic_write_append_and_directory_flush",
+          "azure_cli_low_integrity_credential_write_guard",
+          "node_permission_model_without_filesystem_write"
+        ],
+        "provider_runtime_access": "separately_hash_bound_only",
+        "release_export_enabled": false
       },
       {
         "id": "local-development-toolchain",
@@ -90,8 +157,8 @@
           },
           {
             "component": "github_cli_gh",
-            "minimum": "installed and authenticated",
-            "purpose": "GitHub repository, pull request and Actions operations"
+            "minimum": "optional; use only when an already established task-authorized channel is available",
+            "purpose": "Optional GitHub repository, pull request and Actions operations; Issue #746 read-only reconciliation must not trigger authentication"
           },
           {
             "component": "python",
@@ -270,6 +337,12 @@
       {
         "id": "human-approval",
         "control": "Regulated or notarial AI use requires documented review before external processing."
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-boundary",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "control": "Three non-interchangeable approval gates; source-bound OWNER_SOLO_APPROVAL is never four-eyes; the public registry is synthetic-only; a repository-external protected resolver binds exactly three known accounts to one principal; the local protected provenance-loss confirmation binds that resolver hash, the owner principal, the exact #739 run, and the original lock-binding hashes; the terminal classifier runs before subprocess, package-build, credential, network, or provider access and opens no #739 or #632 gate; cited external two-person duties fail closed with BLOCKED_SINGLE_PRINCIPAL unless distinct qualified principals approve; provider and tenant writes remain separately hash-bound; evidence is canonical and redacted.",
+        "status": "acceptance_blocked_issue739_provenance_lost_terminal_pending_remote_ci"
       }
     ],
     "key_performance_indicators": [
@@ -282,6 +355,13 @@
         "id": "privacy-gate",
         "metric": "Every external AI processing path has AVV/DPA status documented.",
         "target": "100_percent_before_pilot_with_personal_data"
+      },
+      {
+        "id": "m365-bff-failed-partial-safe-completion-acceptance",
+        "component_ref": "m365-bff-failed-partial-safe-completion-contract",
+        "metric": "All AC-746 evidence is executable, remote checks are exact, and the source-bound approval mode is validated without treating same-principal accounts as four eyes.",
+        "target": "100_percent_before_implementation_acceptance",
+        "current_status": "blocked"
       }
     ]
   },

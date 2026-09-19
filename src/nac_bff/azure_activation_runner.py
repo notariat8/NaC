@@ -4,8 +4,6 @@ import errno
 import hashlib
 import json
 import os
-import pwd
-import fcntl
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,12 +14,23 @@ import subprocess
 import tempfile
 from typing import Any, Callable
 
+if os.name == "posix":
+    import pwd
+else:
+    pwd = None  # type: ignore[assignment]
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
+
 from .azure_activation import build_azure_bff_activation_plan
 from .azure_activation_contract import (
     ActivationContext,
     ActivationExecutionPort,
     ActivationStepError,
     LiveActivationRequest,
+)
+from .activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
 )
 
 
@@ -108,13 +117,17 @@ _SUMMARY_BOOL_KEYS = _SUMMARY_EVIDENCE_KEYS - _SUMMARY_COUNT_KEYS
 _HOST_STATE_RELATIVE_PATH = ".local/state/nac/m365-bff-live-activation"
 _HOST_LOCK_ROOT = (
     Path(pwd.getpwuid(os.geteuid()).pw_dir) / _HOST_STATE_RELATIVE_PATH
+    if os.name == "posix"
+    else Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir()))
+    / "NaC"
+    / "m365-bff-live-activation"
 )
 _LEGACY_HOST_STATE_RELATIVE_PATH = "nac-m365-bff-live-activation-locks"
 _LEGACY_HOST_LOCK_ROOT = (
     Path(tempfile.gettempdir()) / _LEGACY_HOST_STATE_RELATIVE_PATH
 )
 _MAX_SECURE_ARTIFACT_BYTES = 8 * 1024 * 1024
-_GIT_EXECUTABLE = Path("/usr/bin/git")
+_GIT_EXECUTABLE = Path(shutil.which("git") or "/usr/bin/git")
 _STEP_11_SUMMARY_SIGNAL_KEYS = (
     "healthz_before_auth_passed",
     "authenticated_read_passed",
@@ -139,6 +152,16 @@ _QUARANTINED_AMBIGUOUS_CODES = frozenset(
         "AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS",
     }
 )
+_WINDOWS_RUN_LOCKS: dict[int, object] = {}
+
+
+def _release_descriptor_lock(descriptor: int) -> None:
+    if os.name == "nt":
+        lock = _WINDOWS_RUN_LOCKS.pop(descriptor, None)
+        if lock is not None:
+            lock.close()
+    else:
+        unlock(descriptor)
 
 
 def run_azure_bff_live_activation(
@@ -541,7 +564,7 @@ def run_azure_bff_live_activation(
                 release_error = exc
         for descriptor in (lock_fd, legacy_lock_fd, legacy_host_lock_fd):
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                _release_descriptor_lock(descriptor)
             finally:
                 os.close(descriptor)
         recoverable_marker = _read_secure_canonical_json(
@@ -698,6 +721,7 @@ def reconcile_azure_bff_live_activation_lock(
             request=request,
             state_path=state_path,
             lock_path=lock_path,
+            lock_descriptor=lock_fd,
             target_binding_sha256=target_binding_sha256,
             committed=committed,
         )
@@ -810,11 +834,11 @@ def reconcile_azure_bff_live_activation_lock(
             if descriptor is None:
                 continue
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                _release_descriptor_lock(descriptor)
             finally:
                 os.close(descriptor)
         try:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            _release_descriptor_lock(lock_fd)
         finally:
             os.close(lock_fd)
 
@@ -1048,9 +1072,18 @@ def _reconcile_marker_payload(
     request: LiveActivationRequest,
     state_path: Path,
     lock_path: Path,
+    lock_descriptor: int | None,
     target_binding_sha256: str,
     committed: bool,
 ) -> dict[str, Any]:
+    lock_sha256 = _artifact_sha256(lock_path)
+    if os.name == "nt" and lock_descriptor is not None:
+        try:
+            lock_sha256 = get_platform_security_backend().inspect_open_file_descriptor(
+                lock_descriptor, purpose="activation-lock"
+            ).sha256
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            lock_sha256 = None
     return {
         "schema_version": FINALIZATION_RECOVERY_SCHEMA_VERSION,
         "status": "LOCK_RELEASE_AUTHORIZED_BY_RECONCILE",
@@ -1070,7 +1103,7 @@ def _reconcile_marker_payload(
         "target_binding_sha256": target_binding_sha256,
         "state_sha256": _artifact_sha256(state_path),
         "ledger_head_sha256": state["ledger_head_sha256"],
-        "lock_sha256": _artifact_sha256(lock_path),
+        "lock_sha256": lock_sha256,
         "committed_artifacts_valid": committed,
         "resume_enabled": False,
     }
@@ -1101,6 +1134,44 @@ def _artifact_sha256(path: Path) -> str | None:
 def _acquire_existing_lock_for_recovery(
     path: Path,
 ) -> tuple[int | None, str | None]:
+    if os.name == "nt":
+        lock = None
+        descriptor: int | None = None
+        try:
+            backend = get_platform_security_backend()
+            lock = backend.acquire_run_lock(_sha256(str(path.resolve()).casefold()))
+            if lock.status == "abandoned":
+                lock.close()
+                lock = None
+                return None, "RECOVERY_REQUIRED"
+            with backend.open_secure_directory(path.parent, create=False) as session:
+                expected = session.inspect_optional_child(
+                    path.name, purpose="activation-lock"
+                )
+                if expected is None:
+                    raise FileNotFoundError(path)
+                descriptor = session.open_regular_descriptor(path.name, create=False)
+                if descriptor < 0:
+                    raise FileNotFoundError(path)
+                opened = backend.inspect_open_file_descriptor(
+                    descriptor, purpose="activation-lock"
+                )
+                if opened != expected:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_BINDING_MISMATCH")
+            _WINDOWS_RUN_LOCKS[descriptor] = lock
+            return descriptor, None
+        except FileNotFoundError:
+            if descriptor is not None:
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
+            return None, "FINALIZATION_LOCK_NOT_HELD"
+        except (OSError, SecurityBoundaryError):
+            if descriptor is not None:
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
+            return None, "ACTIVATION_LOCK_INVALID"
     descriptor: int | None = None
     try:
         metadata = path.lstat()
@@ -1122,7 +1193,7 @@ def _acquire_existing_lock_for_recovery(
         if opened.st_ino != metadata.st_ino or opened.st_dev != metadata.st_dev:
             os.close(descriptor)
             return None, "ACTIVATION_LOCK_INVALID"
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_exclusive(descriptor, nonblocking=True)
         return descriptor, None
     except BlockingIOError:
         if descriptor is not None:
@@ -1212,6 +1283,13 @@ def _clean_tree(root: Path) -> bool:
     git = _trusted_git_executable()
     if git is None:
         return False
+    if os.name == "nt":
+        completed = _run_windows_git(
+            Path(git),
+            ("--no-optional-locks", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"),
+            timeout=_GIT_STATUS_TIMEOUT_SECONDS,
+        )
+        return completed is not None and completed[0] == 0 and completed[1] == ""
     try:
         completed = subprocess.run(
             [
@@ -1240,6 +1318,17 @@ def _git_object(root: Path, argv: list[str]) -> str | None:
     git = _trusted_git_executable()
     if git is None:
         return None
+    if os.name == "nt":
+        completed = _run_windows_git(
+            Path(git),
+            ("--no-optional-locks", "-C", str(root), *argv),
+            timeout=10,
+        )
+        if completed is None:
+            return None
+        returncode, stdout = completed
+        value = stdout.strip().lower()
+        return value if returncode == 0 and _COMMIT_RE.fullmatch(value) else None
     try:
         completed = subprocess.run(
             [git, "--no-optional-locks", "-C", str(root), *argv],
@@ -1255,6 +1344,14 @@ def _git_object(root: Path, argv: list[str]) -> str | None:
 
 
 def _trusted_git_executable() -> str | None:
+    if os.name == "nt":
+        try:
+            get_platform_security_backend().inspect_private_path(
+                _GIT_EXECUTABLE, purpose="toolchain-executable"
+            )
+            return str(_GIT_EXECUTABLE)
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return None
     try:
         metadata = _GIT_EXECUTABLE.stat()
     except OSError:
@@ -1266,6 +1363,38 @@ def _trusted_git_executable() -> str | None:
     ):
         return None
     return str(_GIT_EXECUTABLE)
+
+
+def _run_windows_git(
+    executable: Path, arguments: tuple[str, ...], *, timeout: float
+) -> tuple[int, str] | None:
+    try:
+        from .activation_security_backend import ProcessSpec
+
+        backend = get_platform_security_backend()
+        executable_hash = backend.inspect_private_path(
+            executable, purpose="toolchain-executable"
+        ).sha256
+        environment = {
+            key: os.environ[key]
+            for key in ("SystemRoot", "TEMP", "USERPROFILE", "HOME")
+            if key in os.environ
+        }
+        result = backend.launch_attested_process(
+            ProcessSpec(
+                executable=executable,
+                arguments=arguments,
+                cwd=Path.cwd().resolve(),
+                environment=environment,
+                executable_sha256=executable_hash,
+                timeout_seconds=timeout,
+                maximum_output_bytes=2 * 1024 * 1024,
+                allowed_exit_codes=tuple(range(256)),
+            )
+        )
+        return result.exit_code, result.stdout.decode("utf-8", errors="replace")
+    except (OSError, SecurityBoundaryError, RuntimeError):
+        return None
 
 
 def _permission_boundary_hash(root: Path) -> str | None:
@@ -1294,6 +1423,12 @@ def _existing_host_state_root_is_valid(root: Path) -> bool:
 
 
 def _secure_host_directory(path: Path) -> bool:
+    if os.name == "nt":
+        try:
+            get_platform_security_backend().validate_private_directory(path)
+            return True
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return False
     try:
         metadata = path.lstat()
     except OSError:
@@ -1440,6 +1575,19 @@ def _read_secure_canonical_json_descriptor(
 
 
 def _read_secure_artifact_bytes(path: Path) -> bytes | None:
+    if os.name == "nt":
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(
+                path, purpose="activation-artifact"
+            )
+            if binding.size < 1 or binding.size > _MAX_SECURE_ARTIFACT_BYTES:
+                return None
+            with backend.open_bound_read(path, binding) as handle:
+                raw = handle.read(_MAX_SECURE_ARTIFACT_BYTES + 1)
+            return raw if len(raw) <= _MAX_SECURE_ARTIFACT_BYTES else None
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return None
     descriptor: int | None = None
     try:
         before = path.lstat()
@@ -1483,6 +1631,8 @@ def _read_bounded_descriptor(descriptor: int) -> bytes | None:
 
 
 def _trusted_secure_artifact_metadata(metadata: os.stat_result) -> bool:
+    if os.name == "nt":
+        return bool(stat.S_ISREG(metadata.st_mode) and metadata.st_nlink == 1)
     return bool(
         stat.S_ISREG(metadata.st_mode)
         and metadata.st_uid == os.geteuid()
@@ -1707,6 +1857,10 @@ def _append_lock_marker_bytes(descriptor: int, raw: bytes) -> None:
 def _write_lock_marker(
     descriptor: int, activation_hash: str, status: str
 ) -> None:
+    if os.name == "nt":
+        get_platform_security_backend().inspect_open_file_descriptor(
+            descriptor, purpose="activation-lock"
+        )
     metadata = os.fstat(descriptor)
     if not _trusted_secure_artifact_metadata(metadata):
         raise ActivationStepError("ACTIVATION_LOCK_INVALID")
@@ -1748,6 +1902,58 @@ def _release_lock_markers_verified(
 
 
 def _acquire_lock(path: Path, activation_hash: str) -> int | None:
+    if os.name == "nt":
+        lock = None
+        descriptor: int | None = None
+        try:
+            backend = get_platform_security_backend()
+            lock = backend.acquire_run_lock(_sha256(str(path.resolve()).casefold()))
+            if lock.status == "abandoned":
+                lock.close()
+                lock = None
+                raise ActivationStepError("RECOVERY_REQUIRED")
+            with backend.open_secure_directory(path.parent, create=True) as session:
+                expected = session.inspect_optional_child(
+                    path.name, purpose="activation-lock"
+                )
+                created = expected is None
+                if created:
+                    expected = session.create_exclusive(path.name, b"")
+                descriptor = session.open_regular_descriptor(path.name, create=False)
+                if descriptor < 0:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_OPEN_FAILED")
+                opened = backend.inspect_open_file_descriptor(
+                    descriptor, purpose="activation-lock"
+                )
+                if opened != expected:
+                    raise SecurityBoundaryError("ACTIVATION_LOCK_BINDING_MISMATCH")
+            _WINDOWS_RUN_LOCKS[descriptor] = lock
+            if created:
+                if os.fstat(descriptor).st_size != 0:
+                    raise ActivationStepError("ACTIVATION_LOCK_INVALID")
+            else:
+                marker = _read_lock_marker_descriptor(descriptor)
+                if not _released_lock_marker_is_valid(marker):
+                    _release_descriptor_lock(descriptor)
+                    os.close(descriptor)
+                    return None
+            _write_lock_marker(descriptor, activation_hash, "HELD")
+            _fsync_directory(path.parent)
+            return descriptor
+        except SecurityBoundaryError:
+            if descriptor is not None:
+                _WINDOWS_RUN_LOCKS.pop(descriptor, None)
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
+            return None
+        except Exception:
+            if descriptor is not None:
+                _WINDOWS_RUN_LOCKS.pop(descriptor, None)
+                os.close(descriptor)
+            if lock is not None:
+                lock.close()
+            raise
     descriptor: int | None = None
     created = False
     try:
@@ -1771,16 +1977,16 @@ def _acquire_lock(path: Path, activation_hash: str) -> int | None:
         if not _trusted_secure_artifact_metadata(metadata):
             os.close(descriptor)
             return None
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_exclusive(descriptor, nonblocking=True)
         if created:
             if metadata.st_size != 0:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
                 os.close(descriptor)
                 return None
         else:
             marker = _read_lock_marker_descriptor(descriptor)
             if not _released_lock_marker_is_valid(marker):
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
                 os.close(descriptor)
                 return None
         _write_lock_marker(descriptor, activation_hash, "HELD")
@@ -2642,6 +2848,11 @@ def _atomic_json_create(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
+    if os.name == "nt":
+        get_platform_security_backend().atomic_write(
+            path.resolve(), _canonical_json_bytes(payload)
+        )
+        return
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     descriptor = os.open(
@@ -2662,6 +2873,17 @@ def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
 def _atomic_append(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(path.parent, 0o700)
+    if os.name == "nt":
+        try:
+            with get_platform_security_backend().open_secure_directory(
+                Path(os.path.abspath(path.parent)), create=False
+            ) as session:
+                session.create_exclusive(path.name, payload)
+        except SecurityBoundaryError as exc:
+            if exc.code == "SECURE_CHILD_ALREADY_EXISTS":
+                raise ActivationStepError("LEDGER_APPEND_CONFLICT") from exc
+            raise ActivationStepError("LEDGER_APPEND_FAILED") from exc
+        return
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     descriptor = os.open(
         temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
@@ -2688,6 +2910,9 @@ def _unlink_and_fsync(path: Path) -> None:
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        get_platform_security_backend().flush_directory(path.resolve())
+        return
     descriptor = os.open(path, os.O_RDONLY)
     try:
         try:

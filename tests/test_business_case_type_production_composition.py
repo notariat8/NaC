@@ -148,14 +148,28 @@ class BusinessCaseTypeProductionCompositionTests(unittest.TestCase):
                 ),
                 repository_root=ROOT,
             )
-            os.chmod(root, 0o755)
-            weak = assess_production_composition(
-                bindings,
-                identity_port=SnapshotIdentityInspectionPort(
-                    synthetic_identity_snapshot()
-                ),
-                repository_root=ROOT,
-            )
+            if os.name == "nt":
+                with patch(
+                    "nac_bff.activation_security_windows."
+                    "WindowsActivationSecurityBackend.open_secure_directory",
+                    side_effect=RuntimeError("PRIVATE_DACL_REQUIRED"),
+                ):
+                    weak = assess_production_composition(
+                        bindings,
+                        identity_port=SnapshotIdentityInspectionPort(
+                            synthetic_identity_snapshot()
+                        ),
+                        repository_root=ROOT,
+                    )
+            else:
+                os.chmod(root, 0o755)
+                weak = assess_production_composition(
+                    bindings,
+                    identity_port=SnapshotIdentityInspectionPort(
+                        synthetic_identity_snapshot()
+                    ),
+                    repository_root=ROOT,
+                )
 
         self.assertIn("local_runtime_layout_exact", same["failed_checks"])
         self.assertIn("local_runtime_layout_exact", weak["failed_checks"])
@@ -201,14 +215,28 @@ class BusinessCaseTypeProductionCompositionTests(unittest.TestCase):
             bindings = synthetic_offline_bindings(ROOT, root)
             bindings.mutation_database_path.touch(mode=0o600)
             bindings.evidence_database_path.touch(mode=0o600)
-            os.chmod(bindings.evidence_database_path, 0o644)
-            weak = assess_production_composition(
-                bindings,
-                identity_port=SnapshotIdentityInspectionPort(
-                    synthetic_identity_snapshot()
-                ),
-                repository_root=ROOT,
-            )
+            if os.name == "nt":
+                with patch(
+                    "nac_bff.activation_security_windows."
+                    "WindowsSecureDirectorySession.inspect_optional_child",
+                    side_effect=RuntimeError("PRIVATE_DACL_REQUIRED"),
+                ):
+                    weak = assess_production_composition(
+                        bindings,
+                        identity_port=SnapshotIdentityInspectionPort(
+                            synthetic_identity_snapshot()
+                        ),
+                        repository_root=ROOT,
+                    )
+            else:
+                os.chmod(bindings.evidence_database_path, 0o644)
+                weak = assess_production_composition(
+                    bindings,
+                    identity_port=SnapshotIdentityInspectionPort(
+                        synthetic_identity_snapshot()
+                    ),
+                    repository_root=ROOT,
+                )
             bindings.evidence_database_path.unlink()
             os.link(
                 bindings.mutation_database_path,
@@ -257,11 +285,20 @@ class BusinessCaseTypeProductionCompositionTests(unittest.TestCase):
     def test_unknown_or_remote_filesystem_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self._runtime_root(Path(directory))
-            with patch(
+            target = (
+                "nac_bff.activation_security_windows."
+                "WindowsActivationSecurityBackend.open_secure_directory"
+                if os.name == "nt"
+                else
                 "nac_m365_graph.business_case_type_production_composition."
-                "_is_explicitly_local_filesystem",
-                return_value=False,
-            ):
+                "_is_explicitly_local_filesystem"
+            )
+            replacement = (
+                {"side_effect": RuntimeError("LOCAL_FILESYSTEM_REQUIRED")}
+                if os.name == "nt"
+                else {"return_value": False}
+            )
+            with patch(target, **replacement):
                 result = assess_synthetic_offline_composition(ROOT, root)
 
         self.assertEqual(result["status"], "BLOCKED")

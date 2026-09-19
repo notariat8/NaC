@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -23,6 +25,18 @@ class AzureBffActivationAttestationTests(unittest.TestCase):
         path.write_bytes(content)
         path.chmod(mode)
         return path
+
+    def _node_runtime_digest(self, entrypoint: Path, node: Path) -> str:
+        if os.name != "nt":
+            return build_node_runtime_manifest(entrypoint.parent.parent).digest
+        return hashlib.sha256(
+            (
+                "nac.windows-node-runtime/v1\0"
+                + hashlib.sha256(node.read_bytes()).hexdigest()
+                + "\0"
+                + hashlib.sha256(entrypoint.read_bytes()).hexdigest()
+            ).encode("ascii")
+        ).hexdigest()
 
     def test_plan_emits_exact_eight_digests_and_runner_combined_hash(self) -> None:
         paths = {
@@ -66,15 +80,15 @@ class AzureBffActivationAttestationTests(unittest.TestCase):
         self.assertEqual(len(attestations), 8)
         self.assertEqual(
             attestations["m365_cli_sha256"],
-            build_node_runtime_manifest(
-                paths["m365_cli_path"].parent.parent
-            ).digest,
+            self._node_runtime_digest(
+                paths["m365_cli_path"], paths["m365_node_path"]
+            ),
         )
         self.assertEqual(
             attestations["build_npm_cli_sha256"],
-            build_node_runtime_manifest(
-                paths["build_npm_cli_path"].parent.parent
-            ).digest,
+            self._node_runtime_digest(
+                paths["build_npm_cli_path"], paths["build_node_path"]
+            ),
         )
         self.assertEqual(result["toolchain_attestations_sha256"], _sha256_json(attestations))
         self.assertEqual(set(result["live_cli_arguments"].values()), set(attestations.values()))
@@ -84,7 +98,10 @@ class AzureBffActivationAttestationTests(unittest.TestCase):
     def test_plan_rejects_symlink_or_group_writable_input(self) -> None:
         trusted = self._file("trusted", b"trusted", 0o700)
         symlink = self.root / "m365"
-        symlink.symlink_to(trusted)
+        if os.name == "nt":
+            os.link(trusted, symlink)
+        else:
+            symlink.symlink_to(trusted)
         certificate = self._file("cert.pem", b"cert", 0o600)
         execution_paths = {
             "azure_cli": trusted,

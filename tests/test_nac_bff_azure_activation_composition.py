@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timezone
+from contextlib import nullcontext
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
+import subprocess
 from types import SimpleNamespace
 import tempfile
 import unittest
 import zipfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from nac_bff.azure_activation import (
     DELEGATED_SCOPE,
@@ -61,6 +64,10 @@ from nac_bff.azure_activation_runner import (
     _sha256_json as _runner_sha256_json,
     run_azure_bff_live_activation,
 )
+from nac_bff.issue746_reconciliation_gate import (
+    Issue746ReconciliationAuthorization,
+    Issue746ReconciliationGateError,
+)
 from nac_bff.azure_live_commands import _validated_command
 from nac_bff.graph_activation import (
     GRAPH_APP_ID,
@@ -78,6 +85,70 @@ TREE = "c" * 40
 APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/632#issuecomment-123456789"
 )
+
+
+def _make_windows_file_broadly_writable(path: Path) -> None:
+    completed = subprocess.run(
+        ["icacls", str(path), "/grant", "*S-1-1-0:(W)"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise AssertionError("failed to create broad Windows DACL fixture")
+
+
+def _issue746_authorization_mock() -> Mock:
+    authorization = Mock(spec=Issue746ReconciliationAuthorization)
+    authorization.verify.return_value = None
+    return authorization
+
+
+class _WindowsProcessBackendProxy:
+    def __init__(self, delegate) -> None:
+        self._delegate = delegate
+
+    def __getattr__(self, name: str):
+        return getattr(self._delegate, name)
+
+    def launch_attested_process(self, spec):
+        if not isinstance(subprocess.run, Mock):
+            return self._delegate.launch_attested_process(spec)
+        try:
+            completed = subprocess.run(
+                [str(spec.executable), *spec.arguments],
+                cwd=spec.cwd,
+                shell=False,
+                text=True,
+                capture_output=True,
+                check=False,
+                env=dict(spec.environment),
+                timeout=spec.timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            from nac_bff.activation_security_backend import SecurityBoundaryError
+
+            raise SecurityBoundaryError("PROCESS_TIMEOUT") from exc
+        return SimpleNamespace(
+            exit_code=completed.returncode,
+            stdout=(getattr(completed, "stdout", "") or "").encode("utf-8"),
+            stderr=(getattr(completed, "stderr", "") or "").encode("utf-8"),
+            image_sha256=spec.executable_sha256,
+            job_object_assigned=True,
+        )
+
+
+def _windows_process_backend_patch():
+    if os.name != "nt":
+        return nullcontext()
+    from nac_bff.activation_security_backend import get_platform_security_backend
+
+    return patch(
+        "nac_bff.activation_security_backend.get_platform_security_backend",
+        return_value=_WindowsProcessBackendProxy(
+            get_platform_security_backend()
+        ),
+    )
 TERMINALIZATION_APPROVAL_REFERENCE = (
     "https://github.com/notariat8/NaC/issues/717#issuecomment-987654321"
 )
@@ -983,6 +1054,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             "user": {"login": "ofunk"},
             "author_association": "OWNER",
             "html_url": APPROVAL_REFERENCE,
+            "issue_url": "https://api.github.com/repos/notariat8/NaC/issues/632",
             "created_at": "2026-07-14T10:00:00Z",
             "updated_at": "2026-07-14T10:00:00Z",
             "body": body,
@@ -1018,7 +1090,32 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
         github.assert_not_called()
 
         symlink = context.repo_root / "gh-link"
-        symlink.symlink_to(gh)
+        if os.name == "nt":
+            target_directory = context.repo_root / "gh-target"
+            target_directory.mkdir()
+            target = target_directory / "gh"
+            target.write_bytes(gh.read_bytes())
+            target.chmod(0o700)
+            linked_directory = context.repo_root / "gh-linked-directory"
+            completed = subprocess.run(
+                [
+                    "cmd.exe",
+                    "/d",
+                    "/c",
+                    "mklink",
+                    "/J",
+                    str(linked_directory),
+                    str(target_directory),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                shell=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            symlink = linked_directory / "gh"
+        else:
+            symlink.symlink_to(gh)
         linked = GitHubApprovalVerifier(
             binary=symlink,
             expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
@@ -1037,6 +1134,37 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
         )
 
+    def test_live_approval_rejects_issue_739_before_github_read(self) -> None:
+        temporary, request, context, plan, _comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        request = replace(
+            request,
+            owner_approval_reference=(
+                "https://github.com/notariat8/NaC/issues/739"
+                "#issuecomment-123456789"
+            ),
+        )
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        with patch.object(verifier, "_gh_json") as github:
+            result = verifier.verify(request, context, plan)
+        self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
+        github.assert_not_called()
+
+    def test_live_approval_requires_issue_632_api_binding(self) -> None:
+        temporary, request, context, plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        comment["issue_url"] = "https://api.github.com/repos/notariat8/NaC/issues/739"
+        result = self._verify(request, context, plan, comment)
+        self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_MISMATCH")
+
     def test_exact_immutable_owner_comment_verification_is_generic(self) -> None:
         temporary, _request, context, _plan, comment = self._fixture()
         self.addCleanup(temporary.cleanup)
@@ -1053,6 +1181,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
         comment.update(
             body=expected_body,
             html_url=TERMINALIZATION_APPROVAL_REFERENCE,
+            issue_url="https://api.github.com/repos/notariat8/NaC/issues/717",
         )
         expected_sha256 = _sha256_text(expected_body)
         with patch.object(verifier, "_gh_json", return_value=comment):
@@ -1077,6 +1206,7 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             "#issuecomment-987654322"
         )
         comment["html_url"] = baseline_reference
+        comment["issue_url"] = "https://api.github.com/repos/notariat8/NaC/issues/719"
         with patch.object(verifier, "_gh_json", return_value=comment):
             baseline_result = verifier.verify_owner_comment(
                 reference=baseline_reference,
@@ -1107,6 +1237,83 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             )
         self.assertEqual(result["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
         github.assert_not_called()
+
+    def test_function_deployment_owner_comment_accepts_only_issue_739(self) -> None:
+        temporary, _request, context, _plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        gh.chmod(0o700)
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+            owner_comment_issue_numbers=(739,),
+        )
+        expected_body = "FUNCTION_DEPLOYMENT_QUARANTINE_RELEASE_APPROVAL\n{}"
+        reference = (
+            "https://github.com/notariat8/NaC/issues/739"
+            "#issuecomment-987654321"
+        )
+        comment.update(
+            body=expected_body,
+            html_url=reference,
+            issue_url="https://api.github.com/repos/notariat8/NaC/issues/739",
+        )
+        expected_sha256 = _sha256_text(expected_body)
+        with patch.object(verifier, "_gh_json", return_value=comment) as github:
+            result = verifier.verify_owner_comment(
+                reference=reference,
+                expected_body=expected_body,
+                expected_body_sha256=expected_sha256,
+            )
+        self.assertEqual(result["status"], "VERIFIED")
+        github.assert_called_once()
+        for rejected_issue in (632, 717, 719):
+            rejected = (
+                f"https://github.com/notariat8/NaC/issues/{rejected_issue}"
+                "#issuecomment-987654321"
+            )
+            with self.subTest(issue=rejected_issue), patch.object(
+                verifier, "_gh_json"
+            ) as forbidden:
+                blocked = verifier.verify_owner_comment(
+                    reference=rejected,
+                    expected_body=expected_body,
+                    expected_body_sha256=expected_sha256,
+                )
+            self.assertEqual(blocked["code"], "APPROVAL_SNAPSHOT_UNAVAILABLE")
+            forbidden.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows credential-write guard")
+    def test_windows_github_read_enforces_credential_write_guard(self) -> None:
+        temporary, _request, context, _plan, _comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        gh = context.repo_root / "tools/gh.exe"
+        gh.parent.mkdir(exist_ok=True)
+        gh.write_bytes(b"trusted-gh-test-binary")
+        verifier = GitHubApprovalVerifier(
+            binary=gh,
+            expected_binary_sha256=hashlib.sha256(gh.read_bytes()).hexdigest(),
+            environ={},
+        )
+        backend = Mock()
+        backend.inspect_private_path.return_value = SimpleNamespace(
+            sha256=hashlib.sha256(gh.read_bytes()).hexdigest()
+        )
+        backend.launch_attested_process.return_value = SimpleNamespace(
+            exit_code=0,
+            stdout=b"{}",
+            stderr=b"",
+        )
+        with patch(
+            "nac_bff.activation_security_backend.get_platform_security_backend",
+            return_value=backend,
+        ):
+            self.assertEqual(verifier._gh_json(("api", "synthetic")), {})
+        spec = backend.launch_attested_process.call_args.args[0]
+        self.assertTrue(spec.credential_write_guard)
 
 
     def test_valid_organization_member_snapshot_passes(self) -> None:
@@ -1304,7 +1511,10 @@ class LocalActivationAdapterTests(unittest.TestCase):
             target = root / "target.bin"
             target.write_bytes(b"trusted")
             source = root / "source.bin"
-            source.symlink_to(target)
+            if os.name == "nt":
+                os.link(target, source)
+            else:
+                source.symlink_to(target)
             with self.assertRaisesRegex(
                 ActivationStepError,
                 r"^PREPARED_ARTIFACT_SNAPSHOT_FAILED\Z",
@@ -1803,14 +2013,44 @@ class LocalActivationAdapterTests(unittest.TestCase):
                 node.write_bytes(b"mutated-node")
                 return SimpleNamespace(returncode=0)
 
-            with (
-                patch(
-                    "nac_bff.azure_activation_composition.subprocess.run",
-                    side_effect=first_process_then_mutate,
-                ) as run,
-                self.assertRaises(ActivationStepError) as raised,
-            ):
-                adapter.build_spfx(root, root / "isolated")
+            if os.name == "nt":
+                original_run = adapter._run
+                run_count = 0
+
+                def bound_process_then_mutate(*args, **kwargs):
+                    nonlocal run_count
+                    original_run(*args, **kwargs)
+                    run_count += 1
+                    if run_count == 1:
+                        dependencies = kwargs["cwd"] / "node_modules"
+                        heft = dependencies / "@rushstack/heft/bin/heft"
+                        heft.parent.mkdir(parents=True)
+                        heft.write_bytes(b"trusted-heft")
+                        node.write_bytes(b"mutated-node")
+
+                with (
+                    _windows_process_backend_patch(),
+                    patch(
+                        "nac_bff.azure_activation_composition.subprocess.run",
+                        return_value=SimpleNamespace(returncode=0),
+                    ) as run,
+                    patch.object(
+                        adapter,
+                        "_run",
+                        side_effect=bound_process_then_mutate,
+                    ),
+                    self.assertRaises(ActivationStepError) as raised,
+                ):
+                    adapter.build_spfx(root, root / "isolated")
+            else:
+                with (
+                    patch(
+                        "nac_bff.azure_activation_composition.subprocess.run",
+                        side_effect=first_process_then_mutate,
+                    ) as run,
+                    self.assertRaises(ActivationStepError) as raised,
+                ):
+                    adapter.build_spfx(root, root / "isolated")
 
             self.assertEqual(
                 raised.exception.code, "BUILD_TOOLCHAIN_ATTESTATION_FAILED"
@@ -1875,7 +2115,7 @@ class LocalActivationAdapterTests(unittest.TestCase):
         node_source = node_candidate.resolve(strict=True)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            node = root / "node"
+            node = root / ("node.exe" if os.name == "nt" else "node")
             shutil.copyfile(node_source, node)
             node.chmod(0o700)
             runtime = root / "runtime"
@@ -1938,9 +2178,12 @@ class LocalActivationAdapterTests(unittest.TestCase):
             tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             tool.chmod(0o700)
             tool_sha256 = hashlib.sha256(tool.read_bytes()).hexdigest()
-            with patch(
-                "nac_bff.azure_activation_composition.subprocess.run"
-            ) as run:
+            with (
+                _windows_process_backend_patch(),
+                patch(
+                    "nac_bff.azure_activation_composition.subprocess.run"
+                ) as run,
+            ):
                 run.return_value = SimpleNamespace(returncode=0)
                 with patch.dict(
                     "os.environ",
@@ -1961,7 +2204,10 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertNotIn("NODE_OPTIONS", environment)
             self.assertNotIn("NODE_PATH", environment)
             self.assertEqual(environment["NAPI_RS_FORCE_WASI"], "error")
-            self.assertEqual(environment["PATH"], "/usr/bin:/bin")
+            if os.name == "nt":
+                self.assertNotIn("PATH", environment)
+            else:
+                self.assertEqual(environment["PATH"], "/usr/bin:/bin")
             self.assertNotEqual(
                 environment["NPM_CONFIG_USERCONFIG"],
                 environment["NPM_CONFIG_GLOBALCONFIG"],
@@ -1972,8 +2218,14 @@ class LocalActivationAdapterTests(unittest.TestCase):
             self.assertTrue(
                 environment["NPM_CONFIG_GLOBALCONFIG"].endswith("npm-global.conf")
             )
-            self.assertRegex(run.call_args.args[0][0], r"^/proc/self/fd/[0-9]+$")
-            self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 1)
+            if os.name == "nt":
+                self.assertTrue(Path(run.call_args.args[0][0]).is_absolute())
+                self.assertNotIn("pass_fds", run.call_args.kwargs)
+            else:
+                self.assertRegex(
+                    run.call_args.args[0][0], r"^/proc/self/fd/[0-9]+$"
+                )
+                self.assertEqual(len(run.call_args.kwargs["pass_fds"]), 1)
 
     def test_http_readiness_rejects_foreign_host_without_network(self) -> None:
         adapter = HttpReadinessAdapter(attempts=1, delay_seconds=0)
@@ -4784,7 +5036,11 @@ class AzureBffCompositionTests(unittest.TestCase):
             "PROVISIONER_CERTIFICATE_FILE_UNTRUSTED",
         )
 
-        Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"]).chmod(0o644)
+        private_key = Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"])
+        if os.name == "nt":
+            _make_windows_file_broadly_writable(private_key)
+        else:
+            private_key.chmod(0o644)
         with self.assertRaises(GraphConfigError) as unsafe_key:
             _bound_provisioner_token_provider(
                 environ, expected_certificate_sha256=certificate_sha256
@@ -4800,7 +5056,11 @@ class AzureBffCompositionTests(unittest.TestCase):
         provider = _bound_provisioner_token_provider(
             environ, expected_certificate_sha256=certificate_sha256
         )
-        Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"]).chmod(0o644)
+        private_key = Path(environ["M365_PROVISIONER_CLIENT_KEY_PATH"])
+        if os.name == "nt":
+            _make_windows_file_broadly_writable(private_key)
+        else:
+            private_key.chmod(0o644)
         with self.assertRaises(GraphConfigError) as raised:
             provider.fetch_access_token()
         self.assertEqual(
@@ -4868,7 +5128,10 @@ class AzureBffCompositionTests(unittest.TestCase):
             environ, expected_certificate_sha256=certificate_sha256
         )
         certificate_path.rename(original_path)
-        certificate_path.symlink_to(original_path)
+        if os.name == "nt":
+            os.link(original_path, certificate_path)
+        else:
+            certificate_path.symlink_to(original_path)
 
         with (
             patch(
@@ -4922,6 +5185,8 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "src/nac_bff/azure_activation_runner.py",
                 "src/nac_bff/azure_interruption_baseline.py",
                 "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/issue746_reconciliation_gate.py",
+                "src/nac_identity/governance_registry.py",
                 "src/nac_bff/azure_live_commands.py",
                 "src/nac_cli/cli.py",
             )
@@ -4947,6 +5212,37 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertNotEqual(first, changed)
 
     def test_interruption_git_reads_disable_replace_refs(self) -> None:
+        if os.name == "nt":
+            observed = {}
+
+            class _Backend:
+                def inspect_private_path(self, _path, *, purpose):
+                    self.purpose = purpose
+                    return SimpleNamespace(sha256="1" * 64)
+
+                def launch_attested_process(self, spec):
+                    observed["spec"] = spec
+                    return SimpleNamespace(exit_code=0, stdout=b"bound\n")
+
+            backend = _Backend()
+            with patch(
+                "nac_bff.activation_security_backend."
+                "get_platform_security_backend",
+                return_value=backend,
+            ):
+                self.assertEqual(
+                    _run_interruption_git_read(
+                        Path("C:/repo"), "rev-parse", "HEAD"
+                    ),
+                    "bound",
+                )
+            command = observed["spec"].arguments
+            self.assertEqual(backend.purpose, "toolchain-executable")
+            self.assertIn("--no-replace-objects", command)
+            self.assertLess(
+                command.index("--no-replace-objects"), command.index("-C")
+            )
+            return
         process_result = SimpleNamespace(returncode=0, stdout="bound\n")
         with patch(
             "nac_bff.azure_activation_composition.subprocess.run",
@@ -4973,6 +5269,8 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "src/nac_bff/azure_activation_runner.py",
                 "src/nac_bff/azure_interruption_baseline.py",
                 "src/nac_bff/azure_activation_composition.py",
+                "src/nac_bff/issue746_reconciliation_gate.py",
+                "src/nac_identity/governance_registry.py",
                 "src/nac_bff/azure_live_commands.py",
                 "src/nac_cli/cli.py",
             )
@@ -5006,6 +5304,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             expected_commit=COMMIT,
             expected_tree=TREE,
             expected_toolchain_sha256="e" * 64,
+            issue746_authorization=_issue746_authorization_mock(),
         )
 
     def test_interruption_binding_rejects_commit_mismatch(self) -> None:
@@ -5112,12 +5411,14 @@ class AzureBffCompositionTests(unittest.TestCase):
                 side_effect=AssertionError("M365 must not initialize"),
             ) as m365,
         ):
+            issue746_authorization = _issue746_authorization_mock()
             ports = build_interruption_reconciliation_ports(
                 Path("/repo"),
                 request,
                 reconciler_commit=COMMIT,
                 reconciler_tree=TREE,
                 reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=False,
                 environ={"AZURE_CLIENT_SECRET": "excluded"},
             )
@@ -5144,6 +5445,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             expected_commit=COMMIT,
             expected_tree=TREE,
             expected_toolchain_sha256="e" * 64,
+            issue746_authorization=issue746_authorization,
         )
         observation.assert_called_once_with(
             azure.return_value, preflight=runtime_binding.return_value.verify
@@ -5151,6 +5453,36 @@ class AzureBffCompositionTests(unittest.TestCase):
         graph.assert_not_called()
         credentials.assert_not_called()
         m365.assert_not_called()
+
+    def test_issue746_authorization_blocks_before_azure_adapter(self) -> None:
+        request = SimpleNamespace(
+            azure_cli_toolchain_sha256=AZURE_CLI_TOOLCHAIN_SHA256,
+            gh_cli_sha256=GH_CLI_SHA256,
+        )
+        authorization = _issue746_authorization_mock()
+        authorization.verify.side_effect = Issue746ReconciliationGateError(
+            "tampered authorization"
+        )
+        with (
+            patch(
+                "nac_bff.azure_activation_composition.AzureCliAdapter"
+            ) as azure,
+            self.assertRaises(ActivationStepError) as raised,
+        ):
+            build_interruption_reconciliation_ports(
+                Path("/repo"),
+                request,
+                reconciler_commit=COMMIT,
+                reconciler_tree=TREE,
+                reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=authorization,
+                require_owner_verifier=False,
+                environ={},
+            )
+        self.assertEqual(
+            raised.exception.code, "ISSUE_746_RECONCILIATION_GATE_CLOSED"
+        )
+        azure.assert_not_called()
 
     def test_interruption_terminalization_factory_adds_issue717_verifier(
         self,
@@ -5175,12 +5507,14 @@ class AzureBffCompositionTests(unittest.TestCase):
                 "nac_bff.azure_activation_composition.GitHubApprovalVerifier"
             ) as github,
         ):
+            issue746_authorization = _issue746_authorization_mock()
             ports = build_interruption_reconciliation_ports(
                 Path("/repo"),
                 request,
                 reconciler_commit=COMMIT,
                 reconciler_tree=TREE,
                 reconciler_toolchain_sha256="e" * 64,
+                issue746_authorization=issue746_authorization,
                 require_owner_verifier=True,
                 environ={},
             )
@@ -5197,6 +5531,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=GH_CLI_SHA256,
             environ={},
+            owner_comment_issue_numbers=(717, 719),
         )
         azure.assert_called_once()
 

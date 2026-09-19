@@ -1797,6 +1797,8 @@ def _read_teams_manifest_identity(path: Path) -> tuple[str, str, str]:
 
 
 def _stable_teams_package_bytes(path: Path) -> bytes:
+    if os.name == "nt":
+        return _stable_windows_teams_package_bytes(path)
     descriptor = -1
     try:
         named_before = path.lstat()
@@ -1856,6 +1858,39 @@ def _stable_teams_package_bytes(path: Path) -> bytes:
     finally:
         if descriptor >= 0:
             os.close(descriptor)
+
+
+def _stable_windows_teams_package_bytes(path: Path) -> bytes:
+    try:
+        from nac_bff.activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        backend = get_platform_security_backend()
+        before = backend.inspect_private_path(path, purpose="artifact")
+        if before.size < 1 or before.size > _MAX_TEAMS_PACKAGE_BYTES:
+            raise DeploymentPlanError(
+                "downloaded Teams package must be one stable regular file"
+            )
+        with backend.open_bound_read(path, before) as stream:
+            package_bytes = stream.read(_MAX_TEAMS_PACKAGE_BYTES + 1)
+        after = backend.inspect_private_path(path, purpose="artifact")
+        if (
+            before != after
+            or len(package_bytes) != before.size
+            or hashlib.sha256(package_bytes).hexdigest() != before.sha256
+        ):
+            raise DeploymentPlanError(
+                "downloaded Teams package changed while reading"
+            )
+        return package_bytes
+    except DeploymentPlanError:
+        raise
+    except (OSError, RuntimeError, SecurityBoundaryError) as exc:
+        raise DeploymentPlanError(
+            "downloaded Teams package stable read failed"
+        ) from exc
 
 
 def _page_exists(payload: Any) -> bool:

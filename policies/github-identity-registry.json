@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "Source of truth for GitHub user to technical role mapping.",
+  "version": 2,
+  "description": "Synthetic public examples for provider-qualified accounts, stable principals, and governance roles. Real mappings belong only in the protected external resolver.",
   "role_aliases": {
     "notar": "notar_fachlich",
     "notarin": "notar_fachlich",
@@ -12,14 +12,39 @@
     "praktikant": "mitarbeiter",
     "praktikantin": "mitarbeiter"
   },
-  "users": [
+  "principals": [
     {
-      "github_login": "ofunk-nvidia",
-      "display_name": "Default Maintainer",
-      "technical_role_id": "prozessverantwortung",
+      "principal_id": "person:owner-example",
+      "technical_role_ids": [
+        "prozessverantwortung",
+        "freigabeverantwortung"
+      ],
       "qualifications": [
         "process_design"
       ],
+      "active": true
+    }
+  ],
+  "accounts": [
+    {
+      "account_id": "github:owner-example-primary",
+      "provider": "github",
+      "login": "owner-example-primary",
+      "principal_id": "person:owner-example",
+      "active": true
+    },
+    {
+      "account_id": "github:owner-example-secondary",
+      "provider": "github",
+      "login": "owner-example-secondary",
+      "principal_id": "person:owner-example",
+      "active": true
+    },
+    {
+      "account_id": "nvidia-gitlab:owner-example",
+      "provider": "nvidia-gitlab",
+      "login": "owner-example",
+      "principal_id": "person:owner-example",
       "active": true
     }
   ]

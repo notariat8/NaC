@@ -287,6 +287,17 @@ class SqliteEvidenceStagingOutbox:
 
     def _validate_parent(self) -> None:
         parent = self._database_path.parent
+        if os.name == "nt":
+            try:
+                from nac_bff.activation_security_backend import (
+                    SecurityBoundaryError,
+                    get_platform_security_backend,
+                )
+
+                get_platform_security_backend().validate_private_directory(parent)
+                return
+            except (OSError, SecurityBoundaryError):
+                raise ValueError("database_parent_invalid") from None
         try:
             metadata = parent.lstat()
             local_filesystem = _is_explicitly_local_filesystem(parent)
@@ -305,6 +316,30 @@ class SqliteEvidenceStagingOutbox:
         if self._database_path.exists() or self._database_path.is_symlink():
             self._validate_file()
             return
+        if os.name == "nt":
+            try:
+                from nac_bff.activation_security_backend import (
+                    SecurityBoundaryError,
+                    get_platform_security_backend,
+                )
+
+                backend = get_platform_security_backend()
+                with backend.open_secure_directory(
+                    self._database_path.parent, create=False
+                ) as directory:
+                    descriptor = directory.open_regular_descriptor(
+                        self._database_path.name, create=True
+                    )
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+                    directory.flush()
+                return
+            except (OSError, SecurityBoundaryError):
+                raise ImmutableEvidenceError(
+                    "local evidence staging outbox is unavailable"
+                ) from None
         try:
             descriptor = os.open(
                 self._database_path,
@@ -326,6 +361,23 @@ class SqliteEvidenceStagingOutbox:
             ) from None
 
     def _validate_file(self) -> None:
+        if os.name == "nt":
+            try:
+                from nac_bff.activation_security_backend import (
+                    SecurityBoundaryError,
+                    get_platform_security_backend,
+                )
+
+                snapshot = get_platform_security_backend().inspect_private_path(
+                    self._database_path, purpose="sqlite-evidence-staging"
+                )
+                if snapshot.reparse_point or snapshot.size > _MAX_DATABASE_BYTES:
+                    raise SecurityBoundaryError("DATABASE_FILE_INVALID")
+                return
+            except (OSError, SecurityBoundaryError):
+                raise ImmutableEvidenceError(
+                    "local evidence staging outbox is unavailable"
+                ) from None
         try:
             metadata = self._database_path.lstat()
         except OSError:
@@ -409,6 +461,14 @@ def _close(connection: sqlite3.Connection) -> None:
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        from nac_bff.activation_security_backend import get_platform_security_backend
+
+        with get_platform_security_backend().open_secure_directory(
+            path, create=False
+        ) as directory:
+            directory.flush()
+        return
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     flags |= getattr(os, "O_CLOEXEC", 0)
     flags |= getattr(os, "O_NOFOLLOW", 0)

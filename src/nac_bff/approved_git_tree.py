@@ -7,12 +7,13 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import stat
 import subprocess
 import tarfile
 
 
-_GIT = Path("/usr/bin/git")
+_GIT = Path(shutil.which("git") or "/usr/bin/git")
 _OBJECT_RE = re.compile(r"^[0-9a-f]{40}$")
 _ALLOWED_MODES = frozenset({"100644", "100755"})
 _MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
@@ -69,7 +70,7 @@ class GitApprovedTreeSource:
         approved_commit: str,
         approved_tree: str,
     ) -> ApprovedTreeSnapshot:
-        target = target_root.resolve()
+        target = target_root.absolute()
         entries, files, manifest_sha256 = _verified_tree_payload(
             repo_root,
             approved_commit=approved_commit,
@@ -78,6 +79,13 @@ class GitApprovedTreeSource:
 
         if target.exists():
             raise ApprovedGitTreeError("APPROVED_GIT_SNAPSHOT_TARGET_EXISTS")
+        if os.name == "nt":
+            _materialize_windows_snapshot(target, entries, files)
+            return ApprovedTreeSnapshot(
+                root=target,
+                manifest_sha256=manifest_sha256,
+                file_count=len(entries),
+            )
         target.mkdir(parents=True, mode=0o700)
         try:
             for relative_path, (mode, blob_id) in entries.items():
@@ -107,6 +115,41 @@ class GitApprovedTreeSource:
             manifest_sha256=manifest_sha256,
             file_count=len(entries),
         )
+
+
+def _materialize_windows_snapshot(
+    target: Path,
+    entries: dict[str, tuple[str, str]],
+    files: dict[str, bytes],
+) -> None:
+    try:
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        backend = get_platform_security_backend()
+        with backend.open_secure_directory(target, create=True):
+            pass
+        for relative_path, (_mode, blob_id) in entries.items():
+            destination = target / relative_path
+            data = files[relative_path]
+            with backend.open_secure_directory(
+                destination.parent,
+                create=True,
+            ) as directory:
+                snapshot = directory.create_exclusive(destination.name, data)
+            if (
+                snapshot.sha256 != hashlib.sha256(data).hexdigest()
+                or _git_blob_id(data) != blob_id
+            ):
+                raise ApprovedGitTreeError("APPROVED_GIT_BLOB_MISMATCH")
+    except ApprovedGitTreeError:
+        raise
+    except (KeyError, OSError, RuntimeError, SecurityBoundaryError):
+        raise ApprovedGitTreeError(
+            "APPROVED_GIT_SNAPSHOT_WRITE_FAILED"
+        ) from None
 
 
 def _verified_tree_payload(
@@ -163,6 +206,20 @@ def _verified_tree_payload(
 
 
 def _trusted_git() -> Path:
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            get_platform_security_backend().inspect_private_path(
+                _GIT,
+                purpose="toolchain-executable",
+            )
+            return _GIT
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            raise ApprovedGitTreeError("TRUSTED_GIT_UNAVAILABLE") from None
     try:
         metadata = _GIT.stat()
     except OSError:
@@ -191,15 +248,53 @@ def _git_bytes(
     *,
     max_bytes: int = _MAX_ARCHIVE_BYTES,
 ) -> bytes:
+    arguments = (
+        "--no-optional-locks",
+        "--no-replace-objects",
+        "-C",
+        str(root),
+        *argv,
+    )
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                ProcessSpec,
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            executable_hash = backend.inspect_private_path(
+                git,
+                purpose="toolchain-executable",
+            ).sha256
+            environment = {
+                key: os.environ[key]
+                for key in ("SystemRoot", "TEMP", "TMP", "USERPROFILE", "HOME")
+                if key in os.environ
+            }
+            result = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=git,
+                    arguments=arguments,
+                    cwd=root,
+                    environment=environment,
+                    executable_sha256=executable_hash,
+                    timeout_seconds=60,
+                    maximum_output_bytes=max_bytes,
+                    allowed_exit_codes=tuple(range(256)),
+                )
+            )
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            raise ApprovedGitTreeError("APPROVED_GIT_READ_FAILED") from None
+        if result.exit_code != 0 or len(result.stdout) > max_bytes:
+            raise ApprovedGitTreeError("APPROVED_GIT_READ_FAILED")
+        return result.stdout
     try:
         result = subprocess.run(
             [
                 str(git),
-                "--no-optional-locks",
-                "--no-replace-objects",
-                "-C",
-                str(root),
-                *argv,
+                *arguments,
             ],
             check=False,
             capture_output=True,

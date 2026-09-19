@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol, Sequence
 import urllib.parse
 import urllib.request
 import uuid
@@ -79,6 +79,12 @@ from .azure_activation_contract import (
     ActivationContext,
     ActivationStepError,
     LiveActivationRequest,
+)
+from .issue746_reconciliation_gate import (
+    GATE_CLOSED as ISSUE746_GATE_CLOSED,
+    Issue746ReconciliationAuthorization,
+    Issue746ReconciliationGateError,
+    identity_binding_sha256,
 )
 from .azure_activation_approval import (
     APPROVAL_KEYS,
@@ -252,29 +258,43 @@ _SMART_DETECTION_RECEIVER_COUNTS = {
     "logicAppReceivers": 0,
     "azureFunctionReceivers": 0,
 }
-_NODE_NPM_CANDIDATES = (
-    (
-        Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
-        Path("/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"),
-    ),
-    (
-        Path("/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"),
-        Path(
-            "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/"
-            "lib/node_modules/npm/bin/npm-cli.js"
+if os.name == "nt":
+    _windows_node = Path(shutil.which("node") or "C:/NaC/missing/node.exe")
+    _windows_npm_wrapper = Path(shutil.which("npm") or "C:/NaC/missing/npm.cmd")
+    _NODE_NPM_CANDIDATES = (
+        (
+            _windows_node,
+            _windows_npm_wrapper.parent
+            / "node_modules"
+            / "npm"
+            / "bin"
+            / "npm-cli.js",
         ),
-    ),
-    (Path("/usr/bin/node"), Path("/usr/share/nodejs/npm/bin/npm-cli.js")),
-)
+    )
+else:
+    _NODE_NPM_CANDIDATES = (
+        (
+            Path("/tmp/node-v22.23.1-linux-x64/bin/node"),
+            Path("/tmp/node-v22.23.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js"),
+        ),
+        (
+            Path("/tmp/nac-m365-tools/node-v24.18.0-linux-x64/bin/node"),
+            Path(
+                "/tmp/nac-m365-tools/node-v24.18.0-linux-x64/"
+                "lib/node_modules/npm/bin/npm-cli.js"
+            ),
+        ),
+        (Path("/usr/bin/node"), Path("/usr/share/nodejs/npm/bin/npm-cli.js")),
+    )
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
 )
-_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/(?:632|739)#issuecomment-([1-9][0-9]*)$"
+_LIVE_APPROVAL_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
 )
-_TERMINALIZATION_COMMENT_RE = re.compile(
-    r"^https://github\.com/notariat8/NaC/issues/(?:717|719)"
+_OWNER_COMMENT_RE = re.compile(
+    r"^https://github\.com/notariat8/NaC/issues/([1-9][0-9]*)"
     r"#issuecomment-([1-9][0-9]*)$"
 )
 _PERFORMANCE_ACCEPTANCE_COMMENT_RE = re.compile(
@@ -392,6 +412,9 @@ class GitHubApprovalVerifier:
         binary: str | os.PathLike[str] = "/usr/bin/gh",
         expected_binary_sha256: str | None = None,
         environ: Mapping[str, str] | None = None,
+        owner_comment_issue_numbers: tuple[int, ...] = (717, 719),
+        owner_account_id_sha256: str | None = None,
+        owner_principal_id_sha256: str | None = None,
     ) -> None:
         source = os.environ if environ is None else environ
         self._binary = _trusted_regular_file(
@@ -402,8 +425,35 @@ class GitHubApprovalVerifier:
         self._env = {
             key: value
             for key, value in source.items()
-            if key in {"GH_CONFIG_DIR", "HOME", "LANG"} and value
+            if key in {
+                "GH_CONFIG_DIR",
+                "HOME",
+                "LANG",
+                "SystemRoot",
+                "TEMP",
+                "USERPROFILE",
+            }
+            and value
         }
+        if (
+            not owner_comment_issue_numbers
+            or len(set(owner_comment_issue_numbers)) != len(owner_comment_issue_numbers)
+            or not all(
+                isinstance(number, int) and number > 0
+                for number in owner_comment_issue_numbers
+            )
+        ):
+            raise ValueError("owner comment issue allowlist invalid")
+        self._owner_comment_issue_numbers = frozenset(owner_comment_issue_numbers)
+        if (owner_account_id_sha256 is None) != (owner_principal_id_sha256 is None):
+            raise ValueError("owner principal binding incomplete")
+        if owner_account_id_sha256 is not None and (
+            not re.fullmatch(r"[0-9a-f]{64}", owner_account_id_sha256)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(owner_principal_id_sha256))
+        ):
+            raise ValueError("owner principal binding invalid")
+        self._owner_account_id_sha256 = owner_account_id_sha256
+        self._owner_principal_id_sha256 = owner_principal_id_sha256
 
     def verify(
         self,
@@ -411,7 +461,7 @@ class GitHubApprovalVerifier:
         context: ActivationContext,
         plan: Mapping[str, Any],
     ) -> dict[str, Any]:
-        match = _COMMENT_RE.fullmatch(request.owner_approval_reference)
+        match = _LIVE_APPROVAL_COMMENT_RE.fullmatch(request.owner_approval_reference)
         if self._binary is None or match is None:
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         comment = self._gh_json(
@@ -431,6 +481,8 @@ class GitHubApprovalVerifier:
             return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
         if (
             comment.get("html_url") != request.owner_approval_reference
+            or comment.get("issue_url")
+            != "https://api.github.com/repos/notariat8/NaC/issues/632"
             or comment.get("created_at") != comment.get("updated_at")
             or not isinstance(body, str)
             or _sha256_text(body) != request.approval_body_sha256
@@ -478,43 +530,66 @@ class GitHubApprovalVerifier:
     ) -> dict[str, Any]:
         """Verify an exact immutable owner comment without interpreting its body."""
 
-        match = _TERMINALIZATION_COMMENT_RE.fullmatch(reference)
+        match = _OWNER_COMMENT_RE.fullmatch(reference)
         if (
             self._binary is None
             or match is None
+            or int(match.group(1)) not in self._owner_comment_issue_numbers
             or not isinstance(expected_body, str)
             or _sha256_text(expected_body) != expected_body_sha256
         ):
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         comment = self._gh_json(
-            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(1)}")
+            ("api", f"repos/notariat8/NaC/issues/comments/{match.group(2)}")
         )
         if comment is None:
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_UNAVAILABLE"}
         author = comment.get("user")
         body = comment.get("body")
+        author_login = author.get("login") if isinstance(author, dict) else None
+        author_is_bound = (
+            isinstance(author_login, str)
+            and (
+                identity_binding_sha256(
+                    "account-id", f"github:{author_login}"
+                )
+                == self._owner_account_id_sha256
+                if self._owner_account_id_sha256 is not None
+                else author_login == _APPROVED_OWNER_LOGIN
+            )
+        )
         if (
             not isinstance(author, dict)
-            or author.get("login") != _APPROVED_OWNER_LOGIN
+            or not author_is_bound
             or comment.get("author_association")
             not in _APPROVED_OWNER_ASSOCIATIONS
         ):
             return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
         if (
             comment.get("html_url") != reference
+            or comment.get("issue_url")
+            != (
+                "https://api.github.com/repos/notariat8/NaC/issues/"
+                f"{match.group(1)}"
+            )
             or comment.get("created_at") != comment.get("updated_at")
             or body != expected_body
             or _sha256_text(body) != expected_body_sha256
         ):
             return {"status": "FAILED", "code": "APPROVAL_SNAPSHOT_MISMATCH"}
-        return {
+        verified = {
             "status": "VERIFIED",
-            "owner_login": _APPROVED_OWNER_LOGIN,
+            "owner_login": author_login,
             "immutable": True,
             "reference": reference,
             "body": body,
             "body_sha256": expected_body_sha256,
         }
+        if self._owner_principal_id_sha256 is not None:
+            verified["owner_principal_id_sha256"] = (
+                self._owner_principal_id_sha256
+            )
+        return verified
 
     def verify_performance_owner_comment(
         self,
@@ -564,20 +639,56 @@ class GitHubApprovalVerifier:
 
     def _gh_json(self, argv: tuple[str, ...]) -> dict[str, Any] | None:
         try:
-            result = subprocess.run(
-                [str(self._binary), *argv],
-                check=False,
-                capture_output=True,
-                text=True,
-                shell=False,
-                stdin=subprocess.DEVNULL,
-                timeout=30,
-                env=self._env,
-            )
+            if os.name == "nt":
+                from .activation_security_backend import (
+                    ProcessSpec,
+                    get_platform_security_backend,
+                )
+
+                assert self._binary is not None
+                backend = get_platform_security_backend()
+                executable_hash = backend.inspect_private_path(
+                    self._binary, purpose="toolchain-executable"
+                ).sha256
+                process = backend.launch_attested_process(
+                    ProcessSpec(
+                        executable=self._binary,
+                        arguments=argv,
+                        cwd=Path.cwd().resolve(),
+                        environment=self._env,
+                        executable_sha256=executable_hash,
+                        timeout_seconds=30,
+                        maximum_output_bytes=2 * 1024 * 1024,
+                        allowed_exit_codes=tuple(range(256)),
+                        credential_write_guard=True,
+                    )
+                )
+                result = subprocess.CompletedProcess(
+                    [str(self._binary), *argv],
+                    process.exit_code,
+                    process.stdout.decode("utf-8", errors="replace"),
+                    process.stderr.decode("utf-8", errors="replace"),
+                )
+            else:
+                result = subprocess.run(
+                    [str(self._binary), *argv],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                    stdin=subprocess.DEVNULL,
+                    timeout=30,
+                    env=self._env,
+                )
             value = json.loads(result.stdout) if result.returncode == 0 else None
-        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        except (OSError, RuntimeError, subprocess.SubprocessError, json.JSONDecodeError):
             return None
         return value if isinstance(value, dict) else None
+
+    def read_json(self, argv: Sequence[str]) -> Mapping[str, Any] | None:
+        """Expose the attested, read-only transport for bounded governance reads."""
+
+        return self._gh_json(tuple(argv))
 
 
 class LocalBuildAdapter:
@@ -903,17 +1014,30 @@ class LocalBuildAdapter:
                 npm_user_config = runtime_root / "npm-user.conf"
                 npm_global_config.touch(mode=0o600)
                 npm_user_config.touch(mode=0o600)
-                env = {
-                    "HOME": str(build_home),
-                    "LANG": "C.UTF-8",
-                    "LC_ALL": "C.UTF-8",
-                    "NPM_CONFIG_AUDIT": "false",
-                    "NPM_CONFIG_FUND": "false",
-                    "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
-                    "NPM_CONFIG_USERCONFIG": str(npm_user_config),
-                    "PATH": "/usr/bin:/bin",
-                    "TMPDIR": str(build_tmp),
-                }
+                env = (
+                    {
+                        "SystemRoot": os.environ["SystemRoot"],
+                        "TEMP": str(build_tmp),
+                        "TMP": str(build_tmp),
+                        "USERPROFILE": str(build_home),
+                        "NPM_CONFIG_AUDIT": "false",
+                        "NPM_CONFIG_FUND": "false",
+                        "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
+                        "NPM_CONFIG_USERCONFIG": str(npm_user_config),
+                    }
+                    if os.name == "nt"
+                    else {
+                        "HOME": str(build_home),
+                        "LANG": "C.UTF-8",
+                        "LC_ALL": "C.UTF-8",
+                        "NPM_CONFIG_AUDIT": "false",
+                        "NPM_CONFIG_FUND": "false",
+                        "NPM_CONFIG_GLOBALCONFIG": str(npm_global_config),
+                        "NPM_CONFIG_USERCONFIG": str(npm_user_config),
+                        "PATH": "/usr/bin:/bin",
+                        "TMPDIR": str(build_tmp),
+                    }
+                )
                 if force_wasi_native_fallback:
                     env["NAPI_RS_FORCE_WASI"] = "error"
                 if (
@@ -975,37 +1099,35 @@ class LocalBuildAdapter:
                             env[MANIFEST_ENV] = runtime_sealed.paths[0]
                             env["NODE"] = sealed.paths[0]
                             env["NAC_NODE_RUNTIME_PRELOADER"] = runtime_sealed.paths[1]
-                            env["NAC_NODE_RUNTIME_ESM_LOADER"] = runtime_sealed.paths[2]
+                            env["NAC_NODE_RUNTIME_ESM_LOADER"] = (
+                                Path(runtime_sealed.paths[2]).resolve().as_uri()
+                                if os.name == "nt"
+                                else runtime_sealed.paths[2]
+                            )
                             process_argv = [
                                 sealed.paths[0],
                                 "--preserve-symlinks",
                                 "--require",
                                 runtime_sealed.paths[1],
                                 "--experimental-loader",
-                                runtime_sealed.paths[2],
+                                (
+                                    Path(runtime_sealed.paths[2]).resolve().as_uri()
+                                    if os.name == "nt"
+                                    else runtime_sealed.paths[2]
+                                ),
                                 *argv[1:],
                             ]
-                            result = subprocess.run(
+                            result = _run_local_build_process(
                                 process_argv,
                                 cwd=cwd,
-                                check=False,
-                                capture_output=True,
-                                text=True,
-                                shell=False,
-                                stdin=subprocess.DEVNULL,
                                 timeout=timeout,
                                 env=env,
                                 pass_fds=pass_fds + runtime_sealed.pass_fds,
                             )
                     else:
-                        result = subprocess.run(
+                        result = _run_local_build_process(
                             process_argv,
                             cwd=cwd,
-                            check=False,
-                            capture_output=True,
-                            text=True,
-                            shell=False,
-                            stdin=subprocess.DEVNULL,
                             timeout=timeout,
                             env=env,
                             pass_fds=pass_fds,
@@ -1016,6 +1138,63 @@ class LocalBuildAdapter:
             raise ActivationStepError("LOCAL_BUILD_FAILED") from None
         if result.returncode != 0:
             raise ActivationStepError("LOCAL_BUILD_FAILED")
+
+
+def _run_local_build_process(
+    argv: list[str],
+    *,
+    cwd: Path,
+    timeout: int,
+    env: Mapping[str, str],
+    pass_fds: tuple[int, ...],
+) -> subprocess.CompletedProcess[str]:
+    if os.name != "nt":
+        return subprocess.run(
+            argv,
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+            env=dict(env),
+            pass_fds=pass_fds,
+        )
+    from .activation_security_backend import (
+        ProcessSpec,
+        SecurityBoundaryError,
+        get_platform_security_backend,
+    )
+
+    executable = Path(argv[0])
+    try:
+        backend = get_platform_security_backend()
+        executable_hash = backend.inspect_private_path(
+            executable, purpose="toolchain-executable"
+        ).sha256
+        result = backend.launch_attested_process(
+            ProcessSpec(
+                executable=executable,
+                arguments=tuple(argv[1:]),
+                cwd=cwd.resolve(),
+                environment=dict(env),
+                executable_sha256=executable_hash,
+                timeout_seconds=float(timeout),
+                maximum_output_bytes=8 * 1024 * 1024,
+                allowed_exit_codes=tuple(range(256)),
+            )
+        )
+    except SecurityBoundaryError as exc:
+        if exc.code == "PROCESS_TIMEOUT":
+            raise subprocess.TimeoutExpired(argv, timeout) from exc
+        raise OSError(exc.code) from exc
+    return subprocess.CompletedProcess(
+        argv,
+        result.exit_code,
+        result.stdout.decode("utf-8", errors="replace"),
+        result.stderr.decode("utf-8", errors="replace"),
+    )
 
 
 
@@ -1103,17 +1282,34 @@ def _normalize_zip_archive(path: Path) -> None:
                     (stat.S_IFDIR | 0o755) if is_directory else (stat.S_IFREG | 0o644)
                 ) << 16
                 target.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
-        descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
-        os.replace(temporary, path)
-        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        if os.name == "nt":
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            try:
+                payload = _stable_file_bytes(temporary)
+                with get_platform_security_backend().open_secure_directory(
+                    Path(os.path.abspath(path.parent)), create=False
+                ) as session:
+                    session.atomic_write(path.name, payload)
+            except SecurityBoundaryError:
+                raise ActivationStepError(
+                    "SPFX_PACKAGE_NORMALIZATION_FAILED"
+                ) from None
+        else:
+            descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            os.replace(temporary, path)
+            directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
     except ActivationStepError:
         raise
     except (OSError, zipfile.BadZipFile, KeyError, RuntimeError):
@@ -3097,6 +3293,8 @@ _RECONCILER_TOOLCHAIN_PATHS = (
     Path("src/nac_bff/azure_interruption_baseline.py"),
     Path("src/nac_bff/azure_activation_runner.py"),
     Path("src/nac_bff/azure_activation_composition.py"),
+    Path("src/nac_bff/issue746_reconciliation_gate.py"),
+    Path("src/nac_identity/governance_registry.py"),
     Path("src/nac_bff/azure_live_commands.py"),
     Path("src/nac_cli/cli.py"),
 )
@@ -3104,10 +3302,53 @@ _FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_PATHS = (
     *_RECONCILER_TOOLCHAIN_PATHS,
     Path("src/nac_bff/azure_function_deployment_reconciliation.py"),
 )
-_GIT_READ_BINARY = Path("/usr/bin/git")
+_GIT_READ_BINARY = Path(shutil.which("git") or "/usr/bin/git")
 
 
 def _run_interruption_git_read(repo_root: Path, *args: str) -> str:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            ProcessSpec,
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            backend = get_platform_security_backend()
+            executable_hash = backend.inspect_private_path(
+                _GIT_READ_BINARY, purpose="toolchain-executable"
+            ).sha256
+            result = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=_GIT_READ_BINARY,
+                    arguments=(
+                        "--no-optional-locks",
+                        "--no-replace-objects",
+                        "-C",
+                        str(repo_root),
+                        *args,
+                    ),
+                    cwd=repo_root.resolve(),
+                    environment={
+                        key: os.environ[key]
+                        for key in ("SystemRoot", "TEMP", "USERPROFILE", "HOME")
+                        if key in os.environ
+                    },
+                    executable_sha256=executable_hash,
+                    timeout_seconds=30,
+                    maximum_output_bytes=4 * 1024 * 1024,
+                    allowed_exit_codes=tuple(range(256)),
+                )
+            )
+            if result.exit_code != 0:
+                raise ActivationStepError(
+                    "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
+                )
+            return result.stdout.decode("utf-8", errors="strict").rstrip("\n")
+        except (OSError, UnicodeDecodeError, SecurityBoundaryError):
+            raise ActivationStepError(
+                "INTERRUPTION_RECONCILER_GIT_READ_FAILED"
+            ) from None
     try:
         result = subprocess.run(
             [
@@ -3244,6 +3485,16 @@ def calculate_function_deployment_reconciler_toolchain_sha256(
 
 
 def _stable_worktree_file_sha256(path: Path) -> str | None:
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            binding = get_platform_security_backend().inspect_private_path(
+                path.resolve(), purpose="toolchain-executable"
+            )
+            return binding.sha256 if 0 < binding.size <= 16 * 1024 * 1024 else None
+        except (OSError, RuntimeError):
+            return None
     descriptor: int | None = None
     try:
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -3285,15 +3536,18 @@ class InterruptionRuntimeBindingVerifier:
         expected_commit: str,
         expected_tree: str,
         expected_toolchain_sha256: str,
+        issue746_authorization: Issue746ReconciliationAuthorization,
     ) -> None:
         self._repo_root = repo_root
         self._expected_commit = expected_commit
         self._expected_tree = expected_tree
         self._expected_toolchain_sha256 = expected_toolchain_sha256
+        self._issue746_authorization = issue746_authorization
 
     def verify(self) -> None:
         before = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(before)
+        self._verify_issue746_authorization()
         actual_toolchain_sha256 = (
             calculate_interruption_reconciler_toolchain_sha256(
                 self._repo_root,
@@ -3311,6 +3565,15 @@ class InterruptionRuntimeBindingVerifier:
             raise ActivationStepError(
                 "INTERRUPTION_RECONCILER_TOOLCHAIN_MISMATCH"
             )
+
+    def _verify_issue746_authorization(self) -> None:
+        try:
+            self._issue746_authorization.verify(
+                expected_head=self._expected_commit,
+                expected_tree=self._expected_tree,
+            )
+        except Issue746ReconciliationGateError as exc:
+            raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
         if snapshot.get("commit") != self._expected_commit:
@@ -3333,15 +3596,18 @@ class FunctionDeploymentRuntimeBindingVerifier:
         expected_commit: str,
         expected_tree: str,
         expected_toolchain_sha256: str,
+        issue746_authorization: Issue746ReconciliationAuthorization,
     ) -> None:
         self._repo_root = repo_root
         self._expected_commit = expected_commit
         self._expected_tree = expected_tree
         self._expected_toolchain_sha256 = expected_toolchain_sha256
+        self._issue746_authorization = issue746_authorization
 
     def verify(self) -> None:
         before = _read_interruption_git_snapshot(self._repo_root)
         self._verify_snapshot(before)
+        self._verify_issue746_authorization()
         actual = calculate_function_deployment_reconciler_toolchain_sha256(
             self._repo_root,
             approved_commit=self._expected_commit,
@@ -3357,6 +3623,15 @@ class FunctionDeploymentRuntimeBindingVerifier:
             raise ActivationStepError(
                 "FUNCTION_DEPLOYMENT_RECONCILER_TOOLCHAIN_MISMATCH"
             )
+
+    def _verify_issue746_authorization(self) -> None:
+        try:
+            self._issue746_authorization.verify(
+                expected_head=self._expected_commit,
+                expected_tree=self._expected_tree,
+            )
+        except Issue746ReconciliationGateError as exc:
+            raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     def _verify_snapshot(self, snapshot: Mapping[str, object]) -> None:
         if snapshot.get("commit") != self._expected_commit:
@@ -3380,6 +3655,7 @@ def build_interruption_reconciliation_ports(
     reconciler_commit: str,
     reconciler_tree: str,
     reconciler_toolchain_sha256: str,
+    issue746_authorization: Issue746ReconciliationAuthorization,
     require_owner_verifier: bool,
     environ: Mapping[str, str] | None = None,
 ) -> tuple[
@@ -3388,6 +3664,14 @@ def build_interruption_reconciliation_ports(
     Callable[[], None],
 ]:
     """Build the read port and the optional #717 terminalization verifier."""
+
+    try:
+        issue746_authorization.verify(
+            expected_head=reconciler_commit,
+            expected_tree=reconciler_tree,
+        )
+    except Issue746ReconciliationGateError as exc:
+        raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     source = os.environ if environ is None else environ
     values = {
@@ -3415,12 +3699,14 @@ def build_interruption_reconciliation_ports(
         expected_commit=reconciler_commit,
         expected_tree=reconciler_tree,
         expected_toolchain_sha256=reconciler_toolchain_sha256,
+        issue746_authorization=issue746_authorization,
     )
     owner_verifier = (
         GitHubApprovalVerifier(
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=request.gh_cli_sha256,
             environ=values,
+            owner_comment_issue_numbers=(717, 719),
         )
         if require_owner_verifier
         else None
@@ -3441,6 +3727,7 @@ def build_function_deployment_reconciliation_ports(
     reconciler_commit: str,
     reconciler_tree: str,
     reconciler_toolchain_sha256: str,
+    issue746_authorization: Issue746ReconciliationAuthorization,
     require_owner_verifier: bool,
     environ: Mapping[str, str] | None = None,
 ) -> tuple[
@@ -3449,6 +3736,14 @@ def build_function_deployment_reconciliation_ports(
     Callable[[], None],
 ]:
     """Build the read-only step-7 observation and #739 approval ports."""
+
+    try:
+        issue746_authorization.verify(
+            expected_head=reconciler_commit,
+            expected_tree=reconciler_tree,
+        )
+    except Issue746ReconciliationGateError as exc:
+        raise ActivationStepError(ISSUE746_GATE_CLOSED) from exc
 
     source = os.environ if environ is None else environ
     values = {
@@ -3476,12 +3771,20 @@ def build_function_deployment_reconciliation_ports(
         expected_commit=reconciler_commit,
         expected_tree=reconciler_tree,
         expected_toolchain_sha256=reconciler_toolchain_sha256,
+        issue746_authorization=issue746_authorization,
     )
     owner_verifier = (
         GitHubApprovalVerifier(
             binary=GH_CLI_EXECUTION_PATH,
             expected_binary_sha256=request.gh_cli_sha256,
             environ=values,
+            owner_comment_issue_numbers=(739,),
+            owner_account_id_sha256=(
+                issue746_authorization.operator_account_id_sha256
+            ),
+            owner_principal_id_sha256=(
+                issue746_authorization.operator_principal_id_sha256
+            ),
         )
         if require_owner_verifier
         else None
@@ -3558,6 +3861,22 @@ def _trusted_regular_file(
     path = Path(source)
     if not path.is_absolute():
         return None
+    if os.name == "nt":
+        try:
+            if executable and expected_sha256 is None:
+                return None
+            if path.is_symlink():
+                return None
+            from .activation_security_backend import get_platform_security_backend
+
+            binding = get_platform_security_backend().inspect_private_path(
+                path, purpose="toolchain-executable" if executable else "artifact"
+            )
+            if expected_sha256 is not None and binding.sha256 != expected_sha256:
+                return None
+            return path
+        except (OSError, RuntimeError):
+            return None
     try:
         metadata = path.lstat()
         if (
@@ -3605,6 +3924,25 @@ def _read_trusted_credential_bytes(
     if source is None:
         return None
     path = Path(source)
+    if os.name == "nt":
+        if not path.is_absolute() or not _trusted_credential_parent_chain(path.parent):
+            return None
+        try:
+            from .activation_security_backend import get_platform_security_backend
+
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(path, purpose="credential")
+            if binding.size > _MAX_CREDENTIAL_FILE_BYTES:
+                return None
+            with backend.open_bound_read(path, binding) as handle:
+                payload = handle.read(_MAX_CREDENTIAL_FILE_BYTES + 1)
+            if len(payload) != binding.size:
+                return None
+            if expected_sha256 is not None and hashlib.sha256(payload).hexdigest() != expected_sha256:
+                return None
+            return payload
+        except (OSError, RuntimeError):
+            return None
     if not path.is_absolute() or not _trusted_credential_parent_chain(path.parent):
         return None
     if expected_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
@@ -3668,6 +4006,20 @@ def _read_trusted_credential_bytes(
 
 
 def _trusted_credential_parent_chain(path: Path) -> bool:
+    if os.name == "nt":
+        try:
+            current = path
+            while current != current.parent:
+                metadata = current.lstat()
+                if (
+                    not stat.S_ISDIR(metadata.st_mode)
+                    or getattr(metadata, "st_file_attributes", 0) & 0x400
+                ):
+                    return False
+                current = current.parent
+            return True
+        except OSError:
+            return False
     try:
         current = path
         while current != current.parent:
@@ -4403,6 +4755,40 @@ def _field(row: Mapping[str, Any], *names: str) -> Any:
 
 
 def _stable_file_bytes(source: Path) -> bytes:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            backend = get_platform_security_backend()
+            absolute_source = Path(os.path.abspath(source))
+            expected = backend.inspect_private_path(
+                absolute_source, purpose="prepared-artifact-source"
+            )
+            with backend.open_secure_directory(
+                absolute_source.parent, create=False
+            ) as session:
+                payload = session.read_bounded(
+                    source.name, max(expected.size, 1) + 1
+                )
+            if (
+                payload is None
+                or len(payload) != expected.size
+                or hashlib.sha256(payload).hexdigest() != expected.sha256
+                or backend.inspect_private_path(
+                    absolute_source,
+                    purpose="prepared-artifact-source",
+                )
+                != expected
+            ):
+                raise SecurityBoundaryError("FILE_BINDING_CHANGED")
+            return payload
+        except (OSError, SecurityBoundaryError, ValueError):
+            raise ActivationStepError(
+                "PREPARED_ARTIFACT_SNAPSHOT_FAILED"
+            ) from None
     descriptor = -1
     flags = (
         os.O_RDONLY
@@ -4469,6 +4855,29 @@ def _copy_snapshot(
     payload = _stable_file_bytes(source)
     if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise ActivationStepError("PREPARED_ARTIFACT_HASH_MISMATCH")
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            if destination.exists() or destination.is_symlink():
+                raise SecurityBoundaryError("SECURE_CHILD_ALREADY_EXISTS")
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            with get_platform_security_backend().open_secure_directory(
+                Path(os.path.abspath(destination.parent)), create=False
+            ) as session:
+                session.create_exclusive(destination.name, payload)
+        except (OSError, SecurityBoundaryError, ValueError):
+            raise ActivationStepError(
+                "PREPARED_ARTIFACT_SNAPSHOT_FAILED"
+            ) from None
+        if strict_destination:
+            _require_digest(expected_sha256, destination)
+        else:
+            _require_content_digest(expected_sha256, destination)
+        return
     descriptor = -1
     try:
         if destination.exists() or destination.is_symlink():

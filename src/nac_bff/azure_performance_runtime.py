@@ -11,6 +11,8 @@ import time
 from typing import Any, Callable, Mapping, Protocol, Sequence
 from uuid import UUID
 
+from .activation_security_backend import SecureDirectorySession, SecurityBoundaryError
+
 from .azure_activation import WORKSPACE_ID
 from .azure_performance_acceptance import (
     BoundPerformanceAuthorizationVerifier,
@@ -28,6 +30,7 @@ from .azure_performance_authorization import (
     SecurePerformancePathError,
     VerifiedLiveActionCapability,
     VerifiedPerformanceAuthority,
+    _close_secure_parent,
     _open_root_anchored_private_parent,
 )
 from .azure_performance_monitor import (
@@ -932,7 +935,7 @@ class PerformanceFinalEvidenceStore:
                 for path in (self._path, self._markdown_path)
             )
         finally:
-            os.close(directory)
+            _close_secure_parent(directory)
 
     def load_final_evidence(self) -> Mapping[str, Any] | None:
         directory = _open_private_parent_directory(self._path, create=False)
@@ -984,7 +987,7 @@ class PerformanceFinalEvidenceStore:
                 raise ValueError("PERFORMANCE_FINAL_EVIDENCE_INVALID")
             return validated
         finally:
-            os.close(directory)
+            _close_secure_parent(directory)
 
     def assert_incomplete_final_evidence_recoverable(self) -> None:
         if not self.incomplete_final_evidence:
@@ -1056,7 +1059,7 @@ class PerformanceFinalEvidenceStore:
                 _encode_canonical_json(_validate_completion_manifest(manifest)),
             )
         finally:
-            os.close(directory)
+            _close_secure_parent(directory)
 
     def clear_pending_finalization(self) -> None:
         _remove_private_file(self._pending_path)
@@ -1660,7 +1663,7 @@ def _read_private_json(
 
 
 def _read_private_json_at(
-    directory: int,
+    directory: int | SecureDirectorySession,
     name: str,
     *,
     error_code: str,
@@ -1678,15 +1681,20 @@ def _read_private_bytes(path: Path, *, error_code: str) -> bytes | None:
     try:
         return _read_private_bytes_at(directory, path.name, error_code=error_code)
     finally:
-        os.close(directory)
+        _close_secure_parent(directory)
 
 
 def _read_private_bytes_at(
-    directory: int,
+    directory: int | SecureDirectorySession,
     name: str,
     *,
     error_code: str,
 ) -> bytes | None:
+    if not isinstance(directory, int):
+        try:
+            return directory.read_bounded(name, _MAX_EVIDENCE_BYTES)
+        except SecurityBoundaryError:
+            raise ValueError("PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID") from None
     try:
         descriptor = os.open(
             name,
@@ -1761,10 +1769,18 @@ def _atomic_private_write(path: Path, encoded: bytes) -> None:
     try:
         _atomic_private_write_at(directory, path.name, encoded)
     finally:
-        os.close(directory)
+        _close_secure_parent(directory)
 
 
-def _atomic_private_write_at(directory: int, name: str, encoded: bytes) -> None:
+def _atomic_private_write_at(
+    directory: int | SecureDirectorySession, name: str, encoded: bytes
+) -> None:
+    if not isinstance(directory, int):
+        try:
+            directory.atomic_write(name, encoded)
+            return
+        except SecurityBoundaryError:
+            raise ValueError("PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID") from None
     temporary = f".{name}.{os.getpid()}.{os.urandom(8).hex()}.tmp"
     descriptor = -1
     try:
@@ -1818,10 +1834,18 @@ def _remove_private_file(path: Path) -> None:
     try:
         _remove_private_file_at(directory, path.name)
     finally:
-        os.close(directory)
+        _close_secure_parent(directory)
 
 
-def _remove_private_file_at(directory: int, name: str) -> None:
+def _remove_private_file_at(
+    directory: int | SecureDirectorySession, name: str
+) -> None:
+    if not isinstance(directory, int):
+        try:
+            directory.delete_child(name)
+            return
+        except SecurityBoundaryError:
+            raise ValueError("PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID") from None
     try:
         os.unlink(name, dir_fd=directory)
         os.fsync(directory)
@@ -1831,7 +1855,14 @@ def _remove_private_file_at(directory: int, name: str) -> None:
         raise ValueError("PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID") from None
 
 
-def _private_entry_exists_at(directory: int, name: str) -> bool:
+def _private_entry_exists_at(
+    directory: int | SecureDirectorySession, name: str
+) -> bool:
+    if not isinstance(directory, int):
+        try:
+            return directory.inspect_optional_child(name, "existence-check") is not None
+        except SecurityBoundaryError:
+            raise ValueError("PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID") from None
     try:
         os.stat(name, dir_fd=directory, follow_symlinks=False)
         return True
@@ -1878,7 +1909,9 @@ def _render_final_markdown(evidence: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _open_private_parent_directory(path: Path, *, create: bool) -> int | None:
+def _open_private_parent_directory(
+    path: Path, *, create: bool
+) -> int | SecureDirectorySession | None:
     try:
         return _open_root_anchored_private_parent(path, create=create)
     except SecurePerformancePathError:

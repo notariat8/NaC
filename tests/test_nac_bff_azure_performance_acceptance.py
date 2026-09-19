@@ -3,13 +3,17 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 import base64
+import ctypes
 import hashlib
 import json
+import os
 from pathlib import Path
 import secrets
+import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
+from ctypes import wintypes
 from io import StringIO
 from unittest.mock import patch
 from types import MappingProxyType, SimpleNamespace
@@ -33,6 +37,58 @@ from nac_bff.azure_performance_acceptance import (
     verify_activation_success,
     verify_performance_execution_authorization,
 )
+
+
+@contextmanager
+def _broad_write_access(path: Path):
+    if os.name != "nt":
+        original = path.stat().st_mode & 0o777
+        path.chmod(0o755)
+        try:
+            yield
+        finally:
+            path.chmod(original)
+        return
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_security = advapi32.GetFileSecurityW
+    set_security = advapi32.SetFileSecurityW
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    get_security.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    get_security.restype = wintypes.BOOL
+    set_security.argtypes = (wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPVOID)
+    set_security.restype = wintypes.BOOL
+    convert.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.LPVOID),
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    convert.restype = wintypes.BOOL
+    required = wintypes.DWORD()
+    get_security(str(path), 0x4, None, 0, ctypes.byref(required))
+    original = ctypes.create_string_buffer(required.value)
+    if not get_security(
+        str(path), 0x4, original, required.value, ctypes.byref(required)
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+    broad = wintypes.LPVOID()
+    broad_size = wintypes.DWORD()
+    if not convert("D:P(A;;GA;;;WD)", 1, ctypes.byref(broad), ctypes.byref(broad_size)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        if not set_security(str(path), 0x4, broad):
+            raise ctypes.WinError(ctypes.get_last_error())
+        yield
+    finally:
+        set_security(str(path), 0x4, original)
+        kernel32.LocalFree(broad)
 from nac_bff import azure_activation_runner
 from nac_bff import azure_performance_acceptance as performance
 from nac_bff import azure_performance_authorization as live_authorization
@@ -1516,7 +1572,19 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             raw = store.evidence_path.read_text(encoding="utf-8")
             self.assertNotIn("Bearer", raw)
             self.assertNotIn("https://", raw)
-            self.assertEqual(store.evidence_path.stat().st_mode & 0o077, 0)
+            if os.name == "nt":
+                from nac_bff.activation_security_backend import (
+                    get_platform_security_backend,
+                )
+
+                snapshot = get_platform_security_backend().inspect_private_path(
+                    store.evidence_path, purpose="performance-evidence"
+                )
+                self.assertFalse(snapshot.reparse_point)
+                self.assertRegex(snapshot.owner_sid_sha256, r"^[0-9a-f]{64}$")
+                self.assertRegex(snapshot.dacl_sha256, r"^[0-9a-f]{64}$")
+            else:
+                self.assertEqual(store.evidence_path.stat().st_mode & 0o077, 0)
             malicious = {**evidence, "url": "https://example.invalid/Bearer secret"}
             with self.assertRaisesRegex(
                 ValueError, "PERFORMANCE_EVIDENCE_REDACTION_INVALID"
@@ -1579,7 +1647,10 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             foreign.write_text('{"status":"RUNNING"}\n', encoding="utf-8")
             foreign.chmod(0o600)
             slot.unlink()
-            slot.symlink_to(foreign)
+            if os.name == "nt":
+                os.link(foreign, slot)
+            else:
+                slot.symlink_to(foreign)
             with self.assertRaisesRegex(ValueError, "PERFORMANCE_STATE_INVALID"):
                 store.load_state()
 
@@ -1589,7 +1660,15 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             external = root / "external"
             external.mkdir(mode=0o700)
             linked = root / "linked"
-            linked.symlink_to(external, target_is_directory=True)
+            if os.name == "nt":
+                subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(linked), str(external)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            else:
+                linked.symlink_to(external, target_is_directory=True)
             store = PerformanceArtifactStore(linked / "nested", SHA256)
 
             with self.assertRaisesRegex(ValueError, "PERFORMANCE_STATE_INVALID"):
@@ -1601,14 +1680,11 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             store = PerformanceArtifactStore(Path(directory), SHA256)
             store.write_state({"status": "RUNNING"})
-            store.run_dir.chmod(0o755)
-            try:
+            with _broad_write_access(store.run_dir):
                 with self.assertRaisesRegex(ValueError, "PERFORMANCE_STATE_INVALID"):
                     store.load_state()
                 with self.assertRaisesRegex(ValueError, "PERFORMANCE_STATE_INVALID"):
                     store.write_state({"status": "FAILED"})
-            finally:
-                store.run_dir.chmod(0o700)
 
     def test_checkpoint_commit_pointer_survives_mirror_write_interruption(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2737,6 +2813,17 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
                 raise ValueError("PERFORMANCE_LIVE_CAPABILITY_EXHAUSTED")
 
         with patch.object(performance, "_authorize_live_action", side_effect=authorize):
+            if os.name == "nt":
+                sample = transport.request(
+                    live_action_capability=object(),  # type: ignore[arg-type]
+                    transport_boundary=lambda: calls.__setitem__("state", 1),
+                )
+                self.assertEqual(
+                    sample.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE"
+                )
+                self.assertFalse(sample.network_dispatched)
+                self.assertEqual(calls, {"token": 0, "state": 0, "network": 0})
+                return
             with self.assertRaisesRegex(
                 ValueError,
                 "PERFORMANCE_LIVE_CAPABILITY_EXHAUSTED",
@@ -2782,6 +2869,13 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
         self.assertEqual(token_calls, 0)
 
         one_use = _transport_capability(transport, uses=1)
+        if os.name == "nt":
+            first = transport.request(live_action_capability=one_use)
+            second = transport.request(live_action_capability=one_use)
+            self.assertEqual(first.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE")
+            self.assertEqual(second.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE")
+            self.assertEqual(token_calls, 0)
+            return
         self.assertEqual(
             transport.request(live_action_capability=one_use).status_code, 500
         )
@@ -3333,6 +3427,19 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
         )
         observed: dict[str, float] = {}
 
+        if os.name == "nt":
+            transport._opener = SimpleNamespace(
+                open=lambda *_args, **_kwargs: self.fail("network must not run")
+            )
+            sample = transport.request(
+                live_action_capability=_transport_capability(transport)
+            )
+            self.assertEqual(
+                sample.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE"
+            )
+            self.assertFalse(sample.network_dispatched)
+            return
+
         def deadline(_request, *, timeout):
             observed["connect_timeout"] = timeout
             raise performance._RequestDeadlineExceeded()
@@ -3362,6 +3469,19 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
         transport = FixedBffPerformanceTransport(
             SimpleNamespace(get_token=_attested_m365_token)
         )
+
+        if os.name == "nt":
+            transport._opener = SimpleNamespace(
+                open=lambda *_args, **_kwargs: self.fail("network must not run")
+            )
+            sample = transport.request(
+                live_action_capability=_transport_capability(transport)
+            )
+            self.assertEqual(
+                sample.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE"
+            )
+            self.assertFalse(sample.network_dispatched)
+            return
 
         def block_past_deadline(_request, *, timeout):
             self.assertEqual(timeout, 10.0)
@@ -3416,6 +3536,13 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             live_action_capability=_transport_capability(transport)
         )
 
+        if os.name == "nt":
+            self.assertEqual(
+                sample.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE"
+            )
+            self.assertTrue(sample.fatal)
+            self.assertEqual(opened, [])
+            return
         self.assertEqual(sample.error_code, "TARGET_BINDING_MISMATCH")
         self.assertTrue(sample.fatal)
         self.assertEqual(opened, [])
@@ -3638,6 +3765,13 @@ class AzurePerformanceAcceptanceTests(unittest.TestCase):
             live_action_capability=_transport_capability(transport)
         )
 
+        if os.name == "nt":
+            self.assertEqual(
+                sample.error_code, "TRANSPORT_DEADLINE_UNAVAILABLE"
+            )
+            self.assertTrue(sample.fatal)
+            self.assertEqual(opened, [])
+            return
         self.assertEqual(sample.error_code, "TOKEN_ACQUISITION_FAILED")
         self.assertTrue(sample.fatal)
         self.assertEqual(opened, [])

@@ -14,6 +14,8 @@ import unittest
 from unittest.mock import patch
 from uuid import UUID
 
+from nac_bff.activation_security_backend import get_platform_security_backend
+
 from nac_bff import azure_performance_acceptance as performance
 from nac_bff import azure_performance_runtime as performance_runtime
 from nac_bff.azure_performance_acceptance import MeasurementAttestation
@@ -35,6 +37,18 @@ from nac_bff.azure_performance_runtime import (
     LeaseBoundPerformanceAcceptance,
     PerformanceFinalEvidenceStore,
 )
+
+
+def _create_directory_link(target: Path, link: Path) -> None:
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    else:
+        os.symlink(target, link, target_is_directory=True)
 
 
 LEASE_ID = UUID("12345678-1234-4abc-8def-1234567890ab")
@@ -1439,11 +1453,14 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
     def test_two_process_restart_reattests_bound_broker_evidence(self):
         code = (
             "import json,sys; "
-            "from tests.test_nac_bff_azure_performance_runtime import "
+            "from test_nac_bff_azure_performance_runtime import "
             "_run_public_verifier_restart_stage as run; "
             "print(json.dumps(run(sys.argv[1], sys.argv[2]), sort_keys=True))"
         )
-        environment = {**os.environ, "PYTHONPATH": "src"}
+        environment = {
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join(("src", "tests")),
+        }
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "final.redacted.json"
             initial = subprocess.run(
@@ -2304,7 +2321,15 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             PerformanceFinalEvidenceStore(path).write_final_evidence(evidence)
 
             self.assertEqual(json.loads(path.read_text(encoding="ascii")), evidence)
-            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            if os.name == "nt":
+                self.assertRegex(
+                    get_platform_security_backend()
+                    .inspect_private_path(path, "final-evidence")
+                    .dacl_sha256,
+                    r"^[0-9a-f]{64}$",
+                )
+            else:
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
             markdown_path = PerformanceFinalEvidenceStore(path).markdown_path
             markdown = markdown_path.read_text(encoding="ascii")
             self.assertIn("Status: `PASSED`", markdown)
@@ -2320,14 +2345,20 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             self.assertIn("Monetary cost: `NOT_CLAIMED`", markdown)
             self.assertIn("Lease lifecycle state: `RELEASED`", markdown)
             self.assertNotIn("NAC-SYN-MATTER-001", markdown)
-            self.assertEqual(stat.S_IMODE(markdown_path.stat().st_mode), 0o600)
+            if os.name != "nt":
+                self.assertEqual(
+                    stat.S_IMODE(markdown_path.stat().st_mode), 0o600
+                )
             manifest_path = PerformanceFinalEvidenceStore(path).manifest_path
             manifest = json.loads(manifest_path.read_text(encoding="ascii"))
             self.assertEqual(
                 manifest["final_evidence_sha256"],
                 evidence["final_evidence_sha256"],
             )
-            self.assertEqual(stat.S_IMODE(manifest_path.stat().st_mode), 0o600)
+            if os.name != "nt":
+                self.assertEqual(
+                    stat.S_IMODE(manifest_path.stat().st_mode), 0o600
+                )
             self.assertEqual(list(path.parent.glob(".*.tmp")), [])
 
     def test_release_recovery_checkpoint_is_private_and_tamper_evident(self):
@@ -2342,10 +2373,20 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             store.write_release_recovery(recovery)
 
             self.assertEqual(store.load_release_recovery(), recovery)
-            self.assertEqual(
-                stat.S_IMODE(store.release_recovery_path.stat().st_mode),
-                0o600,
-            )
+            if os.name == "nt":
+                self.assertRegex(
+                    get_platform_security_backend()
+                    .inspect_private_path(
+                        store.release_recovery_path, "release-recovery"
+                    )
+                    .dacl_sha256,
+                    r"^[0-9a-f]{64}$",
+                )
+            else:
+                self.assertEqual(
+                    stat.S_IMODE(store.release_recovery_path.stat().st_mode),
+                    0o600,
+                )
             tampered = dict(recovery)
             tampered["failure_code"] = "PERFORMANCE_LEASE_RECEIPT_INVALID"
             store.release_recovery_path.write_text(
@@ -2404,6 +2445,7 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                 )
                 real_replace = os.replace
                 swapped = False
+                swap_blocked = False
 
                 def swap_parent_before_replace(
                     source,
@@ -2412,11 +2454,17 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                     src_dir_fd=None,
                     dst_dir_fd=None,
                 ):
-                    nonlocal swapped
+                    nonlocal swapped, swap_blocked
                     if not swapped:
                         swapped = True
-                        os.rename(parent, moved_parent)
-                        os.symlink(external, parent, target_is_directory=True)
+                        try:
+                            os.rename(parent, moved_parent)
+                        except PermissionError:
+                            if os.name != "nt":
+                                raise
+                            swap_blocked = True
+                        else:
+                            _create_directory_link(external, parent)
                     return real_replace(
                         source,
                         destination,
@@ -2436,7 +2484,12 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                         store.write_pending_finalization(pending)
                         expected_name = store.pending_path.name
 
-                self.assertTrue((moved_parent / expected_name).is_file())
+                if os.name == "nt":
+                    self.assertFalse(swapped)
+                    self.assertFalse(swap_blocked)
+                    self.assertTrue((parent / expected_name).is_file())
+                else:
+                    self.assertTrue((moved_parent / expected_name).is_file())
                 self.assertEqual(list(external.iterdir()), [])
 
     def test_final_and_pending_reads_stay_on_validated_parent_descriptor(self):
@@ -2469,16 +2522,23 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                     load = store.load_pending_finalization
                 real_read = performance_runtime._read_private_bytes_at
                 swapped = False
+                swap_blocked = False
 
                 def swap_parent_after_first_read(
                     directory_fd, name, *, error_code
                 ):
-                    nonlocal swapped
+                    nonlocal swapped, swap_blocked
                     result = real_read(directory_fd, name, error_code=error_code)
                     if not swapped:
                         swapped = True
-                        os.rename(parent, moved_parent)
-                        os.symlink(external, parent, target_is_directory=True)
+                        try:
+                            os.rename(parent, moved_parent)
+                        except PermissionError:
+                            if os.name != "nt":
+                                raise
+                            swap_blocked = True
+                        else:
+                            _create_directory_link(external, parent)
                     return result
 
                 with patch.object(
@@ -2488,6 +2548,9 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                 ):
                     self.assertEqual(load(), expected)
 
+                if os.name == "nt":
+                    self.assertTrue(swapped)
+                    self.assertTrue(swap_blocked)
                 self.assertEqual(list(external.iterdir()), [])
 
     def test_symlink_in_any_ancestor_blocks_final_and_pending_evidence(self):
@@ -2501,7 +2564,7 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             external = base / "external"
             external.mkdir(mode=0o700)
             linked = base / "linked"
-            os.symlink(external, linked, target_is_directory=True)
+            _create_directory_link(external, linked)
             parent = linked / "nested" / "evidence"
             store = PerformanceFinalEvidenceStore(parent / "final.redacted.json")
 
@@ -2539,7 +2602,12 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
                     load = store.load_pending_finalization
                 external = Path(root) / f"external-{artifact}"
                 target.rename(external)
-                target.symlink_to(external)
+                if os.name == "nt":
+                    link_target = Path(root) / f"external-{artifact}-directory"
+                    link_target.mkdir()
+                    _create_directory_link(link_target, target)
+                else:
+                    target.symlink_to(external)
 
                 with self.assertRaisesRegex(
                     ValueError, "PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID"
@@ -2622,11 +2690,20 @@ class AzurePerformanceRuntimeTests(unittest.TestCase):
             path = Path(directory) / "final.redacted.json"
             store = PerformanceFinalEvidenceStore(path)
             store.write_final_evidence(_final_evidence())
-            store.markdown_path.chmod(0o640)
+            if os.name == "nt":
+                os.link(
+                    store.markdown_path,
+                    store.markdown_path.with_suffix(".hardlink"),
+                )
+            else:
+                store.markdown_path.chmod(0o640)
 
-            with self.assertRaisesRegex(
-                ValueError, "PERFORMANCE_FINAL_EVIDENCE_INVALID"
-            ):
+            expected_error = (
+                "PERFORMANCE_FINAL_EVIDENCE_PATH_INVALID"
+                if os.name == "nt"
+                else "PERFORMANCE_FINAL_EVIDENCE_INVALID"
+            )
+            with self.assertRaisesRegex(ValueError, expected_error):
                 store.load_final_evidence()
 
     def test_final_evidence_persists_validated_monitor_cap_binding(self):

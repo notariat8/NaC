@@ -6,10 +6,11 @@ import json
 import os
 import platform
 import re
+import shutil
 import stat
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Mapping, Protocol, Sequence
 
 from nac_mvp_test_environment import evaluate_synthetic_access_policy
@@ -195,11 +196,53 @@ class M365CliCommandRunner:
         self._timeout_seconds = self._resolve_timeout(timeout_seconds, source_values)
         values = _control_plane_environment(source_values)
 
-        values["PATH"] = os.pathsep.join(("/usr/bin", "/bin"))
+        if os.name == "nt":
+            system_root = (
+                source_values.get("SystemRoot")
+                or source_values.get("WINDIR")
+                or os.environ.get("SystemRoot")
+                or os.environ.get("WINDIR")
+            )
+            if system_root:
+                values["SystemRoot"] = system_root
+                values["WINDIR"] = system_root
+            values["PATH"] = str(self._node_binary.parent)
+        else:
+            values["PATH"] = os.pathsep.join(("/usr/bin", "/bin"))
         values["CLIMICROSOFT365_NOUPDATE"] = "1"
         if resolved_home is not None:
             values["HOME"] = str(resolved_home)
         self._env = values
+        if os.name == "nt":
+            self._verify_windows_node_version()
+
+    def _verify_windows_node_version(self) -> None:
+        from nac_bff.activation_security_backend import (
+            ProcessSpec,
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            result = get_platform_security_backend().launch_attested_process(
+                ProcessSpec(
+                    executable=self._node_binary,
+                    arguments=("--version",),
+                    cwd=self._node_binary.parent.resolve(),
+                    environment=self._env,
+                    executable_sha256=self._node_sha256,
+                    timeout_seconds=min(self._timeout_seconds, 10.0),
+                    maximum_output_bytes=1024,
+                    allowed_exit_codes=(0,),
+                )
+            )
+        except SecurityBoundaryError:
+            raise M365CliReadinessError("M365_NODE_VERSION_UNAVAILABLE") from None
+        match = re.fullmatch(rb"v([0-9]+)\.[0-9]+\.[0-9]+\s*", result.stdout)
+        if match is None:
+            raise M365CliReadinessError("M365_NODE_VERSION_INVALID")
+        if int(match.group(1)) < 24:
+            raise M365CliReadinessError("M365_NODE_VERSION_UNSUPPORTED")
 
     def run(self, argv: Sequence[str]) -> SubprocessCommandResult:
         return self._run(argv, {})
@@ -225,6 +268,22 @@ class M365CliCommandRunner:
         try:
             runtime_payloads = self._runtime_payloads()
             with ExitStack() as stack:
+                if os.name == "nt":
+                    runtime_manifest = build_node_runtime_manifest(
+                        self._runtime_root
+                    )
+                    stack.enter_context(
+                        sealed_toolchain(
+                            tuple(
+                                (
+                                    self._runtime_root / item.relative_path,
+                                    False,
+                                    item.sha256,
+                                )
+                                for item in runtime_manifest.files
+                            )
+                        )
+                    )
                 sealed = stack.enter_context(
                     sealed_toolchain(
                         ((self._node_binary, True, self._node_sha256),)
@@ -268,11 +327,20 @@ class M365CliCommandRunner:
                 )
                 process_argv = [
                     sealed.paths[0],
+                    *(
+                        ("--permission", "--allow-fs-read=*", "--allow-worker")
+                        if os.name == "nt"
+                        else ()
+                    ),
                     "--preserve-symlinks",
                     "--require",
                     runtime_sealed.paths[1],
                     "--experimental-loader",
-                    runtime_sealed.paths[2],
+                    (
+                        Path(runtime_sealed.paths[2]).resolve().as_uri()
+                        if os.name == "nt"
+                        else runtime_sealed.paths[2]
+                    ),
                     str(self.binary),
                     *bound_command[1:],
                 ]
@@ -281,27 +349,65 @@ class M365CliCommandRunner:
                     if artifact_sealed is not None
                     else ()
                 )
-                result = subprocess.run(
-                    process_argv,
-                    cwd=self.binary.parent,
-                    shell=False,
-                    text=True,
-                    capture_output=True,
-                    check=False,
-                    env={
-                        **self._env,
-                        "NODE": sealed.paths[0],
-                        MANIFEST_ENV: runtime_sealed.paths[0],
-                        "NAC_NODE_RUNTIME_PRELOADER": runtime_sealed.paths[1],
-                        "NAC_NODE_RUNTIME_ESM_LOADER": runtime_sealed.paths[2],
-                    },
-                    timeout=self._timeout_seconds,
-                    pass_fds=(
-                        sealed.pass_fds
-                        + runtime_sealed.pass_fds
-                        + artifact_fds
+                process_environment = {
+                    **self._env,
+                    "NODE": sealed.paths[0],
+                    MANIFEST_ENV: runtime_sealed.paths[0],
+                    "NAC_NODE_RUNTIME_PRELOADER": runtime_sealed.paths[1],
+                    "NAC_NODE_RUNTIME_ESM_LOADER": (
+                        Path(runtime_sealed.paths[2]).resolve().as_uri()
+                        if os.name == "nt"
+                        else runtime_sealed.paths[2]
                     ),
-                )
+                }
+                if os.name == "nt":
+                    from nac_bff.activation_security_backend import (
+                        ProcessSpec,
+                        SecurityBoundaryError,
+                        get_platform_security_backend,
+                    )
+
+                    try:
+                        process_result = get_platform_security_backend().launch_attested_process(
+                            ProcessSpec(
+                                executable=Path(sealed.paths[0]),
+                                arguments=tuple(process_argv[1:]),
+                                cwd=self.binary.parent.resolve(),
+                                environment=process_environment,
+                                executable_sha256=self._node_sha256,
+                                timeout_seconds=self._timeout_seconds,
+                                maximum_output_bytes=8 * 1024 * 1024,
+                                allowed_exit_codes=tuple(range(256)),
+                            )
+                        )
+                    except SecurityBoundaryError as exc:
+                        if exc.code == "PROCESS_TIMEOUT":
+                            raise subprocess.TimeoutExpired(
+                                process_argv, self._timeout_seconds
+                            ) from exc
+                        raise OSError(exc.code) from exc
+                    result = subprocess.CompletedProcess(
+                        process_argv,
+                        process_result.exit_code,
+                        process_result.stdout.decode("utf-8", errors="replace"),
+                        process_result.stderr.decode("utf-8", errors="replace"),
+                    )
+                else:
+                    result = subprocess.run(
+                        process_argv,
+                        cwd=self.binary.parent,
+                        shell=False,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                        env=process_environment,
+                        timeout=self._timeout_seconds,
+                        pass_fds=(
+                            sealed.pass_fds
+                            + runtime_sealed.pass_fds
+                            + artifact_fds
+                        ),
+                    )
         except NodeRuntimeIntegrityError:
             raise M365CliReadinessError(
                 "M365_CLI_RUNTIME_BUNDLE_MISMATCH"
@@ -377,7 +483,6 @@ class M365CliCommandRunner:
                     "get",
                     "--resource",
                     _EXPECTED_GRAPH_RESOURCE,
-                    "--new",
                     "--decoded",
                     "--output",
                     "json",
@@ -428,7 +533,24 @@ class M365CliCommandRunner:
         expected_sha256: str | None,
     ) -> Path:
         configured = explicit or values.get(cls._BINARY_ENV)
-        candidate = Path(configured).expanduser() if configured else cls._LOCAL_BINARY
+        if configured:
+            candidate = Path(configured).expanduser()
+        elif os.name == "nt":
+            wrapper = shutil.which("m365")
+            if wrapper is None:
+                candidate = Path("C:/NaC/missing/m365/index.js")
+            else:
+                wrapper_path = Path(wrapper).resolve()
+                candidate = (
+                    wrapper_path.parent
+                    / "node_modules"
+                    / "@pnp"
+                    / "cli-microsoft365"
+                    / "dist"
+                    / "index.js"
+                )
+        else:
+            candidate = cls._LOCAL_BINARY
         return cls._validate_executable(
             candidate,
             None,
@@ -468,12 +590,26 @@ class M365CliCommandRunner:
             candidate = Path(configured).expanduser()
             if not candidate.is_absolute():
                 raise M365CliReadinessError("M365_NODE_PATH_NOT_ABSOLUTE")
+            if os.name == "nt" and candidate.is_file():
+                return cls._validate_executable(
+                    candidate,
+                    expected,
+                    label="M365_NODE_BINARY",
+                )
             return cls._validate_executable(
-                candidate / "node",
+                candidate / ("node.exe" if os.name == "nt" else "node"),
                 expected,
                 label="M365_NODE_BINARY",
             )
 
+        if os.name == "nt":
+            node = shutil.which("node")
+            if node:
+                return cls._validate_executable(
+                    Path(node).resolve(),
+                    expected,
+                    label="M365_NODE_BINARY",
+                )
         if cls._SYSTEM_NODE.exists():
             return cls._validate_executable(
                 cls._SYSTEM_NODE,
@@ -512,6 +648,49 @@ class M365CliCommandRunner:
     ) -> Path:
         if not candidate.is_absolute():
             raise M365CliReadinessError(f"{label}_PATH_NOT_ABSOLUTE")
+        if os.name == "nt":
+            from nac_bff.activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            try:
+                binding = get_platform_security_backend().inspect_private_path(
+                    candidate, purpose="toolchain-executable"
+                )
+            except SecurityBoundaryError as exc:
+                if exc.code == "REPARSE_POINT_REJECTED":
+                    raise M365CliReadinessError(
+                        f"{label}_SYMLINK_REJECTED"
+                    ) from None
+                raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
+            except OSError:
+                raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
+            normalized_expected = (
+                expected_sha256.strip().lower() if expected_sha256 else None
+            )
+            if normalized_expected is None and not allow_bundle_attestation:
+                raise M365CliReadinessError(f"{label}_SHA256_REQUIRED")
+            if normalized_expected is not None:
+                if (
+                    len(normalized_expected) != _SHA256_HEX_LENGTH
+                    or any(
+                        character not in "0123456789abcdef"
+                        for character in normalized_expected
+                    )
+                ):
+                    raise M365CliReadinessError(f"{label}_SHA256_INVALID")
+                try:
+                    actual_sha256 = (
+                        build_node_runtime_manifest(candidate.parent.parent).digest
+                        if allow_bundle_attestation
+                        else binding.sha256
+                    )
+                except (OSError, NodeRuntimeIntegrityError):
+                    raise M365CliReadinessError(f"{label}_UNAVAILABLE") from None
+                if actual_sha256 != normalized_expected:
+                    raise M365CliReadinessError(f"{label}_SHA256_MISMATCH")
+            return candidate
         try:
             metadata = candidate.lstat()
         except OSError:
@@ -612,8 +791,17 @@ def _validate_m365_command(argv: Sequence[str]) -> None:
             "accesstoken",
             "get",
             "--resource",
+            _EXPECTED_API_RESOURCE,
+            "--output",
+            "json",
+        ),
+        (
+            "m365",
+            "util",
+            "accesstoken",
+            "get",
+            "--resource",
             _EXPECTED_GRAPH_RESOURCE,
-            "--new",
             "--decoded",
             "--output",
             "json",
@@ -906,8 +1094,18 @@ def _matches_guid_and_package_command(command: tuple[str, ...]) -> bool:
 
 
 def _is_bound_package_path(raw_path: str, filename: str) -> bool:
-    candidate = Path(raw_path)
-    if not candidate.is_absolute() or ".." in candidate.parts:
+    # The allowlist is data-format validation, not host filesystem access.
+    # Accept the two absolute path syntaxes that can occur in reviewed
+    # contracts even when the validator itself runs on the other platform.
+    windows_candidate = PureWindowsPath(raw_path)
+    posix_candidate = PurePosixPath(raw_path)
+    if windows_candidate.is_absolute():
+        candidate_parts = windows_candidate.parts
+    elif posix_candidate.is_absolute():
+        candidate_parts = posix_candidate.parts
+    else:
+        return False
+    if ".." in candidate_parts:
         return False
     expected_suffix = (
         "spfx",
@@ -916,14 +1114,14 @@ def _is_bound_package_path(raw_path: str, filename: str) -> bool:
         "solution",
         filename,
     )
-    if tuple(candidate.parts[-len(expected_suffix) :]) == expected_suffix:
+    if tuple(candidate_parts[-len(expected_suffix) :]) == expected_suffix:
         return True
     # The standalone tenant deployment is bound to the reviewed, reproducible
     # attested package artifact (ATTESTED_PACKAGE_RELATIVE_PATH). Accept that
     # attested layout for the bound sppkg only, so the zip/publish allowlist
     # shapes (which pass a different filename) are not widened.
     if filename == PACKAGE_NAME and tuple(
-        candidate.parts[-len(ATTESTED_PACKAGE_RELATIVE_PATH.parts) :]
+        candidate_parts[-len(ATTESTED_PACKAGE_RELATIVE_PATH.parts) :]
     ) == tuple(ATTESTED_PACKAGE_RELATIVE_PATH.parts):
         return True
     return False

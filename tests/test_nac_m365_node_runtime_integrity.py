@@ -90,16 +90,19 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
         self.assertIn(digest.encode("ascii"), payloads.esm_loader)
 
     def test_scan_rejects_symlinks_and_untrusted_modes(self) -> None:
-        cases = (
-            ("symlink", "NODE_RUNTIME_SYMLINK_REJECTED"),
-            ("mode", "NODE_RUNTIME_FILE_UNTRUSTED"),
-        )
+        cases = (("symlink", "NODE_RUNTIME_SYMLINK_REJECTED"),)
+        if os.name != "nt":
+            cases += (("mode", "NODE_RUNTIME_FILE_UNTRUSTED"),)
         for case, code in cases:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 target = self._write(root, "target.js", b"module.exports = 1;\n")
                 if case == "symlink":
-                    (root / "linked.js").symlink_to(target)
+                    if os.name == "nt":
+                        os.link(target, root / "linked.js")
+                        code = "NODE_RUNTIME_FILE_UNTRUSTED"
+                    else:
+                        (root / "linked.js").symlink_to(target)
                 else:
                     target.chmod(0o622)
                 with self.assertRaisesRegex(
@@ -183,7 +186,10 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
             entry = self._write(root, "entry.cjs", b"module.exports = 1;\n")
             shim_directory = root / "node_modules" / ".bin"
             shim_directory.mkdir(parents=True)
-            (shim_directory / "tool").symlink_to(entry)
+            if os.name == "nt":
+                shutil.copyfile(entry, shim_directory / "tool")
+            else:
+                (shim_directory / "tool").symlink_to(entry)
 
             manifest = build_node_runtime_manifest(root)
 
@@ -191,10 +197,15 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
                 [item.relative_path for item in manifest.files],
                 ["entry.cjs"],
             )
-            (root / "node_modules" / "linked.js").symlink_to(entry)
+            if os.name == "nt":
+                os.link(entry, root / "node_modules" / "linked.js")
+                expected = r"^NODE_RUNTIME_FILE_UNTRUSTED\Z"
+            else:
+                (root / "node_modules" / "linked.js").symlink_to(entry)
+                expected = r"^NODE_RUNTIME_SYMLINK_REJECTED\Z"
             with self.assertRaisesRegex(
                 NodeRuntimeIntegrityError,
-                r"^NODE_RUNTIME_SYMLINK_REJECTED\Z",
+                expected,
             ):
                 build_node_runtime_manifest(root)
 
@@ -742,8 +753,6 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
             asset = self._write(root, "binding.wasm", b"trusted-wasm")
             symlink = workspace / "binding-symlink.wasm"
             hardlink = workspace / "binding-hardlink.wasm"
-            symlink.symlink_to(asset)
-            os.link(asset, hardlink)
             entry = self._write(
                 root,
                 "entry.cjs",
@@ -765,6 +774,11 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
                 ).encode("utf-8"),
             )
             payloads = self._payload_files(root, workspace)
+            if os.name == "nt":
+                os.link(asset, symlink)
+            else:
+                symlink.symlink_to(asset)
+            os.link(asset, hardlink)
             completed = self._run_node(
                 [
                     "--preserve-symlinks",
@@ -879,7 +893,12 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
                     "try { fs.copyFileSync(source, destination); process.exit(84); }"
                     "catch (error) { if (error.code !== "
                     "'NODE_RUNTIME_COPY_DESTINATION_REJECTED') process.exit(85); }"
-                    "if (fs.existsSync(outside) || !fs.lstatSync(destination).isSymbolicLink()) "
+                    "const metadata = fs.lstatSync(destination);"
+                    "const aliasPreserved = process.platform === 'win32' "
+                    "? metadata.nlink > 1 : metadata.isSymbolicLink();"
+                    "const outsideStateValid = process.platform === 'win32' "
+                    "? fs.existsSync(outside) : !fs.existsSync(outside);"
+                    "if (!outsideStateValid || !aliasPreserved) "
                     "process.exit(86);\n"
                 ).encode("utf-8"),
             )
@@ -889,7 +908,11 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
                 excluded_top_level_directories=frozenset({"lib"}),
             )
             destination.parent.mkdir(mode=0o700)
-            destination.symlink_to(outside)
+            if os.name == "nt":
+                outside.write_bytes(b"")
+                os.link(outside, destination)
+            else:
+                destination.symlink_to(outside)
             completed = self._run_node(
                 [
                     "--preserve-symlinks",
@@ -2345,16 +2368,27 @@ class NodeRuntimeIntegrityTests(unittest.TestCase):
             "NODE": str(_NODE_BINARY),
             MANIFEST_ENV: str(manifest),
         }
-        if "--require" in arguments:
-            environment["NAC_NODE_RUNTIME_PRELOADER"] = arguments[
-                arguments.index("--require") + 1
+        if os.name == "nt":
+            system_root = os.environ.get("SystemRoot") or os.environ.get("WINDIR")
+            if system_root:
+                environment["SystemRoot"] = system_root
+                environment["WINDIR"] = system_root
+        normalized_arguments = list(arguments)
+        if "--experimental-loader" in normalized_arguments and os.name == "nt":
+            loader_index = normalized_arguments.index("--experimental-loader") + 1
+            normalized_arguments[loader_index] = Path(
+                normalized_arguments[loader_index]
+            ).resolve().as_uri()
+        if "--require" in normalized_arguments:
+            environment["NAC_NODE_RUNTIME_PRELOADER"] = normalized_arguments[
+                normalized_arguments.index("--require") + 1
             ]
-        if "--experimental-loader" in arguments:
-            environment["NAC_NODE_RUNTIME_ESM_LOADER"] = arguments[
-                arguments.index("--experimental-loader") + 1
+        if "--experimental-loader" in normalized_arguments:
+            environment["NAC_NODE_RUNTIME_ESM_LOADER"] = normalized_arguments[
+                normalized_arguments.index("--experimental-loader") + 1
             ]
         return subprocess.run(
-            [str(_NODE_BINARY), *arguments],
+            [str(_NODE_BINARY), *normalized_arguments],
             check=False,
             capture_output=True,
             text=True,

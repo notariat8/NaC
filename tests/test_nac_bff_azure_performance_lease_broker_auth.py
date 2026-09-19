@@ -4,6 +4,7 @@ import base64
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -135,7 +136,12 @@ class PerformanceLeaseBrokerAuthTests(unittest.TestCase):
         self.assertNotIn(CLIENT_ID, json.dumps(result))
 
     def test_private_key_must_not_be_group_or_world_readable(self) -> None:
-        self.private_key.chmod(0o644)
+        if os.name == "nt":
+            original = self.private_key.with_name("original-private-key.pem")
+            self.private_key.rename(original)
+            os.link(original, self.private_key)
+        else:
+            self.private_key.chmod(0o644)
         with self.assertRaisesRegex(
             PerformanceLeaseBrokerAuthError, "BFF_APP_CREDENTIAL_INVALID"
         ):
