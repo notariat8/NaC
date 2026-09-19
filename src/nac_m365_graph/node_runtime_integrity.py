@@ -77,6 +77,8 @@ def build_node_runtime_manifest(
 
     runtime_root = _normalized_absolute_root(root)
     excluded = _normalized_excluded_directories(excluded_top_level_directories)
+    if os.name == "nt":
+        return _build_windows_manifest(runtime_root, excluded)
     root_fd = _open_trusted_root(runtime_root)
     files: list[NodeRuntimeFile] = []
     counters = [0, 0]
@@ -88,6 +90,112 @@ def build_node_runtime_manifest(
             _fail("NODE_RUNTIME_TREE_CHANGED")
     finally:
         os.close(root_fd)
+
+    ordered = tuple(
+        sorted(files, key=lambda item: item.relative_path.encode("utf-8"))
+    )
+    return NodeRuntimeManifest(
+        root=runtime_root,
+        files=ordered,
+        digest=_tree_digest(ordered),
+    )
+
+
+def _build_windows_manifest(
+    runtime_root: Path,
+    excluded_top_level_directories: frozenset[str],
+) -> NodeRuntimeManifest:
+    """Build the same tree digest through handle-bound Windows primitives."""
+
+    from nac_bff.activation_security_backend import (
+        BoundFileSnapshot,
+        SecurityBoundaryError,
+        get_platform_security_backend,
+    )
+
+    backend = get_platform_security_backend()
+    files: list[NodeRuntimeFile] = []
+    bindings: list[tuple[Path, BoundFileSnapshot]] = []
+    directory_entries: list[tuple[Path, tuple[str, ...]]] = []
+    total_bytes = 0
+    try:
+        for current_text, directories, names in os.walk(
+            runtime_root, topdown=True, followlinks=False
+        ):
+            current = Path(current_text)
+            backend.validate_private_directory(current)
+            excluded_here = {
+                name
+                for name in directories
+                if name == ".bin"
+                or (
+                    current == runtime_root
+                    and name in excluded_top_level_directories
+                )
+            }
+            for name in excluded_here:
+                backend.validate_private_directory(current / name)
+            directories[:] = [
+                name for name in directories if name not in excluded_here
+            ]
+            directories.sort(key=str.casefold)
+            names.sort(key=str.casefold)
+            directory_entries.append(
+                (current, tuple(sorted((*directories, *names), key=str.casefold)))
+            )
+            for directory in directories:
+                backend.validate_private_directory(current / directory)
+            for name in names:
+                path = current / name
+                binding = backend.inspect_private_path(
+                    path, purpose="node-runtime-file"
+                )
+                if binding.size > _MAX_FILE_BYTES:
+                    _fail("NODE_RUNTIME_FILE_TOO_LARGE")
+                total_bytes += binding.size
+                if total_bytes > _MAX_TREE_BYTES:
+                    _fail("NODE_RUNTIME_TREE_TOO_LARGE")
+                if len(files) >= _MAX_FILE_COUNT:
+                    _fail("NODE_RUNTIME_FILE_COUNT_EXCEEDED")
+                relative = path.relative_to(runtime_root).as_posix()
+                files.append(NodeRuntimeFile(relative, binding.sha256, binding.size))
+                bindings.append((path, binding))
+        for directory, entries in directory_entries:
+            current_names = (
+                child.name
+                for child in directory.iterdir()
+                if child.name != ".bin"
+                and (
+                    directory != runtime_root
+                    or child.name not in excluded_top_level_directories
+                )
+            )
+            if tuple(
+                sorted(current_names, key=str.casefold)
+            ) != entries:
+                _fail("NODE_RUNTIME_TREE_CHANGED")
+        for path, expected in bindings:
+            if backend.inspect_private_path(
+                path, purpose="node-runtime-file"
+            ) != expected:
+                _fail("NODE_RUNTIME_TREE_CHANGED")
+    except NodeRuntimeIntegrityError:
+        raise
+    except SecurityBoundaryError as exc:
+        if exc.code == "REPARSE_POINT_REJECTED":
+            _fail("NODE_RUNTIME_SYMLINK_REJECTED")
+        if exc.code in {
+            "FILE_LINK_COUNT_INVALID",
+            "FILE_OWNER_MISMATCH",
+            "FILE_DACL_MISSING",
+            "FILE_DACL_INVALID",
+            "FILE_DACL_UNSUPPORTED_ALLOW_ACE",
+            "FILE_DACL_TOO_BROAD",
+        }:
+            _fail("NODE_RUNTIME_FILE_UNTRUSTED")
+        raise NodeRuntimeIntegrityError("NODE_RUNTIME_ROOT_UNAVAILABLE") from exc
+    except (OSError, ValueError) as exc:
+        raise NodeRuntimeIntegrityError("NODE_RUNTIME_ROOT_UNAVAILABLE") from exc
 
     ordered = tuple(
         sorted(files, key=lambda item: item.relative_path.encode("utf-8"))
@@ -166,7 +274,9 @@ def _normalized_absolute_root(root: Path) -> Path:
         str(candidate).encode("utf-8", errors="strict")
     except UnicodeEncodeError as exc:
         raise NodeRuntimeIntegrityError("NODE_RUNTIME_PATH_INVALID") from exc
-    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+    if os.name != "nt" and (
+        not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY")
+    ):
         _fail("NODE_RUNTIME_PLATFORM_UNSUPPORTED")
     return candidate
 
@@ -717,6 +827,13 @@ function trustedFile(metadata) {{
   const effectiveUid = typeof process.geteuid === 'function'
     ? BigInt(process.geteuid())
     : -1n;
+  if (process.platform === 'win32') {{
+    // SID, DACL and reparse safety were already established through the
+    // handle-bound Windows backend before this loader was created.  Node's
+    // synthetic POSIX mode bits do not represent the Windows DACL.
+    return (metadata.mode & FILE_TYPE_MASK) === REGULAR_FILE &&
+      metadata.size >= 0n && metadata.size <= MAX_FILE_BYTES;
+  }}
   return (metadata.mode & FILE_TYPE_MASK) === REGULAR_FILE &&
     (metadata.uid === 0n || metadata.uid === effectiveUid) &&
     (metadata.mode & UNTRUSTED_WRITE_BITS) === 0n &&
@@ -808,19 +925,23 @@ function assertAllowed(filename) {{
 
 function trustedRead(filename) {{
   const expected = assertAllowed(filename);
-  if (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
-      !primitiveExistsSync('/proc/self/fd')) {{
+  const windows = process.platform === 'win32';
+  if (!windows && (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
+      !primitiveExistsSync('/proc/self/fd'))) {{
     throw integrityError('NODE_RUNTIME_PLATFORM_UNSUPPORTED');
   }}
   let descriptor;
   try {{
     descriptor = primitiveOpenSync(
       filename,
-      fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_CLOEXEC
+      fs.constants.O_RDONLY |
+        (windows ? 0 : fs.constants.O_NOFOLLOW | fs.constants.O_CLOEXEC)
     );
     const before = primitiveFstatSync(descriptor, {{ bigint: true }});
     const namedBefore = primitiveLstatSync(filename, {{ bigint: true }});
-    const openedPath = primitiveReadlinkSync(`/proc/self/fd/${{descriptor}}`);
+    const openedPath = windows
+      ? filename
+      : primitiveReadlinkSync(`/proc/self/fd/${{descriptor}}`);
     if (!trustedFile(before) || !sameStat(before, namedBefore) ||
         openedPath !== filename) {{
       throw integrityError('NODE_RUNTIME_MODULE_UNTRUSTED');
@@ -865,19 +986,23 @@ function generatedOutputRead(filename) {{
       filename.toLowerCase().endsWith('.node')) {{
     throw integrityError('NODE_RUNTIME_MODULE_NOT_ALLOWED');
   }}
-  if (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
-      !primitiveExistsSync('/proc/self/fd')) {{
+  const windows = process.platform === 'win32';
+  if (!windows && (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
+      !primitiveExistsSync('/proc/self/fd'))) {{
     throw integrityError('NODE_RUNTIME_PLATFORM_UNSUPPORTED');
   }}
   let descriptor;
   try {{
     descriptor = primitiveOpenSync(
       filename,
-      fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_CLOEXEC
+      fs.constants.O_RDONLY |
+        (windows ? 0 : fs.constants.O_NOFOLLOW | fs.constants.O_CLOEXEC)
     );
     const before = primitiveFstatSync(descriptor, {{ bigint: true }});
     const namedBefore = primitiveLstatSync(filename, {{ bigint: true }});
-    const openedPath = primitiveReadlinkSync(`/proc/self/fd/${{descriptor}}`);
+    const openedPath = windows
+      ? filename
+      : primitiveReadlinkSync(`/proc/self/fd/${{descriptor}}`);
     if (!trustedFile(before) || !sameStat(before, namedBefore) ||
         openedPath !== filename) {{
       throw integrityError('NODE_RUNTIME_GENERATED_OUTPUT_UNTRUSTED');
@@ -1254,6 +1379,7 @@ function writeVerifiedCopy(destination, payload, mode) {{
   try {{
     const destinationMetadata = primitiveLstatSync(absolute, {{ bigint: true }});
     if ((destinationMetadata.mode & FILE_TYPE_MASK) === 0o120000n ||
+        (process.platform === 'win32' && destinationMetadata.nlink !== 1n) ||
         (mode && (mode & fs.constants.COPYFILE_EXCL))) {{
       throw integrityError('NODE_RUNTIME_COPY_DESTINATION_REJECTED');
     }}

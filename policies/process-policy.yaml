@@ -419,6 +419,28 @@ github_first_operating_model:
     sync: "sync/<issue-number>-<short-slug>"
     hotfix: "hotfix/<issue-number>-<short-slug>"
 
+github_authentication_boundary:
+  preferred_read_only_channel: github_mcp_connector
+  gh_optional: true
+  missing_gh_auth_is_not_github_outage: true
+  require_exact_current_task_login_authorization: true
+  prior_login_authorization_reusable: false
+  combined_provider_login_authorization_allowed: false
+  automatic_device_code_login_allowed: false
+  token_value_inspection_allowed: false
+  git_credential_to_api_token_conversion_allowed: false
+  issue_746_windows_interactive_authentication_allowed: false
+  issue_746_windows_read_only_reconciliation_allowed_after_bound_gate: true
+  issue_746_windows_live_access_allowed: false
+  issue_746_windows_recovery_access_allowed: false
+  issue_746_windows_provider_write_allowed: false
+  issue_746_windows_tenant_write_allowed: false
+  issue_746_windows_credential_mutation_allowed: false
+  issue_746_windows_automatic_retry_allowed: false
+  unsupported_read_capability_action: report_exact_capability_gap
+  enforced_by:
+    - scripts/validate_agent_authentication_boundary.py
+
 spec_traceability:
   enabled: true
   contract: workflows/contracts/spec-traceability.contract.json

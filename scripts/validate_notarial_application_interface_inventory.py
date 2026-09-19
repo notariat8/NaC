@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,28 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "notarial-application-interface-inventory.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "notarial-application-interface-inventory.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "notarial-application-interface-inventory.md"
-GIT_EXECUTABLE = Path("/usr/bin/git")
+
+
+def _resolve_git_executable() -> Path:
+    if os.name == "nt":
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+        candidates = (
+            program_files / "Git" / "cmd" / "git.exe",
+            program_files / "Git" / "bin" / "git.exe",
+        )
+    else:
+        candidates = (Path("/usr/bin/git"),)
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            continue
+        if resolved.is_file() and resolved.name.lower() in {"git", "git.exe"}:
+            return resolved
+    return Path("/__nac_bound_git_missing__")
+
+
+GIT_EXECUTABLE = _resolve_git_executable()
 
 REQUIRED_INTERFACE_IDS = {
     "mandantenportal",

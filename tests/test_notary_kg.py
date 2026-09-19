@@ -3711,7 +3711,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.workflow-contract-draft/v0.1")
         self.assertEqual(payload["contract_id"], "workflow.immobilienkaufvertrag")
         self.assertEqual(payload["status"], "draft_from_knowledge_graph")
-        self.assertEqual(payload["source"]["catalog_source"], "usecases/immobilienkaufvertrag/knowledge-graph.graph.json")
+        self.assertEqual(
+            payload["source"]["catalog_source"],
+            "usecases/immobilienkaufvertrag/knowledge-graph.graph.json",
+        )
         self.assertGreaterEqual(len(payload["intake"]["required_information"]), 6)
         self.assertGreaterEqual(len(payload["gates"]), 1)
         self.assertIn("python scripts/validate_knowledge_graph.py", payload["validation_commands"])
@@ -3790,13 +3793,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertFalse(_contains_key(payload, "value"))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 def _contains_key(value, key: str) -> bool:
     if isinstance(value, dict):
         return key in value or any(_contains_key(item, key) for item in value.values())
     if isinstance(value, list):
         return any(_contains_key(item, key) for item in value)
     return False
+
+
+if __name__ == "__main__":
+    unittest.main()

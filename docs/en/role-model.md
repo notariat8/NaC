@@ -15,6 +15,17 @@ This model ensures that:
 - Every role may self-resolve only within its approved competence.
 - Subject-critical decisions require qualified roles and, where necessary,
   four-eyes approval.
+- Accounts use provider-qualified `<provider>:<login>` IDs and resolve to stable
+  `principal_id` values. Roles and qualifications belong to the principal.
+  Four-eyes approval requires different `principal_id` values; different logins
+  of the same principal do not count as different people.
+- Without a specifically cited statutory, regulatory, contractual, or binding
+  security policy that requires two natural persons for the operation,
+  `OWNER_SOLO_APPROVAL` is permitted and is explicitly not four-eyes approval.
+  If such a source applies and only one principal is available,
+  `BLOCKED_SINGLE_PRINCIPAL` blocks fail closed.
+  A role label or an abstract `four_eyes` marker alone is not source evidence
+  for an external two-person duty.
 
 Example: if a workstation gate fails, nobody has to be a notary to report it.
 A notarial approval still remains with the qualified subject-matter role.

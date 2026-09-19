@@ -6,6 +6,8 @@ principles:
   - permission_by_role_and_qualification
   - approval_by_risk_level
   - auditability_of_role_decisions
+  - roles_bind_to_stable_principal_not_login_account
+  - four_eyes_requires_distinct_principal_ids
 
 generic_roles:
   mitarbeiter:

@@ -25,11 +25,11 @@
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "859c0abf6fb31fee89f0010a40074a7513e1e2383df98ec1c6fb8d518994d198"
+      "sha256": "ce6e8964ccb1b4472b93da6e71d2a0706ba0402e91704572cf3fbff4fecd4599"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
-      "sha256": "be19563b63c6044ac710261869016ad5dd388e9ea3336e1e91ffc230d53b16df"
+      "sha256": "5e7348dc0cf6e3426f9a276b9e7630399718d22487867d86da5bbe5076030d68"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",

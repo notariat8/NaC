@@ -100,6 +100,9 @@ acceptance_ids:
 applies_when:
   paths:
     - src/nac_bff/azure_activation.py
+    - src/nac_bff/activation_security_backend.py
+    - src/nac_bff/activation_security_linux.py
+    - src/nac_bff/activation_security_windows.py
     - src/nac_bff/azure_activation_approval.py
     - src/nac_bff/azure_activation_provisioner_bootstrap.py
     - src/nac_bff/azure_activation_owner_gate.py
@@ -121,6 +124,10 @@ applies_when:
     - src/nac_m365_graph/provisioner_env_bootstrap.py
     - src/nac_m365_graph/spfx_site_deployment.py
     - src/nac_m365_graph/mvp_test_environment_deploy.py
+    - src/nac_m365_graph/node_runtime_integrity.py
+    - src/nac_m365_graph/sealed_toolchain.py
+    - tests/test_activation_security_backend.py
+    - tests/test_activation_security_windows.py
     - tests/test_nac_bff_azure_activation_provisioner_bootstrap.py
     - tests/test_nac_bff_azure_activation*.py
     - tests/test_nac_bff_azure_interruption_reconciliation.py
@@ -175,6 +182,8 @@ required_context:
     - final allowlisted redacted evidence
 
 checks:
+  - python -m unittest discover -s tests -p "test_activation_security*.py"
+  - python scripts/validate_m365_azure_bff_live_activation.py
   - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation_provisioner_bootstrap tests.test_nac_bff_azure_activation_owner_gate tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_interruption_baseline tests.test_nac_bff_azure_interruption_reconciliation tests.test_nac_bff_azure_function_deployment_reconciliation tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
   - python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression
   - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
@@ -1129,6 +1138,7 @@ failure_behavior:
   finalization_integrity_failure: retain_lock_and_require_owner_bound_local_reconcile
   midrun_step_2_interruption: inspect_read_only_then_require_new_owner_bound_TERMINALIZE_AND_RELEASE_LOCK_ONLY_action
   terminal_step_7_ambiguous_function_deployment: inspect_read_only_then_require_new_issue_739_owner_bound_RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT_action
+  terminal_step_7_original_provenance_lost: return_local_BLOCKED_FUNCTION_DEPLOYMENT_PROVENANCE_LOST_with_terminal_true_retry_false_next_phase_null_and_all_closed_operation_counts_zero_without_github_credential_network_subprocess_provider_tenant_journal_package_recovery_retry_or_live_access
   midrun_unsupported_or_ambiguous_state: retain_all_three_HELD_journals_without_resume_rollback_or_delete
   ledger_corruption_or_provider_ambiguity: remain_FAILED_PARTIAL_and_require_human_review
   evidence_unknown_field_or_secret_sentinel: reject_evidence_and_block_PASSED

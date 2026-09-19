@@ -22,8 +22,77 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Configure private Windows test workspace
+        shell: pwsh
+        run: |
+          $privateRoot = Join-Path $env:RUNNER_TEMP "nac-private-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $privateRoot -Force | Out-Null
+          $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+          $directorySecurity = [System.Security.AccessControl.DirectorySecurity]::new()
+          $directorySecurity.SetOwner($currentIdentity.User)
+          $directorySecurity.SetAccessRuleProtection($true, $false)
+          $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+          $propagation = [System.Security.AccessControl.PropagationFlags]::None
+          foreach ($sidValue in @($currentIdentity.User.Value, "S-1-5-18", "S-1-5-32-544")) {
+            $sid = [System.Security.Principal.SecurityIdentifier]::new($sidValue)
+            $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+              $sid,
+              [System.Security.AccessControl.FileSystemRights]::FullControl,
+              $inheritance,
+              $propagation,
+              [System.Security.AccessControl.AccessControlType]::Allow
+            )
+            $directorySecurity.AddAccessRule($rule) | Out-Null
+          }
+          Set-Acl -LiteralPath $privateRoot -AclObject $directorySecurity
+          "TEMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "TMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install NaC
         run: python -m pip install --disable-pip-version-check -e .
 
-      - name: Verify portable offline CLI and SPFx readback
-        run: python -m unittest tests.test_windows_offline_cli_portability tests.test_spfx_bff_catalog_readback_regression
+      - name: Install Graft context layer CLI
+        run: npm install -g @nanonets/graft
+
+      - name: Verify native Windows activation security and portability
+        shell: pwsh
+        run: |
+          $testOutput = & python -m unittest discover -s tests -p "test_activation_security*.py" 2>&1
+          $testExitCode = $LASTEXITCODE
+          $testOutput | ForEach-Object { Write-Output $_ }
+          if ($testExitCode -ne 0) {
+            $diagnostic = ($testOutput | Select-Object -Last 80) -join "`n"
+            $diagnostic = $diagnostic.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Windows portability tests failed::$diagnostic"
+            exit $testExitCode
+          }
+
+      - name: Verify portable CLI, SPFx readback, and Issue 746 contract
+        run: |
+          python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"
+          python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"
+          python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"
+          python -m unittest discover -s tests -p "test_issue746_reconciliation_gate.py"
+          python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"
+
+      - name: Verify Issue 746 and activation contracts
+        run: |
+          python scripts/validate_m365_bff_failed_partial_safe_completion.py
+          python scripts/validate_m365_azure_bff_live_activation.py
+          python scripts/validate_spec_traceability.py
+
+      - name: Verify the complete Issue 746 Windows matrix
+        run: |
+          python scripts/validate_ai_sbom.py
+          python -m unittest discover -s tests -p "test_nac_bff_azure_*.py"
+          python -m unittest discover -s tests -p "test_business_case_type_*.py"
+          python -m unittest discover -s tests -p "test_m365_*.py"
+          python -m unittest discover -s tests -p "test_sqlite_evidence_staging_outbox.py"
+          graft build
+          graft check
+          python scripts/nac.py doctor --profile strict

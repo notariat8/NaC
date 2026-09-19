@@ -94,11 +94,22 @@ def normalize_role(identity_registry: dict[str, Any], role: str) -> str:
 
 
 def resolve_identity(identity_registry: dict[str, Any], github_login: str) -> dict[str, Any] | None:
-    login = github_login.strip().lower()
-    for entry in identity_registry.get("users", []):
-        if str(entry.get("github_login", "")).lower() == login:
-            return entry
-    return None
+    """Resolve only synthetic public examples; real mappings use a protected resolver."""
+    account_id = f"github:{github_login.strip().lower()}"
+    account = next(
+        (entry for entry in identity_registry.get("accounts", []) if entry.get("account_id", "").lower() == account_id),
+        None,
+    )
+    if not account or not account.get("active", False):
+        return None
+    principal_id = account.get("principal_id")
+    principal = next(
+        (entry for entry in identity_registry.get("principals", []) if entry.get("principal_id") == principal_id),
+        None,
+    )
+    if not principal:
+        return None
+    return {**principal, "account_id": account_id, "github_login": github_login}
 
 
 def print_question_diagram(diagrams: dict[str, Any], question_id: str) -> None:
@@ -133,18 +144,24 @@ def run_start(
 
     identity = resolve_identity(identity_registry, github_login)
     if not identity:
-        print(f"GitHub Nutzer {github_login!r} ist nicht im Identity-Register.")
+        print(
+            "Die Identität ist nicht in der synthetischen öffentlichen Registry; "
+            "für reale Zuordnungen ist der geschützte externe Resolver erforderlich."
+        )
         return 1
     if not identity.get("active", False):
         print(f"GitHub Nutzer {github_login!r} ist im Identity-Register nicht aktiv.")
         return 1
 
     normalized_actor_role = normalize_role(identity_registry, actor_role)
-    identity_role = normalize_role(identity_registry, str(identity.get("technical_role_id", "")))
-    if normalized_actor_role != identity_role:
+    identity_roles = {
+        normalize_role(identity_registry, str(role))
+        for role in identity.get("technical_role_ids", [])
+    }
+    if normalized_actor_role not in identity_roles:
         print(
             f"Rollenkonflikt: angegeben {normalized_actor_role!r}, "
-            f"registriert fuer {github_login!r} ist {identity_role!r}."
+            f"registriert fuer {github_login!r} sind {sorted(identity_roles)!r}."
         )
         return 1
 

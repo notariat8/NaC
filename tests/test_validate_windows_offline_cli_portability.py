@@ -20,9 +20,14 @@ class WindowsPortabilityValidatorTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         root = Path(temporary.name)
         for relative in (
+            "src/nac_bff/activation_security_backend.py",
+            "src/nac_bff/activation_security_windows.py",
             "src/nac_bff/azure_activation_contract.py",
             "src/nac_bff/azure_activation_facade.py",
+            "src/nac_m365_graph/mvp_test_environment_deploy.py",
+            "tests/test_activation_security_windows.py",
             "tests/test_windows_offline_cli_portability.py",
+            "tests/test_m365_bff_failed_partial_safe_completion.py",
             ".github/workflows/windows-portability.yml",
         ):
             destination = root / relative

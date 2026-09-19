@@ -27,7 +27,9 @@ class GenericWorkbenchFoundationValidatorTests(unittest.TestCase):
             errors,
             require_present=True,
         )
-        self.assertEqual(errors, ["visual evidence file missing: build/not-yet-created.js"])
+        self.assertEqual(
+            errors, ["visual evidence file missing: build/not-yet-created.js"]
+        )
 
     def test_rejects_backend_domain_state_derivation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

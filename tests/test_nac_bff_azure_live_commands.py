@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import copy
+from contextlib import nullcontext
 from datetime import UTC, datetime
 import hashlib
 import inspect
 import json
 import os
 import signal
+import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from types import SimpleNamespace
@@ -16,10 +19,19 @@ import zipfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+_TESTS_ROOT = str(Path(__file__).resolve().parent)
+if _TESTS_ROOT not in sys.path:
+    sys.path.insert(0, _TESTS_ROOT)
+
 import nac_bff.azure_cli_sealed_runtime as azure_cli_sealed_runtime
 import nac_bff.azure_live_commands as azure_live_commands
 from nac_bff.azure_performance_monitor import build_metrics_url, monitor_policy_sha256
 from nac_bff.azure_performance_authorization import MONITOR_READ
+from nac_bff.activation_security_backend import (
+    ProcessResult,
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 from nac_bff.azure_live_commands import (
     ALLOWED_COMMAND_PREFIXES,
     AZURE_CLI_CANDIDATES,
@@ -40,9 +52,82 @@ from nac_bff.azure_live_commands import (
 )
 
 
+class _WindowsProcessBackendProxy:
+    """Route Windows process launches through the existing unittest mock."""
+
+    def __init__(self, delegate) -> None:
+        self._delegate = delegate
+
+    def __getattr__(self, name: str):
+        return getattr(self._delegate, name)
+
+    def launch_attested_process(self, spec) -> ProcessResult:
+        if not isinstance(subprocess.run, Mock):
+            return self._delegate.launch_attested_process(spec)
+        try:
+            completed = subprocess.run(
+                [str(spec.executable), *spec.arguments],
+                cwd=spec.cwd,
+                shell=False,
+                text=True,
+                capture_output=True,
+                check=False,
+                env=dict(spec.environment),
+                timeout=spec.timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise SecurityBoundaryError("PROCESS_TIMEOUT") from exc
+        return ProcessResult(
+            exit_code=completed.returncode,
+            stdout=(getattr(completed, "stdout", "") or "").encode("utf-8"),
+            stderr=(getattr(completed, "stderr", "") or "").encode("utf-8"),
+            image_sha256=spec.executable_sha256,
+            job_object_assigned=True,
+        )
+
+
+def _make_private_directory(path: Path) -> None:
+    if os.name == "nt":
+        with get_platform_security_backend().open_secure_directory(
+            path, create=True
+        ):
+            pass
+    else:
+        path.mkdir(mode=0o700)
+
+
+def _make_windows_file_broadly_writable(path: Path) -> None:
+    completed = subprocess.run(
+        ["icacls", str(path), "/grant", "*S-1-1-0:(W)"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise AssertionError("failed to create broad Windows DACL fixture")
+
+
+def _write_private_file(path: Path, payload: bytes) -> None:
+    if os.name == "nt":
+        with get_platform_security_backend().open_secure_directory(
+            path.parent, create=True
+        ) as session:
+            session.create_exclusive(path.name, payload)
+    else:
+        path.write_bytes(payload)
+        path.chmod(0o600)
+
+
 class _IsolatedAzureConfigTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
+        platform_gate = patch.object(
+            azure_live_commands,
+            "platform_security_backend_available",
+            return_value=True,
+        )
+        platform_gate.start()
+        self.addCleanup(platform_gate.stop)
         temporary = tempfile.TemporaryDirectory(prefix="nac-azure-cli-test-")
         self.addCleanup(temporary.cleanup)
         home = Path(temporary.name)
@@ -55,6 +140,37 @@ class _IsolatedAzureConfigTestCase(unittest.TestCase):
         )
         environment.start()
         self.addCleanup(environment.stop)
+        if os.name == "nt":
+            _make_private_directory(home / ".azure")
+            backend_patch = patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=_WindowsProcessBackendProxy(
+                    get_platform_security_backend()
+                ),
+            )
+            backend_patch.start()
+            self.addCleanup(backend_patch.stop)
+
+    def assert_windows_runtime_binding(self) -> None:
+        """Exercise the native Windows equivalent of the POSIX sealed runtime."""
+
+        self.assertEqual(os.name, "nt")
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            digest = _binary_sha256(binary)
+            runtime = azure_live_commands._prepare_bound_runtime(
+                binary,
+                expected_sha256=digest,
+                cloud_selection_sha256=None,
+            )
+            self.assertIsNotNone(runtime)
+            assert runtime is not None
+            self.assertEqual(runtime.pass_fds, ())
+            command = runtime.command(["account", "show"])
+            self.assertEqual(Path(command[0]), binary.parent.parent / "python.exe")
+            self.assertEqual(command[1:], ["-m", "azure.cli", "account", "show"])
+            with runtime:
+                pass
 
 
 class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
@@ -575,6 +691,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertNotIn("/proc/self/gid_map", source)
 
     def test_sealed_bootstrap_writes_exact_single_id_maps(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -606,6 +725,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             self.assertFalse(write_id_maps(123, 1000, 1001, Path(tmp)))
 
     def test_sealed_runtime_binds_package_archive_before_isolation(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -664,6 +786,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 os.close(package_fd)
 
     def test_sealed_bootstrap_child_dies_when_supervisor_is_killed(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         prefix = source.rsplit("\nmain()\n", 1)[0]
         helper = (
@@ -810,6 +935,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     validate(payload)
 
     def test_sealed_bootstrap_asserts_account_once_before_each_write(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -885,6 +1013,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
     def test_sealed_account_child_does_not_flush_parent_stdout_buffer(
         self,
     ) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         prefix = source.rsplit("\nmain()\n", 1)[0]
         valid = {
@@ -929,6 +1060,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(completed.stdout, "parent-buffered-output\n")
 
     def test_sealed_bootstrap_account_assertion_fails_closed(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -959,6 +1093,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             run_with_payload(b"x" * 16385)
 
     def test_sealed_bootstrap_account_child_closes_fds_and_times_out(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -1092,6 +1229,9 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             validate_host_userns_profile(restriction, Path(tmp) / "missing-label")
 
     def test_sealed_bootstrap_omits_default_cloud_selection(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -1101,7 +1241,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             source_config = root / "source"
             destination = root / "destination"
-            source_config.mkdir(mode=0o700)
+            _make_private_directory(source_config)
             (source_config / "azureProfile.json").write_text(
                 '{"subscriptions": []}',
                 encoding="utf-8",
@@ -1134,13 +1274,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             source_config = root / "source"
             destination = root / "destination"
-            source_config.mkdir(mode=0o700)
+            _make_private_directory(source_config)
             (source_config / "clouds.config").mkdir()
 
             with self.assertRaisesRegex(SystemExit, "86"):
                 copy_private_azure_config(source_config, destination, None)
 
     def test_sealed_bootstrap_rejects_cloud_selection_digest_drift(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
         namespace: dict[str, object] = {}
         exec(source.rsplit("\nmain()\n", 1)[0], namespace)
@@ -1150,7 +1293,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             source_config = root / "source"
             destination = root / "destination"
-            source_config.mkdir(mode=0o700)
+            _make_private_directory(source_config)
             selection = source_config / "clouds.config"
             selection.write_text(
                 f"[{EXPECTED_CLOUD_NAME}]\n"
@@ -1180,7 +1323,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             source_config = root / "source"
             destination = root / "destination"
-            source_config.mkdir(mode=0o700)
+            _make_private_directory(source_config)
             selection = source_config / "clouds.config"
             expected = (
                 f"[{EXPECTED_CLOUD_NAME}]\n"
@@ -1419,6 +1562,22 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             ],
         )
         with tempfile.TemporaryDirectory() as tmp:
+            platform_valid = copy.deepcopy(valid)
+            if os.name == "nt":
+                root = Path(tmp)
+                replacements = {
+                    "/tmp/prepared/infra/main.json": str(root / "infra" / "main.json"),
+                    "@/tmp/prepared/main.parameters.json": (
+                        "@" + str(root / "main.parameters.json")
+                    ),
+                    "/tmp/prepared/function/nac-bff.zip": str(
+                        root / "function" / "nac-bff.zip"
+                    ),
+                }
+                platform_valid = tuple(
+                    [replacements.get(token, token) for token in command]
+                    for command in platform_valid
+                )
             binary = _fake_binary(Path(tmp))
             digest = _binary_sha256(binary)
             completed = subprocess.CompletedProcess(
@@ -1428,23 +1587,28 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 "nac_bff.azure_live_commands.subprocess.run",
                 return_value=completed,
             ) as process:
-                for argv in valid:
+                for argv in platform_valid:
                     with self.subTest(argv=argv):
                         result = run_azure_cli(
                             argv,
                             binary=binary,
                             expected_binary_sha256=digest,
                         )
-                        self.assertTrue(result["ok"])
-        self.assertEqual(process.call_count, len(valid))
+                        self.assertTrue(result["ok"], result)
+        self.assertEqual(process.call_count, len(platform_valid))
         for call in process.call_args_list:
             argv = call.args[0]
-            self.assertRegex(argv[0], r"\A/proc/self/fd/[0-9]+\Z")
-            self.assertEqual(argv[1:3], ["-I", "-B"])
-            self.assertRegex(argv[3], r"\A/proc/self/fd/[0-9]+\Z")
-            self.assertRegex(argv[4], r"\A/proc/self/fd/[0-9]+\Z")
-            self.assertRegex(argv[5], r"\A/proc/self/fd/[0-9]+\Z")
-            azure_argv = argv[6:]
+            if os.name == "nt":
+                self.assertEqual(Path(argv[0]).name.casefold(), "python.exe")
+                self.assertEqual(argv[1:3], ["-m", "azure.cli"])
+                azure_argv = argv[3:]
+            else:
+                self.assertRegex(argv[0], r"\A/proc/self/fd/[0-9]+\Z")
+                self.assertEqual(argv[1:3], ["-I", "-B"])
+                self.assertRegex(argv[3], r"\A/proc/self/fd/[0-9]+\Z")
+                self.assertRegex(argv[4], r"\A/proc/self/fd/[0-9]+\Z")
+                self.assertRegex(argv[5], r"\A/proc/self/fd/[0-9]+\Z")
+                azure_argv = argv[6:]
             self.assertEqual(azure_argv[-3:], ["--output", "json", "--only-show-errors"])
             subscription_index = azure_argv.index("--subscription")
             self.assertEqual(
@@ -1452,7 +1616,10 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 EXPECTED_SUBSCRIPTION_ID,
             )
             self.assertEqual(azure_argv.count("--subscription"), 1)
-            self.assertEqual(len(call.kwargs["pass_fds"]), 4)
+            if os.name == "nt":
+                self.assertNotIn("pass_fds", call.kwargs)
+            else:
+                self.assertEqual(len(call.kwargs["pass_fds"]), 4)
 
     def test_process_boundary_is_argv_only_shell_false_and_env_filtered(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1464,11 +1631,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 stdout=json.dumps({"name": "rg-nac-bff-test"}),
                 stderr="raw stderr must not escape",
             )
+            isolated_home = Path(os.environ["HOME"])
             source_env = {
-                "HOME": "/tmp/home",
+                "HOME": str(isolated_home) if os.name == "nt" else "/tmp/home",
                 "PATH": f"{binary.parent}:/usr/bin:/bin",
                 "LANG": "C.UTF-8",
-                "AZURE_CONFIG_DIR": "/tmp/azure-config",
+                "AZURE_CONFIG_DIR": (
+                    os.environ["AZURE_CONFIG_DIR"]
+                    if os.name == "nt"
+                    else "/tmp/azure-config"
+                ),
                 "AZURE_EXTENSION_DIR": "/tmp/hostile-extension",
                 "AZURE_EXTENSION_SYS_DIR": "/tmp/hostile-system-extension",
                 "AZURE_EXTENSION_DEV_SOURCES": "/tmp/hostile-dev-extension",
@@ -1487,43 +1659,58 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     environ=source_env,
                 )
 
-        self.assertTrue(result["ok"])
+        self.assertTrue(result["ok"], result)
         self.assertEqual(result["data"], {"name": "rg-nac-bff-test"})
         process_argv = process.call_args.args[0]
         process_kwargs = process.call_args.kwargs
-        self.assertRegex(process_argv[0], r"\A/proc/self/fd/[0-9]+\Z")
-        self.assertEqual(process_argv[1:3], ["-I", "-B"])
-        self.assertRegex(process_argv[3], r"\A/proc/self/fd/[0-9]+\Z")
-        self.assertRegex(process_argv[4], r"\A/proc/self/fd/[0-9]+\Z")
-        self.assertRegex(process_argv[5], r"\A/proc/self/fd/[0-9]+\Z")
+        if os.name == "nt":
+            self.assertEqual(Path(process_argv[0]).name.casefold(), "python.exe")
+            self.assertEqual(process_argv[1:3], ["-m", "azure.cli"])
+            azure_offset = 3
+        else:
+            self.assertRegex(process_argv[0], r"\A/proc/self/fd/[0-9]+\Z")
+            self.assertEqual(process_argv[1:3], ["-I", "-B"])
+            self.assertRegex(process_argv[3], r"\A/proc/self/fd/[0-9]+\Z")
+            self.assertRegex(process_argv[4], r"\A/proc/self/fd/[0-9]+\Z")
+            self.assertRegex(process_argv[5], r"\A/proc/self/fd/[0-9]+\Z")
+            azure_offset = 6
         self.assertEqual(
-            process_argv[6:10],
+            process_argv[azure_offset:azure_offset + 4],
             ["group", "show", "--name", "rg-nac-bff-test"],
         )
         self.assertNotIn(str(binary.resolve()), process_argv)
         self.assertFalse(
             any(key.startswith("AZURE_EXTENSION_") for key in process_kwargs["env"])
         )
-        self.assertEqual(len(process_kwargs["pass_fds"]), 4)
+        if os.name == "nt":
+            self.assertNotIn("pass_fds", process_kwargs)
+        else:
+            self.assertEqual(len(process_kwargs["pass_fds"]), 4)
         self.assertIs(process_kwargs["shell"], False)
         self.assertIs(process_kwargs["check"], False)
-        self.assertEqual(process_kwargs["stdin"], subprocess.DEVNULL)
+        if os.name != "nt":
+            self.assertEqual(process_kwargs["stdin"], subprocess.DEVNULL)
         self.assertNotIn("AZURE_CLIENT_SECRET", process_kwargs["env"])
         self.assertNotIn("ACCESS_TOKEN", process_kwargs["env"])
-        self.assertEqual(
-            process_kwargs["env"],
-            {
-                "HOME": "/tmp/home",
-                "PATH": "/usr/bin:/bin",
-                "LANG": "C.UTF-8",
-                "AZURE_CONFIG_DIR": "/tmp/azure-config",
-                "AZURE_CORE_COLLECT_TELEMETRY": "0",
-                "AZURE_CORE_NO_COLOR": "true",
-                "PYTHONDONTWRITEBYTECODE": "1",
-                "PYTHONNOUSERSITE": "1",
-                "PYTHONSAFEPATH": "1",
-            },
-        )
+        expected_env = {
+            "HOME": source_env["HOME"],
+            "LANG": "C.UTF-8",
+            "AZURE_CONFIG_DIR": source_env["AZURE_CONFIG_DIR"],
+            "AZURE_CORE_COLLECT_TELEMETRY": "0",
+            "AZURE_CORE_NO_COLOR": "true",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONSAFEPATH": "1",
+        }
+        if os.name == "nt":
+            system_root = os.environ.get("SystemRoot") or os.environ.get("WINDIR")
+            if system_root:
+                expected_env["SystemRoot"] = system_root
+                expected_env["WINDIR"] = system_root
+            expected_env["PATH"] = str(binary.resolve().parent.parent)
+        else:
+            expected_env["PATH"] = "/usr/bin:/bin"
+        self.assertEqual(process_kwargs["env"], expected_env)
 
     def test_failures_expose_stable_codes_without_raw_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1652,7 +1839,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     expected_binary_sha256=digest,
                 )
 
-        self.assertTrue(result["ok"])
+        self.assertTrue(result["ok"], result)
         self.assertEqual(result["code"], "AZURE_CLI_OK")
         self.assertEqual(result["data"], {})
 
@@ -1749,7 +1936,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             binary = _fake_binary(root)
             binary_digest = _binary_sha256(binary)
             artifact = root / "main.json"
-            artifact.write_text("{}")
+            _write_private_file(artifact, b"{}")
             artifact_digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
             completed = subprocess.CompletedProcess([], 0, "{}", "")
             command = [
@@ -1757,7 +1944,11 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                 "--name", "nac-bff-012345abcdef",
                 "--resource-group", "rg-nac-bff-test",
                 "--template-file", str(artifact),
-                "--parameters", "@/tmp/prepared/main.parameters.json",
+                "--parameters", (
+                    "@" + str(root / "main.parameters.json")
+                    if os.name == "nt"
+                    else "@/tmp/prepared/main.parameters.json"
+                ),
                 "--mode", "Incremental",
             ]
             observed: dict[str, object] = {}
@@ -1777,12 +1968,16 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
                     bound_artifacts={str(artifact): (artifact, artifact_digest)},
                 )
 
-        self.assertTrue(result["ok"])
+        self.assertTrue(result["ok"], result)
         provider_argv = process.call_args.args[0]
-        self.assertNotIn(str(artifact), provider_argv)
         template_path = provider_argv[provider_argv.index("--template-file") + 1]
-        self.assertRegex(template_path, r"^/proc/self/fd/[0-9]+/main[.]json$")
-        self.assertEqual(len(process.call_args.kwargs["pass_fds"]), 5)
+        if os.name == "nt":
+            self.assertEqual(Path(template_path), artifact)
+            self.assertNotIn("pass_fds", process.call_args.kwargs)
+        else:
+            self.assertNotIn(str(artifact), provider_argv)
+            self.assertRegex(template_path, r"^/proc/self/fd/[0-9]+/main[.]json$")
+            self.assertEqual(len(process.call_args.kwargs["pass_fds"]), 5)
         self.assertEqual(observed, {"basename": "main.json", "payload": "{}"})
 
     def test_bound_artifact_hash_mismatch_stops_before_provider(self) -> None:
@@ -1790,7 +1985,7 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             binary = _fake_binary(root)
             artifact = root / "package.zip"
-            artifact.write_bytes(b"tampered")
+            _write_private_file(artifact, b"tampered")
             command = [
                 "functionapp", "deployment", "source", "config-zip",
                 "--resource-group", "rg-nac-bff-test",
@@ -1816,7 +2011,11 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
     def test_resolves_only_trusted_absolute_binary_and_lists_tmp_candidate_first(self) -> None:
         self.assertEqual(
             AZURE_CLI_CANDIDATES[0],
-            Path("/tmp/nac-azure-cli-venv/bin/az"),
+            (
+                Path("C:/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd")
+                if os.name == "nt"
+                else Path("/tmp/nac-azure-cli-venv/bin/az")
+            ),
         )
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
@@ -1835,14 +2034,35 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             root = Path(tmp)
             binary = _fake_binary(root)
             digest = _binary_sha256(binary)
-            symlink = root / "link" / "az"
-            symlink.parent.mkdir()
-            symlink.symlink_to(binary)
+            symlink = root / "link" / ("az.cmd" if os.name == "nt" else "az")
+            if os.name == "nt":
+                completed = subprocess.run(
+                    [
+                        "cmd.exe",
+                        "/d",
+                        "/c",
+                        "mklink",
+                        "/J",
+                        str(symlink.parent),
+                        str(binary.parent),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+            else:
+                symlink.parent.mkdir()
+                symlink.symlink_to(binary)
             self.assertIsNone(
                 resolve_azure_cli_binary(symlink, expected_sha256=digest)
             )
 
-            binary.chmod(0o707)
+            if os.name == "nt":
+                _make_windows_file_broadly_writable(binary)
+            else:
+                binary.chmod(0o707)
             self.assertIsNone(
                 resolve_azure_cli_binary(binary, expected_sha256=digest)
             )
@@ -1937,9 +2157,16 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
             expected = _binary_sha256(binary)
-            interpreter = binary.parent / "python3"
-            interpreter.unlink()
-            interpreter.symlink_to("/usr/bin/false")
+            interpreter = (
+                binary.parent.parent / "python.exe"
+                if os.name == "nt"
+                else binary.parent / "python3"
+            )
+            if os.name == "nt":
+                interpreter.write_bytes(b"tampered interpreter")
+            else:
+                interpreter.unlink()
+                interpreter.symlink_to("/usr/bin/false")
             with patch(
                 "nac_bff.azure_live_commands.subprocess.run"
             ) as process:
@@ -2004,6 +2231,9 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         process.assert_not_called()
 
     def test_unchanged_bound_runtime_snapshot_verifies_without_azure(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             binary = _fake_binary(root)
@@ -2060,6 +2290,11 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             )
             destination = root / "verified-copy"
             destination.mkdir()
+            if os.name == "nt":
+                with self.assertRaises(azure_live_commands.SealedToolchainError):
+                    with runtime:
+                        pass
+                return
             with runtime:
                 completed = subprocess.run(
                     runtime.command(
@@ -2082,6 +2317,9 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             )
 
     def test_bound_package_memfd_is_immutable_and_still_verifies(self) -> None:
+        if os.name == "nt":
+            self.assert_windows_runtime_binding()
+            return
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             binary = _fake_binary(root)
@@ -2150,13 +2388,38 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
 
         self.assertEqual(result["code"], "AZURE_CLI_TIMEOUT")
         self.assertEqual(len(captured), 1)
-        self.assertEqual(captured[0].pass_fds, (-1, -1, -1, -1))
+        self.assertEqual(
+            captured[0].pass_fds,
+            () if os.name == "nt" else (-1, -1, -1, -1),
+        )
 
     def test_package_tree_symlink_is_untrusted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
             package_root = _package_entrypoint(binary).parents[2]
-            (package_root / "injected.py").symlink_to("/etc/hosts")
+            if os.name == "nt":
+                outside = Path(tmp) / "outside-package"
+                outside.mkdir()
+                (outside / "injected.py").write_bytes(b"injected")
+                completed = subprocess.run(
+                    [
+                        "cmd.exe",
+                        "/d",
+                        "/c",
+                        "mklink",
+                        "/J",
+                        str(package_root / "injected"),
+                        str(outside),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+            else:
+                injected = package_root / "injected.py"
+                injected.symlink_to("/etc/hosts")
 
             self.assertIsNone(
                 calculate_azure_cli_toolchain_sha256(binary)
@@ -2173,13 +2436,101 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self.assertEqual(result["code"], "AZURE_CLI_BINARY_UNTRUSTED")
         process.assert_not_called()
 
+    @unittest.skipUnless(os.name == "nt", "Windows runtime closure")
+    def test_windows_runtime_digest_binds_stdlib_and_native_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = _fake_binary(Path(tmp))
+            runtime_root = binary.parent.parent
+            stdlib = runtime_root / "Lib" / "os.py"
+            stdlib.parent.mkdir(exist_ok=True)
+            stdlib.write_text("BOUND = 1\n", encoding="utf-8")
+            native = runtime_root / "DLLs" / "runtime.dll"
+            native.parent.mkdir(exist_ok=True)
+            native.write_bytes(b"native-v1")
+            first = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(first)
+            stdlib.write_text("BOUND = 2\n", encoding="utf-8")
+            second = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(second)
+            self.assertNotEqual(first, second)
+            native.write_bytes(b"native-v2")
+            third = calculate_azure_cli_toolchain_sha256(binary)
+            self.assertIsNotNone(third)
+            self.assertNotEqual(second, third)
+
+    def test_windows_runtime_remeasures_after_all_handles_are_pinned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wrapper = root / "az.cmd"
+            interpreter = root / "python.exe"
+            package_root = root / "Lib" / "site-packages"
+            runtime_root = root
+            wrapper.write_bytes(b"wrapper")
+            interpreter.write_bytes(b"python")
+            package_root.mkdir(parents=True)
+            (package_root / "module.py").write_bytes(b"module")
+            attestation = azure_live_commands._ToolchainAttestation(
+                digest="a" * 64,
+                requires_expected=True,
+                interpreter_path=interpreter,
+                interpreter_digest="b" * 64,
+                package_root=package_root,
+                package_digest="c" * 64,
+                runtime_root=runtime_root,
+                runtime_digest="d" * 64,
+            )
+            backend = Mock()
+            backend.inspect_private_path.return_value = SimpleNamespace()
+            backend.open_bound_read.side_effect = lambda *_args: nullcontext()
+            changed = azure_live_commands._ToolchainAttestation(
+                digest="e" * 64,
+                requires_expected=True,
+            )
+            with (
+                patch(
+                    "nac_bff.activation_security_backend.get_platform_security_backend",
+                    return_value=backend,
+                ),
+                patch.object(
+                    azure_live_commands,
+                    "_windows_toolchain_attestation",
+                    return_value=(changed, "AZURE_CLI_BINARY_TRUSTED"),
+                ),
+            ):
+                with self.assertRaises(azure_live_commands.SealedToolchainError):
+                    with azure_live_commands._WindowsAzureCliRuntime(
+                        wrapper, attestation
+                    ):
+                        self.fail("runtime mutation must block before process launch")
+
     def test_symlinked_package_path_component_is_untrusted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             binary = _fake_binary(Path(tmp))
-            python_root = _package_entrypoint(binary).parents[3]
-            relocated = binary.parent.parent / "relocated-python"
-            python_root.rename(relocated)
-            python_root.symlink_to("../relocated-python")
+            if os.name == "nt":
+                python_root = _package_entrypoint(binary).parents[3]
+                relocated = binary.parent.parent / "relocated-python"
+                python_root.rename(relocated)
+                completed = subprocess.run(
+                    [
+                        "cmd.exe",
+                        "/d",
+                        "/c",
+                        "mklink",
+                        "/J",
+                        str(python_root),
+                        str(relocated),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+            else:
+                python_root = _package_entrypoint(binary).parents[3]
+                relocated = binary.parent.parent / "relocated-python"
+                python_root.rename(relocated)
+                python_root.symlink_to("../relocated-python")
 
             self.assertIsNone(
                 calculate_azure_cli_toolchain_sha256(binary)
@@ -2204,7 +2555,12 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 args=[], returncode=0, stdout="{}", stderr=""
             )
             environ = {
-                "HOME": "/tmp/home",
+                "HOME": os.environ["HOME"] if os.name == "nt" else "/tmp/home",
+                **(
+                    {"AZURE_CONFIG_DIR": os.environ["AZURE_CONFIG_DIR"]}
+                    if os.name == "nt"
+                    else {}
+                ),
                 AZURE_CLI_SHA256_ENV: digest,
             }
             with patch(
@@ -2232,9 +2588,12 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
 
     def test_native_elf_az_candidate_is_rejected_before_subprocess(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            binary = Path(tmp) / "az"
+            root = Path(tmp)
+            binary = root / ("az.exe" if os.name == "nt" else "az")
             binary.write_bytes(b"\x7fELF" + b"\0" * 60)
             binary.chmod(0o700)
+            if os.name == "nt":
+                _make_private_directory(root / ".azure")
             with patch("nac_bff.azure_live_commands.subprocess.run") as process:
                 result = run_azure_cli(
                     ["account", "show"],
@@ -2245,7 +2604,14 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                     environ={"HOME": tmp},
                 )
 
-        self.assertEqual(result["code"], "AZURE_CLI_RUNTIME_BINDING_FAILED")
+        self.assertEqual(
+            result["code"],
+            (
+                "AZURE_CLI_BINARY_UNTRUSTED"
+                if os.name == "nt"
+                else "AZURE_CLI_RUNTIME_BINDING_FAILED"
+            ),
+        )
         process.assert_not_called()
 
     def test_minimal_env_does_not_copy_credential_variables(self) -> None:
@@ -2310,7 +2676,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         )
         self.assertNotIn("user", json.dumps(readiness))
         self.assertEqual(process.call_count, 1)
-        account_argv = process.call_args.args[0][6:]
+        account_argv = process.call_args.args[0][3 if os.name == "nt" else 6:]
         self.assertEqual(
             account_argv,
             [
@@ -2328,7 +2694,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = root / "azure-config"
-            config.mkdir(mode=0o700)
+            _make_private_directory(config)
             (config / "clouds.config").write_text(
                 "[cloud]\nname = hostile\n", encoding="utf-8"
             )
@@ -2352,7 +2718,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = root / "azure-config"
-            config.mkdir(mode=0o700)
+            _make_private_directory(config)
             (config / "clouds.config").write_text(
                 f"[{EXPECTED_CLOUD_NAME}]\n"
                 f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
@@ -2388,7 +2754,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             with self.subTest(size=size), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 config = root / "azure-config"
-                config.mkdir(mode=0o700)
+                _make_private_directory(config)
                 payload = exact + b"#" * (size - len(exact))
                 (config / "clouds.config").write_bytes(payload)
                 binary = _fake_binary(root)
@@ -2453,7 +2819,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 config = root / "azure-config"
-                config.mkdir(mode=0o700)
+                _make_private_directory(config)
                 (config / "clouds.config").write_bytes(payload)
                 binary = _fake_binary(root)
                 with patch(
@@ -2488,20 +2854,26 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 config = root / "azure-config"
-                config.mkdir(mode=0o700)
+                _make_private_directory(config)
                 selection = config / "clouds.config"
                 if name == "symlink":
                     target = root / "selection.ini"
                     target.write_text(exact, encoding="utf-8")
-                    selection.symlink_to(target)
+                    if os.name == "nt":
+                        os.link(target, selection)
+                    else:
+                        selection.symlink_to(target)
                 elif name in {
                     "group_writable_file",
                     "world_writable_file",
                 }:
                     selection.write_text(exact, encoding="utf-8")
-                    selection.chmod(
-                        0o660 if name == "group_writable_file" else 0o666
-                    )
+                    if os.name == "nt":
+                        _make_windows_file_broadly_writable(selection)
+                    else:
+                        selection.chmod(
+                            0o660 if name == "group_writable_file" else 0o666
+                        )
                 else:
                     selection.mkdir()
                 binary = _fake_binary(root)
@@ -2533,6 +2905,14 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
                 f"subscription = {EXPECTED_SUBSCRIPTION_ID}\n",
                 encoding="utf-8",
             )
+            if os.name == "nt":
+                os.link(selection, Path(tmp) / "clouds-alias.config")
+                self.assertIsNone(
+                    azure_live_commands._exact_default_cloud_selection_digest(
+                        selection
+                    )
+                )
+                return
             metadata = selection.lstat()
             foreign = SimpleNamespace(
                 st_mode=metadata.st_mode,
@@ -2559,8 +2939,11 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = root / "azure-config"
-            config.mkdir(mode=0o700)
-            config.chmod(0o770)
+            _make_private_directory(config)
+            if os.name == "nt":
+                _make_windows_file_broadly_writable(config)
+            else:
+                config.chmod(0o770)
             binary = _fake_binary(root)
             with patch("nac_bff.azure_live_commands.subprocess.run") as process:
                 result = run_azure_cli(
@@ -2767,7 +3150,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         self._assert_nonempty_interruption_observation(current=True)
 
     def _assert_nonempty_interruption_observation(self, *, current: bool) -> None:
-        from tests.test_nac_bff_azure_interruption_baseline import (
+        from test_nac_bff_azure_interruption_baseline import (
             ACTIVATION_HASH,
             CLIENT_ID,
             COMMIT,
@@ -3288,7 +3671,7 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
         from nac_bff.azure_interruption_contract import (
             resource_graph_visible_targets,
         )
-        from tests.test_nac_bff_azure_interruption_baseline import (
+        from test_nac_bff_azure_interruption_baseline import (
             _inventory,
             _operations,
         )
@@ -3554,9 +3937,11 @@ class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
 
 def _fake_binary(root: Path) -> Path:
     venv = root / "azure-cli-venv"
-    binary_directory = venv / "bin"
+    binary_directory = venv / ("Scripts" if os.name == "nt" else "bin")
     package = (
-        venv
+        venv / "Lib" / "site-packages" / "azure" / "cli"
+        if os.name == "nt"
+        else venv
         / "lib"
         / "python3.12"
         / "site-packages"
@@ -3565,20 +3950,33 @@ def _fake_binary(root: Path) -> Path:
     )
     binary_directory.mkdir(parents=True)
     package.mkdir(parents=True)
+    runtime_home = (
+        str(Path(sys.executable).resolve().parent)
+        if os.name == "nt"
+        else "/usr/bin"
+    )
     (venv / "pyvenv.cfg").write_text(
-        "home = /usr/bin\ninclude-system-site-packages = false\n",
+        f"home = {runtime_home}\ninclude-system-site-packages = false\n",
         encoding="utf-8",
     )
-    interpreter = binary_directory / "python3"
-    interpreter.symlink_to("/usr/bin/python3")
-    binary = binary_directory / "az"
-    binary.write_text(
-        f"#!{interpreter}\n"
-        "import os, sys\n"
-        "os.execl(sys.executable, sys.executable, '-m', 'azure.cli', *sys.argv[1:])\n",
-        encoding="utf-8",
-    )
+    if os.name == "nt":
+        interpreter = venv / "python.exe"
+        shutil.copyfile(Path(sys.executable), interpreter)
+        binary = binary_directory / "az.cmd"
+        binary.write_text("@echo off\r\n", encoding="utf-8")
+    else:
+        interpreter = binary_directory / "python3"
+        interpreter.symlink_to("/usr/bin/python3")
+        binary = binary_directory / "az"
+        binary.write_text(
+            f"#!{interpreter}\n"
+            "import os, sys\n"
+            "os.execl(sys.executable, sys.executable, '-m', 'azure.cli', *sys.argv[1:])\n",
+            encoding="utf-8",
+        )
     binary.chmod(0o700)
+    if os.name == "nt":
+        (package.parent / "__init__.py").write_text("", encoding="utf-8")
     (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "__main__.py").write_text(
         "def main():\n    return 0\n",
@@ -3593,6 +3991,8 @@ def _fake_binary(root: Path) -> Path:
 
 def _package_entrypoint(binary: Path) -> Path:
     venv = binary.parent.parent
+    if os.name == "nt":
+        return venv / "Lib" / "site-packages" / "azure" / "cli" / "__main__.py"
     return (
         venv
         / "lib"

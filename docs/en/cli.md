@@ -6,14 +6,20 @@ Status: first unified CLI implemented on 2026-05-19
 
 | Platform | Offline CLI and local M365/SPFx checks | Live activation, recovery and reconciliation |
 | --- | --- | --- |
-| Windows 11 with Python 3.11 | supported | blocked with `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` |
+| Windows 11 with Python 3.11 and Node.js 24 | supported | supported only with the complete Windows security backend and after every existing owner and security gate |
 | Linux with complete `memfd`, `/proc`, ownership, lock, namespace and no-follow capabilities | supported | supported only after every existing owner and security gate |
 | Other or unknown platform | where the individual offline command is portable | blocked |
 
 Platform detection uses trusted runtime properties only. CLI arguments,
-environment variables and configuration cannot enable live execution on
-Windows. The binding design is defined by the
-[Windows offline CLI spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md).
+environment variables and configuration cannot bypass missing Windows
+security capabilities. Handle/file-ID binding, SID/DACL and reparse checks, a
+named mutex, a Job Object, flush semantics, and credential-write prevention
+must all be available; otherwise the path stops with
+`PLATFORM_SECURITY_BACKEND_UNAVAILABLE` before credential, network, or provider
+access. The offline boundary is defined by the
+[Windows offline CLI spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md),
+and the Windows completion path by the
+[Issue #746 spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
 ## Idea
 
@@ -1140,6 +1146,27 @@ nac m365 teams-sharepoint business-case-type-live-write-smoke --database-path /t
 ## Azure Function Deployment Reconciliation
 
 `bff-azure-function-deployment-reconcile` handles only the terminal step-7 case from Issue [#739](https://github.com/notariat8/NaC/issues/739): six steps are `PASSED`, `deploy_function_package` failed with `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS`, and all three journals remain `HELD`. The owner-free inspection verifies the state, all 18 ledger events, evidence, prepared manifest, and Function ZIP byte for byte. Two identical ARM snapshots constrained to the exact target Function must prove `FUNCTION_DEPLOYMENT_NOT_APPLIED`. Only a new immutable `ofunk` comment in Issue #739 binding `RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` permits `--confirm-release-quarantine`. Release appends only `RELEASED` markers; the failed state, its evidence, and Azure remain unchanged.
+
+When the exactly bound #739 original artifacts are completely lost, use the
+standalone minimal provenance-loss invocation below. Old #632/#739 live
+approvals, `--approval-reference`, and
+`--issue-746-owner-solo-approval-reference` are invalid in this mode. The
+confirmation record and the required protected identity resolver are bound exclusively locally through
+Windows SID, DACL, and hashes. The check covers the complete expected inventory:
+state, evidence, ledger, three lock journals formed from the protected original
+lock bindings, prepared
+manifest, and Function package. Total loss is confirmed only when all of these
+artifacts are absent from the canonical location. A partial inventory or an
+uninspectable bound expected location produces a narrow binding/state error
+instead. This path runs before the GitHub gate and provider factory and returns
+exactly `status=BLOCKED`,
+`reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`,
+`retry_allowed=false`, and `next_phase=null` with exit `2`. It authorizes
+neither #739 release nor #632 packaging or live action.
+
+```powershell
+nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --correlation-id nac-bff-live-20260908-issue739-v4 --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --protected-identity-resolver-file <protected-absolute-json-file> --protected-identity-resolver-sha256 <64-lowercase-hex> --operator-account-id <provider:login> --confirm-provenance-lost --provenance-loss-action CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST --provenance-loss-issue 739 --provenance-loss-confirmation-file <protected-absolute-json-file> --provenance-loss-confirmation-sha256 <64-lowercase-hex> --format json
+```
 
 ```bash
 nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/739#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --provisioner-bootstrap-binding-sha256 <64-lowercase-hex> --reason "<non-empty-owner-reason>" --correlation-id <safe-correlation-id> --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --format json

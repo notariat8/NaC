@@ -631,22 +631,22 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     if (
         lease.get("architecture_exact")
         != "owner_ticketed_bff_broker_system_assigned_identity"
-        or lease.get("local_adapter_path_exact") != str(LEASE_BROKER_CLIENT)
-        or lease.get("broker_path_exact") != str(LEASE_BROKER)
-        or lease.get("broker_storage_path_exact") != str(LEASE_BROKER_STORAGE)
-        or lease.get("local_auth_path_exact") != str(LEASE_BROKER_AUTH)
+        or lease.get("local_adapter_path_exact") != LEASE_BROKER_CLIENT.as_posix()
+        or lease.get("broker_path_exact") != LEASE_BROKER.as_posix()
+        or lease.get("broker_storage_path_exact") != LEASE_BROKER_STORAGE.as_posix()
+        or lease.get("local_auth_path_exact") != LEASE_BROKER_AUTH.as_posix()
         or lease.get("broker_composition_path_exact")
-        != str(LEASE_BROKER_COMPOSITION)
-        or lease.get("broker_test_path_exact") != str(LEASE_BROKER_TESTS)
+        != LEASE_BROKER_COMPOSITION.as_posix()
+        or lease.get("broker_test_path_exact") != LEASE_BROKER_TESTS.as_posix()
         or lease.get("broker_storage_test_path_exact")
-        != str(LEASE_BROKER_STORAGE_TESTS)
-        or lease.get("local_auth_test_path_exact") != str(LEASE_BROKER_AUTH_TESTS)
+        != LEASE_BROKER_STORAGE_TESTS.as_posix()
+        or lease.get("local_auth_test_path_exact") != LEASE_BROKER_AUTH_TESTS.as_posix()
         or lease.get("local_client_test_path_exact")
-        != str(LEASE_BROKER_CLIENT_TESTS)
+        != LEASE_BROKER_CLIENT_TESTS.as_posix()
         or lease.get("broker_composition_test_path_exact")
-        != str(LEASE_BROKER_COMPOSITION_TESTS)
+        != LEASE_BROKER_COMPOSITION_TESTS.as_posix()
         or lease.get("broker_fastapi_test_path_exact")
-        != str(LEASE_BROKER_FASTAPI_TESTS)
+        != LEASE_BROKER_FASTAPI_TESTS.as_posix()
         or lease.get("broker_routes_exact")
         != [
             "POST /v1/internal/performance-lease/acquire",
@@ -909,9 +909,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or set(combined_owner.get("worm_baseline_parameter_fields_exact", []))
         != WORM_BASELINE_PARAMETER_FIELDS
         or combined_owner.get("worm_baseline_compiled_arm_path_exact")
-        != str(WORM_INFRA_COMPILED)
+        != WORM_INFRA_COMPILED.as_posix()
         or combined_owner.get("worm_baseline_compiled_parameters_path_exact")
-        != str(WORM_INFRA_COMPILED_PARAMETERS)
+        != WORM_INFRA_COMPILED_PARAMETERS.as_posix()
         or combined_owner.get("worm_baseline_irreversible_policy_lock_allowed")
         is not False
         or combined_owner.get("deployment_sequence_exact")
@@ -950,11 +950,11 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     )
     if (
         infrastructure_safety.get("implementation_path_exact")
-        != str(INFRA_SAFETY)
+        != INFRA_SAFETY.as_posix()
         or infrastructure_safety.get("test_path_exact")
-        != str(INFRA_SAFETY_TESTS)
+        != INFRA_SAFETY_TESTS.as_posix()
         or infrastructure_safety.get("arm_validator_path_exact")
-        != str(INFRA_ARM_VALIDATOR)
+        != INFRA_ARM_VALIDATOR.as_posix()
         or infrastructure_safety.get(
             "coordination_storage_account_name_policy_exact"
         )
@@ -1193,11 +1193,11 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
         or infrastructure_safety.get("pinned_bicep_version_exact")
         != "0.45.15.27210"
         or infrastructure_safety.get("canonical_compiled_arm_path_exact")
-        != str(INFRA_COMPILED)
+        != INFRA_COMPILED.as_posix()
         or infrastructure_safety.get(
             "canonical_compiled_parameters_path_exact"
         )
-        != str(INFRA_COMPILED_PARAMETERS)
+        != INFRA_COMPILED_PARAMETERS.as_posix()
         or infrastructure_safety.get(
             "compiled_artifacts_must_be_byte_reproducible_in_ci"
         )
@@ -1257,9 +1257,9 @@ def _validate_contract(contract: dict[str, Any], errors: list[str]) -> None:
     ):
         errors.append("contract slice must perform no live action")
     if (
-        boundary.get("azure_command_adapter_path_exact") != str(AZURE_COMMANDS)
+        boundary.get("azure_command_adapter_path_exact") != AZURE_COMMANDS.as_posix()
         or boundary.get("azure_command_adapter_test_path_exact")
-        != str(AZURE_COMMAND_TESTS)
+        != AZURE_COMMAND_TESTS.as_posix()
         or boundary.get("monitor_read_command_requires_exact_canonical_url_shape")
         is not True
         or boundary.get("generic_azure_cli_run_rejects_monitor_metrics_url")
@@ -1575,7 +1575,10 @@ def _validate_verification(
         WORM_INFRA_COMPILED_PARAMETERS,
         QUALITY_GATE_WORKFLOW,
     ):
-        if not isinstance(required_context, list) or str(required_path) not in required_context:
+        if (
+            not isinstance(required_context, list)
+            or required_path.as_posix() not in required_context
+        ):
             errors.append(
                 f"verification required_context must include {required_path}"
             )

@@ -1213,11 +1213,17 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "--provider-observation-sha256",
         "--provider-classification",
         "--baseline-expectation-sha256",
+        "--confirm-provenance-lost",
+        "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+        "load_function_deployment_provenance_loss_confirmation",
     ),
     M365_RUNNER_PATH: (
         "_safe_bff_http_denial", "Request failed with status code 403",
         '"code": "ACCESS_DENIED"', "sealed_toolchain",
         "build_node_runtime_integrity_payloads", "pass_fds",
+        "_verify_windows_node_version", "M365_NODE_VERSION_UNSUPPORTED",
+        "int(match.group(1)) < 24",
+        '"--permission", "--allow-fs-read=*", "--allow-worker"',
     ),
     SEALED_TOOLCHAIN_PATH: (
         "O_NOFOLLOW", "F_ADD_SEALS", "F_SEAL_WRITE",
@@ -1280,6 +1286,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "_stable_observation",
         "_repair_partial_release",
         "provider_write_count",
+        "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+        "classify_function_deployment_provenance_loss",
+        "PROVENANCE_LOSS_COUNTER_KEYS",
     ),
     FUNCTION_DEPLOYMENT_RECONCILIATION_TEST_PATH: (
         "test_inspection_is_local_read_only_and_double_reads",
@@ -1287,6 +1296,9 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "test_exact_approval_releases_locks_without_changing_failed_run",
         "test_wrong_owner_or_hash_never_releases_a_lock",
         "test_crash_after_lock_append_is_recovered_idempotently",
+        "test_total_provenance_loss_is_terminal_and_has_closed_zero_counters",
+        "test_provenance_loss_rejects_wrong_binding_or_partial_inventory",
+        "test_provenance_loss_confirmation_loader_binds_hash_and_shape",
     ),
     INTERRUPTION_CONTRACT_PATH: (
         "RESOURCE_GROUP_ONLY",
@@ -1541,6 +1553,7 @@ BEHAVIOR_TEST_MODULES = (
     "tests.test_nac_bff_azure_live_commands",
     "tests.test_nac_bff_azure_interruption_baseline",
     "tests.test_nac_bff_azure_interruption_reconciliation",
+    "tests.test_nac_bff_azure_function_deployment_reconciliation",
     "tests.test_nac_bff_live_synthetic_workspace",
     "tests.test_nac_bff_azure_activation_cli",
     "tests.test_m365_spfx_site_deployment",
@@ -1549,8 +1562,13 @@ BEHAVIOR_TEST_MODULES = (
 )
 
 WINDOWS_BEHAVIOR_TEST_MODULES = (
+    "tests.test_activation_security_backend",
+    "tests.test_activation_security_windows",
     "tests.test_windows_offline_cli_portability",
     "tests.test_spfx_bff_catalog_readback_regression",
+    "tests.test_m365_bff_failed_partial_safe_completion",
+    "tests.test_nac_bff_azure_function_deployment_reconciliation",
+    "tests.test_nac_bff_azure_activation_cli",
 )
 
 
@@ -1580,16 +1598,26 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     env["TMPDIR"] = str(test_home)
     src = str((repo_root / "src").resolve())
     current = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = src if not current else os.pathsep.join((src, current))
+    roots = (str(repo_root.resolve()), src)
+    env["PYTHONPATH"] = (
+        os.pathsep.join(roots)
+        if not current
+        else os.pathsep.join((*roots, current))
+    )
     try:
         modules = (
             WINDOWS_BEHAVIOR_TEST_MODULES
             if os.name == "nt"
             else BEHAVIOR_TEST_MODULES
         )
+        invocation_modules = (
+            tuple(module.removeprefix("tests.") for module in modules)
+            if os.name == "nt"
+            else modules
+        )
         completed = subprocess.run(
-            [sys.executable, "-m", "unittest", *modules],
-            cwd=repo_root,
+            [sys.executable, "-m", "unittest", *invocation_modules],
+            cwd=repo_root / "tests" if os.name == "nt" else repo_root,
             env=env,
             check=False,
             capture_output=True,
@@ -1601,6 +1629,14 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     finally:
         temporary.cleanup()
     if completed.returncode != 0:
+        canonical_failures = _canonical_behavior_failures(
+            "\n".join((completed.stdout or "", completed.stderr or ""))
+        )
+        if canonical_failures:
+            return [
+                f"BEHAVIOR_TEST_FAILED:{failure}"
+                for failure in canonical_failures
+            ]
         return [
             "behavioral verification suite failed; run the exact listed unittest "
             "modules for local diagnostics"
@@ -1608,13 +1644,35 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
     return []
 
 
+def _canonical_behavior_failures(output: str) -> tuple[str, ...]:
+    """Return only unittest identifiers; never expose captured test output."""
+
+    matches = re.finditer(
+        r"^(?:FAIL|ERROR): (test_[A-Za-z0-9_]+) "
+        r"\(([A-Za-z0-9_.]+)\)$",
+        output,
+        flags=re.MULTILINE,
+    )
+    failures: set[str] = set()
+    for match in matches:
+        test_name, context = match.groups()
+        failures.add(
+            context if context.endswith(f".{test_name}") else f"{context}.{test_name}"
+        )
+    return tuple(sorted(failures))
+
+
 def _validate_windows_portability(
     repo_root: Path, errors: list[str]
 ) -> None:
     required_paths = (
+        Path("src/nac_bff/activation_security_backend.py"),
+        Path("src/nac_bff/activation_security_windows.py"),
         Path("src/nac_bff/azure_activation_contract.py"),
         Path("src/nac_bff/azure_activation_facade.py"),
+        Path("tests/test_activation_security_windows.py"),
         Path("tests/test_windows_offline_cli_portability.py"),
+        Path("tests/test_m365_bff_failed_partial_safe_completion.py"),
         Path(".github/workflows/windows-portability.yml"),
     )
     for relative_path in required_paths:
@@ -1630,15 +1688,22 @@ def _validate_windows_portability(
         return
     jobs = workflow.get("jobs") if isinstance(workflow, dict) else None
     job = jobs.get("windows-offline-cli") if isinstance(jobs, dict) else None
-    steps = job.get("steps") if isinstance(job, dict) else None
-    run_commands = [
-        step.get("run")
-        for step in steps or []
-        if isinstance(step, dict) and isinstance(step.get("run"), str)
-    ]
-    exact_test_command = (
-        "python -m unittest tests.test_windows_offline_cli_portability "
-        "tests.test_spfx_bff_catalog_readback_regression"
+    exact_test_commands = (
+        'python -m unittest discover -s tests -p "test_activation_security*.py"',
+        'python -m unittest discover -s tests -p "test_windows_offline_cli_portability.py"',
+        'python -m unittest discover -s tests -p "test_spfx_bff_catalog_readback_regression.py"',
+        'python -m unittest discover -s tests -p "test_m365_bff_failed_partial_safe_completion.py"',
+        'python -m unittest discover -s tests -p "test_issue746_reconciliation_gate.py"',
+        'python -m unittest discover -s tests -p "test_nac_bff_azure_activation_cli.py"',
+        'python scripts/validate_m365_azure_bff_live_activation.py',
+        'python scripts/validate_ai_sbom.py',
+        'python -m unittest discover -s tests -p "test_nac_bff_azure_*.py"',
+        'python -m unittest discover -s tests -p "test_business_case_type_*.py"',
+        'python -m unittest discover -s tests -p "test_m365_*.py"',
+        'python -m unittest discover -s tests -p "test_sqlite_evidence_staging_outbox.py"',
+        'graft build',
+        'graft check',
+        'python scripts/nac.py doctor --profile strict',
     )
     if not isinstance(workflow, dict) or workflow.get("name") != "NaC Windows Portability":
         errors.append("Windows portability workflow name differs")
@@ -1647,14 +1712,21 @@ def _validate_windows_portability(
             errors.append(f"Windows portability workflow trigger missing: {trigger}")
     if not isinstance(job, dict) or job.get("runs-on") != "windows-latest":
         errors.append("Windows portability runner differs")
-    if exact_test_command not in run_commands:
-        errors.append("Windows portability exact test command missing")
+    for exact_test_command in exact_test_commands:
+        if exact_test_command not in workflow_text:
+            errors.append(
+                f"Windows portability exact test command missing: {exact_test_command}"
+            )
     if 'python-version: "3.11"' not in workflow_text:
         errors.append("Windows portability Python 3.11 pin missing")
     if "uses: actions/checkout@v7" not in workflow_text:
         errors.append("Windows portability checkout pin differs")
     if "uses: actions/setup-python@v6" not in workflow_text:
         errors.append("Windows portability setup-python pin differs")
+    if "uses: actions/setup-node@v6" not in workflow_text:
+        errors.append("Windows portability setup-node pin differs")
+    if 'node-version: "24"' not in workflow_text:
+        errors.append("Windows portability Node.js 24 pin missing")
     if not re.search(r"(?m)^permissions:\s*\n  contents: read\s*$", workflow_text):
         errors.append("Windows portability read-only permissions missing")
     if "persist-credentials: false" not in workflow_text:
@@ -1678,6 +1750,37 @@ def _validate_windows_portability(
         errors.append("Windows portability workflow contains forbidden secret expression")
     if re.search(r"(?m)^\s+paths(?:-ignore)?:", workflow_text):
         errors.append("Windows portability workflow must not use path filters")
+
+    windows_test_path = repo_root / "tests/test_activation_security_windows.py"
+    try:
+        windows_test_text = windows_test_path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    for marker in (
+        "test_credential_guard_blocks_profile_write_before_resume",
+        "test_node_permission_guard_blocks_cache_write",
+        "test_node_permission_guard_is_inherited_by_allowed_worker",
+        "test_m365_runner_is_windows_native_and_credential_write_free",
+        "test_attested_process_is_assigned_before_resume",
+        "ERR_ACCESS_DENIED",
+        "credential_write_guard=True",
+    ):
+        if marker not in windows_test_text:
+            errors.append(f"Windows activation security test marker missing: {marker}")
+    try:
+        m365_runner_text = (repo_root / M365_RUNNER_PATH).read_text(
+            encoding="utf-8"
+        )
+    except OSError:
+        return
+    for marker in (
+        "_verify_windows_node_version",
+        "M365_NODE_VERSION_UNSUPPORTED",
+        "int(match.group(1)) < 24",
+        '"--permission", "--allow-fs-read=*", "--allow-worker"',
+    ):
+        if marker not in m365_runner_text:
+            errors.append(f"Windows M365 runner marker missing: {marker}")
 
     test_path = repo_root / "tests/test_windows_offline_cli_portability.py"
     try:
@@ -2101,6 +2204,132 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
         "domain",
         errors,
     )
+    provenance_loss = domain.get("function_deployment_provenance_loss")
+    expected_loss_counters = {
+        "github_read_count",
+        "credential_access_count",
+        "network_access_count",
+        "subprocess_count",
+        "provider_read_count",
+        "provider_write_count",
+        "tenant_write_count",
+        "local_write_count",
+        "journal_append_count",
+        "quarantine_release_count",
+        "package_build_count",
+        "live_run_count",
+        "recovery_count",
+        "retry_count",
+        "rollback_count",
+        "deletion_count",
+    }
+    expected_provenance_loss_keys = {
+        "issue",
+        "action",
+        "run_id",
+        "confirmation_schema",
+        "confirmation_source",
+        "confirmation_sha256_required",
+        "identity_resolver_required",
+        "identity_resolver_access",
+        "identity_resolver_sha256_bound_in_confirmation",
+        "principal_mode",
+        "owner_confirmation_evidence",
+        "legacy_github_approval_arguments_required",
+        "legacy_github_approval_arguments_allowed",
+        "ordinary_arguments_are_not_trusted_expected_values",
+        "canonical_run_path_source",
+        "original_lock_binding_source",
+        "activation_plan_build_allowed",
+        "expected_artifact_categories",
+        "positive_condition",
+        "partial_expected_inventory",
+        "uninspectable_expected_inventory",
+        "exact_result",
+        "operation_counts_closed",
+        "forbidden_sources",
+        "opens_gates",
+    }
+    if not isinstance(provenance_loss, dict):
+        errors.append("domain function deployment provenance-loss contract missing")
+    else:
+        if set(provenance_loss) != expected_provenance_loss_keys:
+            errors.append("domain function deployment provenance-loss keys differ")
+        _require_values(
+            provenance_loss,
+            {
+                "issue": 739,
+                "action": "CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+                "run_id": "nac-bff-live-20260908-issue739-v4",
+                "confirmation_schema": (
+                    "nac.issue739-function-deployment-provenance-loss-confirmation/v1"
+                ),
+                "confirmation_source": (
+                    "repository_external_windows_sid_dacl_bound_file"
+                ),
+                "confirmation_sha256_required": True,
+                "identity_resolver_required": True,
+                "identity_resolver_access": "local_read_only",
+                "identity_resolver_sha256_bound_in_confirmation": True,
+                "principal_mode": "OWNER_SOLO_APPROVAL",
+                "owner_confirmation_evidence": (
+                    "protected_confirmation_record_only"
+                ),
+                "legacy_github_approval_arguments_required": False,
+                "legacy_github_approval_arguments_allowed": False,
+                "ordinary_arguments_are_not_trusted_expected_values": True,
+                "original_lock_binding_source": (
+                    "protected_confirmation_record"
+                ),
+                "activation_plan_build_allowed": False,
+                "canonical_run_path_source": (
+                    "fixed_output_root_plus_confirmed_activation_hash"
+                ),
+                "positive_condition": (
+                    "canonical_run_directory_and_all_three_confirmation_bound_original_lock_journals_absent"
+                ),
+                "partial_expected_inventory": (
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_INVALID"
+                ),
+                "uninspectable_expected_inventory": (
+                    "FUNCTION_DEPLOYMENT_PROVENANCE_LOSS_STATE_UNINSPECTABLE"
+                ),
+                "expected_artifact_categories": [
+                    "resume_state",
+                    "activation_evidence",
+                    "ledger",
+                    "target_lock_journal",
+                    "legacy_lock_journal",
+                    "legacy_host_lock_journal",
+                    "prepared_inputs_manifest",
+                    "function_package",
+                ],
+                "forbidden_sources": [
+                    "model_knowledge",
+                    "issue_text",
+                    "provider_state",
+                ],
+                "opens_gates": [],
+            },
+            "domain function deployment provenance loss",
+            errors,
+        )
+        if provenance_loss.get("exact_result") != {
+            "status": "BLOCKED",
+            "reason_code": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST",
+            "terminal": True,
+            "retry_allowed": False,
+            "next_phase": None,
+            "cli_exit_code": 2,
+        }:
+            errors.append("domain function deployment provenance-loss result differs")
+        counters = provenance_loss.get("operation_counts_closed")
+        if (
+            not isinstance(counters, dict)
+            or set(counters) != expected_loss_counters
+            or any(type(value) is not int or value != 0 for value in counters.values())
+        ):
+            errors.append("domain function deployment provenance-loss counters differ")
     steps = domain.get("steps")
     actual_steps = [
         (step.get("order"), step.get("id"))
@@ -2205,7 +2434,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
             )
             expected_runtime_binding = {
                 "runtime_executable_bytes_mode": (
-                    "linux_sealed_memfd_and_proc_fd_only"
+                    "platform_handle_bound_exact_bytes"
                 ),
                 "node_runtime_bundle_digest_fields": [
                     "m365_cli_sha256",
@@ -2218,16 +2447,20 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 "runtime_unmanifested_or_changed_module_execution_allowed": False,
                 "runtime_native_node_addons_allowed": False,
                 "runtime_module_symlinks_allowed": False,
-                "linux_memfd_and_proc_fd_required": True,
+                "platform_handle_binding_required": True,
                 "azure_cli_runtime_bundle_digest_field": (
                     "azure_cli_toolchain_sha256"
                 ),
                 "azure_cli_runtime_bytes_mode": (
-                    "linux_sealed_memfd_subprocess"
+                    "platform_attested_interpreter_job_object"
                 ),
                 "azure_cli_original_wrapper_execution_allowed": False,
-                "azure_cli_private_user_and_mount_namespace_required": True,
-                "azure_cli_namespace_unavailable_behavior": (
+                "azure_cli_credential_write_guard_required": True,
+                "azure_cli_process_containment_mode": (
+                    "suspended_start_job_object_kill_on_close_low_integrity_"
+                    "write_guard"
+                ),
+                "credential_guard_unavailable_behavior": (
                     "fail_closed_before_provider_request"
                 ),
                 "azure_cli_extension_loading_allowed": False,
@@ -2369,7 +2602,7 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 ),
                 "provider_artifact_binding_mode": (
                     "expected_sha256_pre_and_post_verified_private_readonly_by_default_"
-                    "filename_preserving_snapshot_via_inherited_directory_fd_"
+                    "filename_preserving_platform_handle_binding_"
                     "attested_provider_same_account_attacker_excluded"
                 ),
                 "spfx_package_reproducibility_mode": (
@@ -2389,19 +2622,19 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 errors.append(
                     "domain sealed toolchain runtime binding differs"
                 )
-            if toolchain.get("windows_light_runner") != {
-                "enabled": False,
-                "support_mode": "offline_only",
-                "live_activation": "blocked",
-                "recovery": "blocked",
-                "reconciliation": "blocked",
+            if toolchain.get("windows_native_runner") != {
+                "enabled": True,
+                "support_mode": "native_control_plane",
+                "live_activation": "capability_guarded",
+                "recovery": "capability_guarded",
+                "reconciliation": "capability_guarded_read_only",
                 "stable_error_code": "PLATFORM_SECURITY_BACKEND_UNAVAILABLE",
                 "writes_started": False,
                 "minimum_os": "Windows 11",
                 "wsl_required": False,
                 "container_required": False,
             }:
-                errors.append("domain Windows offline-only boundary differs")
+                errors.append("domain Windows native boundary differs")
 
     function_deploy_step = next(
         (
@@ -3412,6 +3645,13 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
         "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP"
     ):
         errors.append("verification resume error code must be RESUME_DISABLED_FOR_MVP")
+    if failure_behavior.get("terminal_step_7_original_provenance_lost") != (
+        "return_local_BLOCKED_FUNCTION_DEPLOYMENT_PROVENANCE_LOST_with_"
+        "terminal_true_retry_false_next_phase_null_and_all_closed_operation_"
+        "counts_zero_without_github_credential_network_subprocess_provider_"
+        "tenant_journal_package_recovery_retry_or_live_access"
+    ):
+        errors.append("verification function provenance-loss behavior differs")
 
 
 def _validate_negative_assertions(

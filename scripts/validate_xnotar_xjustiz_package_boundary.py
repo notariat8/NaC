@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from copy import deepcopy
@@ -18,7 +19,31 @@ QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "xnotar-xjustiz-package-boundary.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "xnotar-xjustiz-package-boundary.md"
-GIT_EXECUTABLE = Path("/usr/bin/git")
+
+
+def _resolve_git_executable() -> Path:
+    candidates: list[Path] = []
+    if os.name == "nt":
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+        candidates.extend(
+            (
+                program_files / "Git" / "cmd" / "git.exe",
+                program_files / "Git" / "bin" / "git.exe",
+            )
+        )
+    else:
+        candidates.append(Path("/usr/bin/git"))
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            continue
+        if resolved.is_file() and resolved.name.lower() in {"git", "git.exe"}:
+            return resolved
+    return Path("/__nac_bound_git_missing__")
+
+
+GIT_EXECUTABLE = _resolve_git_executable()
 
 CONTRACT_ID = "workflow.xnotar_xjustiz_package_boundary"
 MANIFEST_SCHEMA_VERSION = "nac.xnotar-xjustiz-package-boundary/v0.1"

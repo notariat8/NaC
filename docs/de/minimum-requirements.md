@@ -4,16 +4,22 @@
 
 | Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
 | --- | --- | --- |
-| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | Live-Aktivierung und Recovery für Issue #746 sind unabhängig vom Backend fail-closed gesperrt; nur die separat gebundene Read-only-Reconciliation ist zulässig |
 | Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
 
 Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
-Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
-nicht für Live-Ausführung freischalten.
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können ein
+fehlendes Sicherheitsbackend nicht umgehen. Der Windows-Live-Pfad verlangt
+NTFS-Handle-/Datei-ID-Bindung, SID-/DACL- und Reparse-Prüfung, Named Mutex,
+Job Object, atomare Flush-Semantik sowie einen schreibfreien Credential-Guard
+für Azure CLI und M365/Node. Fehlt eine dieser Fähigkeiten, stoppt der Pfad mit
+`PLATFORM_SECURITY_BACKEND_UNAVAILABLE` vor Credential-, Netzwerk- oder
+Providerzugriff. Das Vorhandensein des Backends hebt die ausdrückliche
+Windows-Sperre für Live-Aktivierung und Recovery nicht auf.
 
 Status: verbindliche Day-0-Baseline
-Letzte inhaltliche Anpassung: 2026-05-15
+Letzte inhaltliche Anpassung: 2026-09-19
 
 ## Zweck
 
@@ -39,7 +45,7 @@ Der Base-Workspace ist die Mindestumgebung für Arbeit am Repository:
 | --- | --- | --- |
 | Betriebssystem | Windows 11 oder ein aktuelles, gepflegtes Entwickler-OS | Lokale Entwicklung und GitOps-Arbeit |
 | Git | installiert und im `PATH` | Versionierung, Branches, Pull Requests |
-| GitHub CLI `gh` | installiert und authentifiziert | PR-, Actions- und Repo-Operationen |
+| GitHub-Lesekanal | authentifizierter GitHub-Connector bevorzugt; `gh` optional | PR- und Actions-Leseoperationen; Git/GCM bleibt auf Git-Transport begrenzt |
 | Python | `>= 3.11` | deterministische Checks, KG-Runtime, Workflow-Runtime |
 | Codex | erforderlich | Agentenunterstützte Mitarbeit |
 | `pandoc` | empfohlen | späterer Dokumentexport |

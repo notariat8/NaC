@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import fcntl
 import hashlib
 import json
 import math
@@ -17,6 +16,8 @@ from email.utils import format_datetime
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Iterator, Mapping
 from uuid import UUID
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
 
 from .azure_performance_authorization import (
     BLOB_BOOTSTRAP,
@@ -416,7 +417,7 @@ class _PrivateLifecycleStore:
                 dir_fd=directory,
             )
             self._validate_named_file(directory, self._run_lock_name, descriptor)
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_exclusive(descriptor, nonblocking=True)
             self._validate_named_file(directory, self._run_lock_name, descriptor)
         except BlockingIOError:
             if descriptor >= 0:
@@ -434,7 +435,7 @@ class _PrivateLifecycleStore:
             yield
         finally:
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
             finally:
                 os.close(descriptor)
                 os.close(directory)
@@ -450,7 +451,7 @@ class _PrivateLifecycleStore:
                 self._lock_name, flags, 0o600, dir_fd=directory
             )
             self._validate_named_file(directory, self._lock_name, descriptor)
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            lock_exclusive(descriptor, nonblocking=False)
             self._validate_named_file(directory, self._lock_name, descriptor)
         except OSError:
             if descriptor >= 0:
@@ -462,7 +463,7 @@ class _PrivateLifecycleStore:
             yield directory
         finally:
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                unlock(descriptor)
             finally:
                 os.close(descriptor)
                 os.close(directory)

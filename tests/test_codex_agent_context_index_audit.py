@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -172,7 +174,7 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                 outside = root.parent / "outside"
                 outside.mkdir()
                 (outside / "external.md").write_text("external", encoding="utf-8")
-                (root / "link").symlink_to(outside, target_is_directory=True)
+                _create_directory_alias(root / "link", outside)
                 for glob_matches in (
                     index_glob_matches,
                     context_glob_matches,
@@ -186,7 +188,8 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                         self.assertFalse(glob_matches("link/*.md", root))
 
                 linked_file = docs / "linked.md"
-                linked_file.symlink_to(outside / "external.md")
+                if os.name != "nt":
+                    linked_file.symlink_to(outside / "external.md")
                 depth = root / "depth" / "de" / "nested"
                 depth.mkdir(parents=True)
                 (depth / "context.md").write_text("nested", encoding="utf-8")
@@ -194,7 +197,7 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                 generated.mkdir()
                 (generated / "evidence.md").write_text("evidence", encoding="utf-8")
                 internal_alias = root / "alias"
-                internal_alias.symlink_to(generated, target_is_directory=True)
+                _create_directory_alias(internal_alias, generated)
                 git_dir = root / ".git"
                 git_dir.mkdir()
                 (git_dir / "hidden.md").write_text("hidden", encoding="utf-8")
@@ -210,8 +213,9 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                         boundary="file_and_generated_filters",
                     ):
                         self.assertTrue(glob_matches("docs/de/context.md", root))
-                        self.assertFalse(glob_matches("docs/linked*.md", root))
-                        self.assertFalse(glob_matches("docs/linked.md", root))
+                        if os.name != "nt":
+                            self.assertFalse(glob_matches("docs/linked*.md", root))
+                            self.assertFalse(glob_matches("docs/linked.md", root))
                         self.assertFalse(glob_matches("alias/evidence.md", root))
                         self.assertFalse(glob_matches("ignored/empty", root))
                         self.assertFalse(glob_matches("depth/*/*.md", root))
@@ -222,6 +226,21 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
 
 def _read_json(rel_path: str) -> dict[str, object]:
     return json.loads((REPO_ROOT / rel_path).read_text(encoding="utf-8"))
+
+
+def _create_directory_alias(link: Path, target: Path) -> None:
+    if os.name != "nt":
+        link.symlink_to(target, target_is_directory=True)
+        return
+    completed = subprocess.run(
+        ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+        check=False,
+        capture_output=True,
+        text=True,
+        shell=False,
+    )
+    if completed.returncode != 0:
+        raise OSError(f"junction fixture failed: {completed.returncode}")
 
 
 if __name__ == "__main__":

@@ -13,3 +13,13 @@ Identify the smallest sufficient command set for the change, plus any strict qua
 Do not edit files. Do not claim a command passed unless fresh output is provided.
 
 Return exact commands, expected scope, and gaps in validator or test coverage.
+
+Flag completion claims when validation, merge, branch cleanup, or another agent-executable next step is still pending and no owner input is needed.
+
+Apply the persistent owner working agreement to validation evidence. The pre-final check must reject completion while an agent-executable next step without owner input remains, including validation or branch cleanup; if only an owner gate remains, require one concrete approval text.
+
+Work only from the scoped prompt and referenced files. Do not depend on or request the full parent task history.
+
+Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when selecting validation commands: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
+
+Require negative validation for same-principal account aliases, uncited requirement claims, `OWNER_SOLO_APPROVAL` being recorded as non-four-eyes, and `BLOCKED_SINGLE_PRINCIPAL` when a cited applicable two-person duty cannot be satisfied.

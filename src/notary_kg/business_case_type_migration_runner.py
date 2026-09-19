@@ -8,6 +8,11 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
+from nac_bff.activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
+
 from .business_case_type_migration import (
     LocalMigrationReplayPort,
     MigrationValidationError,
@@ -219,6 +224,8 @@ def run_offline_migration(
 
 
 def read_repository_head(repo_root: Path) -> str:
+    if os.name == "nt":
+        return _read_repository_head_windows(repo_root)
     try:
         root = Path(os.path.abspath(repo_root))
         dot_git = root / ".git"
@@ -408,7 +415,12 @@ def _entry_exists_at(directory_fd: int, name: str) -> bool:
 
 
 def _read_object(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    raw = (
+        _read_windows_bound_text(path, encoding="utf-8", max_bytes=_MAX_FIXTURE_BYTES)
+        if os.name == "nt"
+        else path.read_text(encoding="utf-8")
+    )
+    value = json.loads(raw)
     if not isinstance(value, dict):
         raise MigrationValidationError("JSON root must be an object")
     return value
@@ -425,6 +437,24 @@ def _read_fixture_object(repo_root: Path, fixture: Path) -> dict[str, Any]:
         or components[: len(fixture_root_components)] != fixture_root_components
     ):
         raise MigrationValidationError("fixture_invalid")
+    if os.name == "nt":
+        try:
+            raw = _read_windows_bound_text(
+                repo_root.joinpath(*components),
+                encoding="utf-8",
+                max_bytes=_MAX_FIXTURE_BYTES,
+            )
+        except (
+            OSError,
+            UnicodeError,
+            SecurityBoundaryError,
+            RepositoryStateError,
+        ) as exc:
+            raise MigrationValidationError("fixture_invalid") from exc
+        value = json.loads(raw)
+        if not isinstance(value, dict):
+            raise MigrationValidationError("fixture_invalid")
+        return value
     descriptor = _open_absolute_directory(repo_root)
     try:
         for component in components[:-1]:
@@ -445,6 +475,138 @@ def _read_fixture_object(repo_root: Path, fixture: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise MigrationValidationError("fixture_invalid")
     return value
+
+
+def _read_windows_bound_text(
+    path: Path, *, encoding: str, max_bytes: int
+) -> str:
+    if type(max_bytes) is not int or max_bytes <= 0:
+        raise RepositoryStateError()
+    candidate = Path(os.path.abspath(path))
+    backend = get_platform_security_backend()
+    snapshot = backend.inspect_bound_input_path(
+        candidate, purpose="migration-repository-read"
+    )
+    if snapshot.size > max_bytes:
+        raise RepositoryStateError()
+    with backend.open_bound_input_read(candidate, snapshot) as stream:
+        raw = stream.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise RepositoryStateError()
+    return raw.decode(encoding)
+
+
+def _require_windows_bound_directory(path: Path) -> None:
+    backend = get_platform_security_backend()
+    with backend.open_secure_directory(
+        Path(os.path.abspath(path)),
+        create=False,
+        require_current_owner=False,
+        require_restrictive_dacl=False,
+    ) as session:
+        if (
+            session.binding.owner_sid_sha256
+            != backend.current_operator_binding().sid_sha256
+        ):
+            raise SecurityBoundaryError("FILE_OWNER_MISMATCH")
+
+
+def _read_repository_head_windows(repo_root: Path) -> str:
+    try:
+        root = Path(os.path.abspath(repo_root))
+        _require_windows_bound_directory(root)
+        dot_git = root / ".git"
+        if dot_git.is_dir():
+            _require_windows_bound_directory(dot_git)
+            git_dir = dot_git
+            common_dir = dot_git
+            if (git_dir / "commondir").exists() or (git_dir / "gitdir").exists():
+                raise RepositoryStateError()
+        else:
+            marker = _read_windows_bound_text(
+                dot_git, encoding="utf-8", max_bytes=_MAX_ADMIN_FILE_BYTES
+            ).strip()
+            if not marker.startswith("gitdir: ") or "\n" in marker:
+                raise RepositoryStateError()
+            git_dir = _absolute_path(root, marker[8:])
+            if git_dir.parent.name != "worktrees" or git_dir.parent.parent.name != ".git":
+                raise RepositoryStateError()
+            common_dir = git_dir.parent.parent
+            _require_windows_bound_directory(common_dir)
+            _require_windows_bound_directory(git_dir.parent)
+            _require_windows_bound_directory(git_dir)
+            backlink = _read_windows_bound_text(
+                git_dir / "gitdir",
+                encoding="utf-8",
+                max_bytes=_MAX_ADMIN_FILE_BYTES,
+            ).strip()
+            if _absolute_path(git_dir, backlink) != dot_git:
+                raise RepositoryStateError()
+            commondir = _read_windows_bound_text(
+                git_dir / "commondir",
+                encoding="utf-8",
+                max_bytes=_MAX_ADMIN_FILE_BYTES,
+            ).strip()
+            if _absolute_path(git_dir, commondir) != common_dir:
+                raise RepositoryStateError()
+
+        head = _read_windows_bound_text(
+            git_dir / "HEAD",
+            encoding="ascii",
+            max_bytes=_MAX_ADMIN_FILE_BYTES,
+        ).strip()
+        if _OBJECT_ID.fullmatch(head):
+            return head
+        if not head.startswith("ref: "):
+            raise RepositoryStateError()
+        ref = head[5:]
+        if not _safe_ref(ref):
+            raise RepositoryStateError()
+        ref_path = common_dir.joinpath(*ref.split("/"))
+        try:
+            value = _read_windows_bound_text(
+                ref_path,
+                encoding="ascii",
+                max_bytes=_MAX_ADMIN_FILE_BYTES,
+            ).strip()
+        except (FileNotFoundError, SecurityBoundaryError):
+            pass
+        else:
+            if _OBJECT_ID.fullmatch(value):
+                return value
+            raise RepositoryStateError()
+        try:
+            packed_refs = _read_windows_bound_text(
+                common_dir / "packed-refs",
+                encoding="ascii",
+                max_bytes=_MAX_PACKED_REFS_BYTES,
+            )
+        except (FileNotFoundError, SecurityBoundaryError):
+            packed_refs = ""
+        matches: list[str] = []
+        for line in packed_refs.splitlines():
+            if not line or line.startswith(("#", "^")):
+                continue
+            fields = line.split(" ")
+            if (
+                len(fields) != 2
+                or not _OBJECT_ID.fullmatch(fields[0])
+                or not _safe_ref(fields[1])
+            ):
+                raise RepositoryStateError()
+            if fields[1] == ref:
+                matches.append(fields[0])
+        if len(matches) == 1:
+            return matches[0]
+    except (
+        OSError,
+        UnicodeError,
+        ValueError,
+        SecurityBoundaryError,
+        RepositoryStateError,
+    ):
+        pass
+    raise RepositoryStateError("repository_state_unavailable")
 
 def _overlaps(left: Path, right: Path) -> bool:
     return left == right or left in right.parents or right in left.parents

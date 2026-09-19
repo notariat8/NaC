@@ -227,6 +227,26 @@ def _boundaries() -> dict[str, Any]:
 
 
 def _read_trusted_state_bytes(path: Path) -> bytes | None:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        if not path.is_absolute():
+            return None
+        try:
+            backend = get_platform_security_backend()
+            binding = backend.inspect_private_path(
+                path, purpose="provisioner-state"
+            )
+            if binding.size < 1 or binding.size > _MAX_STATE_BYTES:
+                return None
+            with backend.open_bound_read(path, binding) as handle:
+                raw = handle.read(_MAX_STATE_BYTES + 1)
+            return raw if len(raw) == binding.size else None
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return None
     if not path.is_absolute() or not _trusted_parent_chain(path.parent):
         return None
     descriptor: int | None = None
@@ -292,6 +312,26 @@ def _same_file_snapshot(left: os.stat_result, right: os.stat_result) -> bool:
 
 
 def _trusted_regular_file_metadata(path: Path, *, private_key: bool) -> bool:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        if not path.is_absolute():
+            return False
+        try:
+            metadata = get_platform_security_backend().inspect_private_metadata(
+                path,
+                purpose=(
+                    "provisioner-private-key"
+                    if private_key
+                    else "provisioner-certificate"
+                ),
+            )
+            return not metadata.reparse_point
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return False
     if not path.is_absolute() or not _trusted_parent_chain(path.parent):
         return False
     try:
@@ -343,6 +383,17 @@ def _sha256_text(value: str) -> str:
 
 
 def _trusted_parent_chain(path: Path) -> bool:
+    if os.name == "nt":
+        from .activation_security_backend import (
+            SecurityBoundaryError,
+            get_platform_security_backend,
+        )
+
+        try:
+            get_platform_security_backend().validate_private_directory(path)
+            return True
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return False
     try:
         current = path
         while current != current.parent:

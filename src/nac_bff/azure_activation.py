@@ -4,7 +4,9 @@ import ast
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import stat
 import subprocess
 from typing import Any
@@ -84,7 +86,7 @@ API_CLIENT_ID_BINDING = {
 }
 
 _SPFX_ROOT = "spfx/nac-bpmn-viewer"
-_GIT_EXECUTABLE = Path("/usr/bin/git")
+_GIT_EXECUTABLE = Path(shutil.which("git") or "/usr/bin/git")
 _PACKAGE_BUILDER_SHA256 = (
     "6c273c71baa8b133eb4bd4f061a8d2681d029057d0138cacb7f71c8ee77bd3d0"
 )
@@ -278,32 +280,27 @@ def _spfx_source_manifest_binding(
     if git is None:
         return None, "generated:spfx-source-manifest"
     try:
-        completed = subprocess.run(
-            [
-                git,
-                "--no-optional-locks",
-                "-C",
-                str(root),
+        completed = _run_git_text(
+            Path(git),
+            root,
+            (
                 "ls-files",
                 "--cached",
                 "--others",
                 "--exclude-standard",
                 "--",
                 _SPFX_ROOT,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
+            ),
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return None, "generated:spfx-source-manifest"
-    if completed.returncode != 0:
+    if completed is None or completed[0] != 0:
         return None, "generated:spfx-source-manifest"
 
     entries: list[dict[str, str]] = []
     for relative in sorted(
-        line.strip() for line in completed.stdout.splitlines() if line.strip()
+        line.strip() for line in completed[1].splitlines() if line.strip()
     ):
         path = root / relative
         if path.is_symlink():
@@ -594,18 +591,19 @@ def _source_commit(root: Path) -> str:
     if git is None:
         return ""
     try:
-        completed = subprocess.run(
-            [git, "-C", str(root), "rev-parse", "--verify", "HEAD^{commit}"],
-            check=False,
-            capture_output=True,
-            text=True,
+        completed = _run_git_text(
+            Path(git),
+            root,
+            ("rev-parse", "--verify", "HEAD^{commit}"),
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return ""
-    commit = completed.stdout.strip().lower()
+    if completed is None:
+        return ""
+    commit = completed[1].strip().lower()
     if (
-        completed.returncode != 0
+        completed[0] != 0
         or len(commit) != 40
         or any(character not in "0123456789abcdef" for character in commit)
     ):
@@ -614,6 +612,20 @@ def _source_commit(root: Path) -> str:
 
 
 def _trusted_git_executable() -> str | None:
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            get_platform_security_backend().inspect_private_path(
+                _GIT_EXECUTABLE,
+                purpose="toolchain-executable",
+            )
+            return str(_GIT_EXECUTABLE)
+        except (OSError, SecurityBoundaryError, RuntimeError):
+            return None
     try:
         metadata = _GIT_EXECUTABLE.stat()
     except OSError:
@@ -625,3 +637,67 @@ def _trusted_git_executable() -> str | None:
     ):
         return None
     return str(_GIT_EXECUTABLE)
+
+
+def _run_git_text(
+    executable: Path,
+    root: Path,
+    arguments: tuple[str, ...],
+    *,
+    timeout: float,
+) -> tuple[int, str] | None:
+    command_arguments = (
+        "--no-optional-locks",
+        "--no-replace-objects",
+        "-C",
+        str(root),
+        *arguments,
+    )
+    if os.name == "nt":
+        try:
+            from .activation_security_backend import (
+                ProcessSpec,
+                SecurityBoundaryError,
+                get_platform_security_backend,
+            )
+
+            backend = get_platform_security_backend()
+            executable_hash = backend.inspect_private_path(
+                executable,
+                purpose="toolchain-executable",
+            ).sha256
+            environment = {
+                key: os.environ[key]
+                for key in ("SystemRoot", "TEMP", "TMP", "USERPROFILE", "HOME")
+                if key in os.environ
+            }
+            result = backend.launch_attested_process(
+                ProcessSpec(
+                    executable=executable,
+                    arguments=command_arguments,
+                    cwd=root,
+                    environment=environment,
+                    executable_sha256=executable_hash,
+                    timeout_seconds=timeout,
+                    maximum_output_bytes=8 * 1024 * 1024,
+                    allowed_exit_codes=tuple(range(256)),
+                )
+            )
+            return (
+                result.exit_code,
+                result.stdout.decode("utf-8", errors="strict"),
+            )
+        except (OSError, UnicodeDecodeError, SecurityBoundaryError, RuntimeError):
+            return None
+    try:
+        completed = subprocess.run(
+            [str(executable), *command_arguments],
+            check=False,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return completed.returncode, completed.stdout

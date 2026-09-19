@@ -15,11 +15,17 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Das Zielmodell ist `Notariat as Code`, der operative Änderungsfluss ist `Enterprise GitOps`.
 - NaC ist ausschließlich für Notariate und notarielle Vorgangsarten gedacht. Nicht-notarielle Produktpfade oder Beispiele sind keine gültigen NaC-Beispiele.
 - Fachliche Wahrheit entsteht durch versionierte Änderung + Review + Freigabe.
-- Sensible Schritte brauchen Vier-Augen-Freigabe.
+- Sensible Schritte brauchen die jeweils belegte Freigabeform: Ohne konkret
+  gebundene externe Zwei-Personen-Pflicht ist `OWNER_SOLO_APPROVAL` zulässig;
+  echte Vier-Augen-Freigabe erfordert zwei verschiedene natürliche Principals.
 - Prozessänderungen werden immer mit Begründung dokumentiert.
 - Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](docs/en/regelarchitektur.md).
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
+- Für GitHub-Read-only-Operationen werden zuerst der vorhandene authentifizierte GitHub-MCP/Connector und danach nur bereits etablierte, für die konkrete Operation geeignete Kanäle geprüft. `gh` ist optional; ein fehlendes oder fehlerhaftes `gh auth status` beweist weder einen GitHub-Ausfall noch die Notwendigkeit einer Anmeldung.
+- Ein Agent darf `gh auth login`, einen GitHub-Gerätecode, einen Browserlogin, Tokenimport, Accountwechsel oder eine andere interaktive Anmeldung nur nach ausdrücklicher Autorisierung genau dieses Providers und genau dieser Login-Aktion im aktuellen Task starten. Frühere, einmalige, abgebrochene oder in einem anderen Task erteilte Login-Freigaben sind nicht wiederverwendbar. Ein pauschales `Login jetzt` darf niemals GitHub- und Microsoft-/Entra-Anmeldung gemeinsam autorisieren.
+- `GH_TOKEN`, `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN` und `GITHUB_ENTERPRISE_TOKEN` werden bei der Diagnose ausschließlich nach Variablenname, Scope und Quelle geprüft; Werte werden niemals gelesen, ausgegeben, kopiert, gehasht oder persistiert. Git-/GCM-Credentials werden nicht in `gh`, MCP-, API- oder Bearer-Token konvertiert.
+- Für Issue `#746` gilt zusätzlich der eigene Safe-Completion-Vertrag: Unter Windows stoppen Live-, Recovery-, Provider-Schreib- und Credential-Mutationspfade vor Credential-, Netzwerk- und Provider-Zugriff. Ausschließlich die final-HEAD-, PR-#747-, Check-, Resolver-, Principal- und `OWNER_SOLO_APPROVAL`-gebundene Read-only-Reconciliation darf den etablierten Provider-Lesekanal verwenden; CLI, Port-Factory und jeder Provider-Read erzwingen dieselbe produktive Autorisierung. Der read-only Issue-/PR-Abgleich und die Reconciliation dürfen keinen GitHub-Gerätecode und keinen Funktion8-/Entra-Browserlogin anfordern oder als nächsten Schritt anbieten. Fehlt ein bereits etablierter Kanal, wird die konkrete Capability-Lücke gemeldet.
 - Spec-Traceability gilt für neue oder geänderte nichttriviale Specs: Issue, Spec, Plan, AC-IDs und Validierungsbefehle werden nach [workflows/contracts/spec-traceability.contract.json](workflows/contracts/spec-traceability.contract.json) verbunden und mit [scripts/validate_spec_traceability.py](scripts/validate_spec_traceability.py) geprüft.
 - Nichttriviale agentische Arbeit folgt `plan -> review -> fix` vor der Umsetzung und `implement -> review -> fix` vor der Abnahme. Neue nichttriviale Features durchlaufen vor dem Plan den Brainstorming-Skill ([workflows/skills/brainstorming/SKILL.md](workflows/skills/brainstorming/SKILL.md)): Kontext erkunden, klärende Fragen, 2-3 Ansätze mit Trade-offs, Design-Freigabe, Spec-Dokument in [docs/de/superpowers/specs/](docs/de/superpowers/specs/) und [docs/en/superpowers/specs/](docs/en/superpowers/specs/), Spec-Review, dann erst Implementierung. Bei wiederholten, unklaren oder schichtübergreifenden Fehlern gilt Diagnose vor Fix.
 - Vor Merge, Owner-Merge oder PR-Abschluss wird die vollständige PR-Diff gegen den Zielbranch geprüft: `base...head`, Datei- und Commitliste. Ein einzelner HEAD-Commit reicht nicht. Wenn die Diff nicht freigegebenen Scope enthält, stoppen und Branch neu schneiden oder den kombinierten Scope ausdrücklich dokumentieren.
@@ -72,6 +78,14 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
 - Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
 - 8-Brand-Assets für `n8` und künftige `*8`-Repos stammen kanonisch aus `bild8/www-b8` und den veröffentlichten Pfaden unter `https://bild8.de/assets/8/`. Lokale Kopien sind nur für Offline-Oberflächen oder Tests zulässig und müssen mit dieser Quelle synchron bleiben.
+
+## Governance-Identität
+
+- Provider-qualifizierte Accounts (`<provider>:<login>`) werden in [policies/github-identity-registry.json](policies/github-identity-registry.json) auf stabile `principal_id`-Werte abgebildet. Governance-Rollen und Qualifikationen gehören ausschließlich zum Principal.
+- Vier-Augen-, Funktionstrennungs- und Approver-versus-Operator-Prüfungen vergleichen ausschließlich `principal_id`. Verschiedene Accounts desselben Principals gelten niemals als zwei Personen. Rohe Login-Strings sind keine Governance-Identitäten.
+- Account-Routing und Zugriffsrechte bleiben provider- und kontospezifisch; die gemeinsame Principal-ID erweitert keine Account-Berechtigung.
+- Im Single-Principal-Betrieb ist ohne konkret belegte externe Zwei-Personen-Pflicht `OWNER_SOLO_APPROVAL` zulässig und revisionsfest als Solo-Entscheidung zu dokumentieren, niemals als Vier-Augen-Freigabe.
+- Verlangt eine konkret zitierte gesetzliche, regulatorische, vertragliche oder verbindliche Security-Policy zwei verschiedene natürliche Personen, blockiert das Gate mit `BLOCKED_SINGLE_PRINCIPAL`. Eine Rollenbezeichnung allein ist kein solcher Beleg.
 
 ## Gemeinsame Agenten-Workflows
 

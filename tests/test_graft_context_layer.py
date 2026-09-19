@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts import validate_graft_context_layer as graft_validator
 
@@ -40,7 +42,15 @@ class GraftCheckBehaviourTests(unittest.TestCase):
         original = graft_validator.shutil.which
         graft_validator.shutil.which = lambda _command: None
         try:
-            errors = graft_validator._validate_graft_check()
+            with patch.dict(
+                graft_validator.os.environ,
+                {
+                    "APPDATA": "Z:/missing",
+                    "USERPROFILE": "Z:/missing",
+                    "ProgramFiles": "Z:/missing",
+                },
+            ):
+                errors = graft_validator._validate_graft_check()
         finally:
             graft_validator.shutil.which = original
         self.assertEqual(len(errors), 1)
@@ -50,6 +60,71 @@ class GraftCheckBehaviourTests(unittest.TestCase):
         if shutil.which("graft") is None:
             self.skipTest("graft-CLI in dieser Umgebung nicht installiert")
         self.assertEqual(graft_validator._validate_graft_check(), [])
+
+    def test_windows_cmd_wrapper_resolves_to_bound_node_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            wrapper = root / "graft.cmd"
+            node = root / "node.exe"
+            cli = root / "node_modules" / "@nanonets" / "graft" / "dist" / "cli.js"
+            cli.parent.mkdir(parents=True)
+            for path in (wrapper, node, cli):
+                path.write_text("fixture", encoding="utf-8")
+
+            def which(command: str) -> str | None:
+                return str(wrapper) if command == "graft" else None
+
+            with (
+                patch.object(
+                    graft_validator, "_is_windows_runtime", return_value=True
+                ),
+                patch.object(graft_validator.shutil, "which", side_effect=which),
+                patch.dict(
+                    graft_validator.os.environ,
+                    {"APPDATA": "Z:/missing", "USERPROFILE": "Z:/missing"},
+                ),
+            ):
+                command = graft_validator._resolve_graft_check_command()
+
+        self.assertEqual(command, [str(node.resolve()), str(cli.resolve()), "check"])
+
+    def test_windows_standard_npm_location_does_not_require_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            appdata = root / "appdata"
+            program_files = root / "program-files"
+            wrapper = appdata / "npm" / "graft.cmd"
+            cli = (
+                appdata
+                / "npm"
+                / "node_modules"
+                / "@nanonets"
+                / "graft"
+                / "dist"
+                / "cli.js"
+            )
+            node = program_files / "nodejs" / "node.exe"
+            cli.parent.mkdir(parents=True)
+            node.parent.mkdir(parents=True)
+            wrapper.write_text("fixture", encoding="utf-8")
+            cli.write_text("fixture", encoding="utf-8")
+            node.write_text("fixture", encoding="utf-8")
+            with (
+                patch.object(
+                    graft_validator, "_is_windows_runtime", return_value=True
+                ),
+                patch.object(graft_validator.shutil, "which", return_value=None),
+                patch.dict(
+                    graft_validator.os.environ,
+                    {
+                        "APPDATA": str(appdata),
+                        "USERPROFILE": str(root / "missing-user"),
+                        "ProgramFiles": str(program_files),
+                    },
+                ),
+            ):
+                command = graft_validator._resolve_graft_check_command()
+        self.assertEqual(command, [str(node.resolve()), str(cli.resolve()), "check"])
 
 
 if __name__ == "__main__":

@@ -181,8 +181,9 @@ class XNotarXJustizPackageBoundaryTests(unittest.TestCase):
         self.assertIn("xjustiz_message_pointer", row["families"])
 
     def test_tracked_file_scan_uses_bound_git_binary(self) -> None:
-        self.assertEqual(GIT_EXECUTABLE, Path("/usr/bin/git"))
+        self.assertTrue(GIT_EXECUTABLE.is_absolute())
         self.assertTrue(GIT_EXECUTABLE.is_file())
+        self.assertIn(GIT_EXECUTABLE.name.lower(), {"git", "git.exe"})
 
     def test_no_raw_exchange_artifacts_are_committed(self) -> None:
         forbidden_suffixes = {".zip", ".xsd", ".wsdl", ".xml"}

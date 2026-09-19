@@ -1,7 +1,15 @@
 # START_HERE: Operativer Einstieg in NaC
 
 Status: verbindlicher Startpfad
-Letzte inhaltliche Anpassung: 2026-05-19
+Letzte inhaltliche Anpassung: 2026-09-19
+
+Für Governance-Entscheidungen zählt der stabile Principal, nicht die Anzahl
+seiner Accounts. Ohne konkret zitierte externe Zwei-Personen-Pflicht ist
+`OWNER_SOLO_APPROVAL` zulässig; bei anwendbarer Pflicht und nur einem Principal
+blockiert `BLOCKED_SINGLE_PRINCIPAL`. Issue #746 erlaubt unter Windows nur die
+separat gebundene Read-only-Reconciliation; Live-Aktivierung und Recovery
+bleiben vor Credential-, Netzwerk- und Providerzugriff gesperrt und lösen
+keine interaktive Anmeldung aus.
 
 ## Warum dieses Dokument neben dem README existiert
 
@@ -83,6 +91,13 @@ aus [.pi/](../../.pi) geladen werden.
 
 NaC wird als Software entwickelt. Konzeptarbeit ist nur dann vollständig, wenn
 sie mindestens eine passende Umsetzungsfläche mitpflegt:
+
+Provider-Anmeldungen werden einzeln und aktionsbezogen autorisiert. Eine alte,
+abgebrochene oder in einem anderen Task erteilte Login-Freigabe wird nicht
+wiederverwendet; GitHub- und Microsoft-/Entra-Anmeldung dürfen nicht mit einer
+pauschalen Freigabe kombiniert werden. Für Issue #746 darf der Read-only-Pfad
+nur einen bereits etablierten, gebundenen Kanal verwenden und keinen Login
+starten.
 
 - Runtime-Code unter [src/](../../src)
 - Skripte unter [scripts/](../../scripts)

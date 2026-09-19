@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,6 +18,24 @@ from nac_bff.azure_activation import (
 from nac_bff.azure_activation_provisioner_bootstrap import (
     build_activation_provisioner_bootstrap,
 )
+from nac_bff.activation_security_backend import (
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
+
+
+def _make_broadly_writable(path: Path) -> None:
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["icacls", str(path), "/grant", "*S-1-1-0:(W)"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 0:
+            raise AssertionError("failed to create broad Windows DACL fixture")
+    else:
+        path.chmod(0o666)
 
 
 class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
@@ -215,24 +235,48 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
         self.assertIsNone(result.binding_sha256)
 
     def test_state_swap_to_symlink_between_lstat_and_open_is_rejected(self) -> None:
-        original_open = os.open
         replacement = self.root / "replacement-state.json"
         replacement.write_text(json.dumps(self._state_payload()), encoding="utf-8")
         swapped = False
 
-        def swap_before_open(path, flags, *args, **kwargs):
-            nonlocal swapped
-            if Path(path) == self.state and not swapped:
-                self.state.unlink()
-                self.state.symlink_to(replacement)
-                swapped = True
-            return original_open(path, flags, *args, **kwargs)
+        if os.name == "nt":
+            delegate = get_platform_security_backend()
 
-        with patch(
-            "nac_bff.azure_activation_provisioner_bootstrap.os.open",
-            side_effect=swap_before_open,
-        ):
-            result = self._build()
+            class SwappingBackend:
+                def __getattr__(self, name):
+                    return getattr(delegate, name)
+
+                def open_bound_read(self, path, binding):
+                    nonlocal swapped
+                    if Path(path) == self_state and not swapped:
+                        swapped = True
+                        backup = self_state.with_suffix(".original")
+                        self_state.rename(backup)
+                        replacement.rename(self_state)
+                    return delegate.open_bound_read(path, binding)
+
+            self_state = self.state
+            with patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=SwappingBackend(),
+            ):
+                result = self._build()
+        else:
+            original_open = os.open
+
+            def swap_before_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if Path(path) == self.state and not swapped:
+                    self.state.unlink()
+                    self.state.symlink_to(replacement)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with patch(
+                "nac_bff.azure_activation_provisioner_bootstrap.os.open",
+                side_effect=swap_before_open,
+            ):
+                result = self._build()
 
         self.assertTrue(swapped)
         self.assertEqual(result.readiness["status"], "BLOCKED")
@@ -242,11 +286,30 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
         )
 
     def test_state_snapshot_change_during_read_is_rejected(self) -> None:
-        with patch(
-            "nac_bff.azure_activation_provisioner_bootstrap._same_file_snapshot",
-            side_effect=(True, False),
-        ):
-            result = self._build()
+        if os.name == "nt":
+            delegate = get_platform_security_backend()
+
+            class DriftingBackend:
+                def __getattr__(self, name):
+                    return getattr(delegate, name)
+
+                @contextmanager
+                def open_bound_read(self, path, binding):
+                    with delegate.open_bound_read(path, binding) as handle:
+                        yield handle
+                    raise SecurityBoundaryError("FILE_BINDING_DRIFT")
+
+            with patch(
+                "nac_bff.activation_security_backend.get_platform_security_backend",
+                return_value=DriftingBackend(),
+            ):
+                result = self._build()
+        else:
+            with patch(
+                "nac_bff.azure_activation_provisioner_bootstrap._same_file_snapshot",
+                side_effect=(True, False),
+            ):
+                result = self._build()
 
         self.assertEqual(result.readiness["status"], "BLOCKED")
         self.assertEqual(
@@ -373,17 +436,25 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
             (
                 "writable-state",
                 "PROVISIONER_STATE_FILE_UNTRUSTED",
-                lambda: self.state.chmod(0o664),
+                lambda: (
+                    _make_broadly_writable(self.state)
+                    if os.name == "nt"
+                    else self.state.chmod(0o664)
+                ),
             ),
             (
                 "writable-certificate",
                 "PROVISIONER_CERTIFICATE_FILE_UNTRUSTED",
-                lambda: self.certificate.chmod(0o666),
+                lambda: _make_broadly_writable(self.certificate),
             ),
             (
                 "insecure-key-mode",
                 "PROVISIONER_PRIVATE_KEY_FILE_UNTRUSTED",
-                lambda: self.private_key.chmod(0o644),
+                lambda: (
+                    _make_broadly_writable(self.private_key)
+                    if os.name == "nt"
+                    else self.private_key.chmod(0o644)
+                ),
             ),
         ]
         for name, code, mutate in cases:
@@ -408,7 +479,10 @@ class AzureBffActivationProvisionerBootstrapTests(unittest.TestCase):
                 if target.exists():
                     target.unlink()
                 path.rename(target)
-                path.symlink_to(target)
+                if os.name == "nt":
+                    os.link(target, path)
+                else:
+                    path.symlink_to(target)
                 result = self._build()
                 self.assertEqual(result.readiness["status"], "BLOCKED")
                 self.assertEqual(result.readiness["error_code"], code)

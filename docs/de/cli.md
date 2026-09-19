@@ -6,14 +6,20 @@ Status: erste zentrale CLI umgesetzt am 2026-05-19
 
 | Plattform | Offline-CLI und lokale M365-/SPFx-Prüfungen | Live-Aktivierung, Recovery und Reconciliation |
 | --- | --- | --- |
-| Windows 11 mit Python 3.11 | unterstützt | mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` geblockt |
+| Windows 11 mit Python 3.11 und Node.js 24 | unterstützt | nur mit vollständigem Windows-Sicherheitsbackend und nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Linux mit vollständigen `memfd`-, `/proc`, Eigentümer-, Lock-, Namespace- und No-follow-Fähigkeiten | unterstützt | nur nach allen bestehenden Owner- und Sicherheits-Gates unterstützt |
 | Andere oder unbekannte Plattform | soweit der jeweilige Offline-Befehl portabel ist | geblockt |
 
 Die Plattformerkennung stammt ausschließlich aus der vertrauenswürdigen
-Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können Windows
-nicht für Live-Ausführung freischalten. Die verbindliche Ausgestaltung steht
-in der [Windows-Offline-CLI-Spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md).
+Laufzeit. CLI-Argumente, Umgebungsvariablen und Konfiguration können fehlende
+Windows-Sicherheitsfähigkeiten nicht umgehen. Handle-/Datei-ID-Bindung,
+SID-/DACL- und Reparse-Prüfung, Named Mutex, Job Object, Flush-Semantik und der
+Credential-Schreibschutz müssen gemeinsam verfügbar sein; andernfalls stoppt
+der Pfad mit `PLATFORM_SECURITY_BACKEND_UNAVAILABLE` vor Credential-, Netzwerk-
+oder Providerzugriff. Die Offline-Grenze steht in der
+[Windows-Offline-CLI-Spec](superpowers/specs/2026-09-14-windows-offline-cli-portability-design.md),
+der Windows-Abschlusspfad in der
+[Issue-#746-Spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
 ## Idee
 
@@ -1182,3 +1188,25 @@ nac m365 teams-sharepoint business-case-type-live-write-smoke --database-path /t
 ## Azure-Function-Deployment-Reconciliation
 
 `bff-azure-function-deployment-reconcile` behandelt ausschließlich den terminalen Schritt-7-Fall aus Issue [#739](https://github.com/notariat8/NaC/issues/739): sechs Schritte sind `PASSED`, `deploy_function_package` ist mit `AZURE_FUNCTION_DEPLOYMENT_STATE_AMBIGUOUS` fehlgeschlagen und die drei Journale stehen auf `HELD`. Die owner-freie Inspection prüft State, 18 Ledger-Ereignisse, Evidence, Prepared-Manifest und Function-ZIP bytegenau. Zwei identische, fest auf die Ziel-Function begrenzte ARM-Snapshots müssen `FUNCTION_DEPLOYMENT_NOT_APPLIED` beweisen. Erst ein neuer unveränderlicher `ofunk`-Kommentar in Issue #739 mit der Aktion `RELEASE_QUARANTINE_FOR_NOT_APPLIED_FUNCTION_DEPLOYMENT` erlaubt `--confirm-release-quarantine`. Dabei werden nur append-only `RELEASED`-Marker geschrieben; der fehlgeschlagene State, seine Evidence und Azure bleiben unverändert.
+
+Sind die exakt gebundenen #739-Originalartefakte vollständig verloren, wird die
+eigenständige minimale Provenienzverlust-Invokation unten verwendet. Alte
+#632-/#739-Live-Freigaben, `--approval-reference` und
+`--issue-746-owner-solo-approval-reference` sind in diesem Modus unzulässig.
+Der Bestätigungsdatensatz und der erforderliche geschützte
+Identitätsresolver werden ausschließlich lokal über Windows-SID, DACL und Hash
+gebunden. Die Prüfung umfasst den vollständigen erwarteten Bestand aus State,
+Evidence, Ledger, drei aus den geschützten ursprünglichen Lock-Bindings
+gebildeten Lock-Journalen,
+Prepared-Manifest und Function-Paket. Nur wenn alle diese Artefakte am
+kanonischen Ort fehlen, ist der bestätigte Verlustfall erreicht. Ein Teilbestand
+oder eine nicht prüfbare Ablage an den gebundenen Sollorten ergibt stattdessen einen engen
+Binding-/State-Fehler. Der Pfad läuft vor GitHub-Gate und Provider-Factory und
+gibt mit Exit `2` exakt `status=BLOCKED`,
+`reason_code=FUNCTION_DEPLOYMENT_PROVENANCE_LOST`, `terminal=true`,
+`retry_allowed=false` und `next_phase=null` zurück. Er autorisiert weder
+#739-Release noch #632-Paketierung oder Live-Aktion.
+
+```powershell
+nac m365 teams-sharepoint bff-azure-function-deployment-reconcile --expected-activation-hash <64-lowercase-hex> --correlation-id nac-bff-live-20260908-issue739-v4 --reconciler-commit <40-lowercase-hex> --reconciler-tree <40-lowercase-hex> --reconciler-toolchain-sha256 <64-lowercase-hex> --protected-identity-resolver-file <geschützte-absolute-json-datei> --protected-identity-resolver-sha256 <64-lowercase-hex> --operator-account-id <provider:login> --confirm-provenance-lost --provenance-loss-action CONFIRM_FUNCTION_DEPLOYMENT_PROVENANCE_LOST --provenance-loss-issue 739 --provenance-loss-confirmation-file <geschützte-absolute-json-datei> --provenance-loss-confirmation-sha256 <64-lowercase-hex> --format json
+```

@@ -9,7 +9,6 @@ monkeypatch any Python control, including type checks and module-private state.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import fcntl
 import hashlib
 import json
 import os
@@ -20,6 +19,14 @@ import stat
 import threading
 from types import MappingProxyType
 from typing import Any, Mapping
+
+from nac_runtime.platform_file_lock import lock_exclusive, unlock
+
+from .activation_security_backend import (
+    SecureDirectorySession,
+    SecurityBoundaryError,
+    get_platform_security_backend,
+)
 
 from .azure_performance_infrastructure_safety import (
     AzurePerformanceInfrastructureReadbackCapability,
@@ -564,7 +571,7 @@ class _DurableAuthorizationUsageLedger:
             lock_fd = _open_private_regular_at(
                 parent_fd, self.path.name + ".lock", create=True
             )
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            lock_exclusive(lock_fd, nonblocking=False)
             record = _read_json_at(parent_fd, self.path.name)
             if record is None:
                 if not initialize:
@@ -593,10 +600,10 @@ class _DurableAuthorizationUsageLedger:
         finally:
             if lock_fd is not None:
                 try:
-                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    unlock(lock_fd)
                 finally:
                     os.close(lock_fd)
-            os.close(parent_fd)
+            _close_secure_parent(parent_fd)
 
     def _new_record(self) -> dict[str, Any]:
         return {
@@ -658,11 +665,23 @@ def _open_root_anchored_private_parent(
     path: Path,
     *,
     create: bool,
-) -> int | None:
+) -> int | SecureDirectorySession | None:
     """Open a private parent without following a symlink in any component."""
 
     if not isinstance(path, Path) or path.name in {"", ".", ".."}:
         raise SecurePerformancePathError("PERFORMANCE_SECURE_PATH_INVALID")
+    if os.name == "nt":
+        try:
+            return get_platform_security_backend().open_secure_directory(
+                Path(os.path.abspath(path.expanduser())).parent,
+                create=create,
+            )
+        except SecurityBoundaryError as error:
+            if not create and error.code.endswith(("_2", "_3")):
+                return None
+            raise SecurePerformancePathError(
+                "PERFORMANCE_SECURE_PATH_INVALID"
+            ) from None
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is None:
         raise SecurePerformancePathError("PERFORMANCE_SECURE_PATH_INVALID")
@@ -771,11 +790,23 @@ def _absolute_path(path: Path) -> Path:
     return Path(os.path.abspath(path.expanduser()))
 
 
-def _open_private_regular_at(parent_fd: int, name: str, *, create: bool) -> int:
+def _open_private_regular_at(
+    parent_fd: int | SecureDirectorySession,
+    name: str,
+    *,
+    create: bool,
+) -> int:
     if not isinstance(name, str) or name in {"", ".", ".."} or "/" in name:
         raise PerformanceLiveAuthorizationError(
             "PERFORMANCE_AUTHORIZATION_USAGE_LEDGER_INVALID"
         )
+    if not isinstance(parent_fd, int):
+        try:
+            return parent_fd.open_regular_descriptor(name, create=create)
+        except SecurityBoundaryError:
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_AUTHORIZATION_USAGE_LEDGER_INVALID"
+            ) from None
     flags = os.O_RDWR | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     if create:
         flags |= os.O_CREAT
@@ -798,7 +829,24 @@ def _open_private_regular_at(parent_fd: int, name: str, *, create: bool) -> int:
     return descriptor
 
 
-def _read_json_at(parent_fd: int, name: str) -> dict[str, Any] | None:
+def _read_json_at(
+    parent_fd: int | SecureDirectorySession, name: str
+) -> dict[str, Any] | None:
+    if not isinstance(parent_fd, int):
+        try:
+            payload = parent_fd.read_bounded(name, 1024 * 1024)
+            if payload is None:
+                return None
+            value = json.loads(payload.decode("utf-8"))
+        except (SecurityBoundaryError, UnicodeDecodeError, json.JSONDecodeError):
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_AUTHORIZATION_USAGE_LEDGER_INVALID"
+            ) from None
+        if not isinstance(value, dict):
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_AUTHORIZATION_USAGE_LEDGER_INVALID"
+            )
+        return value
     try:
         descriptor = _open_private_regular_at(parent_fd, name, create=False)
     except PerformanceLiveAuthorizationError:
@@ -823,7 +871,11 @@ def _read_json_at(parent_fd: int, name: str) -> dict[str, Any] | None:
     return value
 
 
-def _atomic_json_write_at(parent_fd: int, name: str, value: Mapping[str, Any]) -> None:
+def _atomic_json_write_at(
+    parent_fd: int | SecureDirectorySession,
+    name: str,
+    value: Mapping[str, Any],
+) -> None:
     payload = json.dumps(
         value,
         allow_nan=False,
@@ -831,6 +883,14 @@ def _atomic_json_write_at(parent_fd: int, name: str, value: Mapping[str, Any]) -
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
+    if not isinstance(parent_fd, int):
+        try:
+            parent_fd.atomic_write(name, payload)
+        except SecurityBoundaryError:
+            raise PerformanceLiveAuthorizationError(
+                "PERFORMANCE_AUTHORIZATION_USAGE_LEDGER_INVALID"
+            ) from None
+        return
     temporary = f".{name}.{secrets.token_hex(16)}.tmp"
     descriptor: int | None = None
     try:
@@ -882,7 +942,14 @@ def _read_root_anchored_json(path: Path) -> dict[str, Any] | None:
     except PerformanceLiveAuthorizationError:
         return None
     finally:
-        os.close(parent_fd)
+        _close_secure_parent(parent_fd)
+
+
+def _close_secure_parent(parent: int | SecureDirectorySession) -> None:
+    if isinstance(parent, int):
+        os.close(parent)
+    else:
+        parent.close()
 
 
 def _sha256_text(value: str) -> str:
