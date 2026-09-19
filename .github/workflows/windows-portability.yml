@@ -27,6 +27,32 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Configure private Windows test workspace
+        shell: pwsh
+        run: |
+          $privateRoot = Join-Path $env:RUNNER_TEMP "nac-private-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $privateRoot -Force | Out-Null
+          $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+          $directorySecurity = [System.Security.AccessControl.DirectorySecurity]::new()
+          $directorySecurity.SetOwner($currentIdentity.User)
+          $directorySecurity.SetAccessRuleProtection($true, $false)
+          $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+          $propagation = [System.Security.AccessControl.PropagationFlags]::None
+          foreach ($sidValue in @($currentIdentity.User.Value, "S-1-5-18", "S-1-5-32-544")) {
+            $sid = [System.Security.Principal.SecurityIdentifier]::new($sidValue)
+            $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+              $sid,
+              [System.Security.AccessControl.FileSystemRights]::FullControl,
+              $inheritance,
+              $propagation,
+              [System.Security.AccessControl.AccessControlType]::Allow
+            )
+            $directorySecurity.AddAccessRule($rule) | Out-Null
+          }
+          Set-Acl -LiteralPath $privateRoot -AclObject $directorySecurity
+          "TEMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "TMP=$privateRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install NaC
         run: python -m pip install --disable-pip-version-check -e .
 

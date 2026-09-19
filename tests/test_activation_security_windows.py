@@ -128,6 +128,20 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
             r"\\server\share\evidence.json",
         )
 
+    def test_extended_length_path_supports_drive_and_unc_paths(self) -> None:
+        self.assertEqual(
+            security_windows._extended_length_path(Path(r"C:\Private\evidence.json")),
+            r"\\?\C:\Private\evidence.json",
+        )
+        self.assertEqual(
+            security_windows._extended_length_path(Path(r"\\server\share\evidence.json")),
+            r"\\?\UNC\server\share\evidence.json",
+        )
+        self.assertEqual(
+            security_windows._extended_length_path(Path(r"\\?\C:\Private\evidence.json")),
+            r"\\?\C:\Private\evidence.json",
+        )
+
     def test_requested_path_binding_accepts_case_but_rejects_other_target(self) -> None:
         requested = Path(r"C:\Private\Evidence.json")
         with (

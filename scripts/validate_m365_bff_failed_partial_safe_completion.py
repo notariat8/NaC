@@ -1152,6 +1152,19 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     )
     if expected_gate_command not in WINDOWS_WORKFLOW_PATH.read_text(encoding="utf-8"):
         errors.append("Windows portability workflow does not execute the productive Issue #746 gate tests")
+    windows_workflow = WINDOWS_WORKFLOW_PATH.read_text(encoding="utf-8")
+    for marker in (
+        "Configure private Windows test workspace",
+        "SetAccessRuleProtection($true, $false)",
+        "S-1-5-18",
+        "S-1-5-32-544",
+        '"TEMP=$privateRoot"',
+        '"TMP=$privateRoot"',
+    ):
+        if marker not in windows_workflow:
+            errors.append(
+                f"Windows portability workflow is missing private test workspace marker: {marker}"
+            )
     context_index = json.loads(AGENT_CONTEXT_PATH.read_text(encoding="utf-8"))
     if "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml" not in context_index.get("verification_contracts", []):
         errors.append("agent-context verification-contract registry is missing Issue #746")

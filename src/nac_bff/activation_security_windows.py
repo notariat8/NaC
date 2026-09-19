@@ -645,10 +645,19 @@ def _normalized_final_path(value: str) -> str:
     return value
 
 
+def _extended_length_path(path: Path) -> str:
+    value = str(path)
+    if value.startswith("\\\\?\\"):
+        return value
+    if value.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + value[2:]
+    return "\\\\?\\" + value
+
+
 def _long_path_name(path: Path) -> str:
     """Expand an existing DOS 8.3 path without resolving reparse points."""
 
-    value = str(path)
+    value = _extended_length_path(path)
     required = kernel32.GetLongPathNameW(value, None, 0)
     if not required:
         _raise_last_error("LONG_PATH_READ_FAILED")
