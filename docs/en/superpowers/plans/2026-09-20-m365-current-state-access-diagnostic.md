@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access — Implementation Plan
 
-Status: German and English specifications approved; `plan -> review -> fix` complete; plan approval pending; implementation, provider access, and merge blocked
+Status: German and English plan approved; `plan -> review -> fix` complete; repository implementation is in `implement -> review -> fix`; provider access and merge remain blocked
 
 Date: 20 September 2026
 
@@ -151,7 +151,7 @@ hardlink, path/file/volume-ID or hash change, unattested Git, Python, Node, or
 provider binary, unscrubbed environment, writable credential or config store,
 missing or changed DPA receipt, parallel start, approval replay, crash after
 consumption, and every forbidden `port_factory`, `network_read`, or
-`evidence_sink_write` counter value.
+`run_gate_consume_write` or `result_evidence_write` counter value.
 
 **Then green:** Use the existing Windows security backend; add no simplified
 path check. Atomically consume the one-shot gate before port-factory creation.
@@ -289,7 +289,6 @@ Every commit remains within the approved Issue #748 scope; no force push.
 ## Review Gate
 
 This plan was reviewed independently for scope, governance, validation, and
-German/English parity; findings were fixed and the result was re-reviewed with
-no findings. It does not yet authorize contract, test, or code changes or any
-external access. Explicit plan approval is required; only then does test-first
-implementation begin.
+German/English parity; findings were fixed and the owner approved the plan.
+The test-first repository implementation in Draft PR #749 is authorized;
+external provider access and merge remain separate gates.

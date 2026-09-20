@@ -15,6 +15,11 @@
     "affected_artifacts",
     "review_gates"
   ],
+  "plan_reference_policy": {
+    "repository_relative": true,
+    "must_exist": true,
+    "must_match_manifest_language": true
+  },
   "acceptance_id_pattern_examples": [
     "AC-001",
     "AC-002"

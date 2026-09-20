@@ -466,6 +466,7 @@ def launch_attested_process(spec: ProcessSpec) -> ProcessResult:
             stderr=stderr,
             image_sha256=image_hash,
             job_object_assigned=True,
+            credential_write_guard_applied=spec.credential_write_guard,
         )
     finally:
         # On every exceptional path, closing the configured job terminates the

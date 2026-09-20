@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff – Implementierungsplan
 
-Status: DE/EN-Spec freigegeben; `plan -> review -> fix` abgeschlossen; Planfreigabe offen; Implementierung, Providerzugriff und Merge gesperrt
+Status: DE/EN-Plan freigegeben; `plan -> review -> fix` abgeschlossen; Repository-Implementierung in `implement -> review -> fix`; Providerzugriff und Merge gesperrt
 
 Datum: 20. September 2026
 
@@ -157,7 +157,7 @@ Python-, Node- oder Provider-Binärdatei, nicht bereinigte Umgebung,
 schreibbarer Credential- oder Config-Store, fehlender oder driftender
 DPA-/AVV-Beleg, paralleler Start, Approval-Replay, Crash nach Consume sowie
 jeder nicht erlaubte `port_factory`-, `network_read`- oder
-`evidence_sink_write`-Zählerwert.
+`run_gate_consume_write`- oder `result_evidence_write`-Zählerwert.
 
 **Dann grün:** Bestehendes Windows-Sicherheitsbackend verwenden; keine
 vereinfachte Pfadprüfung ergänzen. Das One-Shot-Gate vor Port-Factory atomar
@@ -298,7 +298,6 @@ kein Force-Push.
 ## Review-Gate
 
 Dieser Plan wurde mit unabhängigen Scope-, Governance-, Validierungs- und
-DE/EN-Paritätsreviews geprüft; die Befunde wurden behoben und erneut ohne
-Befund geprüft. Er autorisiert noch keine Contract-, Test- oder Codeänderung
-und keinen externen Zugriff. Eine ausdrückliche Planfreigabe ist erforderlich;
-erst danach beginnt die test-first Umsetzung.
+DE/EN-Paritätsreviews geprüft; die Befunde wurden behoben und der Owner hat den
+Plan freigegeben. Die test-first Repository-Umsetzung in Draft-PR #749 ist
+autorisiert; externer Providerzugriff und Merge bleiben separate Gates.

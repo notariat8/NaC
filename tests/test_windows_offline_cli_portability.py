@@ -39,6 +39,50 @@ FORBIDDEN_SIDE_EFFECT_CATEGORIES = (
 
 
 class WindowsOfflineCliPortabilityTests(unittest.TestCase):
+    def test_issue748_cli_surfaces_are_native_offline_and_fail_closed(self) -> None:
+        for command in (
+            "current-state-access-diagnostic-preflight",
+            "current-state-access-diagnostic-run-read-only",
+        ):
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(REPO_ROOT / "scripts" / "nac.py"),
+                        "m365",
+                        "teams-sharepoint",
+                        command,
+                        "--format",
+                        "json",
+                    ],
+                    cwd=REPO_ROOT,
+                    env={**os.environ, "PYTHONPATH": str(SRC_ROOT)},
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(result.returncode, 2, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["status"], "BLOCKED")
+                self.assertEqual(payload["provider_ports_created"], 0)
+                self.assertEqual(payload["network_reads"], 0)
+                self.assertEqual(payload["credential_writes"], 0)
+
+        for module in (
+            "current_state_access_diagnostic.py",
+            "current_state_access_gate.py",
+            "current_state_access_ports.py",
+            "current_state_access_adapters.py",
+            "current_state_access_composition.py",
+        ):
+            source = (REPO_ROOT / "src" / "nac_bff" / module).read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("import fcntl", source)
+            self.assertNotIn("/proc/", source)
+            self.assertNotIn("issue746_reconciliation_gate", source)
+
     def _synthetic_environment(self, root: Path) -> dict[str, str]:
         return {
             "PATH": str(Path(sys.executable).parent),

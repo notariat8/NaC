@@ -21,6 +21,24 @@ access. The offline boundary is defined by the
 and the Windows completion path by the
 [Issue #746 spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
+## Teams/BFF Current-State Diagnostics
+
+Issue #748 adds two strictly separated Windows-native surfaces:
+
+```text
+nac m365 teams-sharepoint current-state-access-diagnostic-preflight
+nac m365 teams-sharepoint current-state-access-diagnostic-run-read-only
+```
+
+The preflight checks protected local bindings only and creates no provider
+ports. The read-only command remains blocked until a new approval bound to the
+final state exists. Both accept only `--current-state-access-input-root` and
+`--current-state-access-evidence-root`; real target or identity values are not
+CLI arguments. See the [diagnostic runbook](m365-current-state-access-diagnostic.md).
+The real command additionally requires the repository-external read-only
+driver hash-bound in protected `toolchain.json`; without its complete Windows
+attestation, the run stops before any provider port is created.
+
 ## Idea
 
 The NaC CLI is not the product surface for a notary office. It is the

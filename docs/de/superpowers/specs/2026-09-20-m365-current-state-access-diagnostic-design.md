@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: DE/EN-Spec vom Owner freigegeben; `plan -> review -> fix` abgeschlossen; Contract-, Test- und Codeänderungen warten auf Planfreigabe
+Status: DE/EN-Spec und Implementierungsplan vom Owner freigegeben; Repository-Implementierung in `implement -> review -> fix`; realer Providerlauf weiterhin separat gesperrt
 
 Datum: 20. September 2026
 
@@ -35,6 +35,7 @@ affected_artifacts:
   - docs/en/m365-current-state-access-diagnostic.md
   - agent-context/index.json
   - .github/workflows/windows-portability.yml
+  - assets/docs/generic-workbench/VIS-721-manifest.json
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
   - workflows/contracts/spec-traceability.contract.json
   - scripts/validate_m365_current_state_access_diagnostic.py
@@ -45,6 +46,8 @@ affected_artifacts:
   - src/nac_bff/current_state_access_ports.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
+  - src/nac_bff/activation_security_backend.py
+  - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
@@ -239,7 +242,11 @@ SID-/DACL-geschützten Datenschutzbeleg mit:
   zulässig, wenn eine konkret zitierte übergeordnete Rechts- oder Policy-
   Grundlage diese Ausnahme für genau diesen SaaS-Verarbeitungsscope eröffnet;
 - Provider, Tenant, Zweck und zulässigem Datenumfang;
-- Policy-/Vertragsversion und Digest;
+- exakt `policies/data-protection-policy.yaml` und dessen aus dem gebundenen
+  Repository-Blob neu berechnetem Digest;
+- einem getrennten, geschützten AVV-Vertragsbeleg, dessen Digest im Receipt
+  gebunden wird und dessen effektiver Status, Gültigkeitszeitraum, Microsoft-
+  Provider, Tenant und Ziel vor jedem Read erneut geprüft werden;
 - Aufbewahrungs- und Löschfrist der Diagnose-Evidence;
 - Freigabestatus für genau Issue #748 und den einmaligen Read-only Lauf.
 
@@ -401,7 +408,8 @@ decision_projection:
   side_effect_counters:
     port_factory: nonnegative-integer
     network_read: nonnegative-integer
-    evidence_sink_write: nonnegative-integer
+    run_gate_consume_write: nonnegative-integer
+    result_evidence_write: nonnegative-integer
     login: 0
     device_code: 0
     browser_authentication: 0
@@ -424,7 +432,7 @@ decision_projection_sha256: sha256-hex
 
 Die Typdarstellung oben beschreibt das Schema; reale Evidence enthält
 ausschließlich berechnete Bindungen und konkrete Enum-Werte. `port_factory`,
-`network_read` und `evidence_sink_write` werden gegen die im Verification
+`network_read`, `run_gate_consume_write` und `result_evidence_write` werden gegen die im Verification
 Contract exakt erlaubten Werte geprüft; jeder andere operative Zähler muss
 null sein. Ein unbekannter Schlüssel oder eine nicht erlaubte Anzahl blockiert
 die Kanonisierung.
@@ -512,7 +520,8 @@ Vor dem nächsten Phasenübergang wird fail-closed gestoppt bei:
   Evidence-Sink;
 - jeder Abweichung von den phasen- und klassifikationsspezifisch exakt
   erlaubten Werten für `port_factory`, `network_read` oder
-  `evidence_sink_write` sowie jedem anderen operativen Zähler ungleich null;
+  `run_gate_consume_write` oder `result_evidence_write` sowie jedem anderen
+  operativen Zähler ungleich null;
 - jedem Versuch, #739 oder #632 als Eingabe oder Folgewirkung zu verwenden.
 
 Ein blockierter Lauf autorisiert keinen Retry. Ein neuer realer Versuch braucht
@@ -648,12 +657,10 @@ AI-Komponente ist Nicht-Ziel.
 
 ## Review-Gate
 
-Der Owner hat die geschriebenen DE/EN-Specs auf Commit
-`8616bdbe97546cfc3d2cc74973440a7fe7c508ed` und Tree
-`94d0f7e310be82e206eabff017aeec06d206339a` freigegeben. Der synchronisierte
-DE/EN-Implementierungsplan darf erstellt und mit `plan -> review -> fix`
-geprüft werden. Contract-, Test- und Codeänderungen beginnen erst nach einer
-ausdrücklichen Planfreigabe.
+Der Owner hat die DE/EN-Specs und den synchronisierten DE/EN-Implementierungsplan
+freigegeben. Die test-first Umsetzung in Draft-PR #749 durchläuft
+`implement -> review -> fix`; ihre Repository- und CI-Freigabe umfasst noch
+keinen realen Providerzugriff.
 
 Diese Spec-Freigabe autorisiert noch keinen Providerzugriff. Der spätere reale
 read-only Diagnose-Lauf benötigt nach Implementierung, Review, Push und grüner

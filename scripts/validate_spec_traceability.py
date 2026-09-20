@@ -355,6 +355,46 @@ def validate_one_manifest(
     return errors
 
 
+def validate_plan_traceability(
+    manifest: dict[str, object], *, spec_path: Path, path_label: str
+) -> list[str]:
+    plan_value = manifest.get("plan")
+    if plan_value is None:
+        return []
+    if not isinstance(plan_value, str) or not plan_value.strip():
+        return [f"Planpfad im Spec-Manifest ist ungültig: {path_label}"]
+    relative = Path(plan_value)
+    if relative.is_absolute() or ".." in relative.parts:
+        return [f"Planpfad im Spec-Manifest ist nicht repo-relativ: {path_label}"]
+    try:
+        language = spec_path.relative_to(REPO_ROOT / "docs").parts[0]
+    except ValueError:
+        return [f"Spec-Sprachpfad ist ungültig: {path_label}"]
+    expected_parent = Path("docs") / language / "superpowers" / "plans"
+    if relative.parent != expected_parent:
+        return [f"Planpfad nutzt falschen Sprachpfad: {path_label}"]
+    plan_path = REPO_ROOT / relative
+    if not plan_path.is_file():
+        return [f"Planpfad aus Spec-Manifest fehlt: {path_label} {plan_value}"]
+    plan_text = plan_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    if manifest.get("spec_id") != "m365-current-state-access-diagnostic":
+        return errors
+    issue = manifest.get("leading_issue")
+    if isinstance(issue, str) and issue not in plan_text:
+        errors.append(f"Plan referenziert nicht dasselbe führende Issue: {path_label}")
+    acceptance_ids = manifest.get("acceptance_ids")
+    if isinstance(acceptance_ids, list):
+        for acceptance_id in acceptance_ids:
+            if isinstance(acceptance_id, str) and acceptance_id not in plan_text:
+                errors.append(
+                    f"Akzeptanz-ID aus Spec fehlt im Plan: {path_label} {acceptance_id}"
+                )
+    if spec_path.name not in plan_text:
+        errors.append(f"Plan verweist nicht auf die zugehörige Spec: {path_label}")
+    return errors
+
+
 def validate_manifest_blocks() -> list[str]:
     errors: list[str] = []
     for root in SPEC_ROOTS:
@@ -370,6 +410,13 @@ def validate_manifest_blocks() -> list[str]:
                     validate_one_manifest(
                         manifest,
                         body_text=body_text,
+                        path_label=relative_path,
+                    )
+                )
+                errors.extend(
+                    validate_plan_traceability(
+                        manifest,
+                        spec_path=path,
                         path_label=relative_path,
                     )
                 )

@@ -1,0 +1,249 @@
+schema_version: nac.m365-current-state-access-diagnostic/v0.1
+contract_id: m365-current-state-access-diagnostic
+leading_issue: https://github.com/notariat8/NaC/issues/748
+delivery_mode: Protected PR
+risk_gate: Human Approval
+specifications:
+  de: docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+  en: docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+plans:
+  de: docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  en: docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+exact_artifacts:
+  - .github/workflows/windows-portability.yml
+  - agent-context/index.json
+  - assets/docs/generic-workbench/VIS-721-manifest.json
+  - docs/de/cli.md
+  - docs/en/cli.md
+  - docs/de/m365-current-state-access-diagnostic.md
+  - docs/en/m365-current-state-access-diagnostic.md
+  - docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+  - docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+  - docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  - docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  - scripts/quality_gate.py
+  - scripts/validate_m365_current_state_access_diagnostic.py
+  - scripts/validate_spec_traceability.py
+  - src/nac_bff/current_state_access_adapters.py
+  - src/nac_bff/current_state_access_composition.py
+  - src/nac_bff/current_state_access_diagnostic.py
+  - src/nac_bff/current_state_access_gate.py
+  - src/nac_bff/current_state_access_ports.py
+  - src/nac_bff/activation_security_backend.py
+  - src/nac_bff/azure_live_commands_win.py
+  - src/nac_cli/cli.py
+  - tests/test_m365_current_state_access_diagnostic.py
+  - tests/test_m365_current_state_access_gate.py
+  - tests/test_nac_cli.py
+  - tests/test_spec_traceability.py
+  - tests/test_windows_offline_cli_portability.py
+  - workflows/contracts/spec-traceability.contract.json
+  - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
+acceptance_ids: [AC-748-01, AC-748-02, AC-748-03, AC-748-04, AC-748-05, AC-748-06, AC-748-07, AC-748-08]
+base_binding:
+  merged_pr: 747
+  merge_commit: 80bf813375d7fc2ab292dfdbcc1db447fdb6684a
+  merge_tree: 007e277ca5643f7cb63355961fd0422d92fd4b87
+  final_pr: 749
+  final_head_must_descend_from_merge_commit: true
+normative_classifications:
+  - SPFX_SUBJECT_MISSING
+  - BFF_REQUEST_NOT_OBSERVED
+  - BFF_AUTHENTICATION_REJECTED_401
+  - BFF_AUTHORIZATION_REJECTED_403
+ports:
+  - ClientObservationReceiptPort
+  - TeamsTabMetadataReadPort
+  - SharePointAppCatalogReadPort
+  - EntraApiPermissionReadPort
+  - AzureFunctionMetadataReadPort
+  - AzureFunctionRequestLogReadPort
+  - SharePointAccessDecisionReadPort
+required_remote_checks:
+  - Privacy and Secrets Guard / secret-scan
+  - Privacy and Secrets Guard / privacy-lint
+  - NaC Quality Gate / quality-gate
+  - NaC Windows Portability / windows-offline-cli
+phases:
+  - {id: repository_implementation, provider_access: false, mutation: repository_only}
+  - {id: final_gate, provider_access: false, mutation: github_approval_only}
+  - {id: windows_preflight, provider_access: false, mutation: consumed_gate_only}
+  - {id: single_read_only_run, provider_access: read_only, retry_allowed: false}
+  - {id: diagnostic_result, provider_access: false, authorizes: fix_plan_only}
+authorization:
+  approval_mode: OWNER_SOLO_APPROVAL
+  four_eyes_satisfied: false
+  account_and_principal_are_distinct_bindings: true
+  same_principal_accounts_extend_provider_permission: false
+  cited_two_person_duty_single_principal_status: BLOCKED_SINGLE_PRINCIPAL
+  required_before_port_factory: true
+  required_before_every_read: true
+  credential_write_guard_required: true
+  persistent_one_shot_marker_required: true
+  crash_does_not_restore_run_permission: true
+snapshot:
+  acquisition_count: 2
+  sequences: [1, 2]
+  distinct_provider_read_receipts: true
+  canonicalization: RFC-8785-closed-integer-subset
+  decision_projection_hashes_identical: true
+  raw_provider_payload_persisted: false
+side_effect_counters:
+  port_factory: 1
+  network_read: classification_specific
+  run_gate_consume_write: 1
+  result_evidence_write: 1
+  login: 0
+  device_code: 0
+  browser_authentication: 0
+  token_refresh: 0
+  token_import: 0
+  credential_export: 0
+  credential_write: 0
+  cache_write: 0
+  configuration_write: 0
+  redirect_follow: 0
+  retry: 0
+  second_real_run: 0
+  tenant_write: 0
+  provider_write: 0
+  deployment: 0
+  issue_739_release: 0
+  issue_632_authorization: 0
+counter_matrix:
+  repository_implementation_network_read: 0
+  final_gate_provider_network_read: 0
+  windows_preflight_network_read: 0
+  SPFX_SUBJECT_MISSING_network_read_per_acquisition: 2
+  BFF_REQUEST_NOT_OBSERVED_network_read_per_acquisition: 6
+  BFF_AUTHENTICATION_REJECTED_401_network_read_per_acquisition: 6
+  BFF_AUTHORIZATION_REJECTED_403_network_read_per_acquisition: 6
+ac_evidence:
+  AC-748-01:
+    artifacts:
+      - docs/de/m365-current-state-access-diagnostic.md
+      - docs/en/m365-current-state-access-diagnostic.md
+    validators:
+      - python scripts/validate_language_parity.py
+    positive_tests:
+      - test_plan_traceability_accepts_existing_same_language_plan
+    negative_cases:
+      - test_plan_traceability_requires_existing_same_language_plan
+    expected_result: DE_EN_PARITY
+    required_remote_checks:
+      - NaC Quality Gate / quality-gate
+  AC-748-02:
+    artifacts:
+      - src/nac_bff/current_state_access_gate.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_valid_solo_owner_gate_returns_sealed_authorization
+    negative_cases:
+      - test_all_binding_and_pre_io_failures_block
+    expected_result: POST_MERGE_BINDING_VERIFIED
+    required_remote_checks:
+      - NaC Quality Gate / quality-gate
+  AC-748-03:
+    artifacts:
+      - src/nac_bff/current_state_access_composition.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_issue748_cli_surfaces_are_native_offline_and_fail_closed
+    negative_cases:
+      - test_current_state_access_cli_rejects_login_retry_force_and_raw_targets
+    expected_result: INDEPENDENT_PROVENANCE
+    required_remote_checks:
+      - Privacy and Secrets Guard / privacy-lint
+  AC-748-04:
+    artifacts:
+      - src/nac_bff/current_state_access_gate.py
+      - src/nac_bff/current_state_access_adapters.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_production_adapters_are_injected_closed_and_reauthorize_each_read
+    negative_cases:
+      - test_authorization_rejects_per_read_drift
+      - test_per_read_local_and_github_gate_drift_suppresses_provider_read
+    expected_result: AUTHORIZATION_BEFORE_EVERY_READ
+    required_remote_checks:
+      - NaC Quality Gate / quality-gate
+  AC-748-05:
+    artifacts:
+      - src/nac_bff/current_state_access_diagnostic.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_exact_four_classifications
+    negative_cases:
+      - test_unknown_ambiguous_and_success_states_block
+    expected_result: EXACT_FOUR_CLASSIFICATIONS
+    required_remote_checks:
+      - NaC Windows Portability / windows-offline-cli
+  AC-748-06:
+    artifacts:
+      - src/nac_bff/current_state_access_diagnostic.py
+      - src/nac_bff/current_state_access_composition.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_two_independent_snapshots_compare_by_decision_projection
+    negative_cases:
+      - test_reused_receipt_wrong_sequence_or_projection_drift_blocks
+    expected_result: TWO_IDENTICAL_REDACTED_PROJECTIONS
+    required_remote_checks:
+      - NaC Windows Portability / windows-offline-cli
+  AC-748-07:
+    artifacts:
+      - src/nac_bff/current_state_access_gate.py
+    validators:
+      - python scripts/validate_m365_current_state_access_diagnostic.py
+    positive_tests:
+      - test_protected_production_composition_reaches_redacted_result
+    negative_cases:
+      - test_synthetic_authorization_cannot_consume_production_gate
+      - test_approval_nonce_drift_blocks
+      - test_client_and_request_correlation_drift_block
+    expected_result: ONE_SHOT_AND_ZERO_FORBIDDEN_EFFECTS
+    required_remote_checks:
+      - NaC Windows Portability / windows-offline-cli
+  AC-748-08:
+    artifacts:
+      - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
+      - scripts/validate_m365_current_state_access_diagnostic.py
+    validators:
+      - python scripts/validate_spec_traceability.py
+    positive_tests:
+      - test_validator_accepts_well_formed_manifest_block
+      - test_plan_traceability_accepts_existing_same_language_plan
+    negative_cases:
+      - test_validator_reports_missing_acceptance_id_reference
+    expected_result: COMPLETE_TRACEABILITY
+    required_remote_checks:
+      - Privacy and Secrets Guard / secret-scan
+      - Privacy and Secrets Guard / privacy-lint
+      - NaC Quality Gate / quality-gate
+      - NaC Windows Portability / windows-offline-cli
+forbidden_import_markers:
+  - issue746_reconciliation_gate
+  - azure_function_deployment_reconciliation
+  - m365-azure-bff-live-activation
+commands:
+  - python scripts/validate_m365_current_state_access_diagnostic.py
+  - python scripts/validate_spec_traceability.py
+  - python scripts/validate_language_parity.py
+  - python scripts/validate_doc_links.py
+  - python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py
+  - python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
+  - python -m unittest discover -s tests -p test_nac_cli.py
+  - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
+  - python -m unittest discover -s tests -p test_spec_traceability.py
+  - python -m unittest discover -s tests
+  - graft build
+  - graft check
+  - python scripts/nac.py doctor --profile strict
+  - git diff --name-status origin/main...HEAD
+  - git log --oneline origin/main..HEAD
+  - git diff origin/main...HEAD

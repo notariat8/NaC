@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access
 
-Status: German and English specifications approved by the owner; `plan -> review -> fix` complete; contract, test, and code changes await plan approval
+Status: German and English specification and implementation plan approved by the owner; repository implementation is in `implement -> review -> fix`; the real provider run remains separately blocked
 
 Date: 20 September 2026
 
@@ -35,6 +35,7 @@ affected_artifacts:
   - docs/en/m365-current-state-access-diagnostic.md
   - agent-context/index.json
   - .github/workflows/windows-portability.yml
+  - assets/docs/generic-workbench/VIS-721-manifest.json
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
   - workflows/contracts/spec-traceability.contract.json
   - scripts/validate_m365_current_state_access_diagnostic.py
@@ -45,6 +46,8 @@ affected_artifacts:
   - src/nac_bff/current_state_access_ports.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
+  - src/nac_bff/activation_security_backend.py
+  - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
@@ -234,7 +237,11 @@ receipt containing:
   a specifically cited superior legal or policy basis establishes that
   exception for this exact SaaS-processing scope;
 - provider, tenant, purpose, and permitted data extent;
-- policy/contract version and digest;
+- exactly `policies/data-protection-policy.yaml` and its digest recomputed from
+  the bound repository blob;
+- a separate protected DPA agreement evidence document whose digest is bound
+  by the receipt and whose effective status, validity window, Microsoft
+  provider, tenant, and target are rechecked before every read;
 - retention and deletion period for diagnostic evidence;
 - approval status for exactly Issue #748 and the one read-only run.
 
@@ -388,7 +395,8 @@ decision_projection:
   side_effect_counters:
     port_factory: nonnegative-integer
     network_read: nonnegative-integer
-    evidence_sink_write: nonnegative-integer
+    run_gate_consume_write: nonnegative-integer
+    result_evidence_write: nonnegative-integer
     login: 0
     device_code: 0
     browser_authentication: 0
@@ -411,7 +419,7 @@ decision_projection_sha256: sha256-hex
 
 The type notation above describes the schema; real evidence contains only
 calculated bindings and concrete enum values. `port_factory`, `network_read`,
-and `evidence_sink_write` are checked against the exact permitted values in the
+`run_gate_consume_write`, and `result_evidence_write` are checked against the exact permitted values in the
 verification contract; every other operational counter must be zero. An
 unknown key or disallowed count blocks canonicalization.
 
@@ -491,7 +499,8 @@ The system stops fail-closed before the next phase on:
 - observed or possible mutation;
 - missing OS-enforced write restriction to the single protected evidence sink;
 - any deviation from the phase- and classification-specific exact permitted
-  values for `port_factory`, `network_read`, or `evidence_sink_write`, and any
+  values for `port_factory`, `network_read`, `run_gate_consume_write`, or
+  `result_evidence_write`, and any
   other operational counter with a non-zero value;
 - any attempt to use #739 or #632 as input or downstream effect.
 
@@ -623,11 +632,10 @@ is actually introduced; adding an artificial AI component is a non-goal.
 
 ## Review Gate
 
-The owner approved the written German and English specifications at commit
-`8616bdbe97546cfc3d2cc74973440a7fe7c508ed` and tree
-`94d0f7e310be82e206eabff017aeec06d206339a`. The synchronized German and English
-implementation plan may be created and reviewed through `plan -> review ->
-fix`. Contract, test, and code changes begin only after explicit plan approval.
+The owner approved the German and English specifications and the synchronized
+German and English implementation plan. The test-first implementation in
+Draft PR #749 proceeds through `implement -> review -> fix`; its repository and
+CI authorization still includes no real provider access.
 
 This specification approval will still not authorize provider access. The
 later real read-only diagnostic run requires its own exact binding to final

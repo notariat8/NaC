@@ -529,6 +529,25 @@
           ]
         },
         {
+          "id": "m365_current_state_access_diagnostic",
+          "description": "Issue #748 independent Windows-native, read-only current-state diagnostic for notary_team_01 and the NaC Vorgangsansicht Teams app. The path remains separate from terminal #739 provenance and Issue #632, binds authorization before every read, and requires two redacted identical decision projections before producing one of four closed diagnostic classes.",
+          "paths": [
+            "docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
+            "docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
+            "docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
+            "docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
+            "docs/de/m365-current-state-access-diagnostic.md",
+            "docs/en/m365-current-state-access-diagnostic.md",
+            "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
+            "scripts/validate_m365_current_state_access_diagnostic.py",
+            "src/nac_bff/current_state_access_*.py",
+            "src/nac_cli/cli.py",
+            "tests/test_m365_current_state_access_diagnostic.py",
+            "tests/test_m365_current_state_access_gate.py",
+            ".github/workflows/windows-portability.yml"
+          ]
+        },
+        {
           "id": "generic_workbench_foundation",
           "description": "Issue #721 read-only generic Today, Matter and Decision Center with a framework-light core, exact NaC BFF snapshot projection, short access lease and deny-only capability boundary.",
           "paths": [
@@ -612,6 +631,7 @@
     "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
     "workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml",
     "workflows/verification-contracts/m365-bff-failed-partial-safe-completion.verification.yaml",
+    "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
     "workflows/verification-contracts/business-case-type-live-write-boundary-s4d.verification.json",
     "workflows/verification-contracts/business-case-type-live-write-readiness-s4e.verification.json",
     "workflows/verification-contracts/business-case-type-production-adapters-s4f.verification.json",
