@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: Design vom Owner freigegeben; geschriebene Spec wartet auf Owner-Review vor Implementierungsplan und Code
+Status: DE/EN-Spec vom Owner freigegeben; `plan -> review -> fix` abgeschlossen; Contract-, Test- und Codeänderungen warten auf Planfreigabe
 
 Datum: 20. September 2026
 
@@ -13,6 +13,7 @@ Tree `007e277ca5643f7cb63355961fd0422d92fd4b87`, gemergter
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-current-state-access-diagnostic
+plan: docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
 leading_issue: https://github.com/notariat8/NaC/issues/748
 risk_gate: Human Approval
 delivery_mode: Protected PR
@@ -35,15 +36,19 @@ affected_artifacts:
   - agent-context/index.json
   - .github/workflows/windows-portability.yml
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
+  - workflows/contracts/spec-traceability.contract.json
   - scripts/validate_m365_current_state_access_diagnostic.py
+  - scripts/validate_spec_traceability.py
   - scripts/quality_gate.py
   - src/nac_bff/current_state_access_diagnostic.py
   - src/nac_bff/current_state_access_gate.py
   - src/nac_bff/current_state_access_ports.py
+  - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
   - src/nac_cli/cli.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
+  - tests/test_spec_traceability.py
   - tests/test_nac_cli.py
   - tests/test_windows_offline_cli_portability.py
 acceptance_ids:
@@ -64,6 +69,8 @@ validation_commands:
   - python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
+  - python -m unittest discover -s tests -p test_spec_traceability.py
+  - python -m unittest discover -s tests
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -641,10 +648,12 @@ AI-Komponente ist Nicht-Ziel.
 
 ## Review-Gate
 
-Der Owner hat den empfohlenen unabhängigen Current-State-Ansatz und die
-Erstellung dieser Spec freigegeben. Vor Implementierungsplan, Contract- oder
-Codeänderung muss der Owner nun die tatsächlich geschriebenen DE/EN-Specs
-prüfen und ausdrücklich freigeben.
+Der Owner hat die geschriebenen DE/EN-Specs auf Commit
+`8616bdbe97546cfc3d2cc74973440a7fe7c508ed` und Tree
+`94d0f7e310be82e206eabff017aeec06d206339a` freigegeben. Der synchronisierte
+DE/EN-Implementierungsplan darf erstellt und mit `plan -> review -> fix`
+geprüft werden. Contract-, Test- und Codeänderungen beginnen erst nach einer
+ausdrücklichen Planfreigabe.
 
 Diese Spec-Freigabe autorisiert noch keinen Providerzugriff. Der spätere reale
 read-only Diagnose-Lauf benötigt nach Implementierung, Review, Push und grüner

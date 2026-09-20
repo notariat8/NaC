@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access
 
-Status: design approved by the owner; written specification awaits owner review before implementation plan and code
+Status: German and English specifications approved by the owner; `plan -> review -> fix` complete; contract, test, and code changes await plan approval
 
 Date: 20 September 2026
 
@@ -13,6 +13,7 @@ tree `007e277ca5643f7cb63355961fd0422d92fd4b87`, merged
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-current-state-access-diagnostic
+plan: docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
 leading_issue: https://github.com/notariat8/NaC/issues/748
 risk_gate: Human Approval
 delivery_mode: Protected PR
@@ -35,15 +36,19 @@ affected_artifacts:
   - agent-context/index.json
   - .github/workflows/windows-portability.yml
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
+  - workflows/contracts/spec-traceability.contract.json
   - scripts/validate_m365_current_state_access_diagnostic.py
+  - scripts/validate_spec_traceability.py
   - scripts/quality_gate.py
   - src/nac_bff/current_state_access_diagnostic.py
   - src/nac_bff/current_state_access_gate.py
   - src/nac_bff/current_state_access_ports.py
+  - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
   - src/nac_cli/cli.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
+  - tests/test_spec_traceability.py
   - tests/test_nac_cli.py
   - tests/test_windows_offline_cli_portability.py
 acceptance_ids:
@@ -64,6 +69,8 @@ validation_commands:
   - python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
+  - python -m unittest discover -s tests -p test_spec_traceability.py
+  - python -m unittest discover -s tests
   - graft build
   - graft check
   - python scripts/nac.py doctor --profile strict
@@ -616,10 +623,11 @@ is actually introduced; adding an artificial AI component is a non-goal.
 
 ## Review Gate
 
-The owner approved the recommended independent current-state approach and
-creation of this specification. Before implementation plan, contract, or code
-changes, the owner must now review and explicitly approve the written German
-and English specifications.
+The owner approved the written German and English specifications at commit
+`8616bdbe97546cfc3d2cc74973440a7fe7c508ed` and tree
+`94d0f7e310be82e206eabff017aeec06d206339a`. The synchronized German and English
+implementation plan may be created and reviewed through `plan -> review ->
+fix`. Contract, test, and code changes begin only after explicit plan approval.
 
 This specification approval will still not authorize provider access. The
 later real read-only diagnostic run requires its own exact binding to final
