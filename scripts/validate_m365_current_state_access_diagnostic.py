@@ -105,6 +105,7 @@ REQUIRED_FILES = [
     "src/nac_cli/cli.py",
     "tests/test_nac_cli.py",
     "tests/test_spec_traceability.py",
+    "tests/test_validate_workbench_live_read_binding.py",
     "tests/test_windows_offline_cli_portability.py",
     "workflows/contracts/spec-traceability.contract.json",
     "workflows/contracts/workbench-live-read-binding.contract.json",

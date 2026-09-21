@@ -121,7 +121,7 @@
   "visualHarness": [
     {
       "relativePath": "scripts/validate_workbench_live_read_binding.py",
-      "sha256": "e1d814d74bdc4c2bb94c5ce0e2f76d2302f96f15083e585f992f90c33b8ebc1f"
+      "sha256": "523eb370525f17bb430f5fb53f16de006132f007d2800d13c6886aac4bc214c6"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",

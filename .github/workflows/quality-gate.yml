@@ -117,6 +117,7 @@ jobs:
           path: |
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js
+            spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js
 
   quality-gate:
     needs: spfx-bpmn-viewer
@@ -164,7 +165,7 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: workbench-live-host-compiled
-          path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components
+          path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer
 
       - name: Install pinned Bicep compiler
         run: |

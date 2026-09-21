@@ -19,6 +19,19 @@ class WorkbenchLiveReadBindingValidatorTests(unittest.TestCase):
     def test_repository_binding_is_valid(self) -> None:
         self.assertEqual(validator.validate(), [])
 
+    def test_quality_gate_transfers_all_live_host_build_evidence(self) -> None:
+        workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js",
+            workflow,
+        )
+        self.assertIn(
+            "path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer\n",
+            workflow,
+        )
+
     def test_number_detection_excludes_json_booleans(self) -> None:
         self.assertFalse(validator._contains_number({"flag": True, "value": None}))
         self.assertTrue(validator._contains_number({"value": 1}))

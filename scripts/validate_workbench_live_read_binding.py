@@ -298,6 +298,8 @@ def validate() -> list[str]:
             "workbench-live-host-compiled",
             "NacWorkbenchHost.js",
             "NacWorkbenchHost.styles.js",
+            "ClientObservationReceipt.js",
+            "path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer",
         ),
         errors,
     )
