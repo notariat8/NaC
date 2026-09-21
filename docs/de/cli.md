@@ -23,18 +23,24 @@ der Windows-Abschlusspfad in der
 
 ## Teams-/BFF-Current-State-Diagnose
 
-Issue #748 ergänzt zwei Windows-native, strikt getrennte Bedienkanten:
+Issue #748 ergänzt drei Windows-native, strikt getrennte Bedienkanten:
 
 ```text
 nac m365 teams-sharepoint current-state-access-diagnostic-preflight
 nac m365 teams-sharepoint current-state-access-diagnostic-run-read-only
+nac m365 teams-sharepoint current-state-access-client-receipt-stage
 ```
 
-Der Preflight prüft ausschließlich geschützte lokale Bindungen und erzeugt
-keine Provider-Ports. Der Read-only-Befehl bleibt bis zu einer neuen, final
-gebundenen Freigabe gesperrt. Beide akzeptieren nur die Pfade
-`--current-state-access-input-root` und
-`--current-state-access-evidence-root`; reale Ziel- oder Identitätswerte sind
+Der lokale Staging-Befehl prüft den explizit vom SPFx-Webpart heruntergeladenen
+Sechs-Felder-Beleg und erstellt `client-observation-receipt.json` exklusiv im
+geschützten externen Inputverzeichnis. Er überschreibt nichts und verwendet
+weder Netzwerk noch Login oder Provider. Der Preflight prüft ausschließlich
+geschützte lokale Bindungen und erzeugt keine Provider-Ports. Der Read-only-
+Befehl bleibt bis zu einer neuen, final gebundenen Freigabe gesperrt. Staging
+akzeptiert nur `--current-state-access-client-receipt` und
+`--current-state-access-input-root`; Preflight und Read-only-Lauf akzeptieren
+nur `--current-state-access-input-root` und
+`--current-state-access-evidence-root`. Reale Ziel- oder Identitätswerte sind
 keine CLI-Argumente. Details stehen im
 [Diagnose-Runbook](m365-current-state-access-diagnostic.md).
 Der reale Befehl benötigt außerdem den im geschützten `toolchain.json`

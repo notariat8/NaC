@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access — Implementation Plan
 
-Status: Base plan approved; the privacy-minimal SPFx client-receipt extension is in `plan -> review -> fix` and awaits owner review before implementation; provider access and merge remain blocked
+Status: Base plan and privacy-minimal SPFx client-receipt extension approved after `plan -> review -> fix`; local test-first implementation is in progress; provider access and merge remain blocked
 
 Date: 20 September 2026
 
@@ -103,8 +103,9 @@ deployment, recovery, or write.
 | Core and gate | `src/nac_bff/current_state_access_diagnostic.py`, `src/nac_bff/current_state_access_gate.py` | pure classification and post-merge, GitHub, governance, and privacy authorization |
 | Ports, adapters, and composition | `src/nac_bff/current_state_access_ports.py`, `src/nac_bff/current_state_access_adapters.py`, `src/nac_bff/current_state_access_composition.py` | closed ports, narrow production read adapters, port factory behind gate, and two separate acquisitions |
 | CLI | `src/nac_cli/cli.py` | local preflight and separately blocked read-only run |
-| SPFx client receipt | `spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx`, `spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts`, new `ClientObservationReceipt.ts`, and related tests | ephemeral correlation binding, closed window, and explicit local download without PII |
-| Tests | `tests/test_m365_current_state_access_diagnostic.py`, `tests/test_m365_current_state_access_gate.py`, `tests/test_nac_cli.py`, `tests/test_windows_offline_cli_portability.py` | positive, negative, security, replay, parity, and Windows tests |
+| SPFx client receipt | `NacWorkbenchHost.tsx`, `NacWorkbenchHost.styles.ts`, `NacBpmnViewerWebPart.ts`, `NacBffClient.ts`, new `ClientObservationReceipt.ts`, the VIS-725-05 harness, and related tests | ephemeral correlation binding, closed window, explicit local download without PII, no automatic download, and visual negative evidence |
+| Offline materialization | `src/nac_bff/current_state_access_client_receipt.py`, `src/nac_cli/cli.py` | strict six-field validation and exclusive materialization in the protected external directory |
+| Tests | `tests/test_m365_current_state_access_client_receipt.py`, `tests/test_m365_current_state_access_diagnostic.py`, `tests/test_m365_current_state_access_gate.py`, `tests/test_nac_cli.py`, `tests/test_windows_offline_cli_portability.py` | positive, negative, security, replay, parity, and Windows tests |
 | Documentation and AI-SBOM | `docs/de/cli.md`, `docs/en/cli.md`, `docs/de/m365-current-state-access-diagnostic.md`, `docs/en/m365-current-state-access-diagnostic.md`, `docs/de/sbom-for-ai.md`, `docs/en/sbom-for-ai.md` | operation, boundaries, error classes, later approval chain, and the negative AI-data-flow decision |
 | Context and CI | `agent-context/index.json`, `.github/workflows/windows-portability.yml` | on-demand contract and mandatory Windows test matrix |
 | Traceability | German/English specification and plan, `workflows/contracts/spec-traceability.contract.json`, `scripts/validate_spec_traceability.py`, `tests/test_spec_traceability.py` | connect issue, plan links, ACs, files, and evidence |
@@ -113,6 +114,13 @@ Other files are added only when an initially failing test proves a direct
 in-scope dependency and the plan is synchronized before commit. No Gantt
 change is planned because the path causes no roadmap, scope, or milestone
 change.
+
+The complete PR scope also contains the separately requested commit
+`ecb1f96fc5cceaf2473661a0ff0cf0dd8d80e6f9`, which was already part of the
+approved baseline. It binds every Function8/Microsoft login request to the
+explicit naming of either `ofunk@funktion8` or `funktion8@funktion8`. This
+governance clarification grants no login authorization and remains reviewable
+as a separate forward commit.
 
 ## Test-First Implementation Sequence
 
@@ -272,8 +280,10 @@ python -m unittest discover -s tests -p test_nac_cli.py
 python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
 python -m unittest discover -s tests -p test_spec_traceability.py
 cd spfx/nac-bpmn-viewer && npm run build
-cd spfx/nac-bpmn-viewer && npm run workbench:capture
+cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
+python scripts/validate_workbench_live_read_binding.py
 python scripts/validate_m365_current_state_access_diagnostic.py
+python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
 python scripts/validate_spec_traceability.py
 python scripts/validate_language_parity.py
 python scripts/validate_doc_links.py

@@ -18,7 +18,7 @@ REQUIRED_TOP_LEVEL = {
     "schema_version", "contract_id", "leading_issue", "delivery_mode",
     "risk_gate", "specifications", "plans", "acceptance_ids", "base_binding",
     "normative_classifications", "ports", "required_remote_checks", "phases",
-    "authorization", "snapshot", "side_effect_counters",
+    "authorization", "client_receipt", "snapshot", "side_effect_counters",
     "counter_matrix", "ac_evidence", "exact_artifacts",
     "forbidden_import_markers", "commands",
 }
@@ -42,34 +42,68 @@ REQUIRED_CHECKS = [
     "NaC Windows Portability / windows-offline-cli",
 ]
 REQUIRED_FILES = [
+    ".codex/agents/nac-policy-reviewer.toml",
     ".github/workflows/windows-portability.yml",
+    ".pi/agents/nac-policy-reviewer.md",
+    "AGENTS.md",
     "agent-context/index.json",
     "assets/docs/generic-workbench/VIS-721-manifest.json",
+    "assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-02-narrow-spfx-ready.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-03-mobile-ready.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-04-loading.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-05-deny.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png",
+    "assets/docs/workbench-live-read-binding/VIS-725-manifest.json",
+    "docs/de/START_HERE.md",
     "docs/de/cli.md",
+    "docs/de/README.md",
+    "docs/en/START_HERE.md",
     "docs/en/cli.md",
+    "docs/en/README.md",
+    "docs/de/m365-current-state-access-diagnostic.md",
+    "docs/en/m365-current-state-access-diagnostic.md",
+    "docs/de/sbom-for-ai.md",
+    "docs/en/sbom-for-ai.md",
     "docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
     "docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
     "docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
     "docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
+    "policies/process-policy.yaml",
     "scripts/quality_gate.py",
+    "scripts/validate_agent_authentication_boundary.py",
     "scripts/validate_m365_current_state_access_diagnostic.py",
     "scripts/validate_spec_traceability.py",
+    "scripts/validate_workbench_live_read_binding.py",
+    "spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs",
+    "spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs",
+    "spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.test.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+    "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
     "src/nac_bff/current_state_access_diagnostic.py",
     "src/nac_bff/current_state_access_gate.py",
     "src/nac_bff/current_state_access_ports.py",
     "src/nac_bff/activation_security_backend.py",
     "src/nac_bff/azure_live_commands_win.py",
     "src/nac_bff/current_state_access_adapters.py",
+    "src/nac_bff/current_state_access_client_receipt.py",
     "src/nac_bff/current_state_access_composition.py",
+    "tests/test_agent_authentication_boundary.py",
+    "tests/test_m365_current_state_access_client_receipt.py",
     "tests/test_m365_current_state_access_diagnostic.py",
     "tests/test_m365_current_state_access_gate.py",
-    "docs/de/m365-current-state-access-diagnostic.md",
-    "docs/en/m365-current-state-access-diagnostic.md",
     "src/nac_cli/cli.py",
     "tests/test_nac_cli.py",
     "tests/test_spec_traceability.py",
     "tests/test_windows_offline_cli_portability.py",
     "workflows/contracts/spec-traceability.contract.json",
+    "workflows/contracts/workbench-live-read-binding.contract.json",
     "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
 ]
 GENERATED_EDITABLE_INSTALL_METADATA = {
@@ -165,6 +199,7 @@ def validate() -> list[str]:
         errors.append("forbidden side-effect counter is nonzero")
     expected_counter_matrix = {
         "repository_implementation_network_read": 0,
+        "client_receipt_stage_network_read": 0,
         "final_gate_provider_network_read": 0,
         "windows_preflight_network_read": 0,
         "SPFX_SUBJECT_MISSING_network_read_per_acquisition": 2,
@@ -174,6 +209,36 @@ def validate() -> list[str]:
     }
     if contract.get("counter_matrix") != expected_counter_matrix:
         errors.append("phase/classification counter matrix mismatch")
+    receipt = contract.get("client_receipt")
+    expected_receipt = {
+        "browser_filename": "nac-issue748-client-observation.json",
+        "protected_filename": "client-observation-receipt.json",
+        "maximum_bytes": 16384,
+        "canonicalization": "utf8-json-sorted-keys-no-whitespace",
+        "exact_fields": [
+            "end_utc",
+            "request_correlation_binding_sha256",
+            "spfx_subject_available",
+            "start_utc",
+            "ui_state",
+            "window_binding_sha256",
+        ],
+        "ui_state": "no_access",
+        "correlation_raw_persisted": False,
+        "correlation_single_use": True,
+        "automatic_download": False,
+        "telemetry": False,
+        "source_read_handle_bound": True,
+        "destination_sid_dacl_protected": True,
+        "destination_create_exclusive": True,
+        "repository_external": True,
+        "stage_network_reads": 0,
+        "stage_login": 0,
+        "stage_credential_writes": 0,
+        "stage_provider_writes": 0,
+    }
+    if receipt != expected_receipt:
+        errors.append("client receipt contract mismatch")
     exact_artifacts = contract.get("exact_artifacts")
     if not isinstance(exact_artifacts, list) or set(exact_artifacts) != set(REQUIRED_FILES):
         errors.append("exact artifact scope mismatch")
@@ -269,6 +334,7 @@ def validate() -> list[str]:
         errors.append("feature validator is not registered in quality gate")
     workflow = (REPO_ROOT / ".github/workflows/windows-portability.yml").read_text(encoding="utf-8")
     windows_commands = [
+        "python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py",
         "python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py",
         "python -m unittest discover -s tests -p test_m365_current_state_access_gate.py",
         "python -m unittest discover -s tests -p test_nac_cli.py",
@@ -280,8 +346,19 @@ def validate() -> list[str]:
     for command in windows_commands:
         if command not in contract.get("commands", []) or command not in workflow:
             errors.append(f"Windows workflow command missing: {command}")
+    for marker in (
+        'node-version: "22.14.0"',
+        "npm ci --ignore-scripts",
+        "node scripts/validate-read-only-boundary.cjs",
+        'npx heft test --clean --production --test-path-pattern "ClientObservationReceipt.test.ts|NacWorkbenchHost.test.tsx|NacBffClient.test.ts"',
+        "node scripts/generate-workbench-live-read-visual-fixture.cjs $fixtureRoot",
+        'node-version: "24"',
+    ):
+        if marker not in workflow:
+            errors.append(f"Windows SPFx receipt marker missing: {marker}")
     all_test_methods: set[str] = set()
     for path in (
+        REPO_ROOT / "tests/test_m365_current_state_access_client_receipt.py",
         REPO_ROOT / "tests/test_m365_current_state_access_diagnostic.py",
         REPO_ROOT / "tests/test_m365_current_state_access_gate.py",
         REPO_ROOT / "tests/test_nac_cli.py",
@@ -296,6 +373,7 @@ def validate() -> list[str]:
         if not methods:
             errors.append(f"required test suite is empty: {path.name}")
         if path.name in {
+            "test_m365_current_state_access_client_receipt.py",
             "test_m365_current_state_access_diagnostic.py",
             "test_m365_current_state_access_gate.py",
         }:
@@ -310,12 +388,19 @@ def validate() -> list[str]:
         for method in methods:
             rendered = ast.unparse(method).lower()
             is_feature_suite = path.name in {
+                "test_m365_current_state_access_client_receipt.py",
                 "test_m365_current_state_access_diagnostic.py",
                 "test_m365_current_state_access_gate.py",
             }
+            allowed_native_windows_skip = (
+                path.name == "test_m365_current_state_access_client_receipt.py"
+                and method.name
+                == "test_real_windows_backend_binds_and_exclusively_stages_receipt"
+                and "skipunless(os.name == 'nt'" in rendered
+            )
             if "skip" in rendered and (
                 is_feature_suite or method.name in referenced_test_methods
-            ):
+            ) and not allowed_native_windows_skip:
                 errors.append(f"required test is skipped: {path.name} {method.name}")
     if isinstance(ac_evidence, dict):
         missing_methods = referenced_test_methods - all_test_methods

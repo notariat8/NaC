@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: Basisspec und Basisplan vom Owner freigegeben; datenschutzarme SPFx-Client-Receipt-Erweiterung in DE/EN dokumentiert und vor ihrer Umsetzung im Review-Gate; realer Providerlauf weiterhin separat gesperrt
+Status: Basisspec, datenschutzarme SPFx-Client-Receipt-Erweiterung und synchronisierter DE/EN-Plan vom Owner freigegeben; lokale test-first Umsetzung läuft; realer Providerlauf weiterhin separat gesperrt
 
 Datum: 20. September 2026
 
@@ -46,18 +46,28 @@ affected_artifacts:
   - src/nac_bff/current_state_access_ports.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
+  - src/nac_bff/current_state_access_client_receipt.py
   - src/nac_bff/activation_security_backend.py
   - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.test.ts
+  - spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs
+  - spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs
+  - scripts/validate_workbench_live_read_binding.py
+  - workflows/contracts/workbench-live-read-binding.contract.json
+  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png bis VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/sbom-for-ai.md
   - docs/en/sbom-for-ai.md
   - tests/test_m365_current_state_access_diagnostic.py
+  - tests/test_m365_current_state_access_client_receipt.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_spec_traceability.py
   - tests/test_nac_cli.py
@@ -76,13 +86,15 @@ validation_commands:
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
   - python scripts/validate_m365_current_state_access_diagnostic.py
+  - python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
   - python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py
   - python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
   - python -m unittest discover -s tests -p test_spec_traceability.py
   - cd spfx/nac-bpmn-viewer && npm run build
-  - cd spfx/nac-bpmn-viewer && npm run workbench:capture
+  - cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
+  - python scripts/validate_workbench_live_read_binding.py
   - python -m unittest discover -s tests
   - graft build
   - graft check

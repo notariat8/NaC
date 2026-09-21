@@ -95,6 +95,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Entra-ID-/M365-Anbindung, Karten-Gates und mobile sichere Dokumentlinks.
 - [cli.md](cli.md): technische `nac`-Steuerfläche hinter der Bürooberfläche,
   erste Befehle und Architekturregel für neue Funktionen.
+- [m365-current-state-access-diagnostic.md](m365-current-state-access-diagnostic.md):
+  Windows-native, datenschutzarme Diagnose des aktuellen Teams-/BFF-Zugriffs.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische

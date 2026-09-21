@@ -42,6 +42,7 @@ class NaCCliTests(unittest.TestCase):
         for command in (
             "current-state-access-diagnostic-preflight",
             "current-state-access-diagnostic-run-read-only",
+            "current-state-access-client-receipt-stage",
         ):
             with self.subTest(command=command):
                 rc, output = run_cli(
@@ -50,10 +51,23 @@ class NaCCliTests(unittest.TestCase):
                 self.assertEqual(rc, 2)
                 payload = json.loads(output)
                 self.assertEqual(payload["status"], "BLOCKED")
-                self.assertEqual(payload["provider_ports_created"], 0)
+                self.assertEqual(payload.get("provider_ports_created", 0), 0)
                 self.assertEqual(payload["network_reads"], 0)
                 self.assertEqual(payload["credential_writes"], 0)
                 self.assertNotIn("tenant", output.lower())
+
+    def test_client_receipt_stage_requires_only_external_local_paths(self) -> None:
+        rc, output = run_cli(
+            "m365", "teams-sharepoint",
+            "current-state-access-client-receipt-stage",
+            "--format", "json",
+        )
+        self.assertEqual(rc, 2)
+        payload = json.loads(output)
+        self.assertEqual(payload["reason_code"], "CLIENT_RECEIPT_PATHS_REQUIRED")
+        self.assertEqual(payload["network_reads"], 0)
+        self.assertEqual(payload["credential_writes"], 0)
+        self.assertEqual(payload["provider_writes"], 0)
 
     def test_current_state_access_cli_rejects_login_retry_force_and_raw_targets(self) -> None:
         for flag in ("--login", "--retry", "--force", "--tenant-id", "--team-id"):

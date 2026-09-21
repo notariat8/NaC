@@ -763,6 +763,7 @@ def build_parser() -> argparse.ArgumentParser:
             "bff-azure-function-deployment-reconcile",
             "current-state-access-diagnostic-preflight",
             "current-state-access-diagnostic-run-read-only",
+            "current-state-access-client-receipt-stage",
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
@@ -1355,6 +1356,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--current-state-access-evidence-root",
         type=Path,
         help="Absoluter repository-externer geschützter Issue-#748-Evidence-Root.",
+    )
+    teams_sharepoint.add_argument(
+        "--current-state-access-client-receipt",
+        type=Path,
+        help="Absoluter repository-externer Pfad zum lokalen SPFx-Clientbeleg.",
     )
     teams_sharepoint.add_argument("--bff-attestation-azure-cli", type=Path)
     teams_sharepoint.add_argument("--bff-attestation-m365-cli", type=Path)
@@ -2627,6 +2633,64 @@ def _current_state_access_block_payload(reason_code: str) -> dict:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if (
+            args.teams_sharepoint_command
+            == "current-state-access-client-receipt-stage"
+        ):
+            from nac_bff.current_state_access_client_receipt import (
+                ClientObservationReceiptError,
+                stage_client_observation_receipt,
+            )
+
+            source = getattr(args, "current_state_access_client_receipt", None)
+            input_root = getattr(args, "current_state_access_input_root", None)
+            if source is None or input_root is None:
+                payload = {
+                    "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                    "status": "BLOCKED",
+                    "reason_code": "CLIENT_RECEIPT_PATHS_REQUIRED",
+                    "network_reads": 0,
+                    "credential_writes": 0,
+                    "provider_writes": 0,
+                    "live_run_authorized": False,
+                }
+            else:
+                try:
+                    payload = stage_client_observation_receipt(
+                        source_path=source,
+                        input_root=input_root,
+                        repo_root=repo_root,
+                    )
+                except ClientObservationReceiptError as exc:
+                    payload = {
+                        "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                        "status": "BLOCKED",
+                        "reason_code": exc.code,
+                        "network_reads": 0,
+                        "credential_writes": 0,
+                        "provider_writes": 0,
+                        "live_run_authorized": False,
+                    }
+                except (OSError, RuntimeError, ValueError, TypeError):
+                    payload = {
+                        "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                        "status": "BLOCKED",
+                        "reason_code": "CLIENT_RECEIPT_SECURITY_BINDING_INVALID",
+                        "network_reads": 0,
+                        "credential_writes": 0,
+                        "provider_writes": 0,
+                        "live_run_authorized": False,
+                    }
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(f"STATUS: {payload['status']}")
+                if payload["status"] == "PASSED":
+                    print(f"RECEIPT_SHA256: {payload['receipt_sha256']}")
+                else:
+                    print(f"ERROR: {payload['reason_code']}")
+            return 0 if payload["status"] == "PASSED" else 2
+
         if args.teams_sharepoint_command in {
             "current-state-access-diagnostic-preflight",
             "current-state-access-diagnostic-run-read-only",

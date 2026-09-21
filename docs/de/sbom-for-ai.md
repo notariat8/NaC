@@ -44,6 +44,20 @@ NaC ergänzt zusätzlich Datenschutz-/AVV-DPA-Status, Berufsgeheimnisgrenzen,
 Human-Review-Owner, lokale Runtime-/Hardware-Mindestvoraussetzungen und
 Release-/Evidence-Bindung.
 
+## Issue #748: Client-Observation-Receipt
+
+Der datenschutzarme Client-Observation-Receipt wird ausschließlich lokal mit
+kryptografisch zufälliger Korrelationsbindung und einem aktuellen Zeitfenster
+erzeugt und explizit heruntergeladen. Seine Serialisierung, Validierung und
+Materialisierung in ein geschütztes repository-externes Verzeichnis sind
+deterministisch. Er fügt weder ein Modell noch
+einen Modellanbieter, einen Prompt, einen Agenten oder einen externen
+AI-Datenfluss hinzu. Der Receipt enthält keine Object-ID, keinen Namen, keine
+E-Mail-Adresse, kein Token und keine Tenantdaten. Für Issue #748 lautet die
+AI-SBOM-Entscheidung daher: keine neue AI-Komponente und keine neue
+AI-Datenverarbeitung; die bestehende Runtime- und Evidence-Bindung bleibt
+maßgeblich.
+
 ## Erste Artefakte
 
 - Policy: `policies/sbom-policy.yaml`

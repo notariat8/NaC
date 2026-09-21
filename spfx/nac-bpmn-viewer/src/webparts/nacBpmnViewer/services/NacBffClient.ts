@@ -95,7 +95,8 @@ export async function loadNacWorkbenchSnapshot(
   clientFactory: AadHttpClientFactory,
   expectedSubjectId: string,
   signal: AbortSignal,
-  nowIso?: string
+  nowIso?: string,
+  observationCorrelationId?: string
 ): Promise<WorkbenchSnapshot> {
   if (expectedSubjectId.trim().length === 0) {
     throw new Error('NAC_BFF_ACCESS_DENIED');
@@ -105,11 +106,15 @@ export async function loadNacWorkbenchSnapshot(
     NAC_BFF_MATTER_ID + '/workbench-snapshot';
   const workbenchUrl = NAC_BFF_BASE_URL + workbenchPath + '?purpose=' +
     encodeURIComponent(NAC_BFF_PURPOSE);
+  const correlationId = observationCorrelationId ?? createCorrelationId();
+  if (!isCorrelationId(correlationId)) {
+    throw new Error('NAC_BFF_CORRELATION_INVALID');
+  }
   const response = await client.get(workbenchUrl, AadHttpClient.configurations.v1, {
     signal,
     headers: {
       Accept: 'application/json',
-      'X-Correlation-ID': createCorrelationId()
+      'X-Correlation-ID': correlationId
     }
   });
   const validationNowIso = nowIso ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -350,4 +355,9 @@ function createCorrelationId(): string {
   }
   const random = Math.random().toString(16).slice(2);
   return 'spfx-' + Date.now().toString(16) + '-' + random;
+}
+
+function isCorrelationId(value: string): boolean {
+  return /^spfx-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(value);
 }

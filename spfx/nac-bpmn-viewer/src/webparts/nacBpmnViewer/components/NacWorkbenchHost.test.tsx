@@ -1,7 +1,10 @@
+/// <reference types="node" />
 /* eslint-disable @rushstack/pair-react-dom-render-unmount -- afterEach owns cleanup for every test root. */
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { act } from 'react-dom/test-utils';
+import { createHash } from 'crypto';
+import { TextEncoder } from 'util';
 
 import { WorkbenchSnapshot } from '../../../workbench/core/WorkbenchContracts';
 import { VALID_WORKBENCH_SNAPSHOT } from '../../../workbench/core/parseWorkbenchSnapshot.test';
@@ -44,6 +47,27 @@ describe('NaC workbench live host', () => {
     jest.setSystemTime(new Date('2026-08-01T09:01:00Z'));
     root = document.createElement('div');
     document.body.appendChild(root);
+    Object.defineProperty(globalThis, 'crypto', {
+      configurable: true,
+      value: {
+        randomUUID: (): string => '11111111-2222-4333-8444-555555555555',
+        subtle: {
+          digest: async (
+            _algorithm: AlgorithmIdentifier,
+            data: BufferSource
+          ): Promise<ArrayBuffer> => {
+            const bytes = data instanceof ArrayBuffer
+              ? new Uint8Array(data)
+              : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            return Uint8Array.from(createHash('sha256').update(bytes).digest()).buffer;
+          }
+        }
+      }
+    });
+    Object.defineProperty(globalThis, 'TextEncoder', {
+      configurable: true,
+      value: TextEncoder
+    });
   });
 
   afterEach(() => {
@@ -54,30 +78,75 @@ describe('NaC workbench live host', () => {
     jest.useRealTimers();
   });
 
-  it('fails closed without an authenticated AAD subject', () => {
+  it('fails closed without an authenticated AAD subject', async () => {
     const loadSnapshot = jest.fn();
-    act(() => {
+    await act(async () => {
       ReactDom.render(<NacWorkbenchHost
         expectedSubjectId={undefined}
         loadSnapshot={loadSnapshot}
         detailSurface={<div>BPMN detail</div>}
       />, root);
+      await Promise.resolve();
+      await Promise.resolve();
     });
     expect(root.textContent).toContain('Kein Zugriff auf diesen Arbeitsbereich.');
     expect(loadSnapshot).not.toHaveBeenCalled();
   });
 
+  it('offers an explicit privacy-minimal receipt for a missing SPFx subject', async () => {
+    const downloadReceipt = jest.fn();
+    await act(async () => {
+      ReactDom.render(<NacWorkbenchHost
+        expectedSubjectId={undefined}
+        loadSnapshot={jest.fn()}
+        detailSurface={<div />}
+        downloadReceipt={downloadReceipt}
+      />, root);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const button = Array.from(root.querySelectorAll('button'))
+      .find(candidate => candidate.textContent === 'Diagnosebeleg speichern');
+    expect(button).toBeDefined();
+    act(() => button?.click());
+    expect(downloadReceipt).toHaveBeenCalledTimes(1);
+    const receipt = JSON.parse(downloadReceipt.mock.calls[0][0]);
+    expect(receipt.spfx_subject_available).toBe(false);
+    expect(Object.keys(receipt).sort()).toEqual([
+      'end_utc',
+      'request_correlation_binding_sha256',
+      'spfx_subject_available',
+      'start_utc',
+      'ui_state',
+      'window_binding_sha256'
+    ]);
+  });
+
   it('maps a server denial to the deterministic neutral deny state', async () => {
+    const loadSnapshot = jest.fn(async (
+      _signal: AbortSignal,
+      _observationCorrelationId?: string
+    ) => { throw new Error('NAC_BFF_ACCESS_DENIED'); });
+    const downloadReceipt = jest.fn();
     await act(async () => {
       ReactDom.render(<NacWorkbenchHost
         expectedSubjectId="actor:synthetic:001"
-        loadSnapshot={async () => { throw new Error('NAC_BFF_ACCESS_DENIED'); }}
+        loadSnapshot={loadSnapshot}
         detailSurface={<div>BPMN detail</div>}
+        downloadReceipt={downloadReceipt}
       />, root);
+      await Promise.resolve();
       await Promise.resolve();
     });
     expect(root.textContent).toContain('Kein Zugriff auf diesen Arbeitsbereich.');
     expect(root.textContent).not.toContain('BPMN detail');
+    expect(loadSnapshot.mock.calls[0][1])
+      .toBe('spfx-11111111-2222-4333-8444-555555555555');
+    const button = Array.from(root.querySelectorAll('button'))
+      .find(candidate => candidate.textContent === 'Diagnosebeleg speichern');
+    act(() => button?.click());
+    const receipt = JSON.parse(downloadReceipt.mock.calls[0][0]);
+    expect(receipt.spfx_subject_available).toBe(true);
   });
 
   it('shows the workbench first and retains BPMN as an explicit detail surface', async () => {

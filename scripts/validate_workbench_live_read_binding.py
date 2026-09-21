@@ -27,6 +27,7 @@ EXPECTED_SOURCE_BINDINGS = {
     "host": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
     "styles": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
     "client": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
+    "clientReceipt": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
     "webPart": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
     "parser": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
     "projection": "spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts",
@@ -44,6 +45,7 @@ EXPECTED_VISUAL_HARNESS = {
 EXPECTED_BUILD_ARTIFACTS = {
     "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js",
+    "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js",
@@ -164,7 +166,11 @@ def validate() -> list[str]:
             errors.append("live host visual evidence schema is not contract-bound")
         if visual.get("isolation") != "separate_from_generic_workbench_visual_evidence":
             errors.append("live host visual evidence must remain separate from generic evidence")
-        if visual.get("data") != "synthetic_only" or visual.get("browser_network_requests") != 0:
+        if (
+            visual.get("data") != "synthetic_only"
+            or visual.get("browser_network_requests") != 0
+            or visual.get("automatic_downloads") != 0
+        ):
             errors.append("live host visual evidence must be synthetic and offline")
         if visual.get("manifest") != VISUAL_MANIFEST_PATH.relative_to(ROOT).as_posix():
             errors.append("live host visual manifest path is invalid")
@@ -263,7 +269,13 @@ def validate() -> list[str]:
     )
     _source_markers(
         HOST_PATH,
-        ("WorkbenchPanel", "generation", "AbortController"),
+        (
+            "WorkbenchPanel",
+            "generation",
+            "AbortController",
+            "Diagnosebeleg speichern",
+            "completeClientObservation",
+        ),
         errors,
     )
     _source_markers(
@@ -304,7 +316,11 @@ def validate() -> list[str]:
 def _validate_visual_manifest(manifest: dict, errors: list[str]) -> None:
     if manifest.get("schemaVersion") != "nac.workbench-live-read-host-visual-evidence/v1":
         errors.append("live host visual evidence schema is invalid")
-    if manifest.get("syntheticOnly") is not True or manifest.get("browserNetworkRequests") != 0:
+    if (
+        manifest.get("syntheticOnly") is not True
+        or manifest.get("browserNetworkRequests") != 0
+        or manifest.get("automaticDownloads") != 0
+    ):
         errors.append("live host visual evidence must be synthetic and offline")
     if manifest.get("fixtureClock") != "2026-08-01T09:01:00Z":
         errors.append("live host visual fixture clock is not deterministic")

@@ -414,9 +414,8 @@ def run_current_state_access_diagnostic_from_protected_inputs(
     client_receipt = _closed(
         payloads["client-observation-receipt.json"],
         {
-            "schema_version", "target_payload_sha256", "window_binding_sha256",
-            "request_correlation_binding_sha256", "start_utc", "end_utc",
-            "ui_state", "spfx_subject_available",
+            "window_binding_sha256", "request_correlation_binding_sha256",
+            "start_utc", "end_utc", "ui_state", "spfx_subject_available",
         },
         "BLOCKED_CLIENT_RECEIPT_SCHEMA",
     )
@@ -426,8 +425,7 @@ def run_current_state_access_diagnostic_from_protected_inputs(
         "BLOCKED_TOOLCHAIN_SCHEMA",
     )
     for document in (
-        contract, resolver, target_doc, dpa, dpa_evidence, approval,
-        client_receipt, toolchain
+        contract, resolver, target_doc, dpa, dpa_evidence, approval, toolchain
     ):
         if document.get("schema_version") != "v1":
             raise DiagnosticBlockedError("BLOCKED_SCHEMA_VERSION")
@@ -479,8 +477,7 @@ def run_current_state_access_diagnostic_from_protected_inputs(
         raise DiagnosticBlockedError("BLOCKED_TARGET_BINDING")
     client_snapshot_sha256 = snapshots["client-observation-receipt.json"].sha256
     if (
-        client_receipt["target_payload_sha256"] != target_payload_sha256
-        or client_receipt["window_binding_sha256"]
+        client_receipt["window_binding_sha256"]
         != observation_window["window_binding_sha256"]
         or client_receipt["request_correlation_binding_sha256"]
         != observation_window["request_correlation_binding_sha256"]
@@ -490,8 +487,22 @@ def run_current_state_access_diagnostic_from_protected_inputs(
     ):
         raise DiagnosticBlockedError("BLOCKED_CLIENT_RECEIPT_BINDING")
     if (
-        not isinstance(client_receipt["ui_state"], str)
+        client_receipt["ui_state"] != "no_access"
         or type(client_receipt["spfx_subject_available"]) is not bool
+        or client_receipt["window_binding_sha256"]
+        != _canonical_sha256(
+            {
+                "end_utc": client_receipt["end_utc"],
+                "request_correlation_binding_sha256": client_receipt[
+                    "request_correlation_binding_sha256"
+                ],
+                "spfx_subject_available": client_receipt[
+                    "spfx_subject_available"
+                ],
+                "start_utc": client_receipt["start_utc"],
+                "ui_state": client_receipt["ui_state"],
+            }
+        )
     ):
         raise DiagnosticBlockedError("BLOCKED_CLIENT_RECEIPT_SCHEMA")
     expected_dpa_scope = _canonical_sha256(

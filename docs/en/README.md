@@ -73,6 +73,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   authenticated web app, Entra ID/M365 binding, card gates and mobile secure document links.
 - [docs/en/cli.md](cli.md) explains the technical `nac` control surface behind
   the office UI, first commands and the architecture rule for new functionality.
+- [docs/en/m365-current-state-access-diagnostic.md](m365-current-state-access-diagnostic.md)
+  describes the Windows-native, privacy-minimal current Teams/BFF access diagnostic.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry

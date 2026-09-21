@@ -236,6 +236,7 @@ jobs:
 
       - name: Verify Issue 748 current-state diagnostic
         run: |
+          python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
           python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py
           python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
           python -m unittest discover -s tests -p test_nac_cli.py
@@ -243,6 +244,28 @@ jobs:
           python -m unittest discover -s tests -p test_spec_traceability.py
           python scripts/validate_m365_current_state_access_diagnostic.py
           python scripts/validate_spec_traceability.py
+
+      - name: Setup Node.js 22 for the SPFx receipt boundary
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.14.0"
+
+      - name: Verify Issue 748 SPFx receipt on Windows
+        working-directory: spfx/nac-bpmn-viewer
+        shell: pwsh
+        run: |
+          npm ci --ignore-scripts
+          node scripts/validate-read-only-boundary.cjs
+          npx heft test --clean --production --test-path-pattern "ClientObservationReceipt.test.ts|NacWorkbenchHost.test.tsx|NacBffClient.test.ts"
+          $fixtureRoot = Join-Path $env:RUNNER_TEMP "nac-workbench-live-read-visual"
+          node scripts/generate-workbench-live-read-visual-fixture.cjs $fixtureRoot
+          if (-not (Test-Path -LiteralPath (Join-Path $fixtureRoot "index.html") -PathType Leaf)) { throw "Issue #748 visual fixture HTML missing" }
+          if (-not (Test-Path -LiteralPath (Join-Path $fixtureRoot "bundle.js") -PathType Leaf)) { throw "Issue #748 visual fixture bundle missing" }
+
+      - name: Restore Node.js 24 for the complete Windows matrix
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
 
       - name: Verify the complete Issue 746 Windows matrix
         run: |

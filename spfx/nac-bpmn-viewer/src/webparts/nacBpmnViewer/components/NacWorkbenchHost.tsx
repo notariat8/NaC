@@ -3,6 +3,12 @@ import * as React from 'react';
 import { WorkbenchSnapshot } from '../../../workbench/core/WorkbenchContracts';
 import { snapshotEffectiveExpiry } from '../../../workbench/core/WorkbenchSelectors';
 import { WorkbenchPanel } from '../../../workbench/react/WorkbenchPanel';
+import {
+  beginClientObservation,
+  ClientObservation,
+  completeClientObservation,
+  downloadClientObservationReceipt
+} from '../services/ClientObservationReceipt';
 import { nacWorkbenchHostStyleSheet } from './NacWorkbenchHost.styles';
 
 const LOAD_TIMEOUT_MS = 10_000;
@@ -13,14 +19,18 @@ type HostSurface = 'workbench' | 'detail';
 
 type HostState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'accessDenied' }
+  | { readonly kind: 'accessDenied'; readonly receiptJson?: string }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'ready'; readonly snapshot: WorkbenchSnapshot };
 
 export interface NacWorkbenchHostProps {
   readonly expectedSubjectId: string | undefined;
-  readonly loadSnapshot: (signal: AbortSignal) => Promise<WorkbenchSnapshot>;
+  readonly loadSnapshot: (
+    signal: AbortSignal,
+    observationCorrelationId?: string
+  ) => Promise<WorkbenchSnapshot>;
   readonly detailSurface: React.ReactNode;
+  readonly downloadReceipt?: (canonicalJson: string) => void;
 }
 
 export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactElement {
@@ -36,13 +46,47 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
 
   React.useEffect(() => {
     const subjectId = props.expectedSubjectId;
-    if (subjectId === undefined || subjectId.trim().length === 0) {
-      generation.current += 1;
+    let disposed = false;
+    const closeDeniedObservation = (
+      observation: ClientObservation | undefined,
+      spfxSubjectAvailable: boolean,
+      requestGeneration: number
+    ): void => {
+      if (disposed || generation.current !== requestGeneration) return;
       setState({ kind: 'accessDenied' });
-      return undefined;
+      if (!observation) return;
+      const endUtc = new Date(Math.max(
+        Date.now(),
+        Date.parse(observation.startUtc) + 1
+      )).toISOString();
+      completeClientObservation(
+        observation,
+        spfxSubjectAvailable,
+        endUtc
+      ).then(completed => {
+        if (!disposed && generation.current === requestGeneration) {
+          setState({ kind: 'accessDenied', receiptJson: completed.canonicalJson });
+        }
+      }).catch(() => {
+        // The product remains fail-closed and neutral; only the optional receipt is omitted.
+      });
+    };
+    if (subjectId === undefined || subjectId.trim().length === 0) {
+      const requestGeneration = generation.current + 1;
+      generation.current = requestGeneration;
+      let observation: ClientObservation | undefined;
+      try {
+        observation = beginClientObservation();
+      } catch {
+        observation = undefined;
+      }
+      closeDeniedObservation(observation, false, requestGeneration);
+      return () => {
+        disposed = true;
+        generation.current += 1;
+      };
     }
 
-    let disposed = false;
     let activeController: AbortController | undefined;
     let refreshTimer: number | undefined;
     let expiryTimer: number | undefined;
@@ -73,6 +117,15 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
       generation.current = requestGeneration;
       activeController?.abort();
       activeController = new AbortController();
+      let observation: ClientObservation | undefined;
+      let observationCorrelationId: string | undefined;
+      try {
+        observation = beginClientObservation();
+        observationCorrelationId = observation.takeCorrelationIdForRequest();
+      } catch {
+        observation = undefined;
+        observationCorrelationId = undefined;
+      }
       clearTimer(refreshTimer);
       clearTimer(timeoutTimer);
       refreshTimer = undefined;
@@ -87,7 +140,7 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
         setState({ kind: 'loading' });
       }
 
-      props.loadSnapshot(activeController.signal).then(snapshot => {
+      props.loadSnapshot(activeController.signal, observationCorrelationId).then(snapshot => {
         if (disposed || generation.current !== requestGeneration) return;
         clearAllTimers();
         const now = Date.now();
@@ -116,7 +169,14 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
         );
       }).catch(error => {
         if (disposed || generation.current !== requestGeneration) return;
-        discard(classifyFailure(error), requestGeneration);
+        const failure = classifyFailure(error);
+        if (failure === 'accessDenied') {
+          clearAllTimers();
+          setSurface('workbench');
+          closeDeniedObservation(observation, true, requestGeneration);
+        } else {
+          discard(failure, requestGeneration);
+        }
       });
     };
 
@@ -133,7 +193,18 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
     return <HostMessage kind="status">Arbeitsbereich wird geladen.</HostMessage>;
   }
   if (state.kind === 'accessDenied') {
-    return <HostMessage kind="alert">Kein Zugriff auf diesen Arbeitsbereich.</HostMessage>;
+    const receiptJson = state.receiptJson;
+    return <div className="nacWorkbenchHost" data-nac-component="workbench-host-denied">
+      <style>{nacWorkbenchHostStyleSheet}</style>
+      <HostMessage kind="alert">Kein Zugriff auf diesen Arbeitsbereich.</HostMessage>
+      {receiptJson !== undefined && <button
+        type="button"
+        className="nacWorkbenchHost__receiptDownload"
+        onClick={() => (props.downloadReceipt ?? downloadClientObservationReceipt)(
+          receiptJson
+        )}
+      >Diagnosebeleg speichern</button>}
+    </div>;
   }
   if (state.kind === 'unavailable') {
     return <HostMessage kind="alert">Arbeitsbereich ist derzeit nicht verfügbar.</HostMessage>;

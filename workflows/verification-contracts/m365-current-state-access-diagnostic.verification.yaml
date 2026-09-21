@@ -10,21 +10,52 @@ plans:
   de: docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
   en: docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
 exact_artifacts:
+  - .codex/agents/nac-policy-reviewer.toml
   - .github/workflows/windows-portability.yml
+  - .pi/agents/nac-policy-reviewer.md
+  - AGENTS.md
   - agent-context/index.json
   - assets/docs/generic-workbench/VIS-721-manifest.json
+  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-02-narrow-spfx-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-03-mobile-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-04-loading.png
+  - assets/docs/workbench-live-read-binding/VIS-725-05-deny.png
+  - assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/cli.md
+  - docs/de/README.md
+  - docs/de/START_HERE.md
   - docs/en/cli.md
+  - docs/en/README.md
+  - docs/en/START_HERE.md
   - docs/de/m365-current-state-access-diagnostic.md
   - docs/en/m365-current-state-access-diagnostic.md
+  - docs/de/sbom-for-ai.md
+  - docs/en/sbom-for-ai.md
   - docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
   - docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
   - docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
   - docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  - policies/process-policy.yaml
   - scripts/quality_gate.py
+  - scripts/validate_agent_authentication_boundary.py
   - scripts/validate_m365_current_state_access_diagnostic.py
   - scripts/validate_spec_traceability.py
+  - scripts/validate_workbench_live_read_binding.py
+  - spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs
+  - spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs
+  - spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
   - src/nac_bff/current_state_access_adapters.py
+  - src/nac_bff/current_state_access_client_receipt.py
   - src/nac_bff/current_state_access_composition.py
   - src/nac_bff/current_state_access_diagnostic.py
   - src/nac_bff/current_state_access_gate.py
@@ -32,12 +63,15 @@ exact_artifacts:
   - src/nac_bff/activation_security_backend.py
   - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
+  - tests/test_agent_authentication_boundary.py
+  - tests/test_m365_current_state_access_client_receipt.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_nac_cli.py
   - tests/test_spec_traceability.py
   - tests/test_windows_offline_cli_portability.py
   - workflows/contracts/spec-traceability.contract.json
+  - workflows/contracts/workbench-live-read-binding.contract.json
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
 acceptance_ids: [AC-748-01, AC-748-02, AC-748-03, AC-748-04, AC-748-05, AC-748-06, AC-748-07, AC-748-08]
 base_binding:
@@ -66,6 +100,7 @@ required_remote_checks:
   - NaC Windows Portability / windows-offline-cli
 phases:
   - {id: repository_implementation, provider_access: false, mutation: repository_only}
+  - {id: client_receipt_stage, provider_access: false, mutation: protected_local_receipt_create_exclusive}
   - {id: final_gate, provider_access: false, mutation: github_approval_only}
   - {id: windows_preflight, provider_access: false, mutation: consumed_gate_only}
   - {id: single_read_only_run, provider_access: read_only, retry_allowed: false}
@@ -81,6 +116,31 @@ authorization:
   credential_write_guard_required: true
   persistent_one_shot_marker_required: true
   crash_does_not_restore_run_permission: true
+client_receipt:
+  browser_filename: nac-issue748-client-observation.json
+  protected_filename: client-observation-receipt.json
+  maximum_bytes: 16384
+  canonicalization: utf8-json-sorted-keys-no-whitespace
+  exact_fields:
+    - end_utc
+    - request_correlation_binding_sha256
+    - spfx_subject_available
+    - start_utc
+    - ui_state
+    - window_binding_sha256
+  ui_state: no_access
+  correlation_raw_persisted: false
+  correlation_single_use: true
+  automatic_download: false
+  telemetry: false
+  source_read_handle_bound: true
+  destination_sid_dacl_protected: true
+  destination_create_exclusive: true
+  repository_external: true
+  stage_network_reads: 0
+  stage_login: 0
+  stage_credential_writes: 0
+  stage_provider_writes: 0
 snapshot:
   acquisition_count: 2
   sequences: [1, 2]
@@ -112,6 +172,7 @@ side_effect_counters:
   issue_632_authorization: 0
 counter_matrix:
   repository_implementation_network_read: 0
+  client_receipt_stage_network_read: 0
   final_gate_provider_network_read: 0
   windows_preflight_network_read: 0
   SPFX_SUBJECT_MISSING_network_read_per_acquisition: 2
@@ -184,13 +245,19 @@ ac_evidence:
       - NaC Windows Portability / windows-offline-cli
   AC-748-06:
     artifacts:
+      - src/nac_bff/current_state_access_client_receipt.py
       - src/nac_bff/current_state_access_diagnostic.py
       - src/nac_bff/current_state_access_composition.py
+      - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
     validators:
       - python scripts/validate_m365_current_state_access_diagnostic.py
     positive_tests:
+      - test_accepts_only_the_six_field_privacy_allowlist
+      - test_stages_canonical_receipt_exclusively_outside_repository
+      - test_real_windows_backend_binds_and_exclusively_stages_receipt
       - test_two_independent_snapshots_compare_by_decision_projection
     negative_cases:
+      - test_rejects_duplicate_keys_window_drift_and_invalid_boolean
       - test_reused_receipt_wrong_sequence_or_projection_drift_blocks
     expected_result: TWO_IDENTICAL_REDACTED_PROJECTIONS
     required_remote_checks:
@@ -231,6 +298,7 @@ forbidden_import_markers:
   - azure_function_deployment_reconciliation
   - m365-azure-bff-live-activation
 commands:
+  - python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
   - python scripts/validate_m365_current_state_access_diagnostic.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
@@ -240,6 +308,13 @@ commands:
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
   - python -m unittest discover -s tests -p test_spec_traceability.py
+  - cd spfx/nac-bpmn-viewer && node scripts/validate-read-only-boundary.cjs
+  - cd spfx/nac-bpmn-viewer && npm ci --ignore-scripts
+  - cd spfx/nac-bpmn-viewer && npx heft test --clean --production --test-path-pattern ClientObservationReceipt.test.ts|NacWorkbenchHost.test.tsx|NacBffClient.test.ts
+  - cd spfx/nac-bpmn-viewer && node scripts/generate-workbench-live-read-visual-fixture.cjs <windows-runner-temp>
+  - cd spfx/nac-bpmn-viewer && npm run build
+  - cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
+  - python scripts/validate_workbench_live_read_binding.py
   - python -m unittest discover -s tests
   - graft build
   - graft check

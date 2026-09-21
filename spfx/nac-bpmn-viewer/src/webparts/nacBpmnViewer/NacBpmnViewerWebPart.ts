@@ -25,10 +25,12 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
     });
     const element = React.createElement<NacWorkbenchHostProps>(NacWorkbenchHost, {
       expectedSubjectId,
-      loadSnapshot: (signal: AbortSignal) => loadNacWorkbenchSnapshot(
+      loadSnapshot: (signal: AbortSignal, observationCorrelationId?: string) => loadNacWorkbenchSnapshot(
         this.context.aadHttpClientFactory,
         expectedSubjectId ?? '',
-        signal
+        signal,
+        undefined,
+        observationCorrelationId
       ),
       detailSurface
     });
@@ -37,7 +39,8 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
   }
 
   protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
-    this.isDarkTheme = (currentTheme as any)?.isInverted === true;
+    const theme = currentTheme as (IReadonlyTheme & { readonly isInverted?: boolean }) | undefined;
+    this.isDarkTheme = theme?.isInverted === true;
     this.render();
   }
 

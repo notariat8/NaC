@@ -3,12 +3,13 @@
 const childProcess = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const packageRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(packageRoot, '..', '..');
-const fixtureRoot = '/tmp/nac-workbench-live-read-visual';
+const fixtureRoot = path.join(os.tmpdir(), 'nac-workbench-live-read-visual');
 const fixture = path.join(fixtureRoot, 'index.html');
 const outputRoot = path.resolve(
   process.argv[2] || path.join(repoRoot, 'assets/docs/workbench-live-read-binding')
@@ -25,6 +26,7 @@ const sourceBindingPaths = {
   host: 'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx',
   styles: 'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts',
   client: 'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts',
+  clientReceipt: 'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts',
   webPart: 'spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts',
   parser: 'spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts',
   projection: 'spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts',
@@ -42,6 +44,7 @@ const harnessPaths = [
 const buildArtifactPaths = [
   'spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js',
   'spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js',
+  'spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js',
   'spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js',
   'spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js',
   'spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js',
@@ -86,7 +89,9 @@ async function inspect(page, item) {
       clipped,
       text,
       hasSnapshot: Boolean(host.querySelector('[data-nac-workbench-schema]')),
-      hasHostComponent: Boolean(host.matches('[data-nac-component="workbench-host"]'))
+      hasHostComponent: Boolean(host.matches('[data-nac-component="workbench-host"]')),
+      hasReceiptDownload: Array.from(host.querySelectorAll('button'))
+        .some(button => (button.textContent || '').trim() === 'Diagnosebeleg speichern')
     };
   }, item);
 }
@@ -123,6 +128,12 @@ function assertInspection(item, inspection) {
   if (!inspection.text.includes(expectedText) || inspection.hasSnapshot) {
     throw new Error(item.id + ': NAC_WORKBENCH_LIVE_STATE_INVALID');
   }
+  if (item.state === 'deny' && !inspection.hasReceiptDownload) {
+    throw new Error(item.id + ': NAC_WORKBENCH_LIVE_RECEIPT_DOWNLOAD_MISSING');
+  }
+  if (item.state !== 'deny' && inspection.hasReceiptDownload) {
+    throw new Error(item.id + ': NAC_WORKBENCH_LIVE_RECEIPT_DOWNLOAD_UNEXPECTED');
+  }
 }
 
 async function run() {
@@ -134,11 +145,15 @@ async function run() {
   const browser = await chromium.launch({ headless: true });
   const evidence = [];
   let browserNetworkRequests = 0;
+  let automaticDownloads = 0;
   try {
     for (const item of cases) {
       const page = await browser.newPage({ viewport: { width: item.width, height: item.height } });
       page.on('request', request => {
         if (/^https?:/i.test(request.url())) browserNetworkRequests += 1;
+      });
+      page.on('download', () => {
+        automaticDownloads += 1;
       });
       const fixtureCase = item.state === 'ready' ? 'ready-' + item.layout : item.state;
       await page.goto('file://' + fixture + '?case=' + encodeURIComponent(fixtureCase));
@@ -166,10 +181,14 @@ async function run() {
   if (browserNetworkRequests !== 0) {
     throw new Error('NAC_WORKBENCH_LIVE_NETWORK_REQUEST_DETECTED');
   }
+  if (automaticDownloads !== 0) {
+    throw new Error('NAC_WORKBENCH_LIVE_AUTOMATIC_DOWNLOAD_DETECTED');
+  }
   const manifest = {
     schemaVersion: 'nac.workbench-live-read-host-visual-evidence/v1',
     syntheticOnly: true,
     browserNetworkRequests,
+    automaticDownloads,
     fixtureClock: '2026-08-01T09:01:00Z',
     cases: evidence,
     sourceBindings: Object.fromEntries(

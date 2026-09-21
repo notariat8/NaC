@@ -207,6 +207,48 @@ describe('NaC BFF client boundary', () => {
     );
   });
 
+  it('uses the pre-generated observation correlation id exactly once', async () => {
+    const get = jest.fn().mockResolvedValue(responseFromChunks(
+      [new TextEncoder().encode(signedWorkbenchSnapshotJson())],
+      true,
+      undefined,
+      200,
+      {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        pragma: 'no-cache'
+      }
+    ));
+    const factory = {
+      getClient: jest.fn().mockResolvedValue({ get })
+    } as unknown as AadHttpClientFactory;
+    const correlationId = 'spfx-11111111-2222-4333-8444-555555555555';
+
+    await loadNacWorkbenchSnapshot(
+      factory,
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      new AbortController().signal,
+      '2026-08-01T09:01:00Z',
+      correlationId
+    );
+
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get.mock.calls[0][2].headers['X-Correlation-ID']).toBe(correlationId);
+  });
+
+  it('rejects an unbound or header-unsafe observation correlation id', async () => {
+    const factory = {
+      getClient: jest.fn().mockResolvedValue({ get: jest.fn() })
+    } as unknown as AadHttpClientFactory;
+    await expect(loadNacWorkbenchSnapshot(
+      factory,
+      VALID_WORKBENCH_SNAPSHOT.access.subjectId,
+      new AbortController().signal,
+      '2026-08-01T09:01:00Z',
+      'spfx-valid\r\nX-Injected: value'
+    )).rejects.toThrow('NAC_BFF_CORRELATION_INVALID');
+  });
+
   it('normalizes the default workbench validation time to whole-second RFC3339', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-01T09:01:00.789Z'));

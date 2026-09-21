@@ -1,11 +1,14 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const webpack = require('webpack');
 
 const packageRoot = path.resolve(__dirname, '..');
-const outputRoot = path.resolve(process.argv[2] || '/tmp/nac-workbench-live-read-visual');
+const outputRoot = path.resolve(
+  process.argv[2] || path.join(os.tmpdir(), 'nac-workbench-live-read-visual')
+);
 const entryPath = path.join(outputRoot, 'entry.cjs');
 const bundlePath = path.join(outputRoot, 'bundle.js');
 const htmlPath = path.join(outputRoot, 'index.html');
@@ -58,7 +61,8 @@ function waitUntilRendered() {
     : expectedState === 'loading'
       ? text.includes('Arbeitsbereich wird geladen.')
       : expectedState === 'deny'
-        ? text.includes('Kein Zugriff auf diesen Arbeitsbereich.')
+        ? text.includes('Kein Zugriff auf diesen Arbeitsbereich.') &&
+          text.includes('Diagnosebeleg speichern')
         : text.includes('Arbeitsbereich ist derzeit nicht verfügbar.');
   if (!ready) {
     window.requestAnimationFrame(waitUntilRendered);

@@ -744,22 +744,28 @@ def _protected_payloads(driver: Path, driver_sha: str, target: dict[str, str]):
         ).encode()
     ).hexdigest()
     request_correlation = "7" * 64
-    client_receipt = {
-        "schema_version": "v1", "target_payload_sha256": target_sha,
-        "window_binding_sha256": "f" * 64,
+    client_receipt_core = {
         "request_correlation_binding_sha256": request_correlation,
-        "start_utc": "2026-01-20T08:00:00Z",
-        "end_utc": "2026-01-20T08:05:00Z",
+        "start_utc": "2026-01-20T08:00:00.000Z",
+        "end_utc": "2026-01-20T08:05:00.000Z",
         "ui_state": "no_access",
         "spfx_subject_available": True,
+    }
+    client_receipt = {
+        **client_receipt_core,
+        "window_binding_sha256": hashlib.sha256(
+            json.dumps(
+                client_receipt_core, sort_keys=True, separators=(",", ":")
+            ).encode()
+        ).hexdigest(),
     }
     client_receipt_sha = hashlib.sha256(
         json.dumps(client_receipt, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
     observation_window = {
-        "start_utc": "2026-01-20T08:00:00Z",
-        "end_utc": "2026-01-20T08:05:00Z",
-        "window_binding_sha256": "f" * 64,
+        "start_utc": "2026-01-20T08:00:00.000Z",
+        "end_utc": "2026-01-20T08:05:00.000Z",
+        "window_binding_sha256": client_receipt["window_binding_sha256"],
         "client_receipt_sha256": client_receipt_sha,
         "request_correlation_binding_sha256": request_correlation,
     }

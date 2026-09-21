@@ -43,6 +43,7 @@ class WindowsOfflineCliPortabilityTests(unittest.TestCase):
         for command in (
             "current-state-access-diagnostic-preflight",
             "current-state-access-diagnostic-run-read-only",
+            "current-state-access-client-receipt-stage",
         ):
             with self.subTest(command=command):
                 result = subprocess.run(
@@ -65,7 +66,7 @@ class WindowsOfflineCliPortabilityTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual(payload["status"], "BLOCKED")
-                self.assertEqual(payload["provider_ports_created"], 0)
+                self.assertEqual(payload.get("provider_ports_created", 0), 0)
                 self.assertEqual(payload["network_reads"], 0)
                 self.assertEqual(payload["credential_writes"], 0)
 

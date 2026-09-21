@@ -530,7 +530,7 @@
         },
         {
           "id": "m365_current_state_access_diagnostic",
-          "description": "Issue #748 independent Windows-native, read-only current-state diagnostic for notary_team_01 and the NaC Vorgangsansicht Teams app. The path remains separate from terminal #739 provenance and Issue #632, binds authorization before every read, and requires two redacted identical decision projections before producing one of four closed diagnostic classes.",
+          "description": "Issue #748 independent Windows-native, read-only current-state diagnostic for notary_team_01 and the NaC Vorgangsansicht Teams app. A privacy-minimal SPFx receipt is explicitly downloaded and then exclusively materialized by the offline CLI before the gated path can use it. The path remains separate from terminal #739 provenance and Issue #632, binds authorization before every read, and requires two redacted identical decision projections before producing one of four closed diagnostic classes.",
           "paths": [
             "docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
             "docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
@@ -540,8 +540,12 @@
             "docs/en/m365-current-state-access-diagnostic.md",
             "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
             "scripts/validate_m365_current_state_access_diagnostic.py",
+            "src/nac_bff/current_state_access_client_receipt.py",
             "src/nac_bff/current_state_access_*.py",
             "src/nac_cli/cli.py",
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
+            "tests/test_m365_current_state_access_client_receipt.py",
             "tests/test_m365_current_state_access_diagnostic.py",
             "tests/test_m365_current_state_access_gate.py",
             ".github/workflows/windows-portability.yml"
