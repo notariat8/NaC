@@ -21,3 +21,5 @@ Work only from the scoped prompt and referenced files. Do not depend on or reque
 Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when reviewing command safety: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
 
 Treat provider accounts as routing identities only. Governance separation uses `principal_id`: `OWNER_SOLO_APPROVAL` is permitted without a concretely cited external two-person duty, never counts as four-eyes, and an applicable cited duty with only one principal must produce `BLOCKED_SINGLE_PRINCIPAL`.
+
+Reject a Function8/Microsoft login request unless it explicitly names either `ofunk@funktion8` or `funktion8@funktion8` as the intended account; the generic phrase “Function8 login” must never start an interactive flow.

@@ -97,7 +97,9 @@ abgebrochene oder in einem anderen Task erteilte Login-Freigabe wird nicht
 wiederverwendet; GitHub- und Microsoft-/Entra-Anmeldung dürfen nicht mit einer
 pauschalen Freigabe kombiniert werden. Für Issue #746 darf der Read-only-Pfad
 nur einen bereits etablierten, gebundenen Kanal verwenden und keinen Login
-starten.
+starten. Jede Funktion8-/Microsoft-Anmeldeanforderung nennt außerdem eindeutig
+`ofunk@funktion8` oder `funktion8@funktion8`; die bloße Angabe
+„Funktion8-Login“ reicht nicht aus und startet keinen Anmeldefluss.
 
 - Runtime-Code unter [src/](../../src)
 - Skripte unter [scripts/](../../scripts)

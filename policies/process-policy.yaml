@@ -426,6 +426,10 @@ github_authentication_boundary:
   require_exact_current_task_login_authorization: true
   prior_login_authorization_reusable: false
   combined_provider_login_authorization_allowed: false
+  function8_login_request_must_name_account: true
+  function8_login_account_choices:
+    - "ofunk@funktion8"
+    - "funktion8@funktion8"
   automatic_device_code_login_allowed: false
   token_value_inspection_allowed: false
   git_credential_to_api_token_conversion_allowed: false
