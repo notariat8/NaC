@@ -111,6 +111,31 @@ def _port_receipts(prefix: int) -> tuple[str, ...]:
 
 
 class CurrentStateAccessDiagnosticTests(unittest.TestCase):
+    def test_scope_filter_ignores_only_generated_egg_info_worktree_paths(self) -> None:
+        scripts_path = str(Path(__file__).resolve().parents[1] / "scripts")
+        if scripts_path not in sys.path:
+            sys.path.insert(0, scripts_path)
+        import validate_m365_current_state_access_diagnostic as validator
+
+        filtered = validator._filter_generated_worktree_artifacts(
+            {
+                "src/nac.egg-info/PKG-INFO",
+                "src/nac.egg-info/SOURCES.txt",
+                "src/nac.egg-info/unexpected.txt",
+                "src/nac_bff/current_state_access_gate.py",
+                "unexpected.txt",
+            }
+        )
+
+        self.assertEqual(
+            filtered,
+            {
+                "src/nac.egg-info/unexpected.txt",
+                "src/nac_bff/current_state_access_gate.py",
+                "unexpected.txt",
+            },
+        )
+
     def test_exact_four_classifications(self) -> None:
         cases = (
             (_observations(spfx_subject_available=False), SPFX_SUBJECT_MISSING),
