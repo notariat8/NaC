@@ -121,7 +121,7 @@
   "visualHarness": [
     {
       "relativePath": "scripts/validate_workbench_live_read_binding.py",
-      "sha256": "a25af3c4ec560518994ab2110b0b395cc9074ef4b8d32f9b82b8d89e193296cd"
+      "sha256": "e1d814d74bdc4c2bb94c5ce0e2f76d2302f96f15083e585f992f90c33b8ebc1f"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
@@ -180,7 +180,7 @@
   ],
   "runtime": {
     "nodeVersion": "v22.23.1",
-    "npmUserAgent": "npm/11.17.0 node/v22.23.1 win32 x64 workspaces/false",
+    "npmUserAgent": "npm/11.17.0 node/v24.19.0 win32 x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "webpackVersion": "5.105.4",
     "typescriptVersion": "5.8.3",

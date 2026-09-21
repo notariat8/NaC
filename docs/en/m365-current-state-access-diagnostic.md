@@ -28,6 +28,12 @@ then exclusively creates
 `client-observation-receipt.json`. It does not overwrite an existing receipt.
 Login, network, provider, and deployment remain untouched.
 
+The committed Windows screenshots remain the visually reviewed reference
+evidence. Linux CI renders the same synthetic cases into a temporary runner
+directory and verifies states, overflow, the receipt button, bindings, and the
+zero-network and zero-auto-download boundaries. Platform-specific font and PNG
+bytes are not falsely treated as functional equality.
+
 The local preflight accepts only two absolute, repository-external directories
 protected through the Windows security backend:
 

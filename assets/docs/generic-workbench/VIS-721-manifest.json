@@ -8,20 +8,20 @@
       "file": "VIS-721-01-desktop.png",
       "width": 1440,
       "height": 900,
-      "sha256": "86e71ea59c6f6c59ea15f08c35b2d10a2afdeeefa23aeb6d8665cc40a1c08058"
+      "sha256": "0ce708a876aecfd5075a48f6caaeb1e59863bc5ca92de5b4c6cd90f4b45030f8"
     },
     {
       "id": "VIS-721-02",
       "file": "VIS-721-02-mobile.png",
       "width": 390,
       "height": 844,
-      "sha256": "3b13080b4cd40a5eb8cdc4c93382a2874f3db7297b52ff9d3e651fe8cb341931"
+      "sha256": "eb39180145717bc0d0cb404ee901a8e180f8a7bd36cac4b7febe7c7c6c90ebea"
     }
   ],
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "22ca40715d9961ee2b631945f55a780afe7a8e4c91c1e1416ee9535f8bcb3208"
+      "sha256": "4b7b96fd8d76c1f55509c573b224d6941fd0ed19e686ddba993e58b8db222f31"
     },
     {
       "relativePath": "scripts/quality_gate.py",
@@ -73,7 +73,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
-      "sha256": "eea7cb3b87392c679d9e4c83adac179f61aecd62f5d7e4ab68f32ce02073d421"
+      "sha256": "0e797ad1d89b8c12de757ccc57637059648adc776c45054b96ded99e64e95c11"
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
@@ -115,8 +115,8 @@
     }
   ],
   "runtime": {
-    "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/10.9.2 node/v22.14.0 linux x64 workspaces/false",
+    "nodeVersion": "v22.23.1",
+    "npmUserAgent": "npm/11.17.0 node/v24.19.0 win32 x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "typescriptVersion": "5.8.3",
     "heftVersion": "1.2.17"

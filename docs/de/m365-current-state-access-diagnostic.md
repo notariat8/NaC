@@ -28,6 +28,13 @@ Anschließend erstellt der Befehl
 `client-observation-receipt.json` exklusiv. Ein vorhandener Beleg wird nicht
 überschrieben. Login, Netzwerk, Provider und Deployment bleiben unberührt.
 
+Die committed Windows-Screenshots bleiben der visuell geprüfte Referenzbeleg.
+Linux-CI erzeugt dieselben synthetischen Fälle in einem temporären
+Runner-Verzeichnis und prüft Zustände, Überlauf, Receipt-Schaltfläche,
+Bindungen sowie Null-Netzwerk- und Null-Autodownload-Grenzen. Plattformabhängige
+Schrift- und PNG-Bytes werden nicht fälschlich als fachliche Gleichheit
+behandelt.
+
 Der lokale Preflight erhält nur zwei absolute, repository-externe und über das
 Windows-Sicherheitsbackend geschützte Verzeichnisse:
 

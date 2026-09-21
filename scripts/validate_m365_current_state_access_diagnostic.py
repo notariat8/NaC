@@ -43,10 +43,13 @@ REQUIRED_CHECKS = [
 ]
 REQUIRED_FILES = [
     ".codex/agents/nac-policy-reviewer.toml",
+    ".github/workflows/quality-gate.yml",
     ".github/workflows/windows-portability.yml",
     ".pi/agents/nac-policy-reviewer.md",
     "AGENTS.md",
     "agent-context/index.json",
+    "assets/docs/generic-workbench/VIS-721-01-desktop.png",
+    "assets/docs/generic-workbench/VIS-721-02-mobile.png",
     "assets/docs/generic-workbench/VIS-721-manifest.json",
     "assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png",
     "assets/docs/workbench-live-read-binding/VIS-725-02-narrow-spfx-ready.png",
@@ -75,6 +78,7 @@ REQUIRED_FILES = [
     "scripts/validate_m365_current_state_access_diagnostic.py",
     "scripts/validate_spec_traceability.py",
     "scripts/validate_workbench_live_read_binding.py",
+    "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
     "spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs",
     "spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs",
     "spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs",

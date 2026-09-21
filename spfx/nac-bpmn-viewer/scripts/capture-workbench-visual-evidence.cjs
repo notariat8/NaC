@@ -3,12 +3,13 @@
 const childProcess = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const packageRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(packageRoot, '..', '..');
-const fixture = '/tmp/nac-generic-workbench.html';
+const fixture = path.join(os.tmpdir(), 'nac-generic-workbench.html');
 const outputRoot = path.resolve(process.argv[2] || path.join(repoRoot, 'assets/docs/generic-workbench'));
 const cases = [
   { id: 'VIS-721-01', file: 'VIS-721-01-desktop.png', width: 1440, height: 900 },
