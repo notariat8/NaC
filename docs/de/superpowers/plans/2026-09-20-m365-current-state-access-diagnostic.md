@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff – Implementierungsplan
 
-Status: DE/EN-Plan freigegeben; `plan -> review -> fix` abgeschlossen; Repository-Implementierung in `implement -> review -> fix`; Providerzugriff und Merge gesperrt
+Status: Basisplan freigegeben; datenschutzarme SPFx-Client-Receipt-Erweiterung in `plan -> review -> fix` und vor der Umsetzung im Owner-Review; Providerzugriff und Merge gesperrt
 
 Datum: 20. September 2026
 
@@ -66,24 +66,35 @@ Principal, Datenschutzbeleg und Scope gebundene Owner-Freigabe.
    sind nur allowlistete, nicht-inhaltliche OS-Metadaten unter aktivem
    Credential-Write-Guard.
 9. **Keine KI-Laufzeit:** Der Diagnosepfad ruft kein Modell auf und erzeugt
-   keine neue AI-SBOM-Komponente. Die bestehende AI-SBOM wird nur geprüft.
+   keine neue AI-SBOM-Komponente. Die bestehende AI-SBOM dokumentiert synchron
+   die negative Entscheidung für diesen deterministischen lokalen Datenfluss.
+10. **Expliziter lokaler Client-Receipt:** Das Webpart erzeugt erst nach einem
+    terminalen neutralen Fehlerzustand und nur auf Operatoraktion kanonisches
+    JSON. Es persistiert weder Subject noch Rohkorrelations-ID. Ein separater
+    offline CLI-Schritt validiert und materialisiert den Download exklusiv im
+    SID-/DACL-geschützten repository-externen Issue-#748-Inputverzeichnis.
 
 ## Festgelegte CLI-Bedienkante
 
 Die Produktoberfläche bleibt in der vorhandenen Hierarchie
-`nac m365 teams-sharepoint` und erhält genau zwei neue Unterbefehle:
+`nac m365 teams-sharepoint` und erhält genau drei neue Unterbefehle:
 
 ```text
 nac m365 teams-sharepoint current-state-access-diagnostic-preflight
 nac m365 teams-sharepoint current-state-access-diagnostic-run-read-only
+nac m365 teams-sharepoint current-state-access-client-receipt-stage
 ```
 
 `current-state-access-diagnostic-preflight` führt ausschließlich lokale
 Bindungs- und Sicherheitsprüfungen aus und darf keine Provider-Ports erzeugen.
 `current-state-access-diagnostic-run-read-only` ist zwar implementier- und
 synthetisch testbar, bleibt produktiv bis zur späteren exakt gebundenen
-Freigabe gesperrt. Beide Befehle nehmen nur Pfade zu geschützten lokalen
-Vertragsartefakten entgegen. Reale Tenant-, Account-, Principal-, Team-,
+Freigabe gesperrt. `current-state-access-client-receipt-stage` ist rein lokal,
+akzeptiert den explizit heruntergeladenen Receipt sowie das geschützte
+Inputverzeichnis, validiert eine geschlossene Struktur und erstellt die
+autoritative Datei exklusiv ohne Überschreiben. Alle drei Befehle nehmen nur
+Pfade zu lokalen Vertragsartefakten entgegen. Reale Tenant-, Account-,
+Principal-, Team-,
 Kanal-, Tab-, Site-, App-, Function- oder Korrelationswerte sind keine
 CLI-Argumente. Es gibt keine Flags für Login, Device Code, Browserauth,
 Refresh, Retry, Force, Redirect, Deployment, Recovery oder Write.
@@ -97,8 +108,9 @@ Refresh, Retry, Force, Redirect, Deployment, Recovery oder Write.
 | Kern und Gate | `src/nac_bff/current_state_access_diagnostic.py`, `src/nac_bff/current_state_access_gate.py` | pure Klassifikation, Post-Merge-/GitHub-/Governance-/Datenschutz-Autorisierung |
 | Ports, Adapter und Komposition | `src/nac_bff/current_state_access_ports.py`, `src/nac_bff/current_state_access_adapters.py`, `src/nac_bff/current_state_access_composition.py` | geschlossene Ports, produktive schmale Read-Adapter, Port-Factory hinter Gate, zwei getrennte Erhebungen |
 | CLI | `src/nac_cli/cli.py` | lokaler Preflight und separat gesperrter Read-only-Lauf |
+| SPFx-Client-Receipt | `spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx`, `spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts`, neue `ClientObservationReceipt.ts` und zugehörige Tests | flüchtige Korrelationsbindung, geschlossenes Fenster, expliziter lokaler Download ohne PII |
 | Tests | `tests/test_m365_current_state_access_diagnostic.py`, `tests/test_m365_current_state_access_gate.py`, `tests/test_nac_cli.py`, `tests/test_windows_offline_cli_portability.py` | Positiv-, Negativ-, Sicherheits-, Replay-, Paritäts- und Windows-Tests |
-| Dokumentation | `docs/de/cli.md`, `docs/en/cli.md`, `docs/de/m365-current-state-access-diagnostic.md`, `docs/en/m365-current-state-access-diagnostic.md` | Bedienung, Grenzen, Fehlerklassen und spätere Freigabekette |
+| Dokumentation und AI-SBOM | `docs/de/cli.md`, `docs/en/cli.md`, `docs/de/m365-current-state-access-diagnostic.md`, `docs/en/m365-current-state-access-diagnostic.md`, `docs/de/sbom-for-ai.md`, `docs/en/sbom-for-ai.md` | Bedienung, Grenzen, Fehlerklassen, spätere Freigabekette und negative AI-Datenflussentscheidung |
 | Kontext und CI | `agent-context/index.json`, `.github/workflows/windows-portability.yml` | on-demand Vertrag und verpflichtende Windows-Testmatrix |
 | Traceability | DE/EN-Spec und -Plan, `workflows/contracts/spec-traceability.contract.json`, `scripts/validate_spec_traceability.py`, `tests/test_spec_traceability.py` | Issue, Planlinks, ACs, Dateien und Nachweise verbinden |
 
@@ -108,6 +120,27 @@ synchronisiert wird. Eine Gantt-Änderung ist nicht vorgesehen, weil der Pfad
 keinen Roadmap-, Scope- oder Meilensteinwechsel auslöst.
 
 ## Test-first-Implementierungsfolge
+
+### 0. Datenschutzarmer SPFx-Client-Receipt
+
+**Zuerst rot:** Zusätzliche oder unbekannte Receipt-Felder, Object-/Subject-ID,
+Name, E-Mail, Tenantdaten, Token, Header, Request-Inhalt, Rohkorrelations-ID,
+unsicherer Zufall, offenes oder rückwärts laufendes Zeitfenster, automatischer
+Download, Telemetrie, bestehende Zieldatei, Reparse-/Hardlink-Ziel, fremde SID
+oder breite DACL. Außerdem beweisen UI-Tests getrennt den Pfad ohne Subject und
+den Pfad mit genau einmal verwendetem BFF-Korrelationswert.
+
+**Dann grün:** Eine pure TypeScript-Hilfe erzeugt mit Web Crypto die flüchtige
+Korrelations-ID, schließt das UTC-Fenster beim terminalen `no_access`-Zustand,
+berechnet ausschließlich SHA-256-Bindings und serialisiert kanonisches JSON mit
+exakter Feldmenge. Das Webpart bietet danach einen expliziten Download mit
+festem personenfreiem Dateinamen an. Der BFF-Client akzeptiert für genau einen
+Request die vorab erzeugte Korrelations-ID; er gibt weder Rohwert noch Header
+an den Receipt zurück. Die offline CLI prüft maximal erlaubte Größe, UTF-8,
+Duplikatschlüssel, Feldmenge, Datentypen, Fenster, Hashformate und verbotene
+Schlüssel/Werte und materialisiert mit dem Windows-Sicherheitsbackend exklusiv
+`client-observation-receipt.json`. POSIX-, Login-, Netzwerk-, Provider- und
+Deploymentpfade bleiben unberührt.
 
 ### 1. Verification Contract und Validator
 
@@ -235,7 +268,7 @@ Graft, Strict Doctor, Push und Remote-CI.
 | AC-748-03 | eigene Module, Contracts, Gates und Artefakte | Import-/Pfad-Negativtests gegen jeden #739/#632-Zugriff |
 | AC-748-04 | Resolver-, Principal-, DPA-, Approval- und per-Read Autorisierung | vollständige Governance-Negativmatrix und Drift vor Read 2 |
 | AC-748-05 | pure geschlossene Klassifikation | vier positive Klassen plus Ambiguitäts-/Unvollständigkeitsmatrix |
-| AC-748-06 | zwei Envelopes, unabhängige Receipts und RFC-8785-Projektion | Identitätstest plus Sequenz-, Receipt-, Fenster-, PII- und Drifttests |
+| AC-748-06 | datenschutzarmer SPFx-Beleg, geschützte Offline-Materialisierung, zwei Envelopes, unabhängige Receipts und RFC-8785-Projektion | SPFx-/CLI-Allowlist-, Fenster-, Korrelations-, SID-/DACL-, Sequenz-, Receipt-, PII- und Drifttests |
 | AC-748-07 | Windows-Backend, Credential-Write-Guard und One-Shot-Gate | Null-Seiteneffektzähler, Parallel-, Replay- und Crashtests auf Windows |
 | AC-748-08 | Validator, Quality Gate, Traceability, Docs und CI | Vollsuite, Graft, Strict Doctor, vollständiger Diff und Remote-Checks |
 
@@ -247,6 +280,8 @@ python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
 python -m unittest discover -s tests -p test_nac_cli.py
 python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
 python -m unittest discover -s tests -p test_spec_traceability.py
+cd spfx/nac-bpmn-viewer && npm run build
+cd spfx/nac-bpmn-viewer && npm run workbench:capture
 python scripts/validate_m365_current_state_access_diagnostic.py
 python scripts/validate_spec_traceability.py
 python scripts/validate_language_parity.py
@@ -284,9 +319,15 @@ kein Force-Push.
 - #739 bleibt terminal und #632 bleibt unberührt;
 - Gate und per-Read-Autorisierung laufen vor jedem externen Zugriff;
 - zwei unabhängige, redigierte Snapshots sind erforderlich;
+- der autoritative Clientbeleg entsteht ausschließlich aus dem expliziten
+  lokalen Download und der erfolgreichen geschützten Offline-Materialisierung;
+- der Receipt enthält nur neutralen UI-Zustand, Subject-Boolean, geschlossenes
+  Fenster sowie Fenster- und Korrelationsbindings;
 - Login-, Credential-, Retry-, Redirect-, Mutation- und Deploymentzähler sind
   geschlossen enumeriert und null;
 - die vollständige lokale Windows-Suite, Graft und Strict Doctor sind grün;
+- SPFx-Build, Komponententests und visueller Nachweis des expliziten
+  Receipt-Downloads sind grün;
 - `main...HEAD` ist vollständig reviewed, Workspace sauber und PR #749 bleibt
   Draft;
 - alle verpflichtenden Remote-Checks sind grün;
@@ -297,7 +338,7 @@ kein Force-Push.
 
 ## Review-Gate
 
-Dieser Plan wurde mit unabhängigen Scope-, Governance-, Validierungs- und
-DE/EN-Paritätsreviews geprüft; die Befunde wurden behoben und der Owner hat den
-Plan freigegeben. Die test-first Repository-Umsetzung in Draft-PR #749 ist
-autorisiert; externer Providerzugriff und Merge bleiben separate Gates.
+Der Basisplan wurde geprüft und freigegeben. Die Client-Receipt-Erweiterung ist
+hier synchron in DE/EN geplant. Vor ihrer test-first Repository-Umsetzung ist
+die ausdrückliche Owner-Review-Freigabe des zweistufigen lokalen Übergabepfads
+erforderlich; externer Providerzugriff und Merge bleiben separate Gates.

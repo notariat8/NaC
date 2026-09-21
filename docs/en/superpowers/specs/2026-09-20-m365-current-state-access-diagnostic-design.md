@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access
 
-Status: German and English specification and implementation plan approved by the owner; repository implementation is in `implement -> review -> fix`; the real provider run remains separately blocked
+Status: Base specification and plan approved by the owner; the privacy-minimal SPFx client-receipt extension is documented in German and English and awaits its implementation review gate; the real provider run remains separately blocked
 
 Date: 20 September 2026
 
@@ -49,6 +49,14 @@ affected_artifacts:
   - src/nac_bff/activation_security_backend.py
   - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.test.ts
+  - docs/de/sbom-for-ai.md
+  - docs/en/sbom-for-ai.md
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_spec_traceability.py
@@ -73,6 +81,8 @@ validation_commands:
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
   - python -m unittest discover -s tests -p test_spec_traceability.py
+  - cd spfx/nac-bpmn-viewer && npm run build
+  - cd spfx/nac-bpmn-viewer && npm run workbench:capture
   - python -m unittest discover -s tests
   - graft build
   - graft check
@@ -210,15 +220,44 @@ concrete account permission, target resource, principal, and run binding. A
 different account of the same principal blocks; principal equivalence does not
 extend provider permission.
 
-The client receipt is created before the provider run from an existing,
-operator-triggered Teams/SPFx host context. It may contain only UI state,
-subject-present Boolean, window binding, and a random correlation binding;
-tokens, headers, object ID, name, and email are prohibited. The implementation
-step deploys no new client telemetry and starts no browser automation. If no
-supported existing channel can produce this receipt, or if the actually
-deployed SPFx package and source binding cannot be proven read-only, the later
-run ends with `BLOCKED_CLIENT_OBSERVATION_UNAVAILABLE` or
-`BLOCKED_DEPLOYED_CLIENT_BINDING_UNAVAILABLE` instead of guessing a class.
+The client receipt is created before the provider run from an
+operator-triggered Teams/SPFx host context. It may contain only the constant
+neutral UI state `no_access`, the Boolean `spfx_subject_available`, closed UTC
+window bounds, a canonically derived window binding, and the SHA-256 binding
+of a random correlation ID. Object IDs, subject values, names, email
+addresses, tenant data, tokens, headers, request contents, and other personal
+or authenticating data are prohibited; unknown fields block.
+
+The correlation ID is generated exactly once with cryptographically secure
+browser randomness when observation starts. If an SPFx subject is available,
+the existing BFF request uses exactly that ephemeral raw value as
+`X-Correlation-ID`; if no subject is available, the raw value never leaves the
+client. In both cases, the receipt persists only the SHA-256 binding. If Web
+Crypto is unavailable, the state is not terminally closed, or the raw value
+cannot be discarded after single use, no receipt is produced and the later
+path blocks with `BLOCKED_CLIENT_OBSERVATION_UNAVAILABLE`.
+
+### Selected Repository-External Transfer Path
+
+The browser cannot write an arbitrary local directory. The selected path is
+therefore two-stage and entirely local:
+
+1. After the terminal neutral error state, the web part offers an explicitly
+   operator-triggered download of a canonical JSON file with a fixed,
+   person-free filename. There is no automatic download, network transfer, or
+   telemetry.
+2. A dedicated offline `nac` CLI surface validates size, UTF-8, exact field
+   set, time window, hash formats, and privacy prohibitions, then exclusively
+   materializes the receipt in a repository-external, SID/DACL-protected Issue
+   #748 input directory. It does not overwrite an existing receipt and performs
+   no login, network, or provider access.
+
+A localhost bridge service is rejected because it adds process, CORS, and
+attack surface. Clipboard, DevTools, and manual transcription are rejected for
+lack of durability, binding, and reproducibility. If the actually deployed
+SPFx package and source binding cannot be proven read-only, the later run still
+ends with `BLOCKED_DEPLOYED_CLIENT_BINDING_UNAVAILABLE` instead of guessing a
+class.
 
 The observation window is fixed and closed before diagnostic reads begin. No
 new Teams, browser, or BFF request is triggered during the two provider
@@ -601,17 +640,19 @@ commit, stat, and complete patch views for `origin/main...HEAD`.
 | Principal hash becomes publicly correlatable | Random run-bound HMAC only in the protected local evidence sink |
 | Evidence writes open general host write access | Pre-opened single sink handle; OS-enforced denial for every other store |
 | Personal data enters evidence | Closed allowlist, immediate in-memory redaction, and negative fixtures |
-| Client subject cannot be proven through a supported host channel | Do not guess or deploy; narrow blocked state until an existing read-only channel is proven |
+| Client subject cannot be proven through a privacy-minimal host receipt | Explicit local receipt download plus protected offline CLI materialization; block narrowly when Web Crypto, closed window, or deployed-package binding is missing |
+| Browser download initially resides in an ordinary user folder | The download is transport only; exact validation and exclusive materialization in the external SID/DACL-protected input directory creates the authoritative receipt |
+| Correlation ID would be persisted as a header or identifier | Raw value remains ephemeral, is used at most once for the existing BFF request, and only its SHA-256 binding enters the receipt |
 | Two different temporal states are compared | Bound observation window, identical target binding, and snapshot hash comparison |
 | UI reveals internal authorization detail | Teams message remains neutral; detailed class only in protected operator evidence |
 | Diagnostic is mistaken for fix approval | Result authorizes only a new fix plan |
 
 ## AI-SBOM Decision
 
-The diagnostic path adds no model call and no AI capability. The
-implementation plan must nevertheless check the existing AI-SBOM. A change is
-required only if a new agentic, model-backed, or external AI-processing surface
-is actually introduced; adding an artificial AI component is a non-goal.
+The diagnostic path and client receipt add no model call and no AI capability.
+The AI-SBOM is updated synchronously with the negative decision: deterministic
+local SPFx and CLI processing, with no new model, provider, or personal-data AI
+flow. Adding an artificial AI component is a non-goal.
 
 ## Non-Goals
 
@@ -632,8 +673,11 @@ is actually introduced; adding an artificial AI component is a non-goal.
 
 ## Review Gate
 
-The owner approved the German and English specifications and the synchronized
-German and English implementation plan. The test-first implementation in
+The owner approved the base specification and base plan. The client-receipt
+extension described here is written as a German/English design and synchronized
+German/English plan. Explicit review approval of this exact two-stage local
+transfer path is required before changing SPFx, CLI, contract, validators,
+tests, documentation, or AI-SBOM. The subsequent test-first implementation in
 Draft PR #749 proceeds through `implement -> review -> fix`; its repository and
 CI authorization still includes no real provider access.
 

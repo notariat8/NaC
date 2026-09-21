@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: DE/EN-Spec und Implementierungsplan vom Owner freigegeben; Repository-Implementierung in `implement -> review -> fix`; realer Providerlauf weiterhin separat gesperrt
+Status: Basisspec und Basisplan vom Owner freigegeben; datenschutzarme SPFx-Client-Receipt-Erweiterung in DE/EN dokumentiert und vor ihrer Umsetzung im Review-Gate; realer Providerlauf weiterhin separat gesperrt
 
 Datum: 20. September 2026
 
@@ -49,6 +49,14 @@ affected_artifacts:
   - src/nac_bff/activation_security_backend.py
   - src/nac_bff/azure_live_commands_win.py
   - src/nac_cli/cli.py
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.test.ts
+  - docs/de/sbom-for-ai.md
+  - docs/en/sbom-for-ai.md
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_spec_traceability.py
@@ -73,6 +81,8 @@ validation_commands:
   - python -m unittest discover -s tests -p test_nac_cli.py
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
   - python -m unittest discover -s tests -p test_spec_traceability.py
+  - cd spfx/nac-bpmn-viewer && npm run build
+  - cd spfx/nac-bpmn-viewer && npm run workbench:capture
   - python -m unittest discover -s tests
   - graft build
   - graft check
@@ -213,15 +223,45 @@ unveränderliche Autorisierungskapazität mit providerqualifiziertem
 Principal und Run-Binding. Ein anderes Konto desselben Principals blockiert;
 Principal-Gleichheit erweitert keine Providerberechtigung.
 
-Der Clientbeleg entsteht vor dem Providerlauf aus einem bereits vorhandenen,
-vom Operator ausgelösten Teams-/SPFx-Hostkontext. Er darf nur UI-Zustand,
-Subject-vorhanden-Boolean, Fensterbinding und einen zufälligen
-Korrelationsbinding enthalten; Tokens, Header, Object ID, Name und E-Mail sind
-verboten. Der Implementierungsschritt deployt keine neue Clienttelemetrie und
-startet keine Browserautomation. Kann kein unterstützter bestehender Kanal
-diesen Beleg liefern oder kann die tatsächlich bereitgestellte SPFx-Paket-
-und Quellbindung nicht read-only bewiesen werden, endet der spätere Lauf mit
-`BLOCKED_CLIENT_OBSERVATION_UNAVAILABLE` beziehungsweise
+Der Clientbeleg entsteht vor dem Providerlauf aus einem vom Operator
+ausgelösten Teams-/SPFx-Hostkontext. Er darf ausschließlich den konstanten
+neutralen UI-Zustand `no_access`, den Boolean `spfx_subject_available`, die
+geschlossenen UTC-Fenstergrenzen, einen daraus kanonisch berechneten
+Fensterbinding und den SHA-256-Binding einer zufälligen Korrelations-ID
+enthalten. Object IDs, Subjectwerte, Namen, E-Mail-Adressen, Tenantdaten,
+Tokens, Header, Request-Inhalte und andere personenbezogene oder
+authentifizierende Daten sind verboten; unbekannte Felder blockieren.
+
+Die Korrelations-ID wird mit kryptografisch sicherem Browserzufall genau
+einmal beim Beginn der Beobachtung erzeugt. Ist ein SPFx-Subject vorhanden,
+verwendet der bestehende BFF-Request exakt diesen flüchtigen Rohwert als
+`X-Correlation-ID`; ist kein Subject vorhanden, verlässt der Rohwert den
+Client nicht. In beiden Fällen persistiert der Receipt ausschließlich den
+SHA-256-Binding. Fehlt Web Crypto, ist der Zustand nicht terminal abgeschlossen
+oder kann der Rohwert nicht nach einmaliger Verwendung verworfen werden, wird
+kein Receipt erzeugt und der spätere Pfad blockiert mit
+`BLOCKED_CLIENT_OBSERVATION_UNAVAILABLE`.
+
+### Gewählter repository-externer Übergabepfad
+
+Der Browser darf kein beliebiges lokales Verzeichnis beschreiben. Deshalb ist
+der gewählte Pfad zweistufig und vollständig lokal:
+
+1. Nach dem terminalen neutralen Fehlerzustand bietet das Webpart einen
+   ausdrücklich vom Operator ausgelösten Download einer kanonischen JSON-Datei
+   mit festem, personenfreiem Dateinamen an. Es gibt keinen automatischen
+   Download, keine Netzwerkübertragung und keine Telemetrie.
+2. Eine eigene offline `nac`-CLI-Bedienkante validiert Größe, UTF-8, exakte
+   Feldmenge, Zeitfenster, Hashformate und Datenschutz-Verbote und materialisiert
+   den Beleg exklusiv in einem repository-externen, SID-/DACL-geschützten
+   Issue-#748-Inputverzeichnis. Sie überschreibt keinen vorhandenen Beleg und
+   führt weder Login noch Netzwerk- oder Providerzugriff aus.
+
+Ein Localhost-Bridge-Dienst wird wegen zusätzlichem Prozess-, CORS- und
+Angriffsflächenrisiko verworfen. Clipboard, DevTools und manuelle Abschrift
+werden wegen fehlender Dauerhaftigkeit, Bindung und Reproduzierbarkeit
+verworfen. Kann die tatsächlich bereitgestellte SPFx-Paket- und Quellbindung
+nicht read-only bewiesen werden, endet der spätere Lauf weiterhin mit
 `BLOCKED_DEPLOYED_CLIENT_BINDING_UNAVAILABLE` statt einer geratenen Klasse.
 
 Das Beobachtungsfenster wird vor dem Diagnose-Read fest abgeschlossen. Während
@@ -623,17 +663,19 @@ zusätzlich Datei-, Commit-, Stat- und vollständige Patchansicht von
 | Principal-Hash wird öffentlich korrelierbar | Zufällige laufgebundene HMAC nur im geschützten lokalen Evidence-Sink |
 | Evidence-Schreiben öffnet allgemeine Host-Schreibrechte | Vorab geöffnetes einziges Sink-Handle; OS-erzwungene Sperre aller anderen Speicher |
 | Personenbezogene Daten gelangen in Evidence | Geschlossene Allowlist, unmittelbare In-Memory-Redaktion und Negativfixtures |
-| Client-Subject ist ohne unterstützten Hostkanal nicht beweisbar | Kein Raten und kein Deployment; enger Blockzustand bis ein bestehender read-only Kanal nachgewiesen ist |
+| Client-Subject ist ohne datenschutzarmen Hostbeleg nicht beweisbar | Expliziter lokaler Receipt-Download plus geschützte Offline-CLI-Materialisierung; bei fehlendem Web Crypto, unvollständigem Fenster oder ungebundener Paketversion eng blockieren |
+| Browserdownload liegt zunächst in einem gewöhnlichen Benutzerordner | Download ist nur Transport; erst exakte Validierung und exklusive Materialisierung im SID-/DACL-geschützten externen Inputverzeichnis erzeugt den autoritativen Beleg |
+| Korrelations-ID würde als Header oder Identifikator persistiert | Rohwert bleibt flüchtig, wird höchstens einmal für den bestehenden BFF-Request verwendet und nur sein SHA-256-Binding gelangt in den Receipt |
 | Zwei zeitlich verschiedene Zustände werden verglichen | Gebundenes Beobachtungsfenster, identische Zielbindung und Snapshot-Hashvergleich |
 | UI offenbart interne Autorisierungsdetails | Teams-Meldung bleibt neutral; Detailklasse nur in geschützter Operator-Evidence |
 | Diagnose wird als Fixfreigabe missverstanden | Ergebnis autorisiert ausschließlich einen neuen Fixplan |
 
 ## AI-SBOM-Entscheidung
 
-Der Diagnosepfad fügt keinen Modellaufruf und keine neue AI-Fähigkeit hinzu.
-Der Implementierungsplan muss die bestehende AI-SBOM dennoch prüfen. Eine
-Änderung ist nur erforderlich, wenn tatsächlich eine neue agentische,
-modellgestützte oder externe AI-Verarbeitung eingeführt wird; eine künstliche
+Der Diagnosepfad und der Client-Receipt fügen keinen Modellaufruf und keine
+neue AI-Fähigkeit hinzu. Die AI-SBOM wird synchron um die negative Entscheidung
+ergänzt: deterministische lokale SPFx- und CLI-Verarbeitung, keine neue
+Modell-, Provider- oder personenbezogene AI-Datenflusskante. Eine künstliche
 AI-Komponente ist Nicht-Ziel.
 
 ## Nicht-Ziele
@@ -657,10 +699,13 @@ AI-Komponente ist Nicht-Ziel.
 
 ## Review-Gate
 
-Der Owner hat die DE/EN-Specs und den synchronisierten DE/EN-Implementierungsplan
-freigegeben. Die test-first Umsetzung in Draft-PR #749 durchläuft
-`implement -> review -> fix`; ihre Repository- und CI-Freigabe umfasst noch
-keinen realen Providerzugriff.
+Der Owner hat Basisspec und Basisplan freigegeben. Die hier beschriebene
+Client-Receipt-Erweiterung ist als DE/EN-Design und synchronisierter DE/EN-Plan
+ausformuliert. Vor Änderungen an SPFx, CLI, Contract, Validatoren, Tests,
+Dokumentation und AI-SBOM ist die ausdrückliche Review-Freigabe genau dieses
+zweistufigen lokalen Übergabepfads erforderlich. Danach durchläuft die
+test-first Umsetzung in Draft-PR #749 `implement -> review -> fix`; ihre
+Repository- und CI-Freigabe umfasst weiterhin keinen realen Providerzugriff.
 
 Diese Spec-Freigabe autorisiert noch keinen Providerzugriff. Der spätere reale
 read-only Diagnose-Lauf benötigt nach Implementierung, Review, Push und grüner
