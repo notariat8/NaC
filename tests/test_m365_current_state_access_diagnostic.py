@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 import sys
 import tempfile
@@ -111,6 +112,169 @@ def _port_receipts(prefix: int) -> tuple[str, ...]:
 
 
 class CurrentStateAccessDiagnosticTests(unittest.TestCase):
+    def _build_validator_delivery_fixture(self):
+        scripts_path = str(Path(__file__).resolve().parents[1] / "scripts")
+        if scripts_path not in sys.path:
+            sys.path.insert(0, scripts_path)
+        import validate_m365_current_state_access_diagnostic as validator
+
+        temporary = tempfile.TemporaryDirectory()
+        repository = Path(temporary.name)
+
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", *args],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+
+        git("init", "--initial-branch=main")
+        git("config", "user.name", "NaC Test")
+        git("config", "user.email", "nac-test@example.invalid")
+        (repository / "baseline.txt").write_text("baseline\n", encoding="utf-8")
+        git("add", "baseline.txt")
+        git("commit", "-m", "baseline")
+        first_parent = git("rev-parse", "HEAD")
+
+        git("switch", "-c", "issue-748")
+        (repository / "delivered.txt").write_text("delivered\n", encoding="utf-8")
+        git("add", "delivered.txt")
+        git("commit", "-m", "deliver issue 748")
+        pr_head = git("rev-parse", "HEAD")
+
+        git("switch", "main")
+        git("merge", "--no-ff", "issue-748", "-m", "merge issue 748")
+        merge_commit = git("rev-parse", "HEAD")
+        merge_tree = git("rev-parse", "HEAD^{tree}")
+        git("update-ref", "refs/remotes/origin/main", merge_commit)
+        delivery = {
+            "hotfix_issue": 750,
+            "hotfix_base_commit": merge_commit,
+            "source_pr": 749,
+            "pr_head": pr_head,
+            "merge_commit": merge_commit,
+            "merge_tree": merge_tree,
+            "first_parent": first_parent,
+            "second_parent": pr_head,
+            "ancestry_required": True,
+        }
+        return temporary, repository, git, validator, delivery
+
+    def test_validator_accepts_exact_delivered_merge_on_main(self) -> None:
+        temporary, repository, _git, validator, delivery = (
+            self._build_validator_delivery_fixture()
+        )
+        self.addCleanup(temporary.cleanup)
+
+        self.assertEqual(
+            validator._validate_artifact_lifecycle(
+                repo_root=repository,
+                delivery=delivery,
+                delivered_artifacts={"delivered.txt"},
+                hotfix_artifacts={"validator.py"},
+                hotfix_control_artifacts={"validator.py"},
+            ),
+            [],
+        )
+
+    def test_validator_rejects_wrong_merge_tree_parent_and_missing_ancestry(self) -> None:
+        temporary, repository, git, validator, delivery = (
+            self._build_validator_delivery_fixture()
+        )
+        self.addCleanup(temporary.cleanup)
+
+        wrong_tree = dict(delivery, merge_tree="0" * 40)
+        self.assertIn(
+            "delivered merge tree mismatch",
+            validator._validate_artifact_lifecycle(
+                repo_root=repository,
+                delivery=wrong_tree,
+                delivered_artifacts={"delivered.txt"},
+                hotfix_artifacts={"validator.py"},
+                hotfix_control_artifacts={"validator.py"},
+            ),
+        )
+
+        wrong_parent = dict(delivery, second_parent=delivery["first_parent"])
+        self.assertIn(
+            "delivered merge parents mismatch",
+            validator._validate_artifact_lifecycle(
+                repo_root=repository,
+                delivery=wrong_parent,
+                delivered_artifacts={"delivered.txt"},
+                hotfix_artifacts={"validator.py"},
+                hotfix_control_artifacts={"validator.py"},
+            ),
+        )
+
+        git("switch", "--detach", delivery["first_parent"])
+        git("update-ref", "refs/remotes/origin/main", delivery["first_parent"])
+        errors = validator._validate_artifact_lifecycle(
+            repo_root=repository,
+            delivery=delivery,
+            delivered_artifacts={"delivered.txt"},
+            hotfix_artifacts={"validator.py"},
+            hotfix_control_artifacts={"validator.py"},
+        )
+        self.assertIn("delivered merge is not an ancestor of HEAD", errors)
+        self.assertIn("delivered merge is not an ancestor of origin/main", errors)
+
+    def test_validator_rejects_wrong_pr_head_and_delivered_scope(self) -> None:
+        temporary, repository, _git, validator, delivery = (
+            self._build_validator_delivery_fixture()
+        )
+        self.addCleanup(temporary.cleanup)
+
+        wrong_head = dict(delivery, pr_head=delivery["first_parent"])
+        errors = validator._validate_artifact_lifecycle(
+            repo_root=repository,
+            delivery=wrong_head,
+            delivered_artifacts={"delivered.txt"},
+            hotfix_artifacts={"validator.py"},
+            hotfix_control_artifacts={"validator.py"},
+        )
+        self.assertIn("delivered PR head tree mismatch", errors)
+        self.assertTrue(
+            any(error.startswith("delivered artifact scope mismatch") for error in errors),
+            errors,
+        )
+
+    def test_validator_accepts_only_exact_hotfix_scope(self) -> None:
+        temporary, repository, git, validator, delivery = (
+            self._build_validator_delivery_fixture()
+        )
+        self.addCleanup(temporary.cleanup)
+
+        git("switch", "-c", "hotfix")
+        (repository / "validator.py").write_text("fixed\n", encoding="utf-8")
+        git("add", "validator.py")
+        git("commit", "-m", "fix validator")
+        self.assertEqual(
+            validator._validate_artifact_lifecycle(
+                repo_root=repository,
+                delivery=delivery,
+                delivered_artifacts={"delivered.txt"},
+                hotfix_artifacts={"validator.py"},
+                hotfix_control_artifacts={"validator.py"},
+            ),
+            [],
+        )
+
+        (repository / "unexpected.txt").write_text("unexpected\n", encoding="utf-8")
+        errors = validator._validate_artifact_lifecycle(
+            repo_root=repository,
+            delivery=delivery,
+            delivered_artifacts={"delivered.txt"},
+            hotfix_artifacts={"validator.py"},
+            hotfix_control_artifacts={"validator.py"},
+        )
+        self.assertTrue(
+            any(error.startswith("pre-merge hotfix artifact scope mismatch") for error in errors),
+            errors,
+        )
+
     def test_scope_filter_ignores_only_generated_egg_info_worktree_paths(self) -> None:
         scripts_path = str(Path(__file__).resolve().parents[1] / "scripts")
         if scripts_path not in sys.path:

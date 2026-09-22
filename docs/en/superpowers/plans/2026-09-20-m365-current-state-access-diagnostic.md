@@ -14,6 +14,28 @@ Delivery Mode: Protected PR
 
 Risk Gate: Human Approval
 
+Post-merge hotfix: [Issue #750](https://github.com/notariat8/NaC/issues/750)
+
+## Hotfix plan for the validator lifecycle
+
+The hotfix changes only the validator, verification contract, existing test,
+and these synchronized DE/EN specification and plan sections. Tests first cover
+a valid delivered merge, the exact hotfix scope, and wrong-tree, wrong-parent,
+and missing-ancestry failures. A two-state check then replaces the blanket
+assumption that `origin/main...HEAD` permanently contains the Issue #748
+delivery scope:
+
+1. `pre_merge_scope` binds changes to the validator/contract control surface
+   exactly to base `13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a` and the seven-file hotfix
+   scope.
+2. `delivered_merge_binding` verifies PR #749, its head, the merge commit and
+   tree, both ordered parents, the original file scope, and ancestry from the
+   local Git object graph.
+3. Every extra hotfix file and every commit, tree, parent, head, scope, or
+   ancestry mismatch fails closed.
+4. The fix changes no diagnostic, provider, credential, Teams, SPFx, or
+   deployment behavior.
+
 ## Outcome and Boundary
 
 The implementation delivers an independent, Windows-native, read-only

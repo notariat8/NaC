@@ -21,7 +21,8 @@ REQUIRED_TOP_LEVEL = {
     "authorization", "client_receipt", "snapshot", "read_driver_release",
     "side_effect_counters",
     "read_counter_semantics", "counter_matrix", "ac_evidence", "exact_artifacts",
-    "forbidden_import_markers", "commands",
+    "forbidden_import_markers", "commands", "delivery_binding",
+    "hotfix_exact_artifacts",
 }
 REQUIRED_ACS = [f"AC-748-{index:02d}" for index in range(1, 9)]
 REQUIRED_CLASSES = [
@@ -116,6 +117,19 @@ REQUIRED_FILES = [
     "workflows/contracts/workbench-live-read-binding.contract.json",
     "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
 ]
+HOTFIX_FILES = [
+    "docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
+    "docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
+    "docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md",
+    "docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md",
+    "scripts/validate_m365_current_state_access_diagnostic.py",
+    "tests/test_m365_current_state_access_diagnostic.py",
+    "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
+]
+HOTFIX_CONTROL_FILES = {
+    "scripts/validate_m365_current_state_access_diagnostic.py",
+    "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml",
+}
 GENERATED_EDITABLE_INSTALL_METADATA = {
     "src/nac.egg-info/PKG-INFO",
     "src/nac.egg-info/SOURCES.txt",
@@ -139,6 +153,121 @@ def _filter_generated_worktree_artifacts(paths: set[str]) -> set[str]:
         for path in paths
         if path.replace("\\", "/") not in GENERATED_EDITABLE_INSTALL_METADATA
     }
+
+
+def _git(
+    repo_root: Path,
+    *arguments: str,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *arguments],
+        cwd=repo_root,
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _git_is_ancestor(repo_root: Path, ancestor: str, descendant: str) -> bool:
+    return _git(
+        repo_root,
+        "merge-base",
+        "--is-ancestor",
+        ancestor,
+        descendant,
+        check=False,
+    ).returncode == 0
+
+
+def _validate_artifact_lifecycle(
+    *,
+    repo_root: Path,
+    delivery: dict[str, Any],
+    delivered_artifacts: set[str],
+    hotfix_artifacts: set[str],
+    hotfix_control_artifacts: set[str],
+) -> list[str]:
+    """Validate the exact hotfix scope or the immutable delivered merge.
+
+    A branch that changes the validator or its verification contract is treated
+    as an in-flight hotfix and must have exactly the approved hotfix scope.
+    Other branches and ``main`` validate the already delivered Issue #748 merge
+    instead of incorrectly attributing their own diff to Issue #748.
+    """
+
+    errors: list[str] = []
+    try:
+        committed = _git(
+            repo_root, "diff", "--name-only", "origin/main...HEAD"
+        ).stdout.splitlines()
+        status = _git(
+            repo_root,
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+        ).stdout.splitlines()
+        working = _filter_generated_worktree_artifacts(
+            {
+                line[3:].replace("\\", "/")
+                for line in status
+                if len(line) > 3
+            }
+        )
+        actual_scope = {
+            path.replace("\\", "/") for path in committed
+        } | working
+
+        if actual_scope & hotfix_control_artifacts:
+            if actual_scope != hotfix_artifacts:
+                errors.append(
+                    "pre-merge hotfix artifact scope mismatch: "
+                    f"missing={sorted(hotfix_artifacts - actual_scope)} "
+                    f"extra={sorted(actual_scope - hotfix_artifacts)}"
+                )
+            origin_main = _git(repo_root, "rev-parse", "origin/main").stdout.strip()
+            if origin_main != delivery.get("hotfix_base_commit"):
+                errors.append("pre-merge hotfix base mismatch")
+            if not _git_is_ancestor(
+                repo_root, str(delivery.get("hotfix_base_commit", "")), "HEAD"
+            ):
+                errors.append("pre-merge hotfix base is not an ancestor of HEAD")
+            return errors
+
+        merge_commit = str(delivery.get("merge_commit", ""))
+        pr_head = str(delivery.get("pr_head", ""))
+        first_parent = str(delivery.get("first_parent", ""))
+        second_parent = str(delivery.get("second_parent", ""))
+        actual_tree = _git(
+            repo_root, "rev-parse", f"{merge_commit}^{{tree}}"
+        ).stdout.strip()
+        if actual_tree != delivery.get("merge_tree"):
+            errors.append("delivered merge tree mismatch")
+        pr_tree = _git(repo_root, "rev-parse", f"{pr_head}^{{tree}}").stdout.strip()
+        if pr_tree != actual_tree:
+            errors.append("delivered PR head tree mismatch")
+        parents = _git(repo_root, "show", "-s", "--format=%P", merge_commit).stdout.strip()
+        if parents != f"{first_parent} {second_parent}":
+            errors.append("delivered merge parents mismatch")
+        delivered_scope = {
+            path.replace("\\", "/")
+            for path in _git(
+                repo_root, "diff", "--name-only", f"{first_parent}...{pr_head}"
+            ).stdout.splitlines()
+        }
+        if delivered_scope != delivered_artifacts:
+            errors.append(
+                "delivered artifact scope mismatch: "
+                f"missing={sorted(delivered_artifacts - delivered_scope)} "
+                f"extra={sorted(delivered_scope - delivered_artifacts)}"
+            )
+        if not _git_is_ancestor(repo_root, merge_commit, "HEAD"):
+            errors.append("delivered merge is not an ancestor of HEAD")
+        if not _git_is_ancestor(repo_root, merge_commit, "origin/main"):
+            errors.append("delivered merge is not an ancestor of origin/main")
+    except (OSError, subprocess.CalledProcessError) as exc:
+        errors.append(f"artifact lifecycle cannot be verified: {exc}")
+    return errors
 
 
 def _load() -> tuple[dict[str, Any] | None, list[str]]:
@@ -178,7 +307,7 @@ def validate() -> list[str]:
     if set(contract) != REQUIRED_TOP_LEVEL:
         errors.append("verification contract top-level schema is not closed")
     checks = (
-        ("schema_version", "nac.m365-current-state-access-diagnostic/v0.1"),
+        ("schema_version", "nac.m365-current-state-access-diagnostic/v0.2"),
         ("contract_id", "m365-current-state-access-diagnostic"),
         ("leading_issue", "https://github.com/notariat8/NaC/issues/748"),
         ("acceptance_ids", REQUIRED_ACS),
@@ -198,6 +327,22 @@ def validate() -> list[str]:
         "final_head_must_descend_from_merge_commit": True,
     }:
         errors.append("post-merge base binding mismatch")
+    delivery = contract.get("delivery_binding", {})
+    if delivery != {
+        "hotfix_issue": 750,
+        "hotfix_base_commit": "13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a",
+        "source_pr": 749,
+        "pr_head": "bed94ad636ebfce334d779ebfa1d94fcbf3db075",
+        "merge_commit": "13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a",
+        "merge_tree": "caff867ae512cf4f0517dd0a2f4ae5cffedd2901",
+        "first_parent": "80bf813375d7fc2ab292dfdbcc1db447fdb6684a",
+        "second_parent": "bed94ad636ebfce334d779ebfa1d94fcbf3db075",
+        "ancestry_required": True,
+    }:
+        errors.append("delivered merge binding mismatch")
+    hotfix_artifacts = contract.get("hotfix_exact_artifacts")
+    if not isinstance(hotfix_artifacts, list) or set(hotfix_artifacts) != set(HOTFIX_FILES):
+        errors.append("hotfix exact artifact scope mismatch")
     counters = contract.get("side_effect_counters", {})
     if contract.get("read_driver_release") != {
         "component_id": "nac-issue748-read-driver",
@@ -326,29 +471,16 @@ def validate() -> list[str]:
     for relative in REQUIRED_FILES:
         if not (REPO_ROOT / relative).is_file():
             errors.append(f"required artifact missing: {relative}")
-    try:
-        committed = subprocess.run(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
-            cwd=REPO_ROOT, check=True, capture_output=True, text=True,
-        ).stdout.splitlines()
-        status = subprocess.run(
-            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
-            cwd=REPO_ROOT, check=True, capture_output=True, text=True,
-        ).stdout.splitlines()
-        working = _filter_generated_worktree_artifacts({
-            line[3:].replace("\\", "/")
-            for line in status
-            if len(line) > 3
-        })
-        actual_scope = {path.replace("\\", "/") for path in committed} | working
-        if actual_scope != set(REQUIRED_FILES):
-            errors.append(
-                "actual main...worktree artifact scope mismatch: "
-                f"missing={sorted(set(REQUIRED_FILES) - actual_scope)} "
-                f"extra={sorted(actual_scope - set(REQUIRED_FILES))}"
+    if isinstance(delivery, dict) and isinstance(hotfix_artifacts, list):
+        errors.extend(
+            _validate_artifact_lifecycle(
+                repo_root=REPO_ROOT,
+                delivery=delivery,
+                delivered_artifacts=set(REQUIRED_FILES),
+                hotfix_artifacts=set(hotfix_artifacts),
+                hotfix_control_artifacts=HOTFIX_CONTROL_FILES,
             )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        errors.append(f"actual artifact scope cannot be verified: {exc}")
+        )
     source_files = [
         REPO_ROOT / f"src/nac_bff/current_state_access_{name}.py"
         for name in ("diagnostic", "gate", "ports", "adapters", "composition")

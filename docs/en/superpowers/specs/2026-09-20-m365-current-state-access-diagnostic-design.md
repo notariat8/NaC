@@ -10,6 +10,14 @@ Starting point: merge commit `80bf813375d7fc2ab292dfdbcc1db447fdb6684a`,
 tree `007e277ca5643f7cb63355961fd0422d92fd4b87`, merged
 [PR #747](https://github.com/notariat8/NaC/pull/747)
 
+Post-merge hotfix: [Issue #750](https://github.com/notariat8/NaC/issues/750)
+binds delivered [PR #749](https://github.com/notariat8/NaC/pull/749) to head
+`bed94ad636ebfce334d779ebfa1d94fcbf3db075`, merge commit
+`13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a`, merge tree
+`caff867ae512cf4f0517dd0a2f4ae5cffedd2901`, and the ordered parents
+`80bf813375d7fc2ab292dfdbcc1db447fdb6684a` and
+`bed94ad636ebfce334d779ebfa1d94fcbf3db075`.
+
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-current-state-access-diagnostic
@@ -134,6 +142,23 @@ Arbeitsbereich” to one of four classes:
    authentication.
 4. `BFF_AUTHORIZATION_REJECTED_403`: the BFF accepts the identity but rejects
    business authorization or the bound request context.
+
+## Validator post-merge lifecycle
+
+The validator distinguishes two closed states. If a branch changes the
+validator or its verification contract, `pre_merge_scope` applies: the complete
+set from `origin/main...HEAD` and the allowed worktree must exactly match the
+Issue #750 hotfix scope, and
+`13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a` must remain the unchanged hotfix
+base and an ancestor of `HEAD`.
+
+On `main` and on later branches that do not change this control surface,
+`delivered_merge_binding` applies. The stored PR head, merge commit, tree, both
+ordered parents, original PR file scope, and ancestry to both `HEAD` and
+`origin/main` are then verified directly from the local Git object graph. An
+empty `origin/main...HEAD` diff on merged `main` is therefore not interpreted
+as a missing Issue #748 scope. A wrong tree, parent, head, scope, or ancestry
+continues to fail closed.
 
 The diagnostic is not a repair. It produces only redacted, hash-bound decision
 evidence for a later separate fix and, if needed, activation assignment.

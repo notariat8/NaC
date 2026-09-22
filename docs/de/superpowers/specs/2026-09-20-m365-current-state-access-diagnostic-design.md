@@ -10,6 +10,14 @@ Ausgangsbasis: Merge-Commit `80bf813375d7fc2ab292dfdbcc1db447fdb6684a`,
 Tree `007e277ca5643f7cb63355961fd0422d92fd4b87`, gemergter
 [PR #747](https://github.com/notariat8/NaC/pull/747)
 
+Post-Merge-Hotfix: [Issue #750](https://github.com/notariat8/NaC/issues/750)
+bindet den gelieferten [PR #749](https://github.com/notariat8/NaC/pull/749)
+an Head `bed94ad636ebfce334d779ebfa1d94fcbf3db075`, Merge-Commit
+`13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a`, Merge-Tree
+`caff867ae512cf4f0517dd0a2f4ae5cffedd2901` und die geordneten Eltern
+`80bf813375d7fc2ab292dfdbcc1db447fdb6684a` sowie
+`bed94ad636ebfce334d779ebfa1d94fcbf3db075`.
+
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-current-state-access-diagnostic
@@ -135,6 +143,23 @@ Arbeitsbereich“ reproduzierbar einer von vier Klassen zuordnen:
    die Authentisierung ab.
 4. `BFF_AUTHORIZATION_REJECTED_403`: Der BFF akzeptiert die Identität, lehnt
    aber die fachliche Autorisierung oder den gebundenen Requestkontext ab.
+
+## Post-Merge-Lebenszyklus des Validators
+
+Der Validator unterscheidet zwei geschlossene Zustände. Ändert ein Branch den
+Validator oder seinen Verification Contract, gilt `pre_merge_scope`: Die
+vollständige Menge aus `origin/main...HEAD` und zulässigem Worktree muss exakt
+dem in Issue #750 freigegebenen Hotfix-Scope entsprechen, und
+`13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a` muss die unveränderte Hotfix-Basis
+und ein Vorfahr von `HEAD` sein.
+
+Auf `main` und auf späteren Branches ohne Änderung dieser Kontrollfläche gilt
+`delivered_merge_binding`. Dabei werden der gespeicherte PR-Head, der
+Merge-Commit, sein Tree, beide geordneten Eltern, der ursprüngliche
+PR-Dateiscope und die Ancestry zu `HEAD` sowie `origin/main` direkt aus dem
+lokalen Git-Objektgraphen geprüft. Eine leere `origin/main...HEAD`-Diff auf dem
+gemergten `main` ist damit kein fehlender Issue-#748-Scope. Falscher Tree,
+Parent, Head, Scope oder fehlende Ancestry blockieren weiterhin fail-closed.
 
 Die Diagnose ersetzt keine Fehlerbehebung. Sie liefert ausschließlich eine
 redigierte, hashgebundene Entscheidungsgrundlage für einen späteren separaten

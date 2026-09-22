@@ -1,4 +1,4 @@
-schema_version: nac.m365-current-state-access-diagnostic/v0.1
+schema_version: nac.m365-current-state-access-diagnostic/v0.2
 contract_id: m365-current-state-access-diagnostic
 leading_issue: https://github.com/notariat8/NaC/issues/748
 delivery_mode: Protected PR
@@ -82,6 +82,14 @@ exact_artifacts:
   - workflows/contracts/spec-traceability.contract.json
   - workflows/contracts/workbench-live-read-binding.contract.json
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
+hotfix_exact_artifacts:
+  - docs/de/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  - docs/de/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+  - docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
+  - docs/en/superpowers/specs/2026-09-20-m365-current-state-access-diagnostic-design.md
+  - scripts/validate_m365_current_state_access_diagnostic.py
+  - tests/test_m365_current_state_access_diagnostic.py
+  - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
 acceptance_ids: [AC-748-01, AC-748-02, AC-748-03, AC-748-04, AC-748-05, AC-748-06, AC-748-07, AC-748-08]
 base_binding:
   merged_pr: 747
@@ -89,6 +97,16 @@ base_binding:
   merge_tree: 007e277ca5643f7cb63355961fd0422d92fd4b87
   final_pr: 749
   final_head_must_descend_from_merge_commit: true
+delivery_binding:
+  hotfix_issue: 750
+  hotfix_base_commit: 13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a
+  source_pr: 749
+  pr_head: bed94ad636ebfce334d779ebfa1d94fcbf3db075
+  merge_commit: 13ee6695296d45ce4f3d101ed33e46f9ca6ebb4a
+  merge_tree: caff867ae512cf4f0517dd0a2f4ae5cffedd2901
+  first_parent: 80bf813375d7fc2ab292dfdbcc1db447fdb6684a
+  second_parent: bed94ad636ebfce334d779ebfa1d94fcbf3db075
+  ancestry_required: true
 normative_classifications:
   - SPFX_SUBJECT_MISSING
   - BFF_REQUEST_NOT_OBSERVED
@@ -225,11 +243,15 @@ ac_evidence:
       - python scripts/validate_m365_current_state_access_diagnostic.py
     positive_tests:
       - test_valid_solo_owner_gate_returns_sealed_authorization
+      - test_validator_accepts_exact_delivered_merge_on_main
+      - test_validator_accepts_only_exact_hotfix_scope
     negative_cases:
       - test_other_account_of_same_principal_does_not_inherit_permission
       - test_uncited_two_person_claim_is_rejected
       - test_cited_two_person_duty_blocks_single_principal
       - test_all_binding_and_pre_io_failures_block
+      - test_validator_rejects_wrong_merge_tree_parent_and_missing_ancestry
+      - test_validator_rejects_wrong_pr_head_and_delivered_scope
     expected_result: POST_MERGE_BINDING_VERIFIED
     required_remote_checks:
       - NaC Quality Gate / quality-gate
