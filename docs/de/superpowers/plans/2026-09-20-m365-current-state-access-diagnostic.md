@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff – Implementierungsplan
 
-Status: Basisplan und datenschutzarme SPFx-Client-Receipt-Erweiterung nach `plan -> review -> fix` freigegeben; lokale test-first Umsetzung läuft; Providerzugriff und Merge gesperrt
+Status: Repository- und synthetische Umsetzung abgeschlossen; Abnahme, Merge, SPFx-Bereitstellung und realer Providerlauf bleiben jeweils separat freigabepflichtig
 
 Datum: 20. September 2026
 
@@ -337,8 +337,8 @@ kein Force-Push.
 - die vollständige lokale Windows-Suite, Graft und Strict Doctor sind grün;
 - SPFx-Build, Komponententests und visueller Nachweis des expliziten
   Receipt-Downloads sind grün;
-- `main...HEAD` ist vollständig reviewed, Workspace sauber und PR #749 bleibt
-  Draft;
+- `main...HEAD` ist vollständig reviewed, der Workspace ist sauber und PR #749
+  bleibt bis zur separaten finalen Merge-Freigabe geschützt;
 - alle verpflichtenden Remote-Checks sind grün;
 - die erwarteten Checks sind `Privacy and Secrets Guard / secret-scan`,
   `Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`
@@ -347,7 +347,6 @@ kein Force-Push.
 
 ## Review-Gate
 
-Der Basisplan wurde geprüft und freigegeben. Die Client-Receipt-Erweiterung ist
-hier synchron in DE/EN geplant. Vor ihrer test-first Repository-Umsetzung ist
-die ausdrückliche Owner-Review-Freigabe des zweistufigen lokalen Übergabepfads
-erforderlich; externer Providerzugriff und Merge bleiben separate Gates.
+Der Basisplan und die Client-Receipt-Erweiterung wurden geprüft, freigegeben und
+repository-lokal umgesetzt. Abnahme, Merge, SPFx-Bereitstellung und externer
+Providerzugriff bleiben getrennte Gates.

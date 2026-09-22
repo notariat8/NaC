@@ -18,8 +18,9 @@ REQUIRED_TOP_LEVEL = {
     "schema_version", "contract_id", "leading_issue", "delivery_mode",
     "risk_gate", "specifications", "plans", "acceptance_ids", "base_binding",
     "normative_classifications", "ports", "required_remote_checks", "phases",
-    "authorization", "client_receipt", "snapshot", "side_effect_counters",
-    "counter_matrix", "ac_evidence", "exact_artifacts",
+    "authorization", "client_receipt", "snapshot", "read_driver_release",
+    "side_effect_counters",
+    "read_counter_semantics", "counter_matrix", "ac_evidence", "exact_artifacts",
     "forbidden_import_markers", "commands",
 }
 REQUIRED_ACS = [f"AC-748-{index:02d}" for index in range(1, 9)]
@@ -194,6 +195,21 @@ def validate() -> list[str]:
     }:
         errors.append("post-merge base binding mismatch")
     counters = contract.get("side_effect_counters", {})
+    if contract.get("read_driver_release") != {
+        "component_id": "nac-issue748-read-driver",
+        "license": "AGPL-3.0-or-later",
+        "source_binding_required": True,
+        "classic_sbom_binding_required": True,
+        "http_method_allowlist": ["GET"],
+        "resource_allowlist_binding_required": True,
+        "follow_redirects": False,
+        "automatic_retries": 0,
+        "login_allowed": False,
+        "token_refresh_allowed": False,
+        "credential_write_allowed": False,
+        "provider_write_allowed": False,
+    }:
+        errors.append("read-driver release policy mismatch")
     if not isinstance(counters, dict) or counters.get("port_factory") != 1 or counters.get("network_read") != "classification_specific" or counters.get("run_gate_consume_write") != 1 or counters.get("result_evidence_write") != 1:
         errors.append("allowed side-effect counters mismatch")
     if isinstance(counters, dict) and any(
@@ -202,6 +218,13 @@ def validate() -> list[str]:
         if key not in {"port_factory", "network_read", "run_gate_consume_write", "result_evidence_write"}
     ):
         errors.append("forbidden side-effect counter is nonzero")
+    if contract.get("read_counter_semantics") != {
+        "network_read": "microsoft_provider_port_reads_only",
+        "github_gate_revalidation": (
+            "credential_write_guarded_before_every_provider_port_read"
+        ),
+    }:
+        errors.append("read counter semantics mismatch")
     expected_counter_matrix = {
         "repository_implementation_network_read": 0,
         "client_receipt_stage_network_read": 0,
@@ -351,6 +374,8 @@ def validate() -> list[str]:
     for command in windows_commands:
         if command not in contract.get("commands", []) or command not in workflow:
             errors.append(f"Windows workflow command missing: {command}")
+    if workflow.count("$PSNativeCommandUseErrorActionPreference = $true") < 2:
+        errors.append("Windows Issue #748 native command steps are not fail-fast")
     for marker in (
         'node-version: "22.14.0"',
         "npm ci --ignore-scripts",
@@ -361,6 +386,15 @@ def validate() -> list[str]:
     ):
         if marker not in workflow:
             errors.append(f"Windows SPFx receipt marker missing: {marker}")
+    quality_workflow = (
+        REPO_ROOT / ".github/workflows/quality-gate.yml"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        'diff --recursive --brief assets/docs/generic-workbench "$RUNNER_TEMP/generic-workbench"',
+        'diff --recursive --brief assets/docs/workbench-live-read-binding "$RUNNER_TEMP/workbench-live-read-binding"',
+    ):
+        if marker not in quality_workflow:
+            errors.append(f"fresh visual evidence comparison missing: {marker}")
     all_test_methods: set[str] = set()
     for path in (
         REPO_ROOT / "tests/test_m365_current_state_access_client_receipt.py",

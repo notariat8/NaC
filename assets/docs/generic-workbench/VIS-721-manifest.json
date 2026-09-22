@@ -21,7 +21,7 @@
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "e31f40b7e990e2414fd73c2640a42fff583951a5d3f5556650ccaf466be6c9bb"
+      "sha256": "8fc539c6944af44d10df73d39c681527a56522ab373d812a363c51456003146d"
     },
     {
       "relativePath": "scripts/quality_gate.py",
@@ -115,8 +115,8 @@
     }
   ],
   "runtime": {
-    "nodeVersion": "v22.23.1",
-    "npmUserAgent": "npm/11.17.0 node/v24.19.0 win32 x64 workspaces/false",
+    "nodeVersion": "v22.14.0",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "typescriptVersion": "5.8.3",
     "heftVersion": "1.2.17"

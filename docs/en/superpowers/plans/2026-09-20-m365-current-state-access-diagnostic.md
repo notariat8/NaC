@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access — Implementation Plan
 
-Status: Base plan and privacy-minimal SPFx client-receipt extension approved after `plan -> review -> fix`; local test-first implementation is in progress; provider access and merge remain blocked
+Status: Repository and synthetic implementation complete; acceptance, merge, SPFx deployment, and the real provider run each remain separately approval-gated
 
 Date: 20 September 2026
 
@@ -329,7 +329,7 @@ Every commit remains within the approved Issue #748 scope; no force push.
 - SPFx build, component tests, and visual evidence of the explicit receipt
   download are green;
 - `main...HEAD` is fully reviewed, the workspace is clean, and PR #749 remains
-  draft;
+  protected until the separate final merge approval;
 - all mandatory remote checks are green;
 - the expected checks are `Privacy and Secrets Guard / secret-scan`,
   `Privacy and Secrets Guard / privacy-lint`, `NaC Quality Gate / quality-gate`,
@@ -338,8 +338,6 @@ Every commit remains within the approved Issue #748 scope; no force push.
 
 ## Review Gate
 
-The base plan was reviewed and approved. The client-receipt extension is
-planned here synchronously in German and English. Explicit owner review
-approval of the two-stage local transfer path is required before its test-first
-repository implementation; external provider access and merge remain separate
-gates.
+The base plan and client-receipt extension were reviewed, approved, and
+implemented in the repository. Acceptance, merge, SPFx deployment, and
+external provider access remain separate gates.

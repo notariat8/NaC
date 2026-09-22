@@ -93,6 +93,8 @@ jobs:
 
       - name: Require deterministic Workbench visual evidence
         run: |
+          diff --recursive --brief assets/docs/generic-workbench "$RUNNER_TEMP/generic-workbench"
+          diff --recursive --brief assets/docs/workbench-live-read-binding "$RUNNER_TEMP/workbench-live-read-binding"
           python scripts/validate_generic_workbench_foundation.py
           python scripts/validate_workbench_live_read_binding.py
 

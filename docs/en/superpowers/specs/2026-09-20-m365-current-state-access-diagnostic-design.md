@@ -1,6 +1,6 @@
 # Windows-Native Current-State Diagnostics for Teams and BFF Access
 
-Status: Base specification, privacy-minimal SPFx client-receipt extension, and synchronized German/English plan approved by the owner; local test-first implementation is in progress; the real provider run remains separately blocked
+Status: Repository and synthetic implementation complete; acceptance, merge, SPFx deployment, and the real provider run each remain separately approval-gated
 
 Date: 20 September 2026
 
@@ -62,7 +62,12 @@ affected_artifacts:
   - spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs
   - scripts/validate_workbench_live_read_binding.py
   - workflows/contracts/workbench-live-read-binding.contract.json
-  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png through VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-02-narrow-spfx-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-03-mobile-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-04-loading.png
+  - assets/docs/workbench-live-read-binding/VIS-725-05-deny.png
+  - assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png
   - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/sbom-for-ai.md
   - docs/en/sbom-for-ai.md
@@ -471,7 +476,11 @@ decision_projection_sha256: sha256-hex
 The type notation above describes the schema; real evidence contains only
 calculated bindings and concrete enum values. `port_factory`, `network_read`,
 `run_gate_consume_write`, and `result_evidence_write` are checked against the exact permitted values in the
-verification contract; every other operational counter must be zero. An
+verification contract. `network_read` counts only Microsoft provider-port
+reads within an acquisition. The mandatory local Git and
+credential-write-guarded GitHub gate revalidations run separately before every
+port read and are not declared as Microsoft reads. Every other operational
+counter must be zero. An
 unknown key or disallowed count blocks canonicalization.
 
 For `decision_projection_sha256`, only the fully closed `decision_projection`

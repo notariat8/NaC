@@ -421,7 +421,15 @@ def run_current_state_access_diagnostic_from_protected_inputs(
     )
     toolchain = _closed(
         payloads["toolchain.json"],
-        {"schema_version", "read_driver_path", "read_driver_sha256"},
+        {
+            "schema_version", "read_driver_path", "read_driver_sha256",
+            "component_id", "component_version", "license",
+            "source_binding_sha256", "classic_sbom_sha256",
+            "http_method_allowlist", "resource_allowlist_sha256",
+            "follow_redirects", "automatic_retries", "login_allowed",
+            "token_refresh_allowed", "credential_write_allowed",
+            "provider_write_allowed",
+        },
         "BLOCKED_TOOLCHAIN_SCHEMA",
     )
     for document in (
@@ -622,6 +630,26 @@ def run_current_state_access_diagnostic_from_protected_inputs(
         _string(resolver[field], "BLOCKED_RESOLVER_SCHEMA")
     _string(toolchain["read_driver_path"], "BLOCKED_TOOLCHAIN_SCHEMA")
     _hex(toolchain["read_driver_sha256"], "BLOCKED_TOOLCHAIN_SCHEMA")
+    for field in ("component_id", "component_version", "license"):
+        _string(toolchain[field], "BLOCKED_TOOLCHAIN_SCHEMA")
+    for field in (
+        "source_binding_sha256", "classic_sbom_sha256",
+        "resource_allowlist_sha256",
+    ):
+        _hex(toolchain[field], "BLOCKED_TOOLCHAIN_SCHEMA")
+    if (
+        toolchain["component_id"] != "nac-issue748-read-driver"
+        or toolchain["license"] != "AGPL-3.0-or-later"
+        or toolchain["http_method_allowlist"] != ["GET"]
+        or toolchain["follow_redirects"] is not False
+        or type(toolchain["automatic_retries"]) is not int
+        or toolchain["automatic_retries"] != 0
+        or toolchain["login_allowed"] is not False
+        or toolchain["token_refresh_allowed"] is not False
+        or toolchain["credential_write_allowed"] is not False
+        or toolchain["provider_write_allowed"] is not False
+    ):
+        raise DiagnosticBlockedError("BLOCKED_TOOLCHAIN_POLICY")
     _string(approval["approval_mode"], "BLOCKED_APPROVAL_SCHEMA")
     _bool(approval["four_eyes_satisfied"], "BLOCKED_APPROVAL_SCHEMA")
     _bool(approval["external_two_person_required"], "BLOCKED_APPROVAL_SCHEMA")

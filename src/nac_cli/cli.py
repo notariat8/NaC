@@ -8147,12 +8147,62 @@ def _requested_output_format(argv: list[str]) -> str:
     ) else "text"
 
 
+def _current_state_access_argument_error(argv: list[str]) -> bool:
+    command_names = {
+        "current-state-access-diagnostic-preflight": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-evidence-root", "-h", "--help",
+        },
+        "current-state-access-diagnostic-run-read-only": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-evidence-root", "-h", "--help",
+        },
+        "current-state-access-client-receipt-stage": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-client-receipt", "-h", "--help",
+        },
+    }
+    for command, allowed in command_names.items():
+        marker = ["m365", "teams-sharepoint", command]
+        for index in range(len(argv) - len(marker) + 1):
+            if argv[index : index + len(marker)] != marker:
+                continue
+            options = [token for token in argv if token.startswith("-")]
+            if any(option not in allowed for option in options):
+                return True
+            return any(options.count(option) > 1 for option in set(options))
+    return False
+
+
+def _emit_current_state_access_argument_error(output_format: str) -> int:
+    payload = {
+        "schema_version": "nac.m365-current-state-access-diagnostic-preflight/v1",
+        "status": "BLOCKED",
+        "reason_code": "CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED",
+        "provider_ports_created": 0,
+        "network_reads": 0,
+        "credential_writes": 0,
+        "provider_writes": 0,
+        "live_run_authorized": False,
+    }
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print("STATUS: BLOCKED")
+        print("ERROR: CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED")
+    return 2
+
+
 def main(
     argv: list[str] | None = None,
     *,
     issue746_github_reader: Any | None = None,
 ) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    if _current_state_access_argument_error(effective_argv):
+        return _emit_current_state_access_argument_error(
+            _requested_output_format(effective_argv)
+        )
     live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
     recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if _issue746_windows_mutating_path_blocked():

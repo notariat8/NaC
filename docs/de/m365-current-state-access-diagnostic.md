@@ -1,12 +1,20 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: Repository- und synthetische Implementierung für Issue #748 in Arbeit; Abnahme und realer Providerlauf separat gesperrt
+Status: Repository- und synthetische Implementierung für Issue #748 abgeschlossen; Merge, SPFx-Bereitstellung und realer Providerlauf bleiben jeweils separat freigabepflichtig
 
 Die Diagnose untersucht ausschließlich den aktuellen lesbaren Zustand von
 `notary_team_01` und der Teams-App „NaC Vorgangsansicht“. Sie ersetzt den
 terminalen Issue-#739-Lauf nicht und autorisiert keine Issue-#632-Aktion.
 
 ## Bedienung
+
+Voraussetzung für den ersten Schritt ist, dass die Receipt-fähige SPFx-Version
+nach erfolgreicher PR-Abnahme separat freigegeben, im Test-App-Catalog
+bereitgestellt und ihre Paket-/Source-Bindung read-only verifiziert wurde. Die
+Repository-Implementierung oder die spätere Freigabe des Read-only-Laufs
+autorisiert kein Deployment. Erst in der tatsächlich bereitgestellten neutralen
+Ansicht „Kein Zugriff auf diesen Arbeitsbereich“ wird ausdrücklich
+„Diagnosebeleg speichern“ gewählt.
 
 Vor dem Preflight wird der ausdrücklich im SPFx-Webpart ausgelöste Download
 lokal und ohne Providerzugriff materialisiert. Der Beleg enthält ausschließlich
@@ -50,10 +58,14 @@ Windows-Sicherheitsbackend geschützte Verzeichnisse:
 Das geschützte `toolchain.json` bindet zusätzlich den absoluten Pfad und den
 SHA-256-Wert eines repository-externen Read-only-Treibers. Vor jeder Ausführung
 prüft das Windows-Sicherheitsbackend dessen Owner-, DACL-, Reparse-, Datei-ID-,
-Hardlink- und Hashbindung. Der Treiber akzeptiert nur die fest definierten
-Gate- und Diagnoseoperationen, läuft mit bereinigter Umgebung,
-Credential-Schreibschutz, begrenzter Ausgabe und ohne Retry. Eine
-Owner-Freigabe allein ersetzt diese technische Attestierung nicht.
+Hardlink- und Hashbindung. Das Betriebssystem kann jedoch nicht allein
+attestieren, welche HTTP-Methode dieser Treiber intern verwendet. Der reale
+Lauf bleibt daher gesperrt, bis der konkrete Treiber als reviewbares,
+versioniertes Release mit Source-Bindung, klassischer SBOM, Lizenz,
+GET-only-Ressourcen-Allowlist sowie Null-Login-, Null-Refresh-,
+Null-Redirect-, Null-Retry- und Null-Write-Vertrag separat freigegeben ist.
+PR #749 liefert dieses Treiber-Release nicht. Eine Owner-Freigabe oder ein
+Binärhash allein ersetzt diese Lieferketten- und Verhaltensprüfung nicht.
 
 ```powershell
 python scripts/nac.py m365 teams-sharepoint current-state-access-diagnostic-preflight `

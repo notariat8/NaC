@@ -405,6 +405,51 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                     )
                 self.assertEqual(backend.operations, [])
 
+    def test_external_read_driver_release_policy_is_closed_before_io(self) -> None:
+        mutations = (
+            ("component_id", "other-driver"),
+            ("license", "proprietary"),
+            ("source_binding_sha256", "not-a-digest"),
+            ("classic_sbom_sha256", "not-a-digest"),
+            ("http_method_allowlist", ["GET", "POST"]),
+            ("resource_allowlist_sha256", "not-a-digest"),
+            ("follow_redirects", True),
+            ("automatic_retries", 1),
+            ("automatic_retries", False),
+            ("login_allowed", True),
+            ("token_refresh_allowed", True),
+            ("credential_write_allowed", True),
+            ("provider_write_allowed", True),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                input_root = root / "input"
+                evidence_root = root / "evidence"
+                input_root.mkdir()
+                evidence_root.mkdir()
+                driver = root / "bound-reader.exe"
+                driver.write_bytes(b"synthetic-attested-driver")
+                payloads = _protected_payloads(
+                    driver, hashlib.sha256(driver.read_bytes()).hexdigest(),
+                    {"workspace_id": "notary_team_01", "app_id": "nac-vorgangsansicht"},
+                )
+                payloads["toolchain.json"][field] = value
+                for name, payload in payloads.items():
+                    (input_root / name).write_text(
+                        json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                        encoding="utf-8",
+                    )
+                backend = _ScriptedSecurityBackend(evidence_root, input_root)
+                with self.assertRaises(DiagnosticBlockedError):
+                    run_current_state_access_diagnostic_from_protected_inputs(
+                        input_root=input_root,
+                        evidence_root=evidence_root,
+                        repo_root=Path(__file__).resolve().parents[1],
+                        backend=backend,
+                    )
+                self.assertEqual(backend.operations, [])
+
     def test_approval_nonce_drift_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -779,6 +824,19 @@ def _protected_payloads(driver: Path, driver_sha: str, target: dict[str, str]):
     toolchain = {
         "schema_version": "v1", "read_driver_path": str(driver),
         "read_driver_sha256": driver_sha,
+        "component_id": "nac-issue748-read-driver",
+        "component_version": "0.1.0",
+        "license": "AGPL-3.0-or-later",
+        "source_binding_sha256": "1" * 64,
+        "classic_sbom_sha256": "2" * 64,
+        "http_method_allowlist": ["GET"],
+        "resource_allowlist_sha256": "3" * 64,
+        "follow_redirects": False,
+        "automatic_retries": 0,
+        "login_allowed": False,
+        "token_refresh_allowed": False,
+        "credential_write_allowed": False,
+        "provider_write_allowed": False,
     }
     run_nonce = "6" * 64
     approval_core = {

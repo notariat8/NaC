@@ -95,7 +95,7 @@
     },
     "client": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-      "sha256": "fddc75e23254d97753e5bbddbee42ff7d0ce2364e7850051315dcf10d6ef1696"
+      "sha256": "f0ae40ae61af34079cecf98347e0c4c430b2c62a5b3a404a8d9c9f6e823d4e56"
     },
     "clientReceipt": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
@@ -179,8 +179,8 @@
     }
   ],
   "runtime": {
-    "nodeVersion": "v22.23.1",
-    "npmUserAgent": "npm/11.17.0 node/v24.19.0 win32 x64 workspaces/false",
+    "nodeVersion": "v22.14.0",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "webpackVersion": "5.105.4",
     "typescriptVersion": "5.8.3",

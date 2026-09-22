@@ -1,6 +1,6 @@
 # Windows-native Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: Basisspec, datenschutzarme SPFx-Client-Receipt-Erweiterung und synchronisierter DE/EN-Plan vom Owner freigegeben; lokale test-first Umsetzung läuft; realer Providerlauf weiterhin separat gesperrt
+Status: Repository- und synthetische Umsetzung abgeschlossen; Abnahme, Merge, SPFx-Bereitstellung und realer Providerlauf bleiben jeweils separat freigabepflichtig
 
 Datum: 20. September 2026
 
@@ -62,7 +62,12 @@ affected_artifacts:
   - spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs
   - scripts/validate_workbench_live_read_binding.py
   - workflows/contracts/workbench-live-read-binding.contract.json
-  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png bis VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-01-desktop-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-02-narrow-spfx-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-03-mobile-ready.png
+  - assets/docs/workbench-live-read-binding/VIS-725-04-loading.png
+  - assets/docs/workbench-live-read-binding/VIS-725-05-deny.png
+  - assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png
   - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/sbom-for-ai.md
   - docs/en/sbom-for-ai.md
@@ -485,7 +490,11 @@ decision_projection_sha256: sha256-hex
 Die Typdarstellung oben beschreibt das Schema; reale Evidence enthält
 ausschließlich berechnete Bindungen und konkrete Enum-Werte. `port_factory`,
 `network_read`, `run_gate_consume_write` und `result_evidence_write` werden gegen die im Verification
-Contract exakt erlaubten Werte geprüft; jeder andere operative Zähler muss
+Contract exakt erlaubten Werte geprüft. `network_read` zählt ausschließlich
+Microsoft-Provider-Port-Reads innerhalb einer Erhebung. Die verpflichtenden
+lokalen Git- und credential-write-guarded GitHub-Gate-Neuprüfungen werden
+separat vor jedem Port-Read ausgeführt und sind nicht als Microsoft-Read zu
+deklarieren. Jeder andere operative Zähler muss
 null sein. Ein unbekannter Schlüssel oder eine nicht erlaubte Anzahl blockiert
 die Kanonisierung.
 

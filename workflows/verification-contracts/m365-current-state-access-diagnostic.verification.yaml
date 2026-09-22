@@ -153,6 +153,19 @@ snapshot:
   canonicalization: RFC-8785-closed-integer-subset
   decision_projection_hashes_identical: true
   raw_provider_payload_persisted: false
+read_driver_release:
+  component_id: nac-issue748-read-driver
+  license: AGPL-3.0-or-later
+  source_binding_required: true
+  classic_sbom_binding_required: true
+  http_method_allowlist: [GET]
+  resource_allowlist_binding_required: true
+  follow_redirects: false
+  automatic_retries: 0
+  login_allowed: false
+  token_refresh_allowed: false
+  credential_write_allowed: false
+  provider_write_allowed: false
 side_effect_counters:
   port_factory: 1
   network_read: classification_specific
@@ -175,6 +188,9 @@ side_effect_counters:
   deployment: 0
   issue_739_release: 0
   issue_632_authorization: 0
+read_counter_semantics:
+  network_read: microsoft_provider_port_reads_only
+  github_gate_revalidation: credential_write_guarded_before_every_provider_port_read
 counter_matrix:
   repository_implementation_network_read: 0
   client_receipt_stage_network_read: 0
@@ -206,6 +222,9 @@ ac_evidence:
     positive_tests:
       - test_valid_solo_owner_gate_returns_sealed_authorization
     negative_cases:
+      - test_other_account_of_same_principal_does_not_inherit_permission
+      - test_uncited_two_person_claim_is_rejected
+      - test_cited_two_person_duty_blocks_single_principal
       - test_all_binding_and_pre_io_failures_block
     expected_result: POST_MERGE_BINDING_VERIFIED
     required_remote_checks:
@@ -233,6 +252,7 @@ ac_evidence:
     negative_cases:
       - test_authorization_rejects_per_read_drift
       - test_per_read_local_and_github_gate_drift_suppresses_provider_read
+      - test_external_read_driver_release_policy_is_closed_before_io
     expected_result: AUTHORIZATION_BEFORE_EVERY_READ
     required_remote_checks:
       - NaC Quality Gate / quality-gate
@@ -316,7 +336,7 @@ commands:
   - cd spfx/nac-bpmn-viewer && node scripts/validate-read-only-boundary.cjs
   - cd spfx/nac-bpmn-viewer && npm ci --ignore-scripts
   - cd spfx/nac-bpmn-viewer && npx heft test --clean --production --test-path-pattern ClientObservationReceipt.test.ts|NacWorkbenchHost.test.tsx|NacBffClient.test.ts
-  - cd spfx/nac-bpmn-viewer && node scripts/generate-workbench-live-read-visual-fixture.cjs <windows-runner-temp>
+  - powershell -NoProfile -Command "node spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs (Join-Path $env:TEMP 'nac-workbench-live-read-visual')"
   - cd spfx/nac-bpmn-viewer && npm run build
   - cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
   - python scripts/validate_workbench_live_read_binding.py

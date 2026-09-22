@@ -127,7 +127,7 @@ class _AttestedProcessReadTransport:
                     "--issue748-read", operation,
                     "--input-root", str(self._input_root),
                     "--target-sha256", target_sha256,
-                    *( 
+                    *(
                         ("--authorization-context-sha256", self._provider_context_sha256)
                         if provider_operation else ()
                     ),

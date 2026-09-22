@@ -235,7 +235,9 @@ jobs:
           python scripts/validate_spec_traceability.py
 
       - name: Verify Issue 748 current-state diagnostic
+        shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
           python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py
           python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
@@ -254,6 +256,7 @@ jobs:
         working-directory: spfx/nac-bpmn-viewer
         shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           npm ci --ignore-scripts
           node scripts/validate-read-only-boundary.cjs
           npx heft test --clean --production --test-path-pattern "ClientObservationReceipt.test.ts|NacWorkbenchHost.test.tsx|NacBffClient.test.ts"

@@ -1,12 +1,20 @@
 # Current-State Diagnostics for Teams and BFF Access
 
-Status: repository and synthetic implementation for Issue #748 in progress; acceptance and the real provider run remain separately blocked
+Status: repository and synthetic implementation for Issue #748 complete; merge, SPFx deployment, and the real provider run each remain separately approval-gated
 
 The diagnostic examines only the current readable state of `notary_team_01`
 and the “NaC Vorgangsansicht” Teams app. It does not replace the terminal Issue
 #739 run and authorizes no Issue #632 action.
 
 ## Operation
+
+The first step requires the receipt-capable SPFx version to have passed PR
+acceptance, received a separate deployment approval, been deployed to the test
+app catalog, and had its package/source binding verified read-only. Neither the
+repository implementation nor a later read-only-run approval authorizes a
+deployment. Only then does the operator explicitly select “Diagnosebeleg
+speichern” in the actually deployed neutral “Kein Zugriff auf diesen
+Arbeitsbereich” view.
 
 Before preflight, the download explicitly triggered in the SPFx web part is
 materialized locally without provider access. The receipt contains only the
@@ -48,9 +56,13 @@ protected through the Windows security backend:
 The protected `toolchain.json` also binds the absolute path and SHA-256 digest
 of a repository-external read-only driver. Before every execution, the Windows
 security backend verifies its owner, DACL, reparse, file-ID, hardlink, and hash
-bindings. The driver accepts only the fixed gate and diagnostic operations and
-runs with a scrubbed environment, credential-write guard, bounded output, and
-no retry. Owner approval alone does not replace this technical attestation.
+bindings. The operating system alone cannot attest which HTTP method the
+driver uses internally. The real run therefore remains blocked until the
+specific driver is separately approved as a reviewable, versioned release
+with source binding, classic SBOM, license, a GET-only resource allowlist, and
+zero-login, zero-refresh, zero-redirect, zero-retry, and zero-write contracts.
+PR #749 does not deliver that driver release. Owner approval or a binary digest
+alone does not replace this supply-chain and behavior review.
 
 ```powershell
 python scripts/nac.py m365 teams-sharepoint current-state-access-diagnostic-preflight `

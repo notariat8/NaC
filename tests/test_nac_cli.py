@@ -70,16 +70,25 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["provider_writes"], 0)
 
     def test_current_state_access_cli_rejects_login_retry_force_and_raw_targets(self) -> None:
-        for flag in ("--login", "--retry", "--force", "--tenant-id", "--team-id"):
-            with self.subTest(flag=flag):
-                rc, _output = run_cli_with_exit(
+        for forbidden in (
+            ("--login", "forbidden"),
+            ("--retry", "forbidden"),
+            ("--force", "forbidden"),
+            ("--tenant-id", "forbidden"),
+            ("--team-id", "forbidden"),
+            ("--owner-approved",),
+            ("--bff-attestation-azure-cli", "forbidden"),
+        ):
+            with self.subTest(flag=forbidden[0]):
+                rc, output = run_cli_with_exit(
                     "m365",
                     "teams-sharepoint",
                     "current-state-access-diagnostic-preflight",
-                    flag,
-                    "forbidden",
+                    *forbidden,
                 )
                 self.assertNotEqual(rc, 0)
+                if forbidden[0] in {"--owner-approved", "--bff-attestation-azure-cli"}:
+                    self.assertIn("CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED", output)
 
     def test_current_state_access_text_success_prints_classification(self) -> None:
         ready = {

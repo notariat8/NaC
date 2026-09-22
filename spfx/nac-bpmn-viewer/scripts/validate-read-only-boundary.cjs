@@ -19,7 +19,7 @@ const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
   ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87'],
   ['webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts', 'd5b357e7b60f4de60152908d0356fab7233c73fe9e59584ec3f8ef4c2d324f4f'],
   ['webparts/nacBpmnViewer/services/ClientObservationReceipt.ts', 'c26e78e456608fc02881a93112647520ee5b6fa9894887cd3e524bbc5f49c382'],
-  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'fddc75e23254d97753e5bbddbee42ff7d0ce2364e7850051315dcf10d6ef1696'],
+  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'f0ae40ae61af34079cecf98347e0c4c430b2c62a5b3a404a8d9c9f6e823d4e56'],
   ['workbench/core/WorkbenchContracts.ts', '8eebbb61b8d2b173568ba3022fcec20ccaf76d5a21f3be7dbec8707271db3fba'],
   ['workbench/core/WorkbenchSelectors.ts', '3e3dcf923d999254a5d92ecfbbab17642c5635d026a52bb3a0260607143b6a5c'],
   ['workbench/core/parseWorkbenchSnapshot.ts', '2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df'],
