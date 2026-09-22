@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -37,6 +38,86 @@ def run_cli_with_exit(*argv: str) -> tuple[int, str]:
 
 
 class NaCCliTests(unittest.TestCase):
+    def test_current_state_access_commands_are_exposed_and_fail_closed(self) -> None:
+        for command in (
+            "current-state-access-diagnostic-preflight",
+            "current-state-access-diagnostic-run-read-only",
+            "current-state-access-client-receipt-stage",
+        ):
+            with self.subTest(command=command):
+                rc, output = run_cli(
+                    "m365", "teams-sharepoint", command, "--format", "json"
+                )
+                self.assertEqual(rc, 2)
+                payload = json.loads(output)
+                self.assertEqual(payload["status"], "BLOCKED")
+                self.assertEqual(payload.get("provider_ports_created", 0), 0)
+                self.assertEqual(payload["network_reads"], 0)
+                self.assertEqual(payload["credential_writes"], 0)
+                self.assertNotIn("tenant", output.lower())
+
+    def test_client_receipt_stage_requires_only_external_local_paths(self) -> None:
+        rc, output = run_cli(
+            "m365", "teams-sharepoint",
+            "current-state-access-client-receipt-stage",
+            "--format", "json",
+        )
+        self.assertEqual(rc, 2)
+        payload = json.loads(output)
+        self.assertEqual(payload["reason_code"], "CLIENT_RECEIPT_PATHS_REQUIRED")
+        self.assertEqual(payload["network_reads"], 0)
+        self.assertEqual(payload["credential_writes"], 0)
+        self.assertEqual(payload["provider_writes"], 0)
+
+    def test_current_state_access_cli_rejects_login_retry_force_and_raw_targets(self) -> None:
+        for forbidden in (
+            ("--login", "forbidden"),
+            ("--retry", "forbidden"),
+            ("--force", "forbidden"),
+            ("--tenant-id", "forbidden"),
+            ("--team-id", "forbidden"),
+            ("--owner-approved",),
+            ("--bff-attestation-azure-cli", "forbidden"),
+        ):
+            with self.subTest(flag=forbidden[0]):
+                rc, output = run_cli_with_exit(
+                    "m365",
+                    "teams-sharepoint",
+                    "current-state-access-diagnostic-preflight",
+                    *forbidden,
+                )
+                self.assertNotEqual(rc, 0)
+                if forbidden[0] in {"--owner-approved", "--bff-attestation-azure-cli"}:
+                    self.assertIn("CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED", output)
+
+    def test_current_state_access_text_success_prints_classification(self) -> None:
+        ready = {
+            "schema_version": "nac.m365-current-state-access-diagnostic-preflight/v1",
+            "status": "READY",
+            "provider_ports_created": 0,
+            "network_reads": 0,
+            "credential_writes": 0,
+            "provider_writes": 0,
+            "live_run_authorized": False,
+        }
+        snapshot = SimpleNamespace(decision_projection_sha256="a" * 64)
+        with patch(
+            "nac_bff.current_state_access_composition.preflight_current_state_access_diagnostic",
+            return_value=ready,
+        ), patch(
+            "nac_bff.current_state_access_composition.run_current_state_access_diagnostic_from_protected_inputs",
+            return_value=("BFF_REQUEST_NOT_OBSERVED", snapshot, snapshot),
+        ):
+            rc, output = run_cli(
+                "m365", "teams-sharepoint",
+                "current-state-access-diagnostic-run-read-only",
+                "--current-state-access-input-root", str(REPO_ROOT.parent / "input"),
+                "--current-state-access-evidence-root", str(REPO_ROOT.parent / "evidence"),
+            )
+        self.assertEqual(rc, 0)
+        self.assertIn("STATUS: PASSED", output)
+        self.assertIn("CLASSIFICATION: BFF_REQUEST_NOT_OBSERVED", output)
+
     def test_status_shows_single_entrypoint(self) -> None:
         rc, output = run_cli("status")
 

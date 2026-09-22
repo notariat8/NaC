@@ -157,6 +157,54 @@ class SpecTraceabilityTest(unittest.TestCase):
             "Validierungsbefehl enthält Zeilenumbruch: example.md", errors
         )
 
+    def test_plan_traceability_requires_existing_same_language_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            spec = root / "docs/de/superpowers/specs/example-design.md"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("# Spec\n", encoding="utf-8")
+            validate_spec_traceability.REPO_ROOT = root
+            manifest = {
+                "plan": "docs/en/superpowers/plans/example.md",
+                "leading_issue": "https://github.com/notariat8/NaC/issues/1",
+                "acceptance_ids": ["AC-001"],
+            }
+            errors = validate_spec_traceability.validate_plan_traceability(
+                manifest,
+                spec_path=spec,
+                path_label="docs/de/superpowers/specs/example-design.md",
+            )
+            self.assertIn("Planpfad nutzt falschen Sprachpfad", errors[0])
+
+            manifest["plan"] = "docs/de/superpowers/plans/example.md"
+            errors = validate_spec_traceability.validate_plan_traceability(
+                manifest,
+                spec_path=spec,
+                path_label="docs/de/superpowers/specs/example-design.md",
+            )
+            self.assertIn("Planpfad aus Spec-Manifest fehlt", errors[0])
+
+    def test_plan_traceability_accepts_existing_same_language_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            spec = root / "docs/de/superpowers/specs/example-design.md"
+            plan = root / "docs/de/superpowers/plans/example.md"
+            spec.parent.mkdir(parents=True)
+            plan.parent.mkdir(parents=True)
+            spec.write_text("# Spec\n", encoding="utf-8")
+            plan.write_text("# Plan\n", encoding="utf-8")
+            validate_spec_traceability.REPO_ROOT = root
+            errors = validate_spec_traceability.validate_plan_traceability(
+                {
+                    "plan": "docs/de/superpowers/plans/example.md",
+                    "leading_issue": "https://github.com/notariat8/NaC/issues/1",
+                    "acceptance_ids": ["AC-001"],
+                },
+                spec_path=spec,
+                path_label="docs/de/superpowers/specs/example-design.md",
+            )
+        self.assertEqual(errors, [])
+
     def test_validator_reports_missing_acceptance_id_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

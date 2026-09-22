@@ -12,6 +12,13 @@ Principle:
 - machine-readable result,
 - human-readable report.
 
+Cross-platform visual evidence does not require byte-identical PNGs or
+identical rendered heights. The case matrix, states, layouts, viewports,
+source/build bindings and toolchain contract must remain identical. Each run
+must additionally bind every generated PNG to its SHA-256 digest and actual
+image dimensions within that same run. Platform- or font-specific pixel drift
+must not replace those security bindings.
+
 ## Entry Point
 
 Local:

@@ -27,6 +27,7 @@ EXPECTED_SOURCE_BINDINGS = {
     "host": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
     "styles": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
     "client": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
+    "clientReceipt": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
     "webPart": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
     "parser": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
     "projection": "spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts",
@@ -44,6 +45,7 @@ EXPECTED_VISUAL_HARNESS = {
 EXPECTED_BUILD_ARTIFACTS = {
     "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js",
+    "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js",
     "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js",
@@ -164,7 +166,11 @@ def validate() -> list[str]:
             errors.append("live host visual evidence schema is not contract-bound")
         if visual.get("isolation") != "separate_from_generic_workbench_visual_evidence":
             errors.append("live host visual evidence must remain separate from generic evidence")
-        if visual.get("data") != "synthetic_only" or visual.get("browser_network_requests") != 0:
+        if (
+            visual.get("data") != "synthetic_only"
+            or visual.get("browser_network_requests") != 0
+            or visual.get("automatic_downloads") != 0
+        ):
             errors.append("live host visual evidence must be synthetic and offline")
         if visual.get("manifest") != VISUAL_MANIFEST_PATH.relative_to(ROOT).as_posix():
             errors.append("live host visual manifest path is invalid")
@@ -263,7 +269,13 @@ def validate() -> list[str]:
     )
     _source_markers(
         HOST_PATH,
-        ("WorkbenchPanel", "generation", "AbortController"),
+        (
+            "WorkbenchPanel",
+            "generation",
+            "AbortController",
+            "Diagnosebeleg speichern",
+            "completeClientObservation",
+        ),
         errors,
     )
     _source_markers(
@@ -280,12 +292,14 @@ def validate() -> list[str]:
             '"assets/docs/**"',
             "pip install -e . fastapi==0.116.1 httpx==0.28.1",
             "npx --no-install playwright install --with-deps chromium",
-            "npm run workbench:capture",
-            "npm run workbench:live:capture",
-            "git diff --exit-code -- assets/docs/workbench-live-read-binding",
+            'npm run workbench:capture -- "$RUNNER_TEMP/generic-workbench"',
+            'npm run workbench:live:capture -- "$RUNNER_TEMP/workbench-live-read-binding"',
+            "python scripts/validate_workbench_live_read_binding.py",
             "workbench-live-host-compiled",
             "NacWorkbenchHost.js",
             "NacWorkbenchHost.styles.js",
+            "ClientObservationReceipt.js",
+            "path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer",
         ),
         errors,
     )
@@ -304,7 +318,11 @@ def validate() -> list[str]:
 def _validate_visual_manifest(manifest: dict, errors: list[str]) -> None:
     if manifest.get("schemaVersion") != "nac.workbench-live-read-host-visual-evidence/v1":
         errors.append("live host visual evidence schema is invalid")
-    if manifest.get("syntheticOnly") is not True or manifest.get("browserNetworkRequests") != 0:
+    if (
+        manifest.get("syntheticOnly") is not True
+        or manifest.get("browserNetworkRequests") != 0
+        or manifest.get("automaticDownloads") != 0
+    ):
         errors.append("live host visual evidence must be synthetic and offline")
     if manifest.get("fixtureClock") != "2026-08-01T09:01:00Z":
         errors.append("live host visual fixture clock is not deterministic")
@@ -451,9 +469,83 @@ def _png_dimensions(path: Path, errors: list[str]) -> tuple[int, int] | None:
         or data[:8] != b"\x89PNG\r\n\x1a\n"
         or data[12:16] != b"IHDR"
     ):
-        errors.append(f"live host visual screenshot is not a PNG: {path.relative_to(ROOT)}")
+        label = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path.name
+        errors.append(f"live host visual screenshot is not a PNG: {label}")
         return None
     return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
+    if root.is_symlink() or not root.is_dir():
+        errors.append("generated live host visual evidence root is invalid")
+        return
+    committed = _object(VISUAL_MANIFEST_PATH, errors)
+    generated = _object(root / VISUAL_MANIFEST_PATH.name, errors)
+    if not committed or not generated:
+        return
+    case_fields = ("id", "state", "layout", "file", "viewport")
+    committed_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in committed.get("cases", []) if isinstance(item, dict)
+    ]
+    generated_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in generated.get("cases", []) if isinstance(item, dict)
+    ]
+    if generated_cases != committed_cases:
+        errors.append("generated live host visual case matrix drift")
+    for item in generated.get("cases", []):
+        if isinstance(item, dict) and isinstance(item.get("file"), str):
+            image_path = root / item["file"]
+            _verify_generated_digest(image_path, item.get("sha256"), errors)
+            dimensions = _png_dimensions(image_path, errors)
+            if dimensions is not None:
+                width, height = dimensions
+                if (item.get("imageWidth"), item.get("imageHeight")) != dimensions:
+                    errors.append(
+                        f"{item.get('id')}: generated live host PNG dimensions are not manifest-bound"
+                    )
+                viewport = item.get("viewport")
+                if (
+                    not isinstance(viewport, dict)
+                    or not isinstance(viewport.get("width"), int)
+                    or width <= 0
+                    or height <= 0
+                    or width > viewport["width"]
+                ):
+                    errors.append(
+                        f"{item.get('id')}: generated live host PNG dimensions exceed the viewport width"
+                    )
+    for field in (
+        "schemaVersion", "syntheticOnly", "browserNetworkRequests",
+        "automaticDownloads", "fixtureClock", "sourceBindings", "visualHarness",
+    ):
+        if generated.get(field) != committed.get(field):
+            errors.append(f"generated live host visual manifest drift: {field}")
+    for field in ("playwrightVersion", "webpackVersion", "typescriptVersion", "heftVersion"):
+        if generated.get("runtime", {}).get(field) != committed.get("runtime", {}).get(field):
+            errors.append(f"generated live host visual runtime drift: {field}")
+    if not re.fullmatch(r"v22\.[0-9]+\.[0-9]+", str(generated.get("runtime", {}).get("nodeVersion", ""))):
+        errors.append("generated live host visual Node runtime is not Node 22")
+    committed_artifacts = _manifest_paths(committed.get("buildArtifacts", []))
+    generated_artifacts = _manifest_paths(generated.get("buildArtifacts", []))
+    if generated_artifacts != committed_artifacts:
+        errors.append("generated live host build artifact matrix drift")
+    case_files = {
+        item.get("file") for item in generated_cases if isinstance(item.get("file"), str)
+    }
+    expected_files = {VISUAL_MANIFEST_PATH.name, *case_files}
+    if {path.name for path in root.iterdir() if path.is_file()} != expected_files:
+        errors.append("generated live host visual evidence file set drift")
+
+
+def _verify_generated_digest(path: Path, expected: object, errors: list[str]) -> None:
+    if path.is_symlink() or not path.is_file():
+        errors.append(f"generated live host visual evidence file missing: {path.name}")
+        return
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not isinstance(expected, str) or expected != actual:
+        errors.append(f"generated live host visual digest drift: {path.name}")
 
 
 def _contains_number(value: object) -> bool:
@@ -495,6 +587,10 @@ def _object(path: Path, errors: list[str]) -> dict:
 
 def main() -> int:
     errors = validate()
+    if len(sys.argv) == 3 and sys.argv[1] == "--generated-evidence-root":
+        _compare_generated_visual_evidence(Path(sys.argv[2]).resolve(), errors)
+    elif len(sys.argv) != 1:
+        errors.append("usage: validate_workbench_live_read_binding.py [--generated-evidence-root PATH]")
     if errors:
         print("STATUS: FAILED")
         for error in errors:

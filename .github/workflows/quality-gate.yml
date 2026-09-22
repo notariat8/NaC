@@ -88,13 +88,13 @@ jobs:
       - name: Reproduce committed Workbench visual evidence
         working-directory: spfx/nac-bpmn-viewer
         run: |
-          npm run workbench:capture
-          npm run workbench:live:capture
+          npm run workbench:capture -- "$RUNNER_TEMP/generic-workbench"
+          npm run workbench:live:capture -- "$RUNNER_TEMP/workbench-live-read-binding"
 
-      - name: Require deterministic Workbench visual evidence
+      - name: Validate cross-platform Workbench visual evidence contract
         run: |
-          git diff --exit-code -- assets/docs/generic-workbench
-          git diff --exit-code -- assets/docs/workbench-live-read-binding
+          python scripts/validate_generic_workbench_foundation.py --generated-evidence-root "$RUNNER_TEMP/generic-workbench"
+          python scripts/validate_workbench_live_read_binding.py --generated-evidence-root "$RUNNER_TEMP/workbench-live-read-binding"
 
       - name: Upload generic workbench compiled evidence
         uses: actions/upload-artifact@v7
@@ -117,6 +117,7 @@ jobs:
           path: |
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js
             spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js
+            spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js
 
   quality-gate:
     needs: spfx-bpmn-viewer
@@ -164,7 +165,7 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: workbench-live-host-compiled
-          path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components
+          path: spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer
 
       - name: Install pinned Bicep compiler
         run: |

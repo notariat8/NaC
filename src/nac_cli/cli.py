@@ -761,6 +761,9 @@ def build_parser() -> argparse.ArgumentParser:
             "bff-azure-activation-owner-gate",
             "bff-azure-activate-live",
             "bff-azure-function-deployment-reconcile",
+            "current-state-access-diagnostic-preflight",
+            "current-state-access-diagnostic-run-read-only",
+            "current-state-access-client-receipt-stage",
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
@@ -1343,6 +1346,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-require-runtime-artifacts",
         action="store_true",
         help="Blockiert den Evidence-Export, wenn Runtime-Smoke- oder Runtime-Metadata-Artefakte fehlen.",
+    )
+    teams_sharepoint.add_argument(
+        "--current-state-access-input-root",
+        type=Path,
+        help="Absoluter repository-externer geschützter Issue-#748-Eingaberoot.",
+    )
+    teams_sharepoint.add_argument(
+        "--current-state-access-evidence-root",
+        type=Path,
+        help="Absoluter repository-externer geschützter Issue-#748-Evidence-Root.",
+    )
+    teams_sharepoint.add_argument(
+        "--current-state-access-client-receipt",
+        type=Path,
+        help="Absoluter repository-externer Pfad zum lokalen SPFx-Clientbeleg.",
     )
     teams_sharepoint.add_argument("--bff-attestation-azure-cli", type=Path)
     teams_sharepoint.add_argument("--bff-attestation-m365-cli", type=Path)
@@ -2602,9 +2620,160 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
         print(f"ERROR: {error}")
 
 
+def _current_state_access_block_payload(reason_code: str) -> dict:
+    return {
+        "schema_version": "nac.m365-current-state-access-diagnostic-result/v1",
+        "status": "BLOCKED",
+        "reason_code": reason_code,
+        "side_effect_counters_status": "NOT_ATTESTED_AFTER_BLOCK",
+        "live_run_authorized": False,
+    }
+
+
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if (
+            args.teams_sharepoint_command
+            == "current-state-access-client-receipt-stage"
+        ):
+            from nac_bff.current_state_access_client_receipt import (
+                ClientObservationReceiptError,
+                stage_client_observation_receipt,
+            )
+
+            source = getattr(args, "current_state_access_client_receipt", None)
+            input_root = getattr(args, "current_state_access_input_root", None)
+            if source is None or input_root is None:
+                payload = {
+                    "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                    "status": "BLOCKED",
+                    "reason_code": "CLIENT_RECEIPT_PATHS_REQUIRED",
+                    "network_reads": 0,
+                    "credential_writes": 0,
+                    "provider_writes": 0,
+                    "live_run_authorized": False,
+                }
+            else:
+                try:
+                    payload = stage_client_observation_receipt(
+                        source_path=source,
+                        input_root=input_root,
+                        repo_root=repo_root,
+                    )
+                except ClientObservationReceiptError as exc:
+                    payload = {
+                        "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                        "status": "BLOCKED",
+                        "reason_code": exc.code,
+                        "network_reads": 0,
+                        "credential_writes": 0,
+                        "provider_writes": 0,
+                        "live_run_authorized": False,
+                    }
+                except (OSError, RuntimeError, ValueError, TypeError):
+                    payload = {
+                        "schema_version": "nac.m365-current-state-access-client-receipt-stage/v1",
+                        "status": "BLOCKED",
+                        "reason_code": "CLIENT_RECEIPT_SECURITY_BINDING_INVALID",
+                        "network_reads": 0,
+                        "credential_writes": 0,
+                        "provider_writes": 0,
+                        "live_run_authorized": False,
+                    }
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(f"STATUS: {payload['status']}")
+                if payload["status"] == "PASSED":
+                    print(f"RECEIPT_SHA256: {payload['receipt_sha256']}")
+                else:
+                    print(f"ERROR: {payload['reason_code']}")
+            return 0 if payload["status"] == "PASSED" else 2
+
+        if args.teams_sharepoint_command in {
+            "current-state-access-diagnostic-preflight",
+            "current-state-access-diagnostic-run-read-only",
+        }:
+            from nac_bff.current_state_access_composition import (
+                preflight_current_state_access_diagnostic,
+                run_current_state_access_diagnostic_from_protected_inputs,
+            )
+            from nac_bff.current_state_access_diagnostic import DiagnosticBlockedError
+            from nac_bff.current_state_access_gate import CurrentStateAccessGateError
+
+            input_root = getattr(args, "current_state_access_input_root", None)
+            evidence_root = getattr(args, "current_state_access_evidence_root", None)
+            if input_root is None or evidence_root is None:
+                payload = {
+                    "schema_version": "nac.m365-current-state-access-diagnostic-preflight/v1",
+                    "status": "BLOCKED",
+                    "reason_code": "PROTECTED_INPUT_ROOTS_REQUIRED",
+                    "provider_ports_created": 0,
+                    "network_reads": 0,
+                    "credential_writes": 0,
+                    "provider_writes": 0,
+                    "live_run_authorized": False,
+                }
+            else:
+                payload = preflight_current_state_access_diagnostic(
+                    input_root=input_root,
+                    evidence_root=evidence_root,
+                    repo_root=repo_root,
+                )
+            if (
+                args.teams_sharepoint_command
+                == "current-state-access-diagnostic-run-read-only"
+                and payload["status"] == "READY"
+            ):
+                try:
+                    classification, first, second = (
+                        run_current_state_access_diagnostic_from_protected_inputs(
+                            input_root=Path(input_root),
+                            evidence_root=Path(evidence_root),
+                            repo_root=repo_root,
+                        )
+                    )
+                    payload = {
+                        "schema_version": "nac.m365-current-state-access-diagnostic-result/v1",
+                        "status": "PASSED",
+                        "classification": classification,
+                        "first_projection_sha256": first.decision_projection_sha256,
+                        "second_projection_sha256": second.decision_projection_sha256,
+                        "provider_ports_created": 1,
+                        "credential_writes": 0,
+                        "provider_writes": 0,
+                        "live_run_authorized": False,
+                    }
+                except (DiagnosticBlockedError, CurrentStateAccessGateError) as exc:
+                    payload = {
+                        **_current_state_access_block_payload(
+                            getattr(exc, "code", "CURRENT_STATE_ACCESS_GATE_CLOSED")
+                        )
+                    }
+                except (
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                    TypeError,
+                    KeyError,
+                    AttributeError,
+                    UnicodeDecodeError,
+                    json.JSONDecodeError,
+                ):
+                    payload = _current_state_access_block_payload(
+                        "CURRENT_STATE_ACCESS_RUNTIME_BLOCKED"
+                    )
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(f"STATUS: {payload['status']}")
+                if payload["status"] == "PASSED":
+                    print(f"CLASSIFICATION: {payload['classification']}")
+                elif payload["status"] != "READY":
+                    print(f"ERROR: {payload['reason_code']}")
+            return 0 if payload["status"] in {"READY", "PASSED"} else 2
+
         if args.teams_sharepoint_command == "bff-azure-activation-plan":
             plan = build_azure_bff_activation_plan(repo_root)
             if args.format == "json":
@@ -7978,12 +8147,62 @@ def _requested_output_format(argv: list[str]) -> str:
     ) else "text"
 
 
+def _current_state_access_argument_error(argv: list[str]) -> bool:
+    command_names = {
+        "current-state-access-diagnostic-preflight": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-evidence-root", "-h", "--help",
+        },
+        "current-state-access-diagnostic-run-read-only": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-evidence-root", "-h", "--help",
+        },
+        "current-state-access-client-receipt-stage": {
+            "--repo-root", "--format", "--current-state-access-input-root",
+            "--current-state-access-client-receipt", "-h", "--help",
+        },
+    }
+    for command, allowed in command_names.items():
+        marker = ["m365", "teams-sharepoint", command]
+        for index in range(len(argv) - len(marker) + 1):
+            if argv[index : index + len(marker)] != marker:
+                continue
+            options = [token for token in argv if token.startswith("-")]
+            if any(option not in allowed for option in options):
+                return True
+            return any(options.count(option) > 1 for option in set(options))
+    return False
+
+
+def _emit_current_state_access_argument_error(output_format: str) -> int:
+    payload = {
+        "schema_version": "nac.m365-current-state-access-diagnostic-preflight/v1",
+        "status": "BLOCKED",
+        "reason_code": "CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED",
+        "provider_ports_created": 0,
+        "network_reads": 0,
+        "credential_writes": 0,
+        "provider_writes": 0,
+        "live_run_authorized": False,
+    }
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print("STATUS: BLOCKED")
+        print("ERROR: CURRENT_STATE_ACCESS_ARGUMENTS_BLOCKED")
+    return 2
+
+
 def main(
     argv: list[str] | None = None,
     *,
     issue746_github_reader: Any | None = None,
 ) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    if _current_state_access_argument_error(effective_argv):
+        return _emit_current_state_access_argument_error(
+            _requested_output_format(effective_argv)
+        )
     live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
     recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
     if _issue746_windows_mutating_path_blocked():

@@ -93,7 +93,10 @@ Provider authentication is authorized separately and for a specific action. A
 past, aborted, or other-task login authorization is not reused; GitHub and
 Microsoft/Entra authentication cannot be combined through a blanket approval.
 For Issue #746, the read-only path may use only an already established bound
-channel and must not start authentication.
+channel and must not start authentication. Every Function8/Microsoft login
+request must also name either `ofunk@funktion8` or `funktion8@funktion8`
+unambiguously; “Function8 login” alone is insufficient and starts no login
+flow.
 
 - runtime code under [src/](../../src)
 - scripts under [scripts/](../../scripts)

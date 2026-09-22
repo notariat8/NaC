@@ -43,6 +43,18 @@ NaC additionally tracks privacy/AVV-DPA status, professional-secret boundaries,
 human-review ownership, local runtime/hardware minimum requirements and
 release/evidence binding.
 
+## Issue #748: Client Observation Receipt
+
+The privacy-minimal client observation receipt is generated locally with a
+cryptographically random correlation binding and a current observation
+window, then downloaded explicitly. Its serialization, validation, and
+materialization into a protected repository-external directory are
+deterministic. It adds no model, model provider, prompt,
+agent, or external AI data flow. The receipt contains no object ID, name,
+email address, token, or tenant data. The Issue #748 AI-SBOM decision is
+therefore: no new AI component and no new AI data processing; the existing
+runtime and evidence binding remains authoritative.
+
 ## Initial Artifacts
 
 - Policy: `policies/sbom-policy.yaml`

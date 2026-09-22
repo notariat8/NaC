@@ -250,6 +250,75 @@ def _verify_digest(path: Path, expected: object, errors: list[str]) -> None:
         )
 
 
+def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
+    if root.is_symlink() or not root.is_dir():
+        errors.append("generated generic workbench visual evidence root is invalid")
+        return
+    committed = _json(VISUAL_MANIFEST, errors)
+    generated = _json(root / VISUAL_MANIFEST.name, errors)
+    if not committed or not generated:
+        return
+    case_fields = ("id", "file", "width", "height")
+    committed_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in committed.get("cases", []) if isinstance(item, dict)
+    ]
+    generated_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in generated.get("cases", []) if isinstance(item, dict)
+    ]
+    if generated_cases != committed_cases:
+        errors.append("generated generic workbench visual case matrix drift")
+    for item in generated.get("cases", []):
+        if isinstance(item, dict) and isinstance(item.get("file"), str):
+            image_path = root / item["file"]
+            _verify_external_digest(image_path, item.get("sha256"), errors)
+            dimensions = _png_dimensions(image_path, errors)
+            if dimensions is not None and (
+                item.get("imageWidth"), item.get("imageHeight")
+            ) != dimensions:
+                errors.append(
+                    f"{item.get('id')}: generated generic workbench PNG dimensions are not manifest-bound"
+                )
+    for field in ("schemaVersion", "syntheticOnly", "browserNetworkRequests", "sources"):
+        if generated.get(field) != committed.get(field):
+            errors.append(f"generated generic workbench visual manifest drift: {field}")
+    for field in ("playwrightVersion", "typescriptVersion", "heftVersion"):
+        if generated.get("runtime", {}).get(field) != committed.get("runtime", {}).get(field):
+            errors.append(f"generated generic workbench visual runtime drift: {field}")
+    if not re.fullmatch(r"v22\.[0-9]+\.[0-9]+", str(generated.get("runtime", {}).get("nodeVersion", ""))):
+        errors.append("generated generic workbench visual Node runtime is not Node 22")
+    committed_artifacts = _manifest_paths(committed.get("buildArtifacts", []))
+    generated_artifacts = _manifest_paths(generated.get("buildArtifacts", []))
+    if generated_artifacts != committed_artifacts:
+        errors.append("generated generic workbench build artifact matrix drift")
+    case_files = {
+        item.get("file") for item in generated_cases if isinstance(item.get("file"), str)
+    }
+    expected_files = {VISUAL_MANIFEST.name, *case_files}
+    if {path.name for path in root.iterdir() if path.is_file()} != expected_files:
+        errors.append("generated generic workbench visual evidence file set drift")
+
+
+def _verify_external_digest(path: Path, expected: object, errors: list[str]) -> None:
+    if path.is_symlink() or not path.is_file():
+        errors.append(f"generated visual evidence file missing: {path.name}")
+        return
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not isinstance(expected, str) or expected != actual:
+        errors.append(f"generated visual evidence digest drift: {path.name}")
+
+
+def _png_dimensions(path: Path, errors: list[str]) -> tuple[int, int] | None:
+    if path.is_symlink() or not path.is_file():
+        return None
+    data = path.read_bytes()
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        errors.append(f"generated generic workbench screenshot is not a PNG: {path.name}")
+        return None
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
 def _json(path: Path, errors: list[str]) -> dict:
     if not path.is_file():
         errors.append(f"required JSON file missing: {path.relative_to(REPO_ROOT)}")
@@ -264,6 +333,10 @@ def _json(path: Path, errors: list[str]) -> dict:
 
 def main() -> int:
     errors = validate()
+    if len(sys.argv) == 3 and sys.argv[1] == "--generated-evidence-root":
+        _compare_generated_visual_evidence(Path(sys.argv[2]).resolve(), errors)
+    elif len(sys.argv) != 1:
+        errors.append("usage: validate_generic_workbench_foundation.py [--generated-evidence-root PATH]")
     if errors:
         print("STATUS: FAILED")
         for error in errors:

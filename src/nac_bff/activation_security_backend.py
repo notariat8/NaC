@@ -108,6 +108,7 @@ class ProcessResult:
     stderr: bytes
     image_sha256: str
     job_object_assigned: bool
+    credential_write_guard_applied: bool = False
 
 
 @runtime_checkable

@@ -21,6 +21,32 @@ oder Providerzugriff. Die Offline-Grenze steht in der
 der Windows-Abschlusspfad in der
 [Issue-#746-Spec](superpowers/specs/2026-09-15-m365-bff-failed-partial-safe-completion-design.md).
 
+## Teams-/BFF-Current-State-Diagnose
+
+Issue #748 ergänzt drei Windows-native, strikt getrennte Bedienkanten:
+
+```text
+nac m365 teams-sharepoint current-state-access-diagnostic-preflight
+nac m365 teams-sharepoint current-state-access-diagnostic-run-read-only
+nac m365 teams-sharepoint current-state-access-client-receipt-stage
+```
+
+Der lokale Staging-Befehl prüft den explizit vom SPFx-Webpart heruntergeladenen
+Sechs-Felder-Beleg und erstellt `client-observation-receipt.json` exklusiv im
+geschützten externen Inputverzeichnis. Er überschreibt nichts und verwendet
+weder Netzwerk noch Login oder Provider. Der Preflight prüft ausschließlich
+geschützte lokale Bindungen und erzeugt keine Provider-Ports. Der Read-only-
+Befehl bleibt bis zu einer neuen, final gebundenen Freigabe gesperrt. Staging
+akzeptiert nur `--current-state-access-client-receipt` und
+`--current-state-access-input-root`; Preflight und Read-only-Lauf akzeptieren
+nur `--current-state-access-input-root` und
+`--current-state-access-evidence-root`. Reale Ziel- oder Identitätswerte sind
+keine CLI-Argumente. Details stehen im
+[Diagnose-Runbook](m365-current-state-access-diagnostic.md).
+Der reale Befehl benötigt außerdem den im geschützten `toolchain.json`
+hashgebundenen repository-externen Read-only-Treiber; ohne seine vollständige
+Windows-Attestierung stoppt der Lauf vor jedem Provider-Port.
+
 ## Idee
 
 Die NaC-CLI ist nicht die Produktoberfläche für das Notariat. Sie ist die

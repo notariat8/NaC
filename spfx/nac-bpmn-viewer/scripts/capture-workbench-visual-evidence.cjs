@@ -3,12 +3,13 @@
 const childProcess = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const packageRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(packageRoot, '..', '..');
-const fixture = '/tmp/nac-generic-workbench.html';
+const fixture = path.join(os.tmpdir(), 'nac-generic-workbench.html');
 const outputRoot = path.resolve(process.argv[2] || path.join(repoRoot, 'assets/docs/generic-workbench'));
 const cases = [
   { id: 'VIS-721-01', file: 'VIS-721-01-desktop.png', width: 1440, height: 900 },
@@ -17,6 +18,14 @@ const cases = [
 
 function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function pngDimensions(file) {
+  const data = fs.readFileSync(file);
+  if (data.length < 24 || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || data.subarray(12, 16).toString('ascii') !== 'IHDR') {
+    throw new Error('NAC_WORKBENCH_SCREENSHOT_NOT_PNG');
+  }
+  return { imageWidth: data.readUInt32BE(16), imageHeight: data.readUInt32BE(20) };
 }
 
 function normalizedNpmUserAgent() {
@@ -62,7 +71,7 @@ async function run() {
       }
       const output = path.join(outputRoot, item.file);
       await page.locator('.nacWorkbench').screenshot({ path: output });
-      evidence.push({ ...item, sha256: sha256(output) });
+      evidence.push({ ...item, ...pngDimensions(output), sha256: sha256(output) });
       await page.close();
     }
   } finally {

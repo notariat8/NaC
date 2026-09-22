@@ -11,6 +11,13 @@ Prinzip:
 - maschinenlesbares Ergebnis,
 - menschenlesbarer Report.
 
+Plattformübergreifende visuelle Evidence wird nicht über byte-identische PNGs
+oder identische Renderhöhen erzwungen. Verbindlich identisch sind Fallmatrix,
+Zustände, Layouts, Viewports, Source-/Build-Bindungen und Toolchain-Vertrag.
+Jeder Lauf muss zusätzlich jedes erzeugte PNG innerhalb desselben Laufs an
+seinen SHA-256-Digest und seine tatsächlichen Bildmaße binden. Plattform- oder
+fontbedingte Pixelabweichungen dürfen diese Sicherheitsbindung nicht ersetzen.
+
 ## Einstieg
 
 Lokal:

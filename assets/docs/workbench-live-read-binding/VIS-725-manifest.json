@@ -2,6 +2,7 @@
   "schemaVersion": "nac.workbench-live-read-host-visual-evidence/v1",
   "syntheticOnly": true,
   "browserNetworkRequests": 0,
+  "automaticDownloads": 0,
   "fixtureClock": "2026-08-01T09:01:00Z",
   "cases": [
     {
@@ -15,7 +16,7 @@
       },
       "imageWidth": 1280,
       "imageHeight": 659,
-      "sha256": "8f637fc29c32ab232bbdb907440a2f44496e63651cff26d8e786fa90f9906906"
+      "sha256": "25e659f743c00f8c04c38b4e6f1278b234788f2388b2fcb37349fa2c1cbab5f8"
     },
     {
       "id": "VIS-725-02",
@@ -27,8 +28,8 @@
         "height": 980
       },
       "imageWidth": 600,
-      "imageHeight": 917,
-      "sha256": "cb1bfd17f0da3b4ade61200b22bca8d69822a0094bf5fed2b5f3936a48222e03"
+      "imageHeight": 974,
+      "sha256": "854b9f842bf608909ea62129602a4b18bc843ba785c0d27092ce286275c10d27"
     },
     {
       "id": "VIS-725-03",
@@ -40,8 +41,8 @@
         "height": 844
       },
       "imageWidth": 390,
-      "imageHeight": 888,
-      "sha256": "1297191351b0900896e4062ab2118606d2d5a569eab32912d59f9d1869ae44bc"
+      "imageHeight": 949,
+      "sha256": "48ee7850a8e072d83000b5c6ad20677a450ebb018ba6cff37e3f03ae3247ff33"
     },
     {
       "id": "VIS-725-04",
@@ -54,7 +55,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "73fb8a60ee65401f830cf51bb7285208b2459cab4b609d38f25f016f216d8633"
+      "sha256": "cb07dfef1e1514a00f2f4851e13e28ae4e1fa026d183f03915753980c52116dd"
     },
     {
       "id": "VIS-725-05",
@@ -67,7 +68,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "82eaa58ab3e72ea80819607f6ea92547d0bedb40931dd67ec6aa6bb88dbaa88b"
+      "sha256": "10d0ea30ec3b63afb857f2df7cb0154770e7d5a3e10b47ecbd70a9b7be9747f3"
     },
     {
       "id": "VIS-725-06",
@@ -80,25 +81,29 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "28cfd6b5fbf23cd1a145909a9ea0ac2a405ac07fb1f9653e309efde64b420fcf"
+      "sha256": "8831f82f608520d226107ea552add8ebeca99149c0166422b6d21c9afff440ed"
     }
   ],
   "sourceBindings": {
     "host": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
-      "sha256": "ecc076bf35fabee66c807a0e6a7f14b14eb43c452f01c12116b72633274247ff"
+      "sha256": "0ac51f3eb92c40579f358c612053a633534c84b2829d58bfca442bb1b5382169"
     },
     "styles": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
-      "sha256": "89dc903640f55dcab69cfd92836cd9466c80a73787c8198409a6c1d79fd97983"
+      "sha256": "815e02eae1b1f97a1d0a58765b053f24801833f388a911fb3f8efbc00030f6ee"
     },
     "client": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-      "sha256": "eb73d4e9b6797fb2ae473118fd1f58a1c491488d9630bbf1a54c824f4f0c1d41"
+      "sha256": "f0ae40ae61af34079cecf98347e0c4c430b2c62a5b3a404a8d9c9f6e823d4e56"
+    },
+    "clientReceipt": {
+      "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
+      "sha256": "c26e78e456608fc02881a93112647520ee5b6fa9894887cd3e524bbc5f49c382"
     },
     "webPart": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
-      "sha256": "aa43d4ee6579be19875f141feb79be032d5765857acaf8cc295456f7f1284d12"
+      "sha256": "0a72850c1d59efb07d092137f890ab7c75fc26165cd94213e367c1b3040f7a27"
     },
     "parser": {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
@@ -110,13 +115,13 @@
     },
     "contract": {
       "relativePath": "workflows/contracts/workbench-live-read-binding.contract.json",
-      "sha256": "94ee59945739a1e79feea221bd13e86fa676b818988346c34bb5e781fe97f5a1"
+      "sha256": "0a05baa59ba9e1004d08db210176e2c3d45439eba12749bf9c1c104a54dee28c"
     }
   },
   "visualHarness": [
     {
       "relativePath": "scripts/validate_workbench_live_read_binding.py",
-      "sha256": "f943182e4a06d4b921d59d0e2f277a523c7c51b6f5edac7d394ab4dd15794f03"
+      "sha256": "dffd0248f2e3cfb4c000e2f6a05c93a7deb069cd694aec05063206f54718679e"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
@@ -132,11 +137,11 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs",
-      "sha256": "46840fe0bc9ad6f1e161b62e43da19979c13ecd6f5363aeed5cb87a6daac7da9"
+      "sha256": "b517dca9916f9995f51ad6442f2d262203b4dd83926feb9ed108894a6223005e"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-live-read-visual-evidence.cjs",
-      "sha256": "57e13033560f08f5b78bdf5cb247d964a75c91f8292458c474882a757353f216"
+      "sha256": "64b2f1804df260110695ad6bb8a2dbc011305e1bf589e98c10b410d428056160"
     },
     {
       "relativePath": "workflows/verification-contracts/workbench-live-read-binding.verification.json",
@@ -146,11 +151,15 @@
   "buildArtifacts": [
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js",
-      "sha256": "5126657f9b4adb9b25be71042b6024c05d274ebe770fffc1da47a19ab4e08697"
+      "sha256": "29fbdc8167e1c3e364ef5404affd76cab6ff918ad97222901523293b963366d1"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js",
-      "sha256": "623b89587d551e01cf246672997e4ec79ee65873737407d1245f0a3588bf9296"
+      "sha256": "4cf14e9c51256ea7bbd31452b1a2eb17c4b2a1cf1ad6f73d492d09b07ec634c1"
+    },
+    {
+      "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js",
+      "sha256": "c0fafc3c529b5e3feb3595b10326cf8e21e4846ac29d37840cf23ab7800aa0e0"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
@@ -171,7 +180,7 @@
   ],
   "runtime": {
     "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/10.9.2 node/v22.14.0 linux x64 workspaces/false",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64",
     "playwrightVersion": "1.55.0",
     "webpackVersion": "5.105.4",
     "typescriptVersion": "5.8.3",

@@ -8,28 +8,32 @@
       "file": "VIS-721-01-desktop.png",
       "width": 1440,
       "height": 900,
-      "sha256": "86e71ea59c6f6c59ea15f08c35b2d10a2afdeeefa23aeb6d8665cc40a1c08058"
+      "imageWidth": 1392,
+      "imageHeight": 522,
+      "sha256": "0ce708a876aecfd5075a48f6caaeb1e59863bc5ca92de5b4c6cd90f4b45030f8"
     },
     {
       "id": "VIS-721-02",
       "file": "VIS-721-02-mobile.png",
       "width": 390,
       "height": 844,
-      "sha256": "3b13080b4cd40a5eb8cdc4c93382a2874f3db7297b52ff9d3e651fe8cb341931"
+      "imageWidth": 390,
+      "imageHeight": 1151,
+      "sha256": "eb39180145717bc0d0cb404ee901a8e180f8a7bd36cac4b7febe7c7c6c90ebea"
     }
   ],
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "22ca40715d9961ee2b631945f55a780afe7a8e4c91c1e1416ee9535f8bcb3208"
+      "sha256": "87cc74e7e7b0109b9077aadbc386feff88d29fdac3d0866bdcf22cf5dbe5aa55"
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "ce6e8964ccb1b4472b93da6e71d2a0706ba0402e91704572cf3fbff4fecd4599"
+      "sha256": "71d7f0f7303c2c004cc4a2b7b7077f981d4f6ab89e7dfd12c8911b2e4b110301"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
-      "sha256": "5e7348dc0cf6e3426f9a276b9e7630399718d22487867d86da5bbe5076030d68"
+      "sha256": "4727f08d54845e7c6e87423aeb8b9ebda0076ae3ee5adf1300e8baa87a4007a8"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
@@ -73,7 +77,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
-      "sha256": "eea7cb3b87392c679d9e4c83adac179f61aecd62f5d7e4ab68f32ce02073d421"
+      "sha256": "a40935e9e2f3a9d20a068e76f71b7e2f8507b82a013547b2f634079e8eb0b686"
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
@@ -116,7 +120,7 @@
   ],
   "runtime": {
     "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/10.9.2 node/v22.14.0 linux x64 workspaces/false",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64",
     "playwrightVersion": "1.55.0",
     "typescriptVersion": "5.8.3",
     "heftVersion": "1.2.17"

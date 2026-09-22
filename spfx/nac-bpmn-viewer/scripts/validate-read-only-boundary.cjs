@@ -10,15 +10,16 @@ const sourceRoot = path.join(packageRoot, 'src');
 const BFF_CLIENT = 'webparts/nacBpmnViewer/services/NacBffClient.ts';
 const WEB_PART = 'webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts';
 const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
-  ['webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts', 'aa43d4ee6579be19875f141feb79be032d5765857acaf8cc295456f7f1284d12'],
+  ['webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts', '0a72850c1d59efb07d092137f890ab7c75fc26165cd94213e367c1b3040f7a27'],
   ['webparts/nacBpmnViewer/components/DiagramJs.styles.ts', 'c4bebc30c09d05152daa641df90e26ea8ce1311c421d3d3ec6730e5d1cdfdea0'],
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.styles.ts', 'ab7265b95a38764177036e59babc80c7e44bb301ba43460326ed66c4e0839838'],
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.tsx', '2e5e3bd8fcc4563ddb3d9a31b8aa8e841e10e74cafe9b17f410ede3028e55eac'],
-  ['webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts', '89dc903640f55dcab69cfd92836cd9466c80a73787c8198409a6c1d79fd97983'],
-  ['webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx', 'ecc076bf35fabee66c807a0e6a7f14b14eb43c452f01c12116b72633274247ff'],
+  ['webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts', '815e02eae1b1f97a1d0a58765b053f24801833f388a911fb3f8efbc00030f6ee'],
+  ['webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx', '0ac51f3eb92c40579f358c612053a633534c84b2829d58bfca442bb1b5382169'],
   ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87'],
   ['webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts', 'd5b357e7b60f4de60152908d0356fab7233c73fe9e59584ec3f8ef4c2d324f4f'],
-  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'eb73d4e9b6797fb2ae473118fd1f58a1c491488d9630bbf1a54c824f4f0c1d41'],
+  ['webparts/nacBpmnViewer/services/ClientObservationReceipt.ts', 'c26e78e456608fc02881a93112647520ee5b6fa9894887cd3e524bbc5f49c382'],
+  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'f0ae40ae61af34079cecf98347e0c4c430b2c62a5b3a404a8d9c9f6e823d4e56'],
   ['workbench/core/WorkbenchContracts.ts', '8eebbb61b8d2b173568ba3022fcec20ccaf76d5a21f3be7dbec8707271db3fba'],
   ['workbench/core/WorkbenchSelectors.ts', '3e3dcf923d999254a5d92ecfbbab17642c5635d026a52bb3a0260607143b6a5c'],
   ['workbench/core/parseWorkbenchSnapshot.ts', '2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df'],
@@ -213,7 +214,7 @@ function validateSource(relativePath, source) {
     }
     const expectedGets = [
       "client.get(workspaceUrl,AadHttpClient.configurations.v1,{signal,headers:{Accept:'application/json','X-Correlation-ID':createCorrelationId()}})",
-      "client.get(workbenchUrl,AadHttpClient.configurations.v1,{signal,headers:{Accept:'application/json','X-Correlation-ID':createCorrelationId()}})"
+      "client.get(workbenchUrl,AadHttpClient.configurations.v1,{signal,headers:{Accept:'application/json','X-Correlation-ID':correlationId}})"
     ].sort();
     if (bffGetCalls.length !== 2 ||
         JSON.stringify(bffGetCalls.map(call => compact(call, sourceFile)).sort()) !==
@@ -252,7 +253,7 @@ function validateSource(relativePath, source) {
     const requiredDetail =
       'loadWorkspace:(signal:AbortSignal)=>loadNacBffWorkspace(this.context.aadHttpClientFactory,signal)';
     const requiredWorkbench =
-      "loadSnapshot:(signal:AbortSignal)=>loadNacWorkbenchSnapshot(this.context.aadHttpClientFactory,expectedSubjectId??'',signal)";
+      "loadSnapshot:(signal:AbortSignal,observationCorrelationId?:string)=>loadNacWorkbenchSnapshot(this.context.aadHttpClientFactory,expectedSubjectId??'',signal,undefined,observationCorrelationId)";
     const requiredSubject =
       'expectedSubjectId=this.context.pageContext.aadInfo?.userId.toString()';
     const compactSource = compact(sourceFile, sourceFile);

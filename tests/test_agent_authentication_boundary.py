@@ -61,6 +61,53 @@ class AgentAuthenticationBoundaryTest(unittest.TestCase):
             errors,
         )
 
+    def test_function8_login_request_must_name_exact_account(self) -> None:
+        policy_text = (REPO_ROOT / "policies" / "process-policy.yaml").read_text(
+            encoding="utf-8"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "policies").mkdir()
+            (root / "docs" / "en" / "superpowers" / "specs").mkdir(parents=True)
+            (root / "AGENTS.md").write_text(
+                (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (root / "policies" / "process-policy.yaml").write_text(
+                policy_text.replace(
+                    "function8_login_request_must_name_account: true",
+                    "function8_login_request_must_name_account: false",
+                ),
+                encoding="utf-8",
+            )
+            spec_target = (
+                root
+                / "docs"
+                / "en"
+                / "superpowers"
+                / "specs"
+                / "2026-09-15-m365-bff-failed-partial-safe-completion-design.md"
+            )
+            spec_target.write_text(
+                (
+                    REPO_ROOT
+                    / "docs"
+                    / "en"
+                    / "superpowers"
+                    / "specs"
+                    / "2026-09-15-m365-bff-failed-partial-safe-completion-design.md"
+                ).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+            errors = validate_agent_authentication_boundary.validate(root)
+
+        self.assertIn(
+            "process-policy github_authentication_boundary."
+            "function8_login_request_must_name_account must equal True",
+            errors,
+        )
+
     def test_issue746_runtime_rejects_reintroduced_gh_transport(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

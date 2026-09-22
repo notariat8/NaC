@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import hashlib
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -52,6 +55,57 @@ class GenericWorkbenchFoundationValidatorTests(unittest.TestCase):
 
         self.assertIn(
             "BFF projection must not derive domain state: attention.append",
+            errors,
+        )
+
+    def test_generated_visual_comparison_rejects_case_matrix_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            generated = Path(directory) / "generic-workbench"
+            shutil.copytree(validator.VISUAL_ROOT, generated)
+            errors: list[str] = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertEqual(errors, [])
+            manifest_path = generated / validator.VISUAL_MANIFEST.name
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["cases"][0]["width"] = 1439
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            errors = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertIn("generated generic workbench visual case matrix drift", errors)
+
+    def test_generated_visual_comparison_rejects_non_png_with_self_consistent_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            generated = Path(directory) / "generic-workbench"
+            shutil.copytree(validator.VISUAL_ROOT, generated)
+            manifest_path = generated / validator.VISUAL_MANIFEST.name
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            image_path = generated / manifest["cases"][0]["file"]
+            image_path.write_bytes(b"not-a-png")
+            manifest["cases"][0]["sha256"] = hashlib.sha256(b"not-a-png").hexdigest()
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            errors: list[str] = []
+            validator._compare_generated_visual_evidence(generated, errors)
+
+        self.assertTrue(
+            any("is not a PNG" in error for error in errors),
+            errors,
+        )
+
+    def test_generated_visual_comparison_rejects_manifest_dimension_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            generated = Path(directory) / "generic-workbench"
+            shutil.copytree(validator.VISUAL_ROOT, generated)
+            manifest_path = generated / validator.VISUAL_MANIFEST.name
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["cases"][0]["imageWidth"] += 1
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            errors: list[str] = []
+            validator._compare_generated_visual_evidence(generated, errors)
+
+        self.assertTrue(
+            any("PNG dimensions are not manifest-bound" in error for error in errors),
             errors,
         )
 

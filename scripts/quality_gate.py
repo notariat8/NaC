@@ -449,6 +449,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "m365_current_state_access_diagnostic",
+                    "M365 Current-State Access Diagnostic",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_current_state_access_diagnostic.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [
