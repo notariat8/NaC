@@ -284,7 +284,10 @@ def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
     generated_artifacts = _manifest_paths(generated.get("buildArtifacts", []))
     if generated_artifacts != committed_artifacts:
         errors.append("generated generic workbench build artifact matrix drift")
-    expected_files = {VISUAL_MANIFEST.name, *(item["file"] for item in generated_cases)}
+    case_files = {
+        item.get("file") for item in generated_cases if isinstance(item.get("file"), str)
+    }
+    expected_files = {VISUAL_MANIFEST.name, *case_files}
     if {path.name for path in root.iterdir() if path.is_file()} != expected_files:
         errors.append("generated generic workbench visual evidence file set drift")
 

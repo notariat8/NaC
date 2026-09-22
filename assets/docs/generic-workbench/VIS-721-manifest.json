@@ -29,7 +29,7 @@
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
-      "sha256": "64e3923c9f57e14f199b6ef26629e77cb0bade8f7c23ab79452ca87af055937c"
+      "sha256": "9fcc42646da6eb3e63940b61297dff7e300993ac1016146c693d2eeeeb1e6089"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",

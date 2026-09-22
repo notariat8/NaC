@@ -469,7 +469,8 @@ def _png_dimensions(path: Path, errors: list[str]) -> tuple[int, int] | None:
         or data[:8] != b"\x89PNG\r\n\x1a\n"
         or data[12:16] != b"IHDR"
     ):
-        errors.append(f"live host visual screenshot is not a PNG: {path.relative_to(ROOT)}")
+        label = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path.name
+        errors.append(f"live host visual screenshot is not a PNG: {label}")
         return None
     return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
@@ -482,7 +483,7 @@ def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
     generated = _object(root / VISUAL_MANIFEST_PATH.name, errors)
     if not committed or not generated:
         return
-    case_fields = ("id", "state", "layout", "file", "viewport", "imageWidth", "imageHeight")
+    case_fields = ("id", "state", "layout", "file", "viewport")
     committed_cases = [
         {field: item.get(field) for field in case_fields}
         for item in committed.get("cases", []) if isinstance(item, dict)
@@ -495,7 +496,26 @@ def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
         errors.append("generated live host visual case matrix drift")
     for item in generated.get("cases", []):
         if isinstance(item, dict) and isinstance(item.get("file"), str):
-            _verify_generated_digest(root / item["file"], item.get("sha256"), errors)
+            image_path = root / item["file"]
+            _verify_generated_digest(image_path, item.get("sha256"), errors)
+            dimensions = _png_dimensions(image_path, errors)
+            if dimensions is not None:
+                width, height = dimensions
+                if (item.get("imageWidth"), item.get("imageHeight")) != dimensions:
+                    errors.append(
+                        f"{item.get('id')}: generated live host PNG dimensions are not manifest-bound"
+                    )
+                viewport = item.get("viewport")
+                if (
+                    not isinstance(viewport, dict)
+                    or not isinstance(viewport.get("width"), int)
+                    or width <= 0
+                    or height <= 0
+                    or width > viewport["width"]
+                ):
+                    errors.append(
+                        f"{item.get('id')}: generated live host PNG dimensions exceed the viewport width"
+                    )
     for field in (
         "schemaVersion", "syntheticOnly", "browserNetworkRequests",
         "automaticDownloads", "fixtureClock", "sourceBindings", "visualHarness",
@@ -511,7 +531,10 @@ def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
     generated_artifacts = _manifest_paths(generated.get("buildArtifacts", []))
     if generated_artifacts != committed_artifacts:
         errors.append("generated live host build artifact matrix drift")
-    expected_files = {VISUAL_MANIFEST_PATH.name, *(item["file"] for item in generated_cases)}
+    case_files = {
+        item.get("file") for item in generated_cases if isinstance(item.get("file"), str)
+    }
+    expected_files = {VISUAL_MANIFEST_PATH.name, *case_files}
     if {path.name for path in root.iterdir() if path.is_file()} != expected_files:
         errors.append("generated live host visual evidence file set drift")
 
