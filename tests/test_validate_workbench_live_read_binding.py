@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+import shutil
+import tempfile
 import unittest
 
 
@@ -35,6 +38,21 @@ class WorkbenchLiveReadBindingValidatorTests(unittest.TestCase):
     def test_number_detection_excludes_json_booleans(self) -> None:
         self.assertFalse(validator._contains_number({"flag": True, "value": None}))
         self.assertTrue(validator._contains_number({"value": 1}))
+
+    def test_generated_visual_comparison_rejects_case_matrix_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            generated = Path(directory) / "workbench-live-read-binding"
+            shutil.copytree(validator.VISUAL_ROOT, generated)
+            errors: list[str] = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertEqual(errors, [])
+            manifest_path = generated / validator.VISUAL_MANIFEST_PATH.name
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["cases"][0]["layout"] = "drifted"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            errors = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertIn("generated live host visual case matrix drift", errors)
 
 
 if __name__ == "__main__":

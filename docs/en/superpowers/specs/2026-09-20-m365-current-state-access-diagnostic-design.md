@@ -39,6 +39,7 @@ affected_artifacts:
   - workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml
   - workflows/contracts/spec-traceability.contract.json
   - scripts/validate_m365_current_state_access_diagnostic.py
+  - scripts/validate_generic_workbench_foundation.py
   - scripts/validate_spec_traceability.py
   - scripts/quality_gate.py
   - src/nac_bff/current_state_access_diagnostic.py
@@ -75,6 +76,8 @@ affected_artifacts:
   - tests/test_m365_current_state_access_client_receipt.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_spec_traceability.py
+  - tests/test_validate_generic_workbench_foundation.py
+  - tests/test_validate_workbench_live_read_binding.py
   - tests/test_nac_cli.py
   - tests/test_windows_offline_cli_portability.py
 acceptance_ids:

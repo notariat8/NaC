@@ -68,7 +68,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "5cec18c7747717c9e001c5f47d180a5ef4944740676bb8e8c9c0a860b932f6e4"
+      "sha256": "10d0ea30ec3b63afb857f2df7cb0154770e7d5a3e10b47ecbd70a9b7be9747f3"
     },
     {
       "id": "VIS-725-06",
@@ -121,7 +121,7 @@
   "visualHarness": [
     {
       "relativePath": "scripts/validate_workbench_live_read_binding.py",
-      "sha256": "523eb370525f17bb430f5fb53f16de006132f007d2800d13c6886aac4bc214c6"
+      "sha256": "3c9855ef7c9e38f64d6b254c0419293098dd27a82f3e200b1dbe369e4f37d54c"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",

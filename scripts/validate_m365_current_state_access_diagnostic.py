@@ -76,6 +76,7 @@ REQUIRED_FILES = [
     "policies/process-policy.yaml",
     "scripts/quality_gate.py",
     "scripts/validate_agent_authentication_boundary.py",
+    "scripts/validate_generic_workbench_foundation.py",
     "scripts/validate_m365_current_state_access_diagnostic.py",
     "scripts/validate_spec_traceability.py",
     "scripts/validate_workbench_live_read_binding.py",
@@ -106,6 +107,7 @@ REQUIRED_FILES = [
     "src/nac_cli/cli.py",
     "tests/test_nac_cli.py",
     "tests/test_spec_traceability.py",
+    "tests/test_validate_generic_workbench_foundation.py",
     "tests/test_validate_workbench_live_read_binding.py",
     "tests/test_windows_offline_cli_portability.py",
     "workflows/contracts/spec-traceability.contract.json",
@@ -390,8 +392,8 @@ def validate() -> list[str]:
         REPO_ROOT / ".github/workflows/quality-gate.yml"
     ).read_text(encoding="utf-8")
     for marker in (
-        'diff --recursive --brief assets/docs/generic-workbench "$RUNNER_TEMP/generic-workbench"',
-        'diff --recursive --brief assets/docs/workbench-live-read-binding "$RUNNER_TEMP/workbench-live-read-binding"',
+        'python scripts/validate_generic_workbench_foundation.py --generated-evidence-root "$RUNNER_TEMP/generic-workbench"',
+        'python scripts/validate_workbench_live_read_binding.py --generated-evidence-root "$RUNNER_TEMP/workbench-live-read-binding"',
     ):
         if marker not in quality_workflow:
             errors.append(f"fresh visual evidence comparison missing: {marker}")

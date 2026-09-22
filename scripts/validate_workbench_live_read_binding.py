@@ -474,6 +474,57 @@ def _png_dimensions(path: Path, errors: list[str]) -> tuple[int, int] | None:
     return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
+def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
+    if root.is_symlink() or not root.is_dir():
+        errors.append("generated live host visual evidence root is invalid")
+        return
+    committed = _object(VISUAL_MANIFEST_PATH, errors)
+    generated = _object(root / VISUAL_MANIFEST_PATH.name, errors)
+    if not committed or not generated:
+        return
+    case_fields = ("id", "state", "layout", "file", "viewport", "imageWidth", "imageHeight")
+    committed_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in committed.get("cases", []) if isinstance(item, dict)
+    ]
+    generated_cases = [
+        {field: item.get(field) for field in case_fields}
+        for item in generated.get("cases", []) if isinstance(item, dict)
+    ]
+    if generated_cases != committed_cases:
+        errors.append("generated live host visual case matrix drift")
+    for item in generated.get("cases", []):
+        if isinstance(item, dict) and isinstance(item.get("file"), str):
+            _verify_generated_digest(root / item["file"], item.get("sha256"), errors)
+    for field in (
+        "schemaVersion", "syntheticOnly", "browserNetworkRequests",
+        "automaticDownloads", "fixtureClock", "sourceBindings", "visualHarness",
+    ):
+        if generated.get(field) != committed.get(field):
+            errors.append(f"generated live host visual manifest drift: {field}")
+    for field in ("playwrightVersion", "webpackVersion", "typescriptVersion", "heftVersion"):
+        if generated.get("runtime", {}).get(field) != committed.get("runtime", {}).get(field):
+            errors.append(f"generated live host visual runtime drift: {field}")
+    if not re.fullmatch(r"v22\.[0-9]+\.[0-9]+", str(generated.get("runtime", {}).get("nodeVersion", ""))):
+        errors.append("generated live host visual Node runtime is not Node 22")
+    committed_artifacts = _manifest_paths(committed.get("buildArtifacts", []))
+    generated_artifacts = _manifest_paths(generated.get("buildArtifacts", []))
+    if generated_artifacts != committed_artifacts:
+        errors.append("generated live host build artifact matrix drift")
+    expected_files = {VISUAL_MANIFEST_PATH.name, *(item["file"] for item in generated_cases)}
+    if {path.name for path in root.iterdir() if path.is_file()} != expected_files:
+        errors.append("generated live host visual evidence file set drift")
+
+
+def _verify_generated_digest(path: Path, expected: object, errors: list[str]) -> None:
+    if path.is_symlink() or not path.is_file():
+        errors.append(f"generated live host visual evidence file missing: {path.name}")
+        return
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not isinstance(expected, str) or expected != actual:
+        errors.append(f"generated live host visual digest drift: {path.name}")
+
+
 def _contains_number(value: object) -> bool:
     if isinstance(value, bool) or value is None or isinstance(value, str):
         return False
@@ -513,6 +564,10 @@ def _object(path: Path, errors: list[str]) -> dict:
 
 def main() -> int:
     errors = validate()
+    if len(sys.argv) == 3 and sys.argv[1] == "--generated-evidence-root":
+        _compare_generated_visual_evidence(Path(sys.argv[2]).resolve(), errors)
+    elif len(sys.argv) != 1:
+        errors.append("usage: validate_workbench_live_read_binding.py [--generated-evidence-root PATH]")
     if errors:
         print("STATUS: FAILED")
         for error in errors:

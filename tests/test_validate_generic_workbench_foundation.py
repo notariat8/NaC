@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -54,6 +56,21 @@ class GenericWorkbenchFoundationValidatorTests(unittest.TestCase):
             "BFF projection must not derive domain state: attention.append",
             errors,
         )
+
+    def test_generated_visual_comparison_rejects_case_matrix_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            generated = Path(directory) / "generic-workbench"
+            shutil.copytree(validator.VISUAL_ROOT, generated)
+            errors: list[str] = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertEqual(errors, [])
+            manifest_path = generated / validator.VISUAL_MANIFEST.name
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["cases"][0]["width"] = 1439
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            errors = []
+            validator._compare_generated_visual_evidence(generated, errors)
+            self.assertIn("generated generic workbench visual case matrix drift", errors)
 
 
 if __name__ == "__main__":
