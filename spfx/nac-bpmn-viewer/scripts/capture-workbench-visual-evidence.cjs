@@ -20,6 +20,14 @@ function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function pngDimensions(file) {
+  const data = fs.readFileSync(file);
+  if (data.length < 24 || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || data.subarray(12, 16).toString('ascii') !== 'IHDR') {
+    throw new Error('NAC_WORKBENCH_SCREENSHOT_NOT_PNG');
+  }
+  return { imageWidth: data.readUInt32BE(16), imageHeight: data.readUInt32BE(20) };
+}
+
 function normalizedNpmUserAgent() {
   return (process.env.npm_config_user_agent || '').replace(/\s+ci\/[^\s]+$/u, '');
 }
@@ -63,7 +71,7 @@ async function run() {
       }
       const output = path.join(outputRoot, item.file);
       await page.locator('.nacWorkbench').screenshot({ path: output });
-      evidence.push({ ...item, sha256: sha256(output) });
+      evidence.push({ ...item, ...pngDimensions(output), sha256: sha256(output) });
       await page.close();
     }
   } finally {

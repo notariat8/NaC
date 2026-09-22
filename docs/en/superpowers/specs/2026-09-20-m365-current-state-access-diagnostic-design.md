@@ -31,6 +31,8 @@ affected_artifacts:
   - docs/en/superpowers/plans/2026-09-20-m365-current-state-access-diagnostic.md
   - docs/de/cli.md
   - docs/en/cli.md
+  - docs/de/quality-gate.md
+  - docs/en/quality-gate.md
   - docs/de/m365-current-state-access-diagnostic.md
   - docs/en/m365-current-state-access-diagnostic.md
   - agent-context/index.json
@@ -101,8 +103,10 @@ validation_commands:
   - python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
   - python -m unittest discover -s tests -p test_spec_traceability.py
   - cd spfx/nac-bpmn-viewer && npm run build
-  - cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
-  - python scripts/validate_workbench_live_read_binding.py
+  - powershell -NoProfile -Command "$genericRoot = Join-Path $env:TEMP 'nac-generic-workbench'; Push-Location spfx/nac-bpmn-viewer; try { npm run workbench:capture -- $genericRoot } finally { Pop-Location }"
+  - powershell -NoProfile -Command "$liveRoot = Join-Path $env:TEMP 'nac-workbench-live-read'; Push-Location spfx/nac-bpmn-viewer; try { npm run workbench:live:capture -- $liveRoot } finally { Pop-Location }"
+  - powershell -NoProfile -Command "python scripts/validate_generic_workbench_foundation.py --generated-evidence-root (Join-Path $env:TEMP 'nac-generic-workbench')"
+  - powershell -NoProfile -Command "python scripts/validate_workbench_live_read_binding.py --generated-evidence-root (Join-Path $env:TEMP 'nac-workbench-live-read')"
   - python -m unittest discover -s tests
   - graft build
   - graft check

@@ -8,6 +8,8 @@
       "file": "VIS-721-01-desktop.png",
       "width": 1440,
       "height": 900,
+      "imageWidth": 1392,
+      "imageHeight": 522,
       "sha256": "0ce708a876aecfd5075a48f6caaeb1e59863bc5ca92de5b4c6cd90f4b45030f8"
     },
     {
@@ -15,13 +17,15 @@
       "file": "VIS-721-02-mobile.png",
       "width": 390,
       "height": 844,
+      "imageWidth": 390,
+      "imageHeight": 1151,
       "sha256": "eb39180145717bc0d0cb404ee901a8e180f8a7bd36cac4b7febe7c7c6c90ebea"
     }
   ],
   "sources": [
     {
       "relativePath": ".github/workflows/quality-gate.yml",
-      "sha256": "b035070c000bba69fc21175656a3ff310a88e892ff1228982fc9c464c6f832f0"
+      "sha256": "87cc74e7e7b0109b9077aadbc386feff88d29fdac3d0866bdcf22cf5dbe5aa55"
     },
     {
       "relativePath": "scripts/quality_gate.py",
@@ -29,7 +33,7 @@
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
-      "sha256": "9fcc42646da6eb3e63940b61297dff7e300993ac1016146c693d2eeeeb1e6089"
+      "sha256": "4727f08d54845e7c6e87423aeb8b9ebda0076ae3ee5adf1300e8baa87a4007a8"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/package.json",
@@ -73,7 +77,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/capture-workbench-visual-evidence.cjs",
-      "sha256": "0e797ad1d89b8c12de757ccc57637059648adc776c45054b96ded99e64e95c11"
+      "sha256": "a40935e9e2f3a9d20a068e76f71b7e2f8507b82a013547b2f634079e8eb0b686"
     },
     {
       "relativePath": "workflows/contracts/generic-workbench.contract.json",
@@ -116,7 +120,7 @@
   ],
   "runtime": {
     "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64 workspaces/false",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64",
     "playwrightVersion": "1.55.0",
     "typescriptVersion": "5.8.3",
     "heftVersion": "1.2.17"

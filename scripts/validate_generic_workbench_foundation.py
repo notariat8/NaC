@@ -271,7 +271,15 @@ def _compare_generated_visual_evidence(root: Path, errors: list[str]) -> None:
         errors.append("generated generic workbench visual case matrix drift")
     for item in generated.get("cases", []):
         if isinstance(item, dict) and isinstance(item.get("file"), str):
-            _verify_external_digest(root / item["file"], item.get("sha256"), errors)
+            image_path = root / item["file"]
+            _verify_external_digest(image_path, item.get("sha256"), errors)
+            dimensions = _png_dimensions(image_path, errors)
+            if dimensions is not None and (
+                item.get("imageWidth"), item.get("imageHeight")
+            ) != dimensions:
+                errors.append(
+                    f"{item.get('id')}: generated generic workbench PNG dimensions are not manifest-bound"
+                )
     for field in ("schemaVersion", "syntheticOnly", "browserNetworkRequests", "sources"):
         if generated.get(field) != committed.get(field):
             errors.append(f"generated generic workbench visual manifest drift: {field}")
@@ -299,6 +307,16 @@ def _verify_external_digest(path: Path, expected: object, errors: list[str]) -> 
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     if not isinstance(expected, str) or expected != actual:
         errors.append(f"generated visual evidence digest drift: {path.name}")
+
+
+def _png_dimensions(path: Path, errors: list[str]) -> tuple[int, int] | None:
+    if path.is_symlink() or not path.is_file():
+        return None
+    data = path.read_bytes()
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        errors.append(f"generated generic workbench screenshot is not a PNG: {path.name}")
+        return None
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
 def _json(path: Path, errors: list[str]) -> dict:

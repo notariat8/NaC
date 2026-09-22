@@ -81,7 +81,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "3308158a7a90d8627c09422087d2eba47fc218ad496eac9774db27ea7c7c0190"
+      "sha256": "8831f82f608520d226107ea552add8ebeca99149c0166422b6d21c9afff440ed"
     }
   ],
   "sourceBindings": {
@@ -180,7 +180,7 @@
   ],
   "runtime": {
     "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64 workspaces/false",
+    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64",
     "playwrightVersion": "1.55.0",
     "webpackVersion": "5.105.4",
     "typescriptVersion": "5.8.3",

@@ -280,8 +280,10 @@ python -m unittest discover -s tests -p test_nac_cli.py
 python -m unittest discover -s tests -p test_windows_offline_cli_portability.py
 python -m unittest discover -s tests -p test_spec_traceability.py
 cd spfx/nac-bpmn-viewer && npm run build
-cd spfx/nac-bpmn-viewer && npm run workbench:live:capture
-python scripts/validate_workbench_live_read_binding.py
+powershell -NoProfile -Command "$genericRoot = Join-Path $env:TEMP 'nac-generic-workbench'; Push-Location spfx/nac-bpmn-viewer; try { npm run workbench:capture -- $genericRoot } finally { Pop-Location }"
+powershell -NoProfile -Command "$liveRoot = Join-Path $env:TEMP 'nac-workbench-live-read'; Push-Location spfx/nac-bpmn-viewer; try { npm run workbench:live:capture -- $liveRoot } finally { Pop-Location }"
+powershell -NoProfile -Command "python scripts/validate_generic_workbench_foundation.py --generated-evidence-root (Join-Path $env:TEMP 'nac-generic-workbench')"
+powershell -NoProfile -Command "python scripts/validate_workbench_live_read_binding.py --generated-evidence-root (Join-Path $env:TEMP 'nac-workbench-live-read')"
 python scripts/validate_m365_current_state_access_diagnostic.py
 python -m unittest discover -s tests -p test_m365_current_state_access_client_receipt.py
 python scripts/validate_spec_traceability.py
