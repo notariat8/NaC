@@ -18,47 +18,153 @@ SPEC.loader.exec_module(builder)
 
 
 class CandidateBuilderBoundaryTests(unittest.TestCase):
-    def test_sbom_component_locations_must_cover_exact_bundle_files(self) -> None:
-        cdx = {
-            "bomFormat": "CycloneDX",
-            "metadata": {"component": {"bom-ref": "scan-root"}},
-            "components": [{"bom-ref": "pkg:nac", "evidence": {
-                "occurrences": [{"location": "reader.exe"}]
-            }}],
-        }
-        spdx = {
-            "spdxVersion": "SPDX-2.3",
-            "packages": [{"SPDXID": "SPDXRef-nac"}],
-            "files": [{"SPDXID": "SPDXRef-File-reader", "fileName": "./reader.exe"}],
-            "relationships": [{"spdxElementId": "SPDXRef-nac",
-                               "relationshipType": "CONTAINS",
-                               "relatedSpdxElement": "SPDXRef-File-reader"}],
-        }
-        mappings = builder.validate_sbom_bundle_mapping(cdx, spdx, {"reader.exe"})
-        self.assertEqual(mappings["reader.exe"], ({"pkg:nac"}, {"SPDXRef-nac"}))
-        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_SBOM_BUNDLE_MAPPING"):
-            builder.validate_sbom_bundle_mapping(cdx, spdx, {"reader.exe", "runtime.dll"})
-        cdx["components"][0]["evidence"]["occurrences"] = []
-        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_SBOM_BUNDLE_MAPPING"):
-            builder.validate_sbom_bundle_mapping(cdx, spdx, {"reader.exe"})
+    def test_current_contract_blocks_new_candidate_before_build(self) -> None:
+        with self.assertRaisesRegex(
+            builder.BuildBlocked, "BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED",
+        ):
+            builder.require_candidate_contract_gate(builder.ROOT)
 
+    def test_cli_modes_block_without_creating_output_or_touching_toolchain(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            for mode in ("prepare", "build", "finalize"):
+                output = Path(folder) / mode
+                arguments = [
+                    "--mode", mode, "--output", str(output),
+                    "--expected-head", "a" * 40, "--expected-tree", "b" * 40,
+                ]
+                if mode != "prepare":
+                    arguments.extend(("--license-evidence-dir", folder))
+                with self.subTest(mode=mode):
+                    with mock.patch.object(builder, "require_windows_security") as security:
+                        with mock.patch.object(builder, "_tool_versions") as tools:
+                            self.assertEqual(builder.main(arguments), 1)
+                            self.assertFalse(output.exists())
+                            security.assert_not_called()
+                            tools.assert_not_called()
+
+    def test_reviewed_catalog_is_independent_of_operator_inventory(self) -> None:
+        component = {
+            "id": "nac", "name": "NaC", "version": "test",
+            "license": "AGPL-3.0-or-later", "license_text_path": "LICENSE",
+            "license_text_sha256": "a" * 64,
+        }
+        catalog = {
+            "schema_version": "nac.m365-current-state-read-driver-license-catalog/v0.1",
+            "status": "APPROVED",
+            "reviewed_preparation": {},
+            "components": [{**component, "source_uri": "git:HEAD",
+                            "source_sha256": "BOUND_SOURCE_TREE"}],
+            "files": [{"path": "reader.exe", "component_ids": ["nac"]}],
+        }
+        inventory = {
+            "schema_version": "nac.m365-current-state-read-driver-license-inventory/v0.1",
+            "components": [{**component, "cyclonedx_ref": None, "spdx_id": None}],
+            "files": [{"path": "reader.exe", "component_ids": ["nac"]}],
+        }
+        builder.validate_reviewed_license_catalog(
+            catalog, inventory, {"reader.exe"}, expected_tree="b" * 40,
+            reviewed_preparation={},
+        )
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"reader.exe"}, expected_tree="b" * 40,
+                reviewed_preparation={"bundle_files": "drifted"},
+            )
+        inventory["components"][0]["license"] = "MIT"
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"reader.exe"}, expected_tree="b" * 40,
+                reviewed_preparation={},
+            )
+        inventory["components"][0]["license"] = "AGPL-3.0-or-later"
+        catalog["status"] = "PENDING"
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"reader.exe"}, expected_tree="b" * 40,
+                reviewed_preparation={},
+            )
+
+    def test_reviewed_catalog_rejects_unmapped_file_and_unbound_source(self) -> None:
+        catalog = {
+            "schema_version": "nac.m365-current-state-read-driver-license-catalog/v0.1",
+            "status": "APPROVED",
+            "reviewed_preparation": {},
+            "components": [{
+                "id": "runtime", "name": "Runtime", "version": "1.0",
+                "license": "MIT", "license_text_path": "licenses/runtime.txt",
+                "license_text_sha256": "a" * 64,
+                "source_uri": "https://example.org/runtime.zip",
+                "source_sha256": "c" * 64,
+            }],
+            "files": [{"path": "runtime.dll", "component_ids": ["runtime"]}],
+        }
+        inventory = {
+            "schema_version": "nac.m365-current-state-read-driver-license-inventory/v0.1",
+            "components": [{
+                **{key: value for key, value in catalog["components"][0].items()
+                   if key not in {"source_uri", "source_sha256"}},
+                "cyclonedx_ref": "c" * 16,
+                "spdx_id": "SPDXRef-Package-runtime-" + "c" * 16,
+            }],
+            "files": [{"path": "runtime.dll", "component_ids": ["runtime"]}],
+        }
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"runtime.dll", "extra.dll"},
+                expected_tree="b" * 40, reviewed_preparation={},
+            )
+        catalog["files"].append({"path": "extra.dll", "component_ids": ["runtime"]})
+        inventory["files"].append({"path": "extra.dll", "component_ids": ["runtime"]})
+        catalog["components"][0]["source_sha256"] = "0" * 64
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"runtime.dll", "extra.dll"},
+                expected_tree="b" * 40, reviewed_preparation={},
+            )
+        catalog["components"][0]["source_sha256"] = "c" * 64
+        catalog["components"][0]["license"] = "NOASSERTION"
+        inventory["components"][0]["license"] = "NOASSERTION"
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"runtime.dll", "extra.dll"},
+                expected_tree="b" * 40, reviewed_preparation={},
+            )
+        catalog["components"][0]["license"] = "MIT"
+        inventory["components"][0]["license"] = "MIT"
+        inventory["files"][1]["component_ids"] = []
+        with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_PROVENANCE"):
+            builder.validate_reviewed_license_catalog(
+                catalog, inventory, {"runtime.dll", "extra.dll"},
+                expected_tree="b" * 40, reviewed_preparation={},
+            )
     def test_inventory_component_assignment_must_match_both_sbom_locations(self) -> None:
         inventory = {
             "components": [
-                {"id": "nac", "cyclonedx_ref": "pkg:nac", "spdx_id": "SPDXRef-nac"},
-                {"id": "python", "cyclonedx_ref": "pkg:python", "spdx_id": "SPDXRef-python"},
+                {"id": "nac", "name": "NaC", "version": "test",
+                 "cyclonedx_ref": "pkg:nac", "spdx_id": "SPDXRef-nac"},
+                {"id": "python", "name": "Python", "version": "3",
+                 "cyclonedx_ref": "pkg:python", "spdx_id": "SPDXRef-python"},
             ],
             "files": [
                 {"path": "reader.exe", "component_ids": ["nac", "python"]},
             ],
         }
-        binding = {"reader.exe": ({"pkg:nac", "pkg:python"},
-                                  {"SPDXRef-nac", "SPDXRef-python"})}
+        binding = SimpleNamespace(
+            file_packages={"reader.exe": ("SPDXRef-nac", "SPDXRef-python")},
+            packages=(
+                {"spdx_id": "SPDXRef-nac", "cyclonedx_ref": "pkg:nac",
+                 "name": "NaC", "version": "test"},
+                {"spdx_id": "SPDXRef-python", "cyclonedx_ref": "pkg:python",
+                 "name": "Python", "version": "3"},
+            ),
+        )
         builder.validate_inventory_bundle_mapping(inventory, binding)
         with self.assertRaisesRegex(builder.BuildBlocked, "BLOCKED_LICENSE_SBOM_FILE_MISMATCH"):
             builder.validate_inventory_bundle_mapping(
-                inventory, {"reader.exe": ({"pkg:nac"},
-                                          {"SPDXRef-nac", "SPDXRef-python"})},
+                inventory, SimpleNamespace(
+                    file_packages={"reader.exe": ("SPDXRef-nac",)},
+                    packages=binding.packages,
+                ),
             )
 
     def test_package_tree_digest_changes_with_executed_tool_source(self) -> None:

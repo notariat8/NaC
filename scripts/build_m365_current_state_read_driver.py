@@ -21,13 +21,17 @@ import stat
 import subprocess
 import sys
 import tarfile
+from urllib.parse import urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE = "workflows/contracts/m365-current-state-read-driver-resources.contract.json"
 SOURCE = "src/nac_bff/current_state_read_driver.py"
-SCHEMA = "nac.m365-current-state-read-driver-candidate/v0.1"
+SCHEMA = "nac.m365-current-state-read-driver-candidate/v0.2"
+PREPARATION_SCHEMA = "nac.m365-current-state-read-driver-preparation/v0.1"
 LICENSE_SCHEMA = "nac.m365-current-state-read-driver-license-inventory/v0.1"
+LICENSE_CATALOG_SCHEMA = "nac.m365-current-state-read-driver-license-catalog/v0.1"
+LICENSE_CATALOG = "workflows/contracts/m365-current-state-read-driver-license-catalog.json"
 PYINSTALLER_VERSION = "6.22.3"
 SYFT_VERSION = "1.52.0"
 PYTHON_VERSION = "3.13.4"
@@ -36,7 +40,7 @@ _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _SAFE_COMPONENT = re.compile(r"[A-Za-z0-9._-]{1,120}\Z")
 _ARTIFACTS = (
     "source.tar", "cyclonedx.json", "spdx.json", "LICENSE", "NOTICE",
-    "license-inventory.json",
+    "license-inventory.json", "license-catalog.json", "preparation.json",
 )
 _BUNDLE_FIELDS = (
     "path", "sha256", "size", "volume_serial", "file_id",
@@ -437,102 +441,21 @@ def _archive_head(repo: Path, destination: Path) -> None:
         raise BuildBlocked("BLOCKED_SOURCE_ARCHIVE_UNAVAILABLE") from None
 
 
-def _sbom_location(value: object) -> str:
-    if not isinstance(value, str):
-        raise BuildBlocked("BLOCKED_SBOM_BUNDLE_MAPPING")
-    location = value[2:] if value.startswith("./") else value
+def _real_syft_mapping(cyclonedx: Path, spdx: Path, bundle_paths: set[str]):
+    """Read Syft's actual package links; bundle coverage is a separate gate."""
+    sys.path.insert(0, str(ROOT / "src"))
+    if str(ROOT / "src") not in sys.path:
+        sys.path.insert(0, str(ROOT / "src"))
+    from nac_bff.current_state_read_driver_sbom import (
+        SbomMappingError, parse_syft_sboms,
+    )
     try:
-        return _safe_relative(location)
-    except BuildBlocked:
-        raise BuildBlocked("BLOCKED_SBOM_BUNDLE_MAPPING") from None
-
-
-def validate_sbom_bundle_mapping(
-    cyclonedx: object, spdx: object, bundle_paths: set[str],
-) -> dict[str, tuple[set[str], set[str]]]:
-    """Require both generated SBOMs to locate every package at bundle files."""
-    blocked = "BLOCKED_SBOM_BUNDLE_MAPPING"
-    if not isinstance(cyclonedx, dict) or cyclonedx.get("bomFormat") != "CycloneDX":
-        raise BuildBlocked(blocked)
-    if not isinstance(spdx, dict) or spdx.get("spdxVersion") != "SPDX-2.3":
-        raise BuildBlocked(blocked)
-    cdx_components = cyclonedx.get("components")
-    # metadata.component describes the scanned bundle as a whole; the actual
-    # licensable package set is the exact components[] collection.
-    packages = spdx.get("packages")
-    files = spdx.get("files")
-    relationships = spdx.get("relationships")
-    if (not isinstance(cdx_components, list) or not cdx_components
-            or not isinstance(packages, list) or not packages
-            or not isinstance(files, list) or not files
-            or not isinstance(relationships, list)):
-        raise BuildBlocked(blocked)
-    cdx_map: dict[str, set[str]] = {path: set() for path in bundle_paths}
-    cdx_refs: set[str] = set()
-    for component in cdx_components:
-        if not isinstance(component, dict) or not isinstance(component.get("bom-ref"), str):
-            raise BuildBlocked(blocked)
-        ref = component["bom-ref"]
-        evidence = component.get("evidence")
-        occurrences = evidence.get("occurrences") if isinstance(evidence, dict) else None
-        if not ref or ref in cdx_refs or not isinstance(occurrences, list) or not occurrences:
-            raise BuildBlocked(blocked)
-        cdx_refs.add(ref)
-        for occurrence in occurrences:
-            if not isinstance(occurrence, dict):
-                raise BuildBlocked(blocked)
-            location = _sbom_location(occurrence.get("location"))
-            if location not in bundle_paths:
-                raise BuildBlocked(blocked)
-            cdx_map[location].add(ref)
-    spdx_files: dict[str, str] = {}
-    for item in files:
-        if not isinstance(item, dict) or not isinstance(item.get("SPDXID"), str):
-            raise BuildBlocked(blocked)
-        identifier = item["SPDXID"]
-        location = _sbom_location(item.get("fileName"))
-        if identifier in spdx_files or location not in bundle_paths:
-            raise BuildBlocked(blocked)
-        spdx_files[identifier] = location
-    if set(spdx_files.values()) != bundle_paths or len(spdx_files) != len(bundle_paths):
-        raise BuildBlocked(blocked)
-    spdx_ids = {item.get("SPDXID") for item in packages if isinstance(item, dict)}
-    if len(spdx_ids) != len(packages) or any(not isinstance(item, str) or not item for item in spdx_ids):
-        raise BuildBlocked(blocked)
-    spdx_map: dict[str, set[str]] = {path: set() for path in bundle_paths}
-    for item in relationships:
-        if not isinstance(item, dict):
-            raise BuildBlocked(blocked)
-        left, right, kind = (
-            item.get("spdxElementId"), item.get("relatedSpdxElement"),
-            item.get("relationshipType"),
+        return parse_syft_sboms(
+            json.loads(cyclonedx.read_text(encoding="utf-8")),
+            json.loads(spdx.read_text(encoding="utf-8")), bundle_paths,
         )
-        if kind == "CONTAINS" and left in spdx_ids and right in spdx_files:
-            spdx_map[spdx_files[right]].add(left)
-        elif kind == "CONTAINED_BY" and left in spdx_files and right in spdx_ids:
-            spdx_map[spdx_files[left]].add(right)
-    if (any(not refs for refs in cdx_map.values())
-            or any(not refs for refs in spdx_map.values())
-            or {ref for refs in cdx_map.values() for ref in refs} != cdx_refs
-            or {ref for refs in spdx_map.values() for ref in refs} != spdx_ids):
-        raise BuildBlocked(blocked)
-    return {path: (cdx_map[path], spdx_map[path]) for path in bundle_paths}
-
-
-def _sbom_refs(
-    cyclonedx: Path, spdx: Path, bundle_paths: set[str],
-) -> tuple[set[str], set[str], dict[str, tuple[set[str], set[str]]]]:
-    try:
-        cdx = json.loads(cyclonedx.read_text(encoding="utf-8"))
-        spx = json.loads(spdx.read_text(encoding="utf-8"))
-        mapping = validate_sbom_bundle_mapping(cdx, spx, bundle_paths)
-        cdx_refs = {ref for cdx_ids, _ in mapping.values() for ref in cdx_ids}
-        spdx_refs = {ref for _, spdx_ids in mapping.values() for ref in spdx_ids}
-        return cdx_refs, spdx_refs, mapping
-    except BuildBlocked:
-        raise
-    except (OSError, UnicodeError, ValueError, TypeError, KeyError):
-        raise BuildBlocked("BLOCKED_SBOM_INVALID") from None
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, SbomMappingError):
+        raise BuildBlocked("BLOCKED_SBOM_BUNDLE_MAPPING") from None
 
 
 def validate_license_inventory(
@@ -573,13 +496,17 @@ def validate_license_inventory(
                 or not _HEX64.fullmatch(component["license_text_sha256"])
                 or text_hashes.get(text_path) != component["license_text_sha256"]):
             raise BuildBlocked("BLOCKED_LICENSE_TEXT_MISMATCH")
-        if component["cyclonedx_ref"] not in cdx_refs or component["spdx_id"] not in spdx_refs:
+        cdx_ref, spdx_id = component["cyclonedx_ref"], component["spdx_id"]
+        if (cdx_ref is None) != (spdx_id is None):
             raise BuildBlocked("BLOCKED_LICENSE_SBOM_REFERENCE")
-        if (component["cyclonedx_ref"] in inventoried_cdx_refs
-                or component["spdx_id"] in inventoried_spdx_refs):
-            raise BuildBlocked("BLOCKED_LICENSE_SBOM_REFERENCE")
-        inventoried_cdx_refs.add(component["cyclonedx_ref"])
-        inventoried_spdx_refs.add(component["spdx_id"])
+        if cdx_ref is not None:
+            if (not isinstance(cdx_ref, str) or not isinstance(spdx_id, str)
+                    or cdx_ref not in cdx_refs or spdx_id not in spdx_refs
+                    or cdx_ref in inventoried_cdx_refs
+                    or spdx_id in inventoried_spdx_refs):
+                raise BuildBlocked("BLOCKED_LICENSE_SBOM_REFERENCE")
+            inventoried_cdx_refs.add(cdx_ref)
+            inventoried_spdx_refs.add(spdx_id)
     if inventoried_cdx_refs != cdx_refs or inventoried_spdx_refs != spdx_refs:
         raise BuildBlocked("BLOCKED_LICENSE_SBOM_REFERENCE")
     observed: set[str] = set()
@@ -608,24 +535,163 @@ def validate_license_inventory(
 
 
 def validate_inventory_bundle_mapping(
-    inventory: dict, bindings: dict[str, tuple[set[str], set[str]]],
+    inventory: dict, bindings: object,
 ) -> None:
     """Reject an inventory that assigns a real SBOM component to a wrong file."""
-    components = {item["id"]: item for item in inventory["components"]}
-    observed = set()
-    for item in inventory["files"]:
-        path = item["path"]
-        if path not in bindings or path in observed:
-            raise BuildBlocked("BLOCKED_LICENSE_SBOM_FILE_MISMATCH")
-        observed.add(path)
-        cdx_refs = {components[identifier]["cyclonedx_ref"]
-                    for identifier in item["component_ids"]}
-        spdx_ids = {components[identifier]["spdx_id"]
-                    for identifier in item["component_ids"]}
-        if bindings[path] != (cdx_refs, spdx_ids):
-            raise BuildBlocked("BLOCKED_LICENSE_SBOM_FILE_MISMATCH")
-    if observed != set(bindings):
+    if not hasattr(bindings, "file_packages") or not hasattr(bindings, "packages"):
         raise BuildBlocked("BLOCKED_LICENSE_SBOM_FILE_MISMATCH")
+    components = {item["id"]: item for item in inventory["components"]}
+    records = {item["spdx_id"]: item for item in bindings.packages}
+    from nac_bff.current_state_read_driver_sbom import (
+        SbomMappingError, require_inventory_file_attribution,
+    )
+    try:
+        require_inventory_file_attribution(inventory["files"], components, bindings)
+    except (SbomMappingError, KeyError, TypeError):
+        raise BuildBlocked("BLOCKED_LICENSE_SBOM_FILE_MISMATCH") from None
+    for item in inventory["components"]:
+        spdx_id = item["spdx_id"]
+        if spdx_id is None:
+            continue
+        record = records.get(spdx_id)
+        if (record is None or item["cyclonedx_ref"] != record["cyclonedx_ref"]
+                or item["name"] != record["name"]
+                or item["version"] != record["version"]):
+            raise BuildBlocked("BLOCKED_LICENSE_SBOM_REFERENCE")
+
+
+def validate_reviewed_license_catalog(
+    catalog: object, inventory: object, bundle_paths: set[str], *, expected_tree: str,
+    reviewed_preparation: dict[str, object] | None = None,
+) -> None:
+    """Bind operator evidence to a separately versioned, reviewable source catalog.
+
+    A hash of operator-supplied text is not evidence of its claimed license.  The
+    catalog is part of the bound Git tree and must explicitly approve every
+    component, source digest, and runtime-file attribution before release.
+    """
+    blocked = "BLOCKED_LICENSE_PROVENANCE"
+    if (
+        not isinstance(catalog, dict)
+        or set(catalog) != {"schema_version", "status", "reviewed_preparation", "components", "files"}
+        or catalog["schema_version"] != LICENSE_CATALOG_SCHEMA
+        or catalog["status"] != "APPROVED"
+        or not isinstance(catalog["components"], list)
+        or not catalog["components"]
+        or not isinstance(catalog["files"], list)
+        or not catalog["files"]
+        or not isinstance(inventory, dict)
+        or inventory.get("schema_version") != LICENSE_SCHEMA
+        or not isinstance(inventory.get("components"), list)
+        or not isinstance(inventory.get("files"), list)
+        or not isinstance(expected_tree, str)
+        or _HEX40.fullmatch(expected_tree) is None
+        or not isinstance(catalog["reviewed_preparation"], dict)
+        or catalog["reviewed_preparation"] != reviewed_preparation
+    ):
+        raise BuildBlocked(blocked)
+    catalog_components = {}
+    for item in catalog["components"]:
+        if not isinstance(item, dict) or set(item) != {
+            "id", "name", "version", "license", "license_text_path",
+            "license_text_sha256", "source_uri", "source_sha256",
+        }:
+            raise BuildBlocked(blocked)
+        identifier = item["id"]
+        if not isinstance(identifier, str) or _SAFE_COMPONENT.fullmatch(identifier) is None:
+            raise BuildBlocked(blocked)
+        if identifier in catalog_components:
+            raise BuildBlocked(blocked)
+        for field in ("name", "version", "license"):
+            value = item[field]
+            if (not isinstance(value, str) or not value or len(value) > 160
+                    or any(ord(character) < 32 for character in value)):
+                raise BuildBlocked(blocked)
+        try:
+            text_path = _safe_relative(item["license_text_path"])
+        except BuildBlocked:
+            raise BuildBlocked(blocked) from None
+        if text_path != "LICENSE" and not (
+            text_path.startswith("licenses/") and len(text_path.split("/")) == 2
+        ):
+            raise BuildBlocked(blocked)
+        if (not isinstance(item["license_text_sha256"], str)
+                or _HEX64.fullmatch(item["license_text_sha256"]) is None
+                or item["license_text_sha256"] == "0" * 64):
+            raise BuildBlocked(blocked)
+        if identifier == "nac":
+            if (item["source_uri"] != "git:HEAD"
+                    or item["source_sha256"] != "BOUND_SOURCE_TREE"
+                    or item["license"] != "AGPL-3.0-or-later"
+                    or text_path != "LICENSE"):
+                raise BuildBlocked(blocked)
+        else:
+            uri = item["source_uri"]
+            digest = item["source_sha256"]
+            if not isinstance(uri, str) or len(uri) > 240:
+                raise BuildBlocked(blocked)
+            parsed = urlsplit(uri)
+            if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+                    or parsed.password or parsed.query or parsed.fragment
+                    or not isinstance(digest, str) or _HEX64.fullmatch(digest) is None
+                     or digest == "0" * 64
+                     or item["license"].upper() in {
+                         "NOASSERTION", "UNKNOWN", "PENDING", "TBD", "NONE", "N/A",
+                     }):
+                raise BuildBlocked(blocked)
+        catalog_components[identifier] = item
+    inventory_components = {}
+    for item in inventory["components"]:
+        if not isinstance(item, dict) or set(item) != {
+            "id", "name", "version", "license", "license_text_path",
+            "license_text_sha256", "cyclonedx_ref", "spdx_id",
+        }:
+            raise BuildBlocked(blocked)
+        identifier = item["id"]
+        if identifier in inventory_components or identifier not in catalog_components:
+            raise BuildBlocked(blocked)
+        if any(item[field] != catalog_components[identifier][field]
+               for field in (
+                   "name", "version", "license", "license_text_path",
+                   "license_text_sha256",
+               )):
+            raise BuildBlocked(blocked)
+        inventory_components[identifier] = item
+    if set(inventory_components) != set(catalog_components):
+        raise BuildBlocked(blocked)
+    expected_files = {}
+    for item in catalog["files"]:
+        if not isinstance(item, dict) or set(item) != {"path", "component_ids"}:
+            raise BuildBlocked(blocked)
+        try:
+            path = _safe_relative(item["path"])
+        except BuildBlocked:
+            raise BuildBlocked(blocked) from None
+        identifiers = item["component_ids"]
+        if (path in expected_files or not isinstance(identifiers, list)
+                or not identifiers or any(not isinstance(identifier, str)
+                                       for identifier in identifiers)
+                or len(identifiers) != len(set(identifiers))
+                or any(not isinstance(identifier, str)
+                       or identifier not in catalog_components
+                       for identifier in identifiers)):
+            raise BuildBlocked(blocked)
+        expected_files[path] = set(identifiers)
+    if set(expected_files) != bundle_paths:
+        raise BuildBlocked(blocked)
+    observed_files = {}
+    for item in inventory["files"]:
+        if not isinstance(item, dict) or set(item) != {"path", "component_ids"}:
+            raise BuildBlocked(blocked)
+        path, identifiers = item["path"], item["component_ids"]
+        if (not isinstance(path, str) or path in observed_files
+                or not isinstance(identifiers, list)
+                or any(not isinstance(identifier, str) for identifier in identifiers)
+                or len(identifiers) != len(set(identifiers))):
+            raise BuildBlocked(blocked)
+        observed_files[path] = set(identifiers)
+    if observed_files != expected_files:
+        raise BuildBlocked(blocked)
 
 
 def _bundle_paths(bundle: Path) -> set[str]:
@@ -648,17 +714,16 @@ def _remove_build_temp(candidate: Path, target: Path) -> None:
     shutil.rmtree(resolved)
 
 
-def build_candidate(
+def prepare_candidate(
     *, repo: Path, output: Path, expected_head: str, expected_tree: str,
-    license_evidence: Path, syft: str,
+    syft: str,
 ) -> Path:
+    require_candidate_contract_gate(repo)
     backend, windows = require_windows_security()
     if repo.resolve() != ROOT.resolve():
         raise BuildBlocked("BLOCKED_SOURCE_REPOSITORY_MISMATCH")
     candidate = validate_output_path(repo, output)
     validate_source_state(repo, expected_head, expected_tree)
-    if not license_evidence.is_absolute() or not license_evidence.is_dir() or license_evidence.is_symlink():
-        raise BuildBlocked("BLOCKED_LICENSE_EVIDENCE_UNAVAILABLE")
     tool = _tool_versions(syft)
     source_code = (repo / SOURCE).read_text(encoding="utf-8")
     if 'if __name__ == "__main__"' not in source_code:
@@ -704,9 +769,137 @@ def build_candidate(
     )
     for name in ("LICENSE", "NOTICE"):
         shutil.copyfile(repo / name, candidate / name)
+    paths = _bundle_paths(candidate / "bundle")
+    preparation = {
+        "schema_version": PREPARATION_SCHEMA,
+        "status": "AWAITING_INDEPENDENT_LICENSE_EVIDENCE",
+        "source_commit": expected_head,
+        "source_tree": expected_tree,
+        "build_tool": tool,
+        "build_command": build_command,
+        "sbom_commands": sbom_commands,
+        "artifacts": {
+            name: _sha256(candidate / name)
+            for name in ("source.tar", "cyclonedx.json", "spdx.json", "LICENSE", "NOTICE")
+        },
+        "bundle_files": [
+            {"path": name, "sha256": _sha256(candidate / "bundle" / Path(name))}
+            for name in sorted(paths)
+        ],
+    }
+    _write_json(candidate / "preparation.json", preparation)
+    _seal_tree_current_user_only(candidate, backend, windows)
+    validate_source_state(repo, expected_head, expected_tree)
+    return candidate
+
+
+def _reviewed_catalog(repo: Path) -> dict:
+    try:
+        catalog = json.loads((repo / LICENSE_CATALOG).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        raise BuildBlocked("BLOCKED_LICENSE_PROVENANCE") from None
+    if not isinstance(catalog, dict) or catalog.get("status") != "APPROVED":
+        raise BuildBlocked("BLOCKED_LICENSE_PROVENANCE")
+    return catalog
+
+
+def require_candidate_contract_gate(repo: Path) -> None:
+    """This repair cannot create a new package until a later contract change."""
+    try:
+        contract = json.loads((repo / "workflows/verification-contracts"
+                               / "m365-current-state-read-driver.verification.json")
+                              .read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        raise BuildBlocked("BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED") from None
+    if (not isinstance(contract, dict)
+            or not isinstance(contract.get("side_effects_allowed_offline"), dict)
+            or contract["side_effects_allowed_offline"].get(
+                "repository_external_release_candidate") is not True):
+        raise BuildBlocked("BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED")
+
+
+def finalize_candidate(
+    *, repo: Path, candidate: Path, expected_head: str, expected_tree: str,
+    license_evidence: Path, syft: str,
+) -> Path:
+    require_candidate_contract_gate(repo)
+    backend, windows = require_windows_security()
+    if repo.resolve() != ROOT.resolve() or not candidate.is_absolute():
+        raise BuildBlocked("BLOCKED_SOURCE_REPOSITORY_MISMATCH")
+    if candidate.is_symlink():
+        raise BuildBlocked("BLOCKED_CANDIDATE_ACL_SEAL_FAILED")
+    candidate = candidate.resolve(strict=True)
+    if repo.resolve() == candidate or repo.resolve() in candidate.parents:
+        raise BuildBlocked("BLOCKED_OUTPUT_INSIDE_REPOSITORY")
+    validate_source_state(repo, expected_head, expected_tree)
+    catalog = _reviewed_catalog(repo)
+    if (not license_evidence.is_absolute() or not license_evidence.is_dir()
+            or license_evidence.is_symlink()):
+        raise BuildBlocked("BLOCKED_LICENSE_EVIDENCE_UNAVAILABLE")
+    backend.validate_current_user_only_directory(license_evidence)
+    if any(part.is_symlink() for part in (candidate, candidate / "bundle")):
+        raise BuildBlocked("BLOCKED_CANDIDATE_ACL_SEAL_FAILED")
+    backend.validate_current_user_only_directory(candidate)
+    backend.validate_current_user_only_directory(candidate / "bundle")
+    prepared_names = {entry.name for entry in os.scandir(candidate)}
+    if prepared_names != {
+        "bundle", "source.tar", "cyclonedx.json", "spdx.json",
+        "LICENSE", "NOTICE", "preparation.json",
+    }:
+        raise BuildBlocked("BLOCKED_PREPARATION_DRIFT")
+    try:
+        preparation = json.loads((candidate / "preparation.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        raise BuildBlocked("BLOCKED_PREPARATION_DRIFT") from None
+    tool = _tool_versions(syft)
+    bundle_stage, work = candidate / "bundle-stage", candidate / "work"
+    build_command = [
+        tool["python"]["path"], "-m", "PyInstaller", "--onedir", "--name", "reader",
+        "--distpath", str(bundle_stage), "--workpath", str(work),
+        "--specpath", str(work), "--paths", str(repo / "src"), str(repo / SOURCE),
+    ]
+    sbom_commands = {
+        "cyclonedx": [tool["syft"]["path"], f"dir:{candidate / 'bundle'}", "-o",
+                      f"cyclonedx-json={candidate / 'cyclonedx.json'}"],
+        "spdx": [tool["syft"]["path"], f"dir:{candidate / 'bundle'}", "-o",
+                 f"spdx-json={candidate / 'spdx.json'}"],
+    }
+    paths = _bundle_paths(candidate / "bundle")
+    expected_preparation = {
+        "schema_version": PREPARATION_SCHEMA,
+        "status": "AWAITING_INDEPENDENT_LICENSE_EVIDENCE",
+        "source_commit": expected_head,
+        "source_tree": expected_tree,
+        "build_tool": tool,
+        "build_command": build_command,
+        "sbom_commands": sbom_commands,
+        "artifacts": {
+            name: _sha256(candidate / name)
+            for name in ("source.tar", "cyclonedx.json", "spdx.json", "LICENSE", "NOTICE")
+        },
+        "bundle_files": [
+            {"path": name, "sha256": _sha256(candidate / "bundle" / Path(name))}
+            for name in sorted(paths)
+        ],
+    }
+    if preparation != expected_preparation:
+        raise BuildBlocked("BLOCKED_PREPARATION_DRIFT")
+    try:
+        with tarfile.open(candidate / "source.tar", "r:") as archive:
+            selected = archive.getmember(LICENSE_CATALOG)
+            if not selected.isfile():
+                raise BuildBlocked("BLOCKED_PREPARATION_DRIFT")
+            source = archive.extractfile(selected)
+            if source is None or source.read() != (repo / LICENSE_CATALOG).read_bytes():
+                raise BuildBlocked("BLOCKED_PREPARATION_DRIFT")
+    except (OSError, KeyError, tarfile.TarError):
+        raise BuildBlocked("BLOCKED_PREPARATION_DRIFT") from None
     evidence_inventory = license_evidence / "license-inventory.json"
     if not evidence_inventory.is_file() or evidence_inventory.is_symlink():
         raise BuildBlocked("BLOCKED_LICENSE_EVIDENCE_UNAVAILABLE")
+    backend.inspect_private_path(
+        evidence_inventory, purpose="issue748-read-driver-bundle-current-user-only",
+    )
     try:
         inventory = json.loads(evidence_inventory.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError):
@@ -727,16 +920,35 @@ def build_candidate(
                     or any(parent.is_symlink() for parent in source.parents
                            if parent == license_evidence or license_evidence in parent.parents)):
                 raise BuildBlocked("BLOCKED_LICENSE_TEXT_MISMATCH")
+            backend.validate_current_user_only_directory(source.parent)
+            backend.inspect_private_path(
+                source, purpose="issue748-read-driver-bundle-current-user-only",
+            )
             destination = candidate.joinpath(*relative.split("/"))
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
             text_hashes[relative] = _sha256(destination)
     paths = _bundle_paths(candidate / "bundle")
-    cdx_refs, spdx_refs, sbom_file_bindings = _sbom_refs(
+    sbom_file_bindings = _real_syft_mapping(
         candidate / "cyclonedx.json", candidate / "spdx.json", paths,
     )
+    cdx_refs = {item["cyclonedx_ref"] for item in sbom_file_bindings.packages}
+    spdx_refs = {item["spdx_id"] for item in sbom_file_bindings.packages}
     validate_license_inventory(inventory, paths, cdx_refs, spdx_refs, text_hashes=text_hashes)
     validate_inventory_bundle_mapping(inventory, sbom_file_bindings)
+    validate_reviewed_license_catalog(
+        catalog, inventory, paths, expected_tree=expected_tree,
+        reviewed_preparation={
+            "driver_source_sha256": _sha256(repo / SOURCE),
+            "resource_contract_sha256": _sha256(repo / RESOURCE),
+            "build_tool": tool,
+            "bundle_files": expected_preparation["bundle_files"],
+            "cyclonedx_sha256": expected_preparation["artifacts"]["cyclonedx.json"],
+            "spdx_sha256": expected_preparation["artifacts"]["spdx.json"],
+            "notice_sha256": expected_preparation["artifacts"]["NOTICE"],
+        },
+    )
+    shutil.copyfile(repo / LICENSE_CATALOG, candidate / "license-catalog.json")
     third_party = [component for component in inventory["components"]
                    if component["id"] != "nac"]
     if third_party:
@@ -798,26 +1010,58 @@ def build_candidate(
     return candidate
 
 
+def build_candidate(
+    *, repo: Path, output: Path, expected_head: str, expected_tree: str,
+    license_evidence: Path, syft: str,
+) -> Path:
+    require_candidate_contract_gate(repo)
+    # Do not spend a full build or create an output when source review is still pending.
+    _reviewed_catalog(repo)
+    preparation = prepare_candidate(
+        repo=repo, output=output, expected_head=expected_head,
+        expected_tree=expected_tree, syft=syft,
+    )
+    return finalize_candidate(
+        repo=repo, candidate=preparation, expected_head=expected_head,
+        expected_tree=expected_tree, license_evidence=license_evidence, syft=syft,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mode", choices=("prepare", "finalize", "build"), default="build")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--expected-tree", required=True)
-    parser.add_argument("--license-evidence-dir", type=Path, required=True)
+    parser.add_argument("--license-evidence-dir", type=Path)
     parser.add_argument("--syft", default=shutil.which("syft") or "")
     args = parser.parse_args(argv)
     try:
-        result = build_candidate(
-            repo=ROOT, output=args.output, expected_head=args.expected_head,
-            expected_tree=args.expected_tree,
-            license_evidence=args.license_evidence_dir, syft=args.syft,
-        )
+        if args.mode == "prepare":
+            if args.license_evidence_dir is not None:
+                raise BuildBlocked("BLOCKED_PREPARATION_ARGUMENTS")
+            result = prepare_candidate(
+                repo=ROOT, output=args.output, expected_head=args.expected_head,
+                expected_tree=args.expected_tree, syft=args.syft,
+            )
+        else:
+            if args.license_evidence_dir is None:
+                raise BuildBlocked("BLOCKED_LICENSE_EVIDENCE_UNAVAILABLE")
+            arguments = {
+                "repo": ROOT, "expected_head": args.expected_head,
+                "expected_tree": args.expected_tree,
+                "license_evidence": args.license_evidence_dir, "syft": args.syft,
+            }
+            result = (build_candidate(output=args.output, **arguments)
+                      if args.mode == "build"
+                      else finalize_candidate(candidate=args.output, **arguments))
     except (BuildBlocked, OSError, ValueError, TypeError) as error:
         code = error.code if isinstance(error, BuildBlocked) else "BLOCKED_CANDIDATE_BUILD_FAILED"
         print(f"STATUS: {code}")
         return 1
-    print("STATUS: CANDIDATE_BUILT")
-    print(f"CANDIDATE: {result}")
+    print("STATUS: PREPARED_PENDING_EVIDENCE" if args.mode == "prepare"
+          else "STATUS: CANDIDATE_BUILT")
+    print(f"OUTPUT: {result}")
     return 0
 
 

@@ -39,11 +39,26 @@ class ReadDriverContractTests(unittest.TestCase):
             (root / "bundle/reader.exe").write_bytes(b"synthetic-reader")
             license_text = b"AGPL-3.0-or-later synthetic license"
             notice_text = b"NaC synthetic notice"
+            catalog = {
+                "schema_version": "nac.m365-current-state-read-driver-license-catalog/v0.1",
+                "status": "APPROVED",
+                "reviewed_preparation": None,
+                "components": [{
+                    "id": "nac", "name": "NaC", "version": "test",
+                    "license": "AGPL-3.0-or-later", "license_text_path": "LICENSE",
+                    "license_text_sha256": hashlib.sha256(license_text).hexdigest(),
+                    "source_uri": "git:HEAD", "source_sha256": "BOUND_SOURCE_TREE",
+                }],
+                "files": [{"path": "reader.exe", "component_ids": ["nac"]}],
+            }
+            catalog_bytes = json.dumps(catalog).encode()
             source_stream = io.BytesIO()
             with tarfile.open(fileobj=source_stream, mode="w") as archive:
                 for name, content in (
                     ("LICENSE", license_text), ("NOTICE", notice_text),
                     ("src/nac_bff/current_state_read_driver.py", b"synthetic-driver"),
+                    ("workflows/contracts/m365-current-state-read-driver-license-catalog.json",
+                     catalog_bytes),
                 ):
                     info = tarfile.TarInfo(name)
                     info.size = len(content)
@@ -52,24 +67,37 @@ class ReadDriverContractTests(unittest.TestCase):
             (root / "source.tar").write_bytes(source_bytes)
             (root / "LICENSE").write_bytes(license_text)
             (root / "NOTICE").write_bytes(notice_text)
+            (root / "license-catalog.json").write_bytes(catalog_bytes)
             (root / "cyclonedx.json").write_text(json.dumps({
                 "bomFormat": "CycloneDX", "components": [{
-                    "bom-ref": "nac:test",
-                    "evidence": {"occurrences": [{"location": "reader.exe"}]},
+                    "bom-ref": "1111222233334444", "name": "NaC", "version": "test",
+                    "properties": [{"name": "syft:location:0:path", "value": "\\reader.exe"}],
                 }],
             }), encoding="utf-8")
             (root / "spdx.json").write_text(json.dumps({
-                "spdxVersion": "SPDX-2.3", "packages": [{"SPDXID": "SPDXRef-NaC"}],
-                "files": [{"SPDXID": "SPDXRef-File", "fileName": "reader.exe"}],
-                "relationships": [{"spdxElementId": "SPDXRef-NaC",
-                                   "relatedSpdxElement": "SPDXRef-File",
-                                   "relationshipType": "CONTAINS"}],
+                "spdxVersion": "SPDX-2.3", "packages": [
+                    {"SPDXID": "SPDXRef-DocumentRoot-Directory-0", "name": "bundle"},
+                    {"SPDXID": "SPDXRef-Package-NaC-1111222233334444",
+                     "name": "NaC", "versionInfo": "test"},
+                ],
+                "files": [{"SPDXID": "SPDXRef-File-reader", "fileName": "\\reader.exe"}],
+                "relationships": [
+                    {"spdxElementId": "SPDXRef-Package-NaC-1111222233334444",
+                      "relatedSpdxElement": "SPDXRef-File-reader", "relationshipType": "OTHER"},
+                    {"spdxElementId": "SPDXRef-DocumentRoot-Directory-0",
+                     "relatedSpdxElement": "SPDXRef-Package-NaC-1111222233334444",
+                     "relationshipType": "CONTAINS"},
+                    {"spdxElementId": "SPDXRef-DOCUMENT",
+                     "relatedSpdxElement": "SPDXRef-DocumentRoot-Directory-0",
+                     "relationshipType": "DESCRIBES"},
+                ],
             }), encoding="utf-8")
             component = {
                 "id": "nac", "name": "NaC", "version": "test",
                 "license": "AGPL-3.0-or-later", "license_text_path": "LICENSE",
                 "license_text_sha256": hashlib.sha256((root / "LICENSE").read_bytes()).hexdigest(),
-                "cyclonedx_ref": "nac:test", "spdx_id": "SPDXRef-NaC",
+                "cyclonedx_ref": "1111222233334444",
+                "spdx_id": "SPDXRef-Package-NaC-1111222233334444",
             }
             inventory = {
                 "schema_version": "nac.m365-current-state-read-driver-license-inventory/v0.1",
@@ -93,7 +121,7 @@ class ReadDriverContractTests(unittest.TestCase):
                 name: hashlib.sha256((root / name).read_bytes()).hexdigest()
                 for name in (
                     "source.tar", "cyclonedx.json", "spdx.json", "LICENSE",
-                    "NOTICE", "license-inventory.json",
+                    "NOTICE", "license-inventory.json", "license-catalog.json",
                 )
             }
             entry = {
@@ -103,30 +131,75 @@ class ReadDriverContractTests(unittest.TestCase):
                 "dacl_sha256": "b" * 64, "security_descriptor_sha256": "c" * 64,
                 "path_sha256": "d" * 64,
             }
+            build_command = [
+                build_tool["python"]["path"], "-m", "PyInstaller", "--onedir",
+                "--name", "reader", "--distpath", str(root / "bundle-stage"),
+                "--workpath", str(root / "work"), "--specpath", str(root / "work"),
+                "--paths", str(ROOT / "src"),
+                str(ROOT / "src/nac_bff/current_state_read_driver.py"),
+            ]
+            sbom_commands = {
+                "cyclonedx": [build_tool["syft"]["path"], f"dir:{root / 'bundle'}",
+                              "-o", f"cyclonedx-json={root / 'cyclonedx.json'}"],
+                "spdx": [build_tool["syft"]["path"], f"dir:{root / 'bundle'}",
+                         "-o", f"spdx-json={root / 'spdx.json'}"],
+            }
+            preparation = {
+                "schema_version": "nac.m365-current-state-read-driver-preparation/v0.1",
+                "status": "AWAITING_INDEPENDENT_LICENSE_EVIDENCE",
+                "source_commit": "1" * 40, "source_tree": "2" * 40,
+                "build_tool": build_tool, "build_command": build_command,
+                "sbom_commands": sbom_commands,
+                "artifacts": {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+                              for name in ("source.tar", "cyclonedx.json", "spdx.json",
+                                           "LICENSE", "NOTICE")},
+                "bundle_files": [{"path": "reader.exe", "sha256": entry["sha256"]}],
+            }
+            (root / "preparation.json").write_text(json.dumps(preparation), encoding="utf-8")
+            catalog["reviewed_preparation"] = {
+                "driver_source_sha256": hashlib.sha256(b"synthetic-driver").hexdigest(),
+                "resource_contract_sha256": resource_sha,
+                "build_tool": build_tool,
+                "bundle_files": preparation["bundle_files"],
+                "cyclonedx_sha256": artifacts["cyclonedx.json"],
+                "spdx_sha256": artifacts["spdx.json"],
+                "notice_sha256": artifacts["NOTICE"],
+            }
+            catalog_bytes = json.dumps(catalog).encode()
+            (root / "license-catalog.json").write_bytes(catalog_bytes)
+            source_stream = io.BytesIO()
+            with tarfile.open(fileobj=source_stream, mode="w") as archive:
+                for name, content in (
+                    ("LICENSE", license_text), ("NOTICE", notice_text),
+                    ("src/nac_bff/current_state_read_driver.py", b"synthetic-driver"),
+                    ("workflows/contracts/m365-current-state-read-driver-license-catalog.json",
+                     catalog_bytes),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+            source_bytes = source_stream.getvalue()
+            (root / "source.tar").write_bytes(source_bytes)
+            artifacts["source.tar"] = hashlib.sha256(source_bytes).hexdigest()
+            artifacts["license-catalog.json"] = hashlib.sha256(catalog_bytes).hexdigest()
+            preparation["artifacts"]["source.tar"] = artifacts["source.tar"]
+            (root / "preparation.json").write_text(json.dumps(preparation), encoding="utf-8")
+            artifacts["preparation.json"] = hashlib.sha256(
+                (root / "preparation.json").read_bytes()
+            ).hexdigest()
             inputs = {
                 "source_archive_sha256": artifacts["source.tar"],
                 "resource_contract_sha256": resource_sha, "build_tool": build_tool,
             }
             release = {
-                "schema_version": "nac.m365-current-state-read-driver-candidate/v0.1",
+                "schema_version": "nac.m365-current-state-read-driver-candidate/v0.2",
                 "status": "CANDIDATE_BUILT", "source_commit": "1" * 40,
                 "source_tree": "2" * 40, "resource_contract_sha256": resource_sha,
                 "entrypoint": "reader.exe", "bundle_files": [entry],
                 "artifacts": artifacts, "build_tool": build_tool,
                 "byte_reproducibility_claim": False,
-                "build_command": [
-                    build_tool["python"]["path"], "-m", "PyInstaller", "--onedir",
-                    "--name", "reader", "--distpath", str(root / "bundle-stage"),
-                    "--workpath", str(root / "work"), "--specpath", str(root / "work"),
-                    "--paths", str(ROOT / "src"),
-                    str(ROOT / "src/nac_bff/current_state_read_driver.py"),
-                ],
-                "sbom_commands": {
-                    "cyclonedx": [build_tool["syft"]["path"], f"dir:{root / 'bundle'}",
-                                  "-o", f"cyclonedx-json={root / 'cyclonedx.json'}"],
-                    "spdx": [build_tool["syft"]["path"], f"dir:{root / 'bundle'}",
-                             "-o", f"spdx-json={root / 'spdx.json'}"],
-                },
+                "build_command": build_command,
+                "sbom_commands": sbom_commands,
                 "build_inputs_sha256": hashlib.sha256(json.dumps(
                     inputs, sort_keys=True, separators=(",", ":")
                 ).encode()).hexdigest(),
@@ -157,9 +230,28 @@ class ReadDriverContractTests(unittest.TestCase):
                     )
 
             self.assertEqual(check(), [])
+            self.assertTrue(current_state_read_driver_release._reviewed_catalog_matches(
+                catalog, inventory, {"reader.exe"}, "2" * 40,
+                catalog["reviewed_preparation"],
+            ))
+            drifted_review = {**catalog["reviewed_preparation"],
+                              "cyclonedx_sha256": "0" * 64}
+            self.assertFalse(current_state_read_driver_release._reviewed_catalog_matches(
+                catalog, inventory, {"reader.exe"}, "2" * 40,
+                drifted_review,
+            ))
+            (root / "NOTICE").write_bytes(notice_text + b"\nforged attribution")
+            release["artifacts"]["NOTICE"] = hashlib.sha256(
+                (root / "NOTICE").read_bytes()
+            ).hexdigest()
+            (root / "release.json").write_text(json.dumps(release), encoding="utf-8")
+            self.assertIn("DRIVER_RELEASE_BINDING", check())
+            (root / "NOTICE").write_bytes(notice_text)
+            release["artifacts"]["NOTICE"] = hashlib.sha256(notice_text).hexdigest()
+            (root / "release.json").write_text(json.dumps(release), encoding="utf-8")
             valid_cyclonedx = (root / "cyclonedx.json").read_bytes()
             altered_cyclonedx = json.loads(valid_cyclonedx)
-            altered_cyclonedx["components"][0]["evidence"]["occurrences"][0]["location"] = "other.exe"
+            altered_cyclonedx["components"][0]["properties"][0]["value"] = "other.exe"
             (root / "cyclonedx.json").write_text(json.dumps(altered_cyclonedx), encoding="utf-8")
             release["artifacts"]["cyclonedx.json"] = hashlib.sha256(
                 (root / "cyclonedx.json").read_bytes()

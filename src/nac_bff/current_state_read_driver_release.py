@@ -16,8 +16,12 @@ import re
 import stat
 import subprocess
 import tarfile
+from urllib.parse import urlsplit
 
 from nac_bff.current_state_read_driver import ReadDriverBlocked, verify_bundle_files
+from nac_bff.current_state_read_driver_sbom import (
+    SbomMappingError, parse_syft_sboms, require_inventory_file_attribution,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -91,18 +95,21 @@ _RELEASE_ARTIFACTS = {
     "closed_bundle_file_manifest", "source_commit_and_tree",
     "source_archive_and_corresponding_source", "build_tool_and_pinned_dependencies",
     "binary_and_runtime_file_hashes", "cyclonedx_json", "spdx_json",
-    "agpl_license_notice", "third_party_license_inventory", "resource_manifest_digest",
+    "complete_bundle_file_attestation_separate_from_syft_package_discovery",
+    "agpl_license_notice", "third_party_license_inventory",
+    "reviewed_git_bound_license_catalog_and_source_hashes",
+    "protected_preparation_record_before_release_record", "resource_manifest_digest",
 }
 _OFFLINE_EFFECTS = {
     "repository_change": True,
     "synthetic_test_files": True,
-    "repository_external_release_candidate": True,
+    "repository_external_release_candidate": False,
     "microsoft_provider_read": False,
     "real_run_gate_consume": False,
 }
 _CANDIDATE_ARTIFACTS = frozenset({
     "source.tar", "cyclonedx.json", "spdx.json", "LICENSE", "NOTICE",
-    "license-inventory.json",
+    "license-inventory.json", "license-catalog.json", "preparation.json",
 })
 _CANDIDATE_FIELDS = frozenset({
     "schema_version", "status", "source_commit", "source_tree",
@@ -118,6 +125,7 @@ _LICENSE_FILE_FIELDS = frozenset({"path", "component_ids"})
 _HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _SAFE_COMPONENT = re.compile(r"[A-Za-z0-9._-]{1,120}\Z")
+_CATALOG_SCHEMA = "nac.m365-current-state-read-driver-license-catalog/v0.1"
 
 
 def _digest(value: bytes) -> str:
@@ -224,76 +232,82 @@ def _validate_build_tool(tool: object, backend: object) -> bool:
             and _tool_tree_digest(Path(pyinstaller["module_path"]).parent) == tree_digest)
 
 
-def _sbom_location(value: object) -> str:
-    if not isinstance(value, str):
-        raise ValueError("invalid SBOM location")
-    location = value[2:] if value.startswith("./") else value
-    if (not location or len(location) > 240 or "\\" in location or ":" in location
-        or location.startswith("/") or any(part in {"", ".", ".."}
-                                         for part in location.split("/"))):
-        raise ValueError("invalid SBOM location")
-    return location
-
-
-def _sbom_file_mapping(cdx: dict, spdx: dict, bundle_paths: set[str]) -> dict[str, tuple[set[str], set[str]]]:
-    cdx_map = {path: set() for path in bundle_paths}
-    spdx_map = {path: set() for path in bundle_paths}
-    components = cdx.get("components")
-    packages = spdx.get("packages")
-    files = spdx.get("files")
-    relations = spdx.get("relationships")
-    if (not isinstance(components, list) or not components
-        or not isinstance(packages, list) or not packages
-        or not isinstance(files, list) or not files
-        or not isinstance(relations, list)):
-        raise ValueError("incomplete SBOM")
-    cdx_refs: set[str] = set()
-    for component in components:
-        if not isinstance(component, dict):
-            raise ValueError("invalid component")
-        ref = component.get("bom-ref")
-        evidence = component.get("evidence")
-        occurrences = evidence.get("occurrences") if isinstance(evidence, dict) else None
-        if not isinstance(ref, str) or not ref or ref in cdx_refs or not isinstance(occurrences, list) or not occurrences:
-            raise ValueError("unbound component")
-        cdx_refs.add(ref)
-        for occurrence in occurrences:
-            if not isinstance(occurrence, dict):
-                raise ValueError("invalid occurrence")
-            location = _sbom_location(occurrence.get("location"))
-            if location not in bundle_paths:
-                raise ValueError("occurrence outside bundle")
-            cdx_map[location].add(ref)
-    spdx_files: dict[str, str] = {}
-    for item in files:
-        if not isinstance(item, dict) or not isinstance(item.get("SPDXID"), str):
-            raise ValueError("invalid SPDX file")
-        location = _sbom_location(item.get("fileName"))
-        identifier = item["SPDXID"]
-        if identifier in spdx_files or location not in bundle_paths:
-            raise ValueError("SPDX file outside bundle")
-        spdx_files[identifier] = location
-    if set(spdx_files.values()) != bundle_paths or len(spdx_files) != len(bundle_paths):
-        raise ValueError("incomplete SPDX files")
-    spdx_ids = {item.get("SPDXID") for item in packages if isinstance(item, dict)}
-    if len(spdx_ids) != len(packages) or any(not isinstance(item, str) or not item for item in spdx_ids):
-        raise ValueError("invalid SPDX package")
-    for relation in relations:
-        if not isinstance(relation, dict):
-            raise ValueError("invalid SPDX relationship")
-        left, right, kind = (relation.get("spdxElementId"),
-                             relation.get("relatedSpdxElement"),
-                             relation.get("relationshipType"))
-        if kind == "CONTAINS" and left in spdx_ids and right in spdx_files:
-            spdx_map[spdx_files[right]].add(left)
-        elif kind == "CONTAINED_BY" and left in spdx_files and right in spdx_ids:
-            spdx_map[spdx_files[left]].add(right)
-    if (any(not refs for refs in cdx_map.values())
-        or any(not refs for refs in spdx_map.values())
-        or {ref for refs in cdx_map.values() for ref in refs} != cdx_refs
-        or {ref for refs in spdx_map.values() for ref in refs} != spdx_ids):
-        raise ValueError("incomplete SBOM mapping")
-    return {path: (cdx_map[path], spdx_map[path]) for path in bundle_paths}
+def _reviewed_catalog_matches(
+    catalog: object, inventory: dict, bundle_paths: set[str], source_tree: str,
+    reviewed_preparation: dict[str, object],
+) -> bool:
+    """Reject self-attested inventory claims absent from the bound source tree."""
+    if (not isinstance(catalog, dict)
+        or set(catalog) != {"schema_version", "status", "reviewed_preparation", "components", "files"}
+        or catalog["schema_version"] != _CATALOG_SCHEMA
+        or catalog["status"] != "APPROVED"
+        or not isinstance(catalog["components"], list)
+        or not catalog["components"]
+        or not isinstance(catalog["files"], list)
+        or not catalog["files"]
+        or _HEX40.fullmatch(source_tree) is None
+        or not isinstance(catalog["reviewed_preparation"], dict)
+        or catalog["reviewed_preparation"] != reviewed_preparation):
+        return False
+    components = {}
+    for item in catalog["components"]:
+        if (not isinstance(item, dict) or set(item) != {
+            "id", "name", "version", "license", "license_text_path",
+            "license_text_sha256", "source_uri", "source_sha256",
+        } or not isinstance(item["id"], str)
+            or _SAFE_COMPONENT.fullmatch(item["id"]) is None
+            or item["id"] in components
+            or not _license_path(item["license_text_path"])
+            or not isinstance(item["license_text_sha256"], str)
+            or _HEX64.fullmatch(item["license_text_sha256"]) is None
+            or item["license_text_sha256"] == "0" * 64
+            or any(not isinstance(item[key], str) or not item[key]
+                   or len(item[key]) > 160 or any(ord(char) < 32 for char in item[key])
+                   for key in ("name", "version", "license"))):
+            return False
+        if item["id"] == "nac":
+            if (item["source_uri"] != "git:HEAD"
+                or item["source_sha256"] != "BOUND_SOURCE_TREE"
+                or item["license"] != "AGPL-3.0-or-later"
+                or item["license_text_path"] != "LICENSE"):
+                return False
+        else:
+            uri, digest = item["source_uri"], item["source_sha256"]
+            if not isinstance(uri, str) or len(uri) > 240:
+                return False
+            parsed = urlsplit(uri)
+            if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+                or parsed.password or parsed.query or parsed.fragment
+                or not isinstance(digest, str) or _HEX64.fullmatch(digest) is None
+                or digest == "0" * 64
+                or item["license"].upper() in {
+                    "NOASSERTION", "UNKNOWN", "PENDING", "TBD", "NONE", "N/A",
+                }):
+                return False
+        components[item["id"]] = item
+    if set(components) != {item["id"] for item in inventory["components"]}:
+        return False
+    for item in inventory["components"]:
+        if any(item[key] != components[item["id"]][key] for key in (
+            "name", "version", "license", "license_text_path", "license_text_sha256",
+        )):
+            return False
+    catalog_files = {}
+    for item in catalog["files"]:
+        if (not isinstance(item, dict) or set(item) != {"path", "component_ids"}
+            or not isinstance(item["path"], str) or item["path"] in catalog_files
+            or not isinstance(item["component_ids"], list)
+            or not item["component_ids"]
+            or any(not isinstance(name, str) or name not in components
+                   for name in item["component_ids"])
+            or len(item["component_ids"]) != len(set(item["component_ids"]))):
+            return False
+        catalog_files[item["path"]] = set(item["component_ids"])
+    if set(catalog_files) != bundle_paths:
+        return False
+    return catalog_files == {
+        item["path"]: set(item["component_ids"]) for item in inventory["files"]
+    }
 
 
 def validate_candidate_release(
@@ -325,7 +339,7 @@ def validate_candidate_release(
         if not isinstance(release, dict) or frozenset(release) != _CANDIDATE_FIELDS:
             return blocked
         if (
-            release["schema_version"] != "nac.m365-current-state-read-driver-candidate/v0.1"
+            release["schema_version"] != "nac.m365-current-state-read-driver-candidate/v0.2"
             or release["status"] != "CANDIDATE_BUILT"
             or release["source_commit"] != source_commit
             or release["source_tree"] != source_tree
@@ -371,6 +385,7 @@ def validate_candidate_release(
         with tarfile.open(fileobj=io.BytesIO(source_archive), mode="r:") as archive:
             selected = (
                 "LICENSE", "NOTICE", "src/nac_bff/current_state_read_driver.py",
+                "workflows/contracts/m365-current-state-read-driver-license-catalog.json",
             )
             members = archive.getmembers()
             source_files = {}
@@ -386,6 +401,9 @@ def validate_candidate_release(
                 artifacts["LICENSE"] != source_files["LICENSE"]
                 or not artifacts["NOTICE"].startswith(source_files["NOTICE"])
                 or not source_files["src/nac_bff/current_state_read_driver.py"]
+                or artifacts["license-catalog.json"] != source_files[
+                    "workflows/contracts/m365-current-state-read-driver-license-catalog.json"
+                ]
             ):
                 return blocked
         inputs = {
@@ -410,6 +428,32 @@ def validate_candidate_release(
         cyclonedx = json.loads(artifacts["cyclonedx.json"])
         spdx = json.loads(artifacts["spdx.json"])
         inventory = json.loads(artifacts["license-inventory.json"])
+        catalog = json.loads(artifacts["license-catalog.json"])
+        preparation = json.loads(artifacts["preparation.json"])
+        if (not isinstance(preparation, dict) or set(preparation) != {
+            "schema_version", "status", "source_commit", "source_tree",
+            "build_tool", "build_command", "sbom_commands", "artifacts", "bundle_files",
+        } or preparation["schema_version"]
+            != "nac.m365-current-state-read-driver-preparation/v0.1"
+            or preparation["status"] != "AWAITING_INDEPENDENT_LICENSE_EVIDENCE"
+            or preparation["source_commit"] != source_commit
+            or preparation["source_tree"] != source_tree
+            or preparation["build_tool"] != release["build_tool"]
+            or preparation["build_command"] != release["build_command"]
+            or preparation["sbom_commands"] != release["sbom_commands"]
+            or not isinstance(preparation["artifacts"], dict)
+            or set(preparation["artifacts"]) != {
+                "source.tar", "cyclonedx.json", "spdx.json", "LICENSE", "NOTICE",
+            }
+            or any(preparation["artifacts"][name] != release["artifacts"][name]
+                   for name in ("source.tar", "cyclonedx.json", "spdx.json", "LICENSE"))
+            or preparation["artifacts"]["NOTICE"] != _digest(source_files["NOTICE"])
+            or not isinstance(preparation["bundle_files"], list)
+            or preparation["bundle_files"] != [
+                {"path": item["path"], "sha256": item["sha256"]}
+                for item in sorted(release["bundle_files"], key=lambda entry: entry["path"])
+            ]):
+            return blocked
         if (
             not isinstance(cyclonedx, dict) or cyclonedx.get("bomFormat") != "CycloneDX"
             or not isinstance(cyclonedx.get("components"), list)
@@ -426,13 +470,9 @@ def validate_candidate_release(
         ):
             return blocked
         bundle_paths = {item["path"] for item in release["bundle_files"]}
-        sbom_bindings = _sbom_file_mapping(cyclonedx, spdx, bundle_paths)
-        cdx_refs = {component.get("bom-ref") for component in cyclonedx["components"]
-                    if isinstance(component, dict)}
-        spdx_ids = {
-            package.get("SPDXID") for package in spdx["packages"]
-            if isinstance(package, dict)
-        }
+        sbom_bindings = parse_syft_sboms(cyclonedx, spdx, bundle_paths)
+        cdx_refs = {item["cyclonedx_ref"] for item in sbom_bindings.packages}
+        spdx_ids = {item["spdx_id"] for item in sbom_bindings.packages}
         components = inventory["components"]
         if any(not isinstance(item, dict) or set(item) != _LICENSE_COMPONENT_FIELDS
                for item in components):
@@ -442,8 +482,10 @@ def validate_candidate_release(
                for item in ids) or len(set(ids)) != len(ids):
             return blocked
         if (
-            {item["cyclonedx_ref"] for item in components} != cdx_refs
-            or {item["spdx_id"] for item in components} != spdx_ids
+            {item["cyclonedx_ref"] for item in components if item["cyclonedx_ref"] is not None}
+            != cdx_refs
+            or {item["spdx_id"] for item in components if item["spdx_id"] is not None}
+            != spdx_ids
         ):
             return blocked
         if not any(
@@ -460,25 +502,27 @@ def validate_candidate_release(
                 not _license_path(path)
                 or not isinstance(item["license_text_sha256"], str)
                 or _HEX64.fullmatch(item["license_text_sha256"]) is None
-                or not isinstance(item["cyclonedx_ref"], str)
-                or not item["cyclonedx_ref"]
-                or not isinstance(item["spdx_id"], str)
-                or not item["spdx_id"]
-                or item["cyclonedx_ref"] not in cdx_refs
-                or item["spdx_id"] not in spdx_ids
+                or ((item["cyclonedx_ref"] is None) != (item["spdx_id"] is None))
+                or (item["cyclonedx_ref"] is not None and (
+                    not isinstance(item["cyclonedx_ref"], str)
+                    or not isinstance(item["spdx_id"], str)
+                    or item["cyclonedx_ref"] not in cdx_refs
+                    or item["spdx_id"] not in spdx_ids))
                 or any(not isinstance(item[field], str) or not item[field]
                        for field in ("name", "version", "license"))
                 or any(len(item[field]) > 160 or any(ord(char) < 32 for char in item[field])
                        for field in ("name", "version", "license"))
-                or item["cyclonedx_ref"] in used_cdx_refs
-                or item["spdx_id"] in used_spdx_ids
+                or (item["cyclonedx_ref"] is not None and (
+                    item["cyclonedx_ref"] in used_cdx_refs
+                    or item["spdx_id"] in used_spdx_ids))
             ):
                 return blocked
             if _digest(_candidate_bytes(candidate_root, path, backend)) != item["license_text_sha256"]:
                 return blocked
             license_paths.add(path)
-            used_cdx_refs.add(item["cyclonedx_ref"])
-            used_spdx_ids.add(item["spdx_id"])
+            if item["cyclonedx_ref"] is not None:
+                used_cdx_refs.add(item["cyclonedx_ref"])
+                used_spdx_ids.add(item["spdx_id"])
         if "licenses" in root_names:
             licenses_dir = candidate_root / "licenses"
             if not _candidate_directory(licenses_dir):
@@ -511,18 +555,45 @@ def validate_candidate_release(
         ):
             return blocked
         components_by_id = {item["id"]: item for item in components}
-        for item in files:
-            path = item["path"]
-            expected = (
-                {components_by_id[identifier]["cyclonedx_ref"]
-                 for identifier in item["component_ids"]},
-                {components_by_id[identifier]["spdx_id"]
-                 for identifier in item["component_ids"]},
-            )
-            if sbom_bindings[path] != expected:
-                return blocked
+        packages_by_id = {item["spdx_id"]: item for item in sbom_bindings.packages}
+        for component in components:
+            package_id = component["spdx_id"]
+            if package_id is not None:
+                package = packages_by_id.get(package_id)
+                if (package is None or component["cyclonedx_ref"] != package["cyclonedx_ref"]
+                        or component["name"] != package["name"]
+                        or component["version"] != package["version"]):
+                    return blocked
+        require_inventory_file_attribution(files, components_by_id, sbom_bindings)
+        if not _reviewed_catalog_matches(
+            catalog, inventory, bundle_paths, source_tree,
+            {
+                "driver_source_sha256": _digest(source_files[
+                    "src/nac_bff/current_state_read_driver.py"
+                ]),
+                "resource_contract_sha256": release["resource_contract_sha256"],
+                "build_tool": release["build_tool"],
+                "bundle_files": preparation["bundle_files"],
+                "cyclonedx_sha256": release["artifacts"]["cyclonedx.json"],
+                "spdx_sha256": release["artifacts"]["spdx.json"],
+                "notice_sha256": preparation["artifacts"]["NOTICE"],
+            },
+        ):
+            return blocked
+        expected_notice = source_files["NOTICE"]
+        third_party = [item for item in components if item["id"] != "nac"]
+        if third_party:
+            suffix = "\nThird-party runtime components in this candidate:\n"
+            for item in sorted(third_party, key=lambda entry: entry["id"]):
+                suffix += (
+                    f"{item['name']} {item['version']} — "
+                    f"{item['license']} ({item['license_text_path']})\n"
+                )
+            expected_notice += suffix.encode("utf-8")
+        if artifacts["NOTICE"] != expected_notice:
+            return blocked
     except (OSError, ValueError, KeyError, TypeError, AttributeError, StopIteration,
-            tarfile.TarError, EOFError, ReadDriverBlocked):
+            tarfile.TarError, EOFError, ReadDriverBlocked, SbomMappingError):
         return blocked
     return []
 

@@ -51,14 +51,17 @@
     "binary_and_runtime_file_hashes",
     "cyclonedx_json",
     "spdx_json",
+    "complete_bundle_file_attestation_separate_from_syft_package_discovery",
     "agpl_license_notice",
     "third_party_license_inventory",
+    "reviewed_git_bound_license_catalog_and_source_hashes",
+    "protected_preparation_record_before_release_record",
     "resource_manifest_digest"
   ],
   "side_effects_allowed_offline": {
     "repository_change": true,
     "synthetic_test_files": true,
-    "repository_external_release_candidate": true,
+    "repository_external_release_candidate": false,
     "microsoft_provider_read": false,
     "real_run_gate_consume": false
   },
