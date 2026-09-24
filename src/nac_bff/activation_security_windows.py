@@ -718,6 +718,7 @@ def _security_hashes(
     *,
     require_current_owner: bool,
     require_restrictive_dacl: bool = True,
+    require_current_user_only_dacl: bool = False,
 ) -> tuple[str, str, str]:
     owner = wintypes.LPVOID()
     dacl = wintypes.LPVOID()
@@ -755,6 +756,8 @@ def _security_hashes(
                 dacl_bytes,
                 owner_sid=_sid_string(owner.value),
             )
+        if require_current_user_only_dacl:
+            _require_current_user_only_dacl(dacl.value, dacl_bytes)
         return (
             hashlib.sha256(owner_bytes).hexdigest(),
             hashlib.sha256(descriptor_bytes).hexdigest(),
@@ -811,11 +814,41 @@ def _require_restrictive_dacl(
             not ace_flags & 0x08 or not ace_flags & 0x03
         ):
             raise SecurityBoundaryError("FILE_DACL_TOO_BROAD")
-        if (
-            mask & write_mask
-            and principal not in writable_principals
-        ):
+        if mask & write_mask and principal not in writable_principals:
             raise SecurityBoundaryError("FILE_DACL_TOO_BROAD")
+
+
+def _require_current_user_only_dacl(dacl: int, raw: bytes) -> None:
+    """Require the Issue #748 bundle to grant access only to this Windows SID."""
+    ace_count = int.from_bytes(raw[4:6], "little")
+    current_sid = _current_sid_string()
+    entries: list[tuple[int, str | None]] = []
+    for index in range(ace_count):
+        ace = wintypes.LPVOID()
+        if not advapi32.GetAce(dacl, index, ctypes.byref(ace)):
+            _raise_last_error("FILE_DACL_INVALID")
+        header = ctypes.string_at(ace, 8)
+        ace_type = header[0]
+        ace_size = int.from_bytes(header[2:4], "little")
+        if ace_size < 8:
+            raise SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY")
+        entries.append((ace_type, _sid_string(ace.value + 8) if ace_type == 0 else None))
+    _require_current_user_only_aces(entries, current_sid)
+
+
+def _require_current_user_only_aces(
+    entries: list[tuple[int, str | None]], current_sid: str,
+) -> None:
+    current_grant = False
+    for ace_type, principal in entries:
+        if ace_type not in {0, 1}:
+            raise SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY")
+        if ace_type == 0:
+            if principal != current_sid:
+                raise SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY")
+            current_grant = True
+    if not current_grant:
+        raise SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY")
 
 
 def _duplicate_for_python(handle: int) -> BinaryIO:
@@ -845,6 +878,7 @@ def _snapshot(
     require_current_owner: bool = True,
     require_restrictive_dacl: bool = True,
     require_single_link: bool = True,
+    require_current_user_only_dacl: bool = False,
 ) -> BoundFileSnapshot:
     information = BY_HANDLE_FILE_INFORMATION()
     if not kernel32.GetFileInformationByHandle(handle, ctypes.byref(information)):
@@ -868,6 +902,7 @@ def _snapshot(
         handle,
         require_current_owner=require_current_owner,
         require_restrictive_dacl=require_restrictive_dacl,
+        require_current_user_only_dacl=require_current_user_only_dacl,
     )
     canonical = _final_path(handle).casefold().encode("utf-8")
     return BoundFileSnapshot(
@@ -1072,6 +1107,9 @@ class WindowsSecureDirectorySession:
                 },
                 require_restrictive_dacl=True,
                 require_single_link=not system_toolchain,
+                require_current_user_only_dacl=(
+                    purpose == "issue748-read-driver-bundle-current-user-only"
+                ),
             )
             if snapshot.volume_serial != self.binding.volume_serial:
                 raise SecurityBoundaryError("SECURE_CHILD_VOLUME_MISMATCH")
@@ -1345,6 +1383,17 @@ class WindowsActivationSecurityBackend:
 
     def current_operator_binding(self) -> OperatorBinding:
         return OperatorBinding(hashlib.sha256(_current_sid_bytes()).hexdigest())
+
+    def validate_current_user_only_directory(self, path: Path) -> SecureDirectoryBinding:
+        """Bind a release directory and reject every non-user allow ACE."""
+        with self.open_secure_directory(path, create=False) as session:
+            _security_hashes(
+                session._handles[-1],
+                require_current_owner=True,
+                require_restrictive_dacl=True,
+                require_current_user_only_dacl=True,
+            )
+            return session.binding
 
     def inspect_private_path(
         self, path: Path, purpose: str

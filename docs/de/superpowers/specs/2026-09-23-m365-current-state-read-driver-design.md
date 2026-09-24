@@ -1,6 +1,6 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose
 
-Status: Design zur Owner-Review; weder Treiber-Release noch realer Providerlauf freigegeben
+Status: Spec und Plan für die lokale Implementierung freigegeben; weder Treiber-Release noch realer Providerlauf freigegeben
 
 Datum: 23. September 2026
 
@@ -30,19 +30,25 @@ affected_artifacts:
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
+  - src/nac_bff/current_state_read_driver_release.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
+  - src/nac_bff/activation_security_windows.py
   - scripts/build_m365_current_state_read_driver.py
   - scripts/validate_m365_current_state_read_driver.py
+  - scripts/quality_gate.py
   - scripts/validate_m365_current_state_access_diagnostic.py
   - scripts/validate_spec_traceability.py
   - tests/test_m365_current_state_read_driver.py
+  - tests/test_build_m365_current_state_read_driver.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
+  - tests/test_activation_security_windows.py
   - tests/test_spec_traceability.py
   - docs/de/m365-current-state-access-diagnostic.md
   - docs/en/m365-current-state-access-diagnostic.md
   - .github/workflows/windows-portability.yml
+  - assets/docs/generic-workbench/VIS-721-manifest.json
 acceptance_ids:
   - AC-748-RD-01
   - AC-748-RD-02
@@ -55,6 +61,7 @@ acceptance_ids:
 validation_commands:
   - python scripts/validate_m365_current_state_read_driver.py
   - python -m unittest discover -s tests -p test_m365_current_state_read_driver.py
+  - python -m unittest discover -s tests -p test_build_m365_current_state_read_driver.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py

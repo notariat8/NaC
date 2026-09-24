@@ -91,6 +91,56 @@ class WindowsActivationSecurityBackendTests(unittest.TestCase):
     def setUp(self) -> None:
         self.backend = WindowsActivationSecurityBackend()
 
+    def test_issue748_bundle_dacl_requires_only_current_user_grants(self) -> None:
+        current = "S-1-5-21-synthetic-user"
+        security_windows._require_current_user_only_aces([(0, current)], current)
+        for entries in (
+            [(0, current), (0, "S-1-5-32-544")],
+            [(0, "S-1-5-18")],
+            [(1, "S-1-5-18")],
+            [(5, current)],
+        ):
+            with self.subTest(entries=entries), self.assertRaisesRegex(
+                SecurityBoundaryError, "FILE_DACL_NOT_CURRENT_USER_ONLY"
+            ):
+                security_windows._require_current_user_only_aces(entries, current)
+
+    def test_issue748_bundle_purpose_invokes_strict_dacl_check(self) -> None:
+        with _private_test_directory(self.backend) as directory:
+            path = _create_private_file(self.backend, directory, "reader.exe", b"synthetic")
+            with patch.object(
+                security_windows,
+                "_require_current_user_only_dacl",
+                side_effect=SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY"),
+            ) as strict_check:
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "FILE_DACL_NOT_CURRENT_USER_ONLY"
+                ):
+                    self.backend.inspect_private_path(
+                        path, purpose="issue748-read-driver-bundle-current-user-only"
+                    )
+                strict_check.assert_called_once()
+
+    def test_issue748_bundle_directory_invokes_strict_dacl_check(self) -> None:
+        with _private_test_directory(self.backend) as directory:
+            with patch.object(
+                security_windows,
+                "_require_current_user_only_dacl",
+                side_effect=SecurityBoundaryError("FILE_DACL_NOT_CURRENT_USER_ONLY"),
+            ) as strict_check:
+                with self.assertRaisesRegex(
+                    SecurityBoundaryError, "FILE_DACL_NOT_CURRENT_USER_ONLY"
+                ):
+                    self.backend.validate_current_user_only_directory(directory)
+                strict_check.assert_called_once()
+
+    def test_issue748_general_private_directory_is_not_user_only_release(self) -> None:
+        with _private_test_directory(self.backend) as directory:
+            with self.assertRaisesRegex(
+                SecurityBoundaryError, "FILE_DACL_NOT_CURRENT_USER_ONLY"
+            ):
+                self.backend.validate_current_user_only_directory(directory)
+
     def test_private_file_is_measured_from_bound_handle(self) -> None:
         with _private_test_directory(self.backend) as directory:
             payload = b'{"synthetic":true}\n'

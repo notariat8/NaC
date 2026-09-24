@@ -1,6 +1,6 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose – Implementierungsplan
 
-Status: Plan zur Owner-Review; keine Implementierungs- oder Release-Freigabe
+Status: Plan für test-first Implementierung freigegeben; keine Treiber-Release- oder Real-Read-Freigabe
 
 Datum: 23. September 2026
 
@@ -18,7 +18,7 @@ Delivery Mode: Protected PR. Risk Gate: Human Approval.
 2. **Geschlossene Ressourcen:** `workflows/contracts/m365-current-state-read-driver-resources.contract.json` definiert die sechs festen Microsoft-GET-Familien, Origins, API-Versionen, Pfadschablonen, zulässige gebundene Platzhalter, feste Query-Felder, Responseprojektionen und Obergrenzen. Für den Request-Log-Port ist ausschließlich Application-Insights-Query-GET mit einem kompilierten, parametergebundenen KQL-Template zulässig. Fehlt für Entra- oder SharePoint-Evidence eine vollständige Projektion mit einem GET, blockiert der Port; die Zählermatrix des #748-Vertrags wird nicht erweitert.
 3. **Test-first Bindung:** `tests/test_m365_current_state_read_driver.py`, `tests/test_m365_current_state_access_gate.py`, `tests/test_spec_traceability.py` und Negativfälle im bestehenden #748-Diagnosetest prüfen zunächst Rotfälle für Dummy-/fehlende Source-, Binary-, Bundle-, CycloneDX-, SPDX-, korrespondierende Quellcode- oder Lizenzbelege und unvollständiges Drittanbieter-Attributionsinventar; unbekannte Runtime-Datei; falschen Owner/DACL/Datei-ID/Hash/Hardlink/Reparse; gefälschte Ressourcenschablone; falsche Methode, Host, Query, Status, `Location`, `nextLink`, Retry, Login-/Refresh-Versuch und Roh-/PII-Ausgabe. Die Governance-Fixtures belegen Same-Principal-Aliase ohne Vier-Augen- oder Berechtigungserweiterung, blockierte unzitierte Zwei-Personen-Behauptungen, `OWNER_SOLO_APPROVAL` mit `four_eyes_satisfied=false` und `BLOCKED_SINGLE_PRINCIPAL` bei zitierter anwendbarer Pflicht. Die Read-Fixtures zählen vier Microsoft-GETs für zwei `SPFX_SUBJECT_MISSING`-Erhebungen beziehungsweise zwölf für jede andere vollständige Zweifacherhebung und null weitere Requests nach blockierter Projektion. Auch Request-URL, Query und Ziel-ID dürfen nicht im Fehler oder Log erscheinen. Die Tests bleiben hermetisch und benutzen Fakes.
 4. **Schmale Python-Quelle:** `src/nac_bff/current_state_read_driver.py` implementiert ausschließlich die geschlossenen Operationen und die Redaktionsprojektionen. HTTP-Transport und Authentisierungsfähigkeit sind getrennte Interfaces. Die Microsoft-Port-Factory bleibt ohne nachgewiesene No-Refresh-Fähigkeit `BLOCKED_NO_REFRESH_CAPABILITY`, bevor sie Credentials, Authentisierung oder Netzwerk berührt. Weder Azure- noch M365-CLI wird als stillschweigender Ersatz eingesetzt. Die bestehende #748-Komposition und der Prozess-Adapter werden so ergänzt, dass sie den Release-Beleg und alle Bundle-Dateien vor dem One-Shot-Consume tatsächlich verifizieren.
-5. **Windows-Build:** `scripts/build_m365_current_state_read_driver.py` pinnt Python, ein lizenzgeprüftes Build-Werkzeug und Abhängigkeiten. Ein Verzeichnis-Bundle ist Ausgangspunkt; ein Ein-Datei-Bundle mit ungebundener temporärer Entpackung ist ausgeschlossen. Der Build erzeugt repository-extern ein geschlossenes File-Manifest, Source-/Tool-/Commit-/Tree-Bindung, Binary-Hashes, klassische CycloneDX-/SPDX-SBOMs, korrespondierenden AGPL-Quellcode sowie sichtbare NaC- und Drittanbieter-Attribution mit Lizenztexten. Der Release-Validator `scripts/validate_m365_current_state_read_driver.py` liest diese Dateien selbst, gleicht das Lizenzinventar mit allen gebündelten Komponenten ab und prüft Source-/Runtime-Korrespondenz. Ohne unabhängigen Build-Nachweis wird keine Byte-Reproduzierbarkeit behauptet.
+5. **Windows-Build:** `scripts/build_m365_current_state_read_driver.py` pinnt Python, ein lizenzgeprüftes Build-Werkzeug und Abhängigkeiten. Ein Verzeichnis-Bundle ist Ausgangspunkt; ein Ein-Datei-Bundle mit ungebundener temporärer Entpackung ist ausgeschlossen. Der Build erzeugt repository-extern ein geschlossenes File-Manifest, Source-/Tool-/Commit-/Tree-Bindung, Binary-Hashes, klassische CycloneDX-/SPDX-SBOMs, korrespondierenden AGPL-Quellcode sowie sichtbare NaC- und Drittanbieter-Attribution mit Lizenztexten. Der Release-Validator `scripts/validate_m365_current_state_read_driver.py` liest diese Dateien selbst und gleicht das Lizenzinventar mit allen gebündelten Komponenten ab. Der Status `CANDIDATE_BUILT` belegt keine unabhängig verifizierte Source-/Binary-Korrespondenz; ohne einen solchen Nachweis wird weder Byte-Reproduzierbarkeit noch `OFFLINE_REVIEWABLE` behauptet.
 6. **Integration und Doku:** Die vorhandene `nac`-CLI bleibt Bedienkante; keine neue freie URL-/KQL-/Token-Option. DE/EN-[Diagnoseanleitung](../../m365-current-state-access-diagnostic.md), Spec-Traceability, AI-SBOM-Negativentscheidung, Lizenz-/SBOM-Dokumentation und Windows-CI werden synchronisiert. Realer Providerzugriff, SPFx-/BFF-Deployment und #739/#632-Pfade bleiben ausgeschlossen.
 7. **Review und Abnahme:** `implement -> review -> fix` mit unabhängiger Policy-, Docs-Parity- und Validation-Sicht; danach fokussierte Negativtests, komplette lokale Windows-Testsuite, Graft Build/Check und Strict Doctor. Der vollständige `main...HEAD`-Diff samt Commit- und Dateiliste wird geprüft. Separate Vorwärtscommits, Push ohne Force-Push und alle verpflichtenden Remote-CI-Checks. Der PR bleibt Draft und stoppt vor Treiber-Release-Freigabe oder realem Read.
 
@@ -39,10 +39,12 @@ Delivery Mode: Protected PR. Risk Gate: Human Approval.
 
 ```text
 python -m unittest discover -s tests -p test_m365_current_state_read_driver.py
+python -m unittest discover -s tests -p test_build_m365_current_state_read_driver.py
 python -m unittest discover -s tests -p test_m365_current_state_access_gate.py
 python -m unittest discover -s tests -p test_m365_current_state_access_diagnostic.py
 python -m unittest discover -s tests -p test_spec_traceability.py
 python scripts/validate_m365_current_state_read_driver.py
+python scripts/validate_m365_current_state_read_driver.py --candidate <geschützter-externer-Kandidatenpfad>
 python scripts/validate_m365_current_state_access_diagnostic.py
 python scripts/validate_spec_traceability.py
 python scripts/validate_language_parity.py
@@ -60,4 +62,4 @@ git log --oneline origin/main..HEAD
 
 ## Plan-Review vor Implementierung
 
-Policy-Review prüft Lizenz, Datenschutz, AVV-/DPA- und Providergrenze; Docs-Review prüft DE/EN-Parität und Links; Validation-Review prüft die Gegenbeispiele und ob Gates vor Credential-/Provider-I/O laufen. Befunde werden vor einer Implementierungsfreigabe in Spec und Plan korrigiert. Kein Code, Login oder realer Diagnose-Lauf in dieser Phase.
+Policy-Review prüft Lizenz, Datenschutz, AVV-/DPA- und Providergrenze; Docs-Review prüft DE/EN-Parität und Links; Validation-Review prüft die Gegenbeispiele und ob Gates vor Credential-/Provider-I/O laufen. Befunde werden im Implementierungs-Review korrigiert. Der Befehl mit `--candidate` ist erst für ein tatsächlich erzeugtes, geschütztes Paket ausführbar; der reine Quellvertragstest ersetzt ihn nicht. In dieser Arbeit erfolgen weder Login noch realer Diagnose-Lauf.

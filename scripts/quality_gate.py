@@ -457,6 +457,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "m365_current_state_read_driver",
+                    "M365 Current-State Read Driver",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_current_state_read_driver.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [
