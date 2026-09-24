@@ -129,7 +129,13 @@ Verträge. Ein tatsächliches externes Paket muss zusätzlich mit `--candidate
 <absoluter-pfad>` gegen den aktuellen Git-Commit, den Source-Archivinhalt,
 sämtliche Bundle-Dateien, die Windows-Eigentümer-/DACL-Bindung sowie
 CycloneDX-, SPDX- und Lizenzbelege geprüft werden. Ein bestandener Quelltest
-ist kein Paketnachweis. Der Produktionsport blockiert weiterhin mit
+ist kein Paketnachweis. Die Paketvorbereitung erzeugt nur
+`AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; erst ein separat geprüfter,
+im Git-Tree gebundener [Lizenzkatalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
+mit Status `APPROVED` und geschützte externe Lizenzbelege erlauben die
+Finalisierung. Syft-entdeckte Pakete und das vollständige Bundle-Dateimanifest
+werden getrennt abgeglichen. In diesem Schritt wird kein neues Paket gebaut.
+Der Produktionsport blockiert weiterhin mit
 `BLOCKED_NO_REFRESH_CAPABILITY`; es gibt keine Freigabe für einen realen Read.
 
 - Autorisierung vor Port-Factory und erneut vor jedem Read;

@@ -124,8 +124,13 @@ scripts/validate_m365_current_state_read_driver.py` checks the checked-in
 contracts only. An actual external package must additionally pass `--candidate
 <absolute-path>` against the current Git commit, source archive contents,
 every bundle file, Windows owner/DACL binding, and CycloneDX, SPDX, and license
-evidence. A passing source check is not proof of a package. The production
-port still blocks with `BLOCKED_NO_REFRESH_CAPABILITY`; no real read is approved.
+evidence. A passing source check is not proof of a package. Package
+preparation produces only `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; finalization
+requires a separately reviewed, Git-tree-bound [license catalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
+with status `APPROVED` and protected external license evidence. Syft-discovered
+packages and the complete bundle-file manifest are reconciled separately. No
+new package is built in this step. The production port still blocks with
+`BLOCKED_NO_REFRESH_CAPABILITY`; no real read is approved.
 
 - authorization before the port factory and again before every read;
 - seven closed ports, no general provider or search interface;

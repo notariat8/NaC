@@ -1,6 +1,6 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose
 
-Status: Spec und Plan für die lokale Implementierung freigegeben; weder Treiber-Release noch realer Providerlauf freigegeben
+Status: Spec und Plan freigegeben; Offline-Builder-Reparatur in Draft-PR, Paketkandidat, Treiber-Release und realer Providerlauf nicht freigegeben
 
 Datum: 23. September 2026
 
@@ -23,14 +23,19 @@ review_gates:
   - Platform
   - Policy
 affected_artifacts:
+  - AGENTS.md
+  - .codex/agents/nac-policy-reviewer.toml
+  - .pi/agents/nac-policy-reviewer.md
   - docs/de/superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md
   - docs/en/superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md
   - docs/de/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - docs/en/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
+  - workflows/contracts/m365-current-state-read-driver-license-catalog.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
   - src/nac_bff/current_state_read_driver_release.py
+  - src/nac_bff/current_state_read_driver_sbom.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
   - src/nac_bff/activation_security_windows.py
@@ -41,12 +46,18 @@ affected_artifacts:
   - scripts/validate_spec_traceability.py
   - tests/test_m365_current_state_read_driver.py
   - tests/test_build_m365_current_state_read_driver.py
+  - tests/test_m365_current_state_read_driver_sbom.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_activation_security_windows.py
   - tests/test_spec_traceability.py
   - docs/de/m365-current-state-access-diagnostic.md
   - docs/en/m365-current-state-access-diagnostic.md
+  - docs/de/sbom-for-ai.md
+  - docs/en/sbom-for-ai.md
+  - docs/de/sbom-products.md
+  - docs/en/sbom-products.md
+  - policies/sbom-policy.yaml
   - .github/workflows/windows-portability.yml
   - assets/docs/generic-workbench/VIS-721-manifest.json
 acceptance_ids:
@@ -60,8 +71,10 @@ acceptance_ids:
   - AC-748-RD-08
 validation_commands:
   - python scripts/validate_m365_current_state_read_driver.py
+  - python scripts/validate_m365_current_state_read_driver.py --candidate <geschützter-externer-Kandidatenpfad>
   - python -m unittest discover -s tests -p test_m365_current_state_read_driver.py
   - python -m unittest discover -s tests -p test_build_m365_current_state_read_driver.py
+  - python -m unittest discover -s tests -p test_m365_current_state_read_driver_sbom.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
@@ -79,12 +92,15 @@ validation_commands:
 Der bestehende [#748-Diagnosevertrag](../../../../workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml) verlangt vor einem realen Read einen reviewbaren Treiber. Die derzeitige Komposition attestiert nur den externen ausführbaren Pfad und prüft Source-, klassisches SBOM- und Ressourcen-Digests lediglich auf Hex-Format. Die hier entworfene Release-Grenze macht diese Behauptungen anhand echter Artefakte prüfbar. Sie dient weiterhin ausschließlich dem synthetischen Workspace `notary_team_01` und der Teams-App „NaC Vorgangsansicht“.
 
 Dieses Design autorisiert weder einen Microsoft-Read noch das Konsumieren des einmaligen Diagnose-Gates. Der terminale Issue-#739-Lauf und Issue #632 bleiben unberührt.
+Der `--candidate`-Befehl in der Traceability ist ein **späteres** Paket-Gate und
+wird unter der aktuellen Reparaturfreigabe nicht ausgeführt; ohne reales,
+separat genehmigtes Paket bleibt AC-748-RD-01 auf Artefaktebene offen.
 
 ## Scope und Designentscheidungen
 
 1. Eine eigene, versionierte Python-Quelle implementiert ausschließlich die neun bereits geschlossenen Operationen des [#748-Vertrags](../../../../workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml). `local_git_gate`, `github_gate` und `client_observation_receipt` benutzen ihre bestehenden lokalen beziehungsweise gesondert credential-write-geschützten Kanten; keine dieser Operationen erhält Microsoft-Netzwerkfähigkeit.
 2. Für Windows entsteht ein eigenständiges, attestiertes ausführbares Release aus einem gepinnten Build-Werkzeug. Ein Ein-Datei-Bundle mit ungebundener Entpackung in temporäre Pfade genügt nicht. Bei einem Verzeichnis-Bundle müssen ausführbarer Einstiegspunkt **und jede** geladene Runtime-/Bibliotheksdatei anhand eines geschlossenen Manifests, Eigentümer, Current-User-only-DACL, Datei-ID, Hardlink- und Reparse-Grenze geprüft werden. Tool, Version, Build-Befehl, Source-Commit/Tree, Eingabe-Digests und Binary-Digests werden im Release-Beleg gebunden; fehlende reproduzierbare Bytegleichheit darf nicht als Reproduzierbarkeit behauptet werden.
-3. Die Release-Bindung umfasst tatsächlich erzeugte CycloneDX-JSON- und SPDX-JSON-SBOMs, die AGPL-3.0-or-later-Lizenz der NaC-Quelle, deren korrespondierenden Quellcode und die Lizenzen aller eingebundenen Laufzeitkomponenten. Bei Verteilung sind [NOTICE](../../../../NOTICE), Drittanbieter-Attribution und Lizenztexte mitzuliefern. Der Validator liest und hasht die Artefakte selbst und gleicht die Lizenzinventarliste mit den tatsächlich gebündelten Komponenten ab. Ein frei eingetragener 64-Zeichen-Wert oder eine bloße `GET`-Behauptung reicht nicht.
+3. Die Release-Bindung umfasst tatsächlich erzeugte CycloneDX-JSON- und SPDX-JSON-SBOMs, die AGPL-3.0-or-later-Lizenz der NaC-Quelle, deren korrespondierenden Quellcode und die Lizenzen aller eingebundenen Laufzeitkomponenten. Syft 1.52.0 meldet Windows-Binary-Pakete über `syft:location:*:path`, SPDX-Paket-/Dateibeziehungen und nicht alle gebündelten Dateien als Paket: Der Validator gleicht die beiden Formate für entdeckte Pakete ab, attestiert **jede** Bundle-Datei separat und verlangt für nicht entdeckte Dateien eine ausdrückliche Zuordnung. Er erfindet keine SBOM-Pakete oder -Dateikanten. Bei Verteilung sind [NOTICE](../../../../NOTICE), Drittanbieter-Attribution und Lizenztexte mitzuliefern. Ein operatorseitiges Inventar samt Hash reicht allein nicht: Jede Lizenz-, Quell- und Dateizuordnung muss zusätzlich einem separat versionierten, reviewten [Lizenzkatalog](../../../../workflows/contracts/m365-current-state-read-driver-license-catalog.json) entsprechen. Solange dessen Status `PENDING` ist, blockiert die Finalisierung.
 4. Ein kanonisches Ressourcenmanifest bindet pro Port die exakte Kombination aus HTTPS-Origin, API-Version, Pfadschablone, erlaubten Platzhaltern, festgelegter Query-Struktur, Ausgabefeldern und maximal einem GET pro Erhebung. Platzhalterwerte stammen ausschließlich aus geschützten, bereits gebundenen Target-Inputs, nie aus CLI-Argumenten, Redirects, Antwort-URLs oder freier Suche. Paginierung, `$batch`, allgemeine Tenant-/Ressourcenlisten und beliebige KQL-Strings sind ausgeschlossen.
 5. Ein eigener HTTP-Transport akzeptiert nur `GET`, keinen Body, keinen Redirect und keinen Retry. Unerwartete HTTP-Statuswerte, `Location`, Pagination-Links, Authentifizierungs-Challenges, größenüberschreitende oder nicht redigierbare Antworten blockieren vor einem weiteren Request. Rohantworten, Header, Tokens, Request-URLs und -Querys, Ziel-IDs und personenbezogene Daten werden weder ausgegeben noch persistiert – auch nicht in Fehlermeldungen oder Prozesslogs. Die vorhandenen reduzierten Port-Schemas bleiben exakt.
 6. Die Microsoft-Authentifizierung ist eine gesonderte Fähigkeit. Die bestehende Azure-/M365-CLI darf nicht als No-Refresh-Beleg gelten, weil sie vor einem GET intern Token erneuern kann. Solange kein bestehender Kanal die Nicht-Erneuerung technisch und testbar garantiert, ist die Microsoft-Transport-Factory deaktiviert und endet **vor** Credential-, Authentifizierungs- und Providerzugriff mit `BLOCKED_NO_REFRESH_CAPABILITY`. Weder Tokenexport/-import noch Browser-, Broker- oder Gerätecode-Login ist ein Fallback.
@@ -110,6 +126,7 @@ Microsoft dokumentiert die [Teams-Tab-GET-API](https://learn.microsoft.com/en-us
 - Ein GET kann im aufgerufenen CLI-Client einen Refresh auslösen. Deshalb werden `az rest` und M365-CLI nicht ungeprüft als produktiver Transport eingehängt; ein Offline-Mock beweist dies ebenfalls nicht.
 - Ein einzelner GET kann für einen Port nicht alle benötigten Fakten liefern. Dann lautet das Ergebnis `BLOCKED_RESOURCE_PROJECTION_INCOMPLETE`; eine zusätzliche Abfrage, ein POST-Batch oder eine verallgemeinerte Suche wird nicht improvisiert.
 - Ein Build-Bundle kann Bibliotheken außerhalb des attestierten Einstiegs enthalten. Ohne vollständigen Bundle- und Lizenz-/SBOM-Nachweis lautet das Ergebnis `BLOCKED_DRIVER_RELEASE_BINDING`.
+- Die Vorbereitung erzeugt nur ein Current-User-only-Bundle mit `preparation.json` und dem Status `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, aber keinen Release-Beleg. Die erste Vorbereitung ist Review-Evidence; nach Freigabe des Katalogs auf einem neuen Commit muss eine frische Vorbereitung mit **identischen** Datei-, Tool-, SBOM-, Treiberquell- und Ressourcen-Hashes erfolgen. Die Finalisierung braucht den im Git-Tree gebundenen, ausdrücklich reviewten Lizenzkatalog und geschützte externe Lizenztexte. Ein Katalogeintrag ist ein nachvollziehbarer Review-Nachweis, keine automatische Authentizitätsprüfung eines fremden Download-Servers. Ohne unabhängige Prüfung seiner Quell-Hashes und Lizenztexte bleibt `BLOCKED_LICENSE_PROVENANCE`; in diesem Auftrag wird kein neuer Paketkandidat gebaut.
 - Ein aktiver Clientbeleg beweist weder einen Request im BFF noch vorhandene Request-Telemetrie. Fehlende, nicht korrelationsgebundene oder nicht redigierbare Log-Evidence blockiert; sie wird nicht zu `BFF_REQUEST_NOT_OBSERVED` geraten.
 - Die Konto-/Principal-Regeln des #748-Gates gelten unverändert. Ohne konkret zitierte anwendbare externe Zwei-Personen-Pflicht ist `OWNER_SOLO_APPROVAL` zulässig und dokumentiert `four_eyes_satisfied=false`. Eine konkret zitierte anwendbare Pflicht mit nur einem Principal blockiert `BLOCKED_SINGLE_PRINCIPAL`. Verschiedene Accounts desselben Principals sind keine Vier-Augen-Trennung und erweitern keine Providerberechtigung.
 

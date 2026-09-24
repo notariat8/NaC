@@ -17,8 +17,15 @@ open source or subscription-based.
 | --- | --- | --- | --- | --- |
 | Python component SBOM | `cyclonedx-python` | CycloneDX JSON | Yes | No |
 | Filesystem/artifact SBOM | `syft` | SPDX JSON | Yes | No |
+| Issue #748 Windows binary bundle | `syft` | CycloneDX JSON and SPDX JSON of the same sealed bundle | Yes | No |
 | CI execution | GitHub Actions | Artifact export | No (platform service) | No (basic use) |
 | Extended security analysis | GitHub Advanced Security | Security features | No | Yes (optional) |
+
+The narrow bundle exception is specified in the [SBOM policy](../../policies/sbom-policy.yaml).
+`cyclonedx-python` describes the Python environment rather than that same
+frozen Windows binary bundle. For the Issue #748 bundle, both Syft formats
+must therefore be reconciled, every file separately attested, and license
+and file attribution independently reviewed.
 
 ## SBOM For AI
 

@@ -1,6 +1,6 @@
 # Versioned read-only driver for the Teams current-state diagnostic
 
-Status: Specification and plan approved for local implementation; neither driver release nor real provider run approved
+Status: Specification and plan approved; offline builder repair in Draft PR, package candidate, driver release, and real provider run not approved
 
 Date: September 23, 2026
 
@@ -23,14 +23,19 @@ review_gates:
   - Platform
   - Policy
 affected_artifacts:
+  - AGENTS.md
+  - .codex/agents/nac-policy-reviewer.toml
+  - .pi/agents/nac-policy-reviewer.md
   - docs/de/superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md
   - docs/en/superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md
   - docs/de/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - docs/en/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
+  - workflows/contracts/m365-current-state-read-driver-license-catalog.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
   - src/nac_bff/current_state_read_driver_release.py
+  - src/nac_bff/current_state_read_driver_sbom.py
   - src/nac_bff/current_state_access_adapters.py
   - src/nac_bff/current_state_access_composition.py
   - src/nac_bff/activation_security_windows.py
@@ -41,12 +46,18 @@ affected_artifacts:
   - scripts/validate_spec_traceability.py
   - tests/test_m365_current_state_read_driver.py
   - tests/test_build_m365_current_state_read_driver.py
+  - tests/test_m365_current_state_read_driver_sbom.py
   - tests/test_m365_current_state_access_diagnostic.py
   - tests/test_m365_current_state_access_gate.py
   - tests/test_activation_security_windows.py
   - tests/test_spec_traceability.py
   - docs/de/m365-current-state-access-diagnostic.md
   - docs/en/m365-current-state-access-diagnostic.md
+  - docs/de/sbom-for-ai.md
+  - docs/en/sbom-for-ai.md
+  - docs/de/sbom-products.md
+  - docs/en/sbom-products.md
+  - policies/sbom-policy.yaml
   - .github/workflows/windows-portability.yml
   - assets/docs/generic-workbench/VIS-721-manifest.json
 acceptance_ids:
@@ -60,8 +71,10 @@ acceptance_ids:
   - AC-748-RD-08
 validation_commands:
   - python scripts/validate_m365_current_state_read_driver.py
+  - python scripts/validate_m365_current_state_read_driver.py --candidate <protected-external-candidate-path>
   - python -m unittest discover -s tests -p test_m365_current_state_read_driver.py
   - python -m unittest discover -s tests -p test_build_m365_current_state_read_driver.py
+  - python -m unittest discover -s tests -p test_m365_current_state_read_driver_sbom.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
@@ -79,12 +92,15 @@ validation_commands:
 The existing [#748 diagnostic contract](../../../../workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml) requires a reviewable driver before a real read. The current composition attests only the external executable path and checks source, classic SBOM, and resource digests merely for hexadecimal shape. This design makes those claims verifiable against actual release artifacts. It remains limited to the synthetic `notary_team_01` workspace and the “NaC Vorgangsansicht” Teams app.
 
 This design authorizes neither a Microsoft read nor consumption of the one-shot diagnostic gate. Terminal Issue #739 and Issue #632 remain separate.
+The `--candidate` command in traceability is a **later** package gate and is
+not run under the current repair approval; without a real, separately approved
+package, AC-748-RD-01 remains open at artifact level.
 
 ## Scope and design decisions
 
 1. Separate versioned Python source implements only the nine already closed operations in the [#748 contract](../../../../workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml). `local_git_gate`, `github_gate`, and `client_observation_receipt` retain their local or separately credential-write-guarded edges; none receives Microsoft network capability.
 2. Windows receives a standalone attested executable release built with a pinned tool. A one-file bundle that unpacks into unbound temporary paths is insufficient. For a directory bundle, the entry executable **and every** loaded runtime/library file must be checked against a closed manifest, owner, current-user-only DACL, file identity, hardlink, and reparse boundary. Tool, version, build command, source commit/tree, input digests, and binary digests are bound in the release record; reproducibility must not be claimed without byte-for-byte replay.
-3. Release binding includes actually generated CycloneDX JSON and SPDX JSON SBOMs, the AGPL-3.0-or-later license and corresponding NaC source, and licenses of all bundled runtime components. Distribution must include [NOTICE](../../../../NOTICE), third-party attribution, and license texts. The validator reads and hashes the artifacts itself and compares the license inventory with actually bundled components. A user-entered 64-character value or a bare `GET` assertion is insufficient.
+3. Release binding includes actually generated CycloneDX JSON and SPDX JSON SBOMs, the AGPL-3.0-or-later license and corresponding NaC source, and licenses of all bundled runtime components. Syft 1.52.0 reports Windows binary packages using `syft:location:*:path` and SPDX package/file relationships, but does not identify every bundled file as a package. The validator reconciles both formats for discovered packages, attests **every** bundle file separately, and requires explicit attribution of undiscovered files. It invents no SBOM packages or file edges. Distribution must include [NOTICE](../../../../NOTICE), third-party attribution, and license texts. An operator inventory and hashes alone are insufficient: each license, source, and file attribution must also match a separately versioned and reviewed [license catalog](../../../../workflows/contracts/m365-current-state-read-driver-license-catalog.json). Finalization blocks while its status is `PENDING`.
 4. A canonical resource manifest binds each port's exact HTTPS origin, API version, path template, allowed placeholders, fixed query structure, output fields, and at most one GET per acquisition. Placeholders come only from protected, already-bound target inputs, never CLI arguments, redirects, response URLs, or open search. Pagination, `$batch`, broad tenant/resource listing, and arbitrary KQL are excluded.
 5. A dedicated HTTP transport accepts only `GET`, no body, redirect, or retry. Unexpected HTTP status, `Location`, pagination links, authentication challenges, oversized or non-redactable responses block before another request. Raw responses, headers, tokens, request URLs and queries, target IDs, and personal data are neither emitted nor persisted, including in errors or process logs. The existing reduced port schemas remain exact.
 6. Microsoft authentication is a separate capability. Existing Azure/M365 CLIs are not evidence of no-refresh behavior because they may refresh internally before a GET. Until an established channel technically and testably guarantees no refresh, the Microsoft transport factory is disabled and ends **before** credential, authentication, or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`. Token export/import, browser, broker, or device-code login is not a fallback.
@@ -110,6 +126,7 @@ Microsoft documents [Teams tab GET](https://learn.microsoft.com/en-us/graph/api/
 - An apparent GET in a CLI may trigger a refresh. `az rest` and the M365 CLI are therefore not connected as production transport without proof; an offline mock cannot supply that proof.
 - One GET may not provide all facts for a port. The outcome is then `BLOCKED_RESOURCE_PROJECTION_INCOMPLETE`; no extra request, POST batch, or broader search is improvised.
 - A bundle may contain libraries outside the attested entry executable. Without full bundle and license/SBOM proof, the outcome is `BLOCKED_DRIVER_RELEASE_BINDING`.
+- Preparation produces only a current-user-only bundle and `preparation.json` with `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, not a release record. The first preparation is review evidence; once the catalog is approved on a new commit, a fresh preparation with **identical** file, tool, SBOM, driver-source, and resource digests is required. Finalization needs the reviewed license catalog bound to the Git tree and protected external license texts. A catalog entry is reviewable evidence, not automatic authenticity verification of a third-party download server. Until its source hashes and license texts are independently checked, `BLOCKED_LICENSE_PROVENANCE` applies; no new package candidate is built under this approval.
 - A client receipt proves neither a BFF request nor request telemetry. Missing, uncorrelated, or non-redactable log evidence blocks; it is not guessed to be `BFF_REQUEST_NOT_OBSERVED`.
 - The #748 account/principal rules remain unchanged. Without a specifically cited applicable external two-person duty, `OWNER_SOLO_APPROVAL` is permitted and records `four_eyes_satisfied=false`. A specifically cited applicable duty with only one principal blocks as `BLOCKED_SINGLE_PRINCIPAL`. Multiple accounts of one principal neither constitute four-eyes approval nor expand provider permission.
 

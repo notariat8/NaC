@@ -58,6 +58,14 @@ AI-SBOM-Entscheidung daher: keine neue AI-Komponente und keine neue
 AI-Datenverarbeitung; die bestehende Runtime- und Evidence-Bindung bleibt
 maßgeblich.
 
+Der separat versionierte Issue-#748-Read-only-Treiber und seine Offline-Werkzeuge
+PyInstaller 6.22.3 sowie Syft 1.52.0 sind klassische Build-/Runtime- und
+SBOM-Abhängigkeiten, keine neuen AI-Komponenten. Ihre reale Lizenz- und
+Dateizuordnung ist im [noch unbefüllten Read-driver-Lizenzkatalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
+noch nicht eingetragen; dieser bleibt bis zur unabhängigen Prüfung ausdrücklich
+`PENDING`. Daraus wird kein
+`OFFLINE_REVIEWABLE`- oder Live-Status abgeleitet.
+
 ## Erste Artefakte
 
 - Policy: `policies/sbom-policy.yaml`
