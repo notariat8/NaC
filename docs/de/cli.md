@@ -23,6 +23,22 @@ der Windows-Abschlusspfad in der
 
 ## Teams-/BFF-Current-State-Diagnose
 
+Die separate [BFF-Request-Log-Triage](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md)
+hat nur einen lokalen, blockierenden Preflight:
+
+```text
+nac m365 teams-sharepoint bff-request-log-triage-preflight --bff-triage-input-root <geschützter-externer-Root> --format json
+```
+
+Der Root enthält ausschließlich die fest benannten Dateien
+`client-observation-receipt.json` und `client-http-observation.json`. Der Befehl prüft
+Current-User-only-Zugriff, die beiden exakten Datei-Hashes, die Companion-
+Bindung und das geschlossene UTC-Fenster. Auch nach erfolgreicher Belegprüfung
+stoppt er derzeit mit `BLOCKED_TARGET_UNBOUND`: App-ID, Queryprojektion,
+Korrelationsspalte und No-Refresh-Kanal sind nicht belegt. Es gibt keinen
+Microsoft-Read, keine freie URL-/KQL-/Token-Option und keine Freigabe des
+historischen Diagnose- oder Live-Pfads.
+
 Issue #748 ergänzt drei Windows-native, strikt getrennte Bedienkanten:
 
 ```text

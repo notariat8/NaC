@@ -75,6 +75,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   the office UI, first commands and the architecture rule for new functionality.
 - [docs/en/m365-current-state-access-diagnostic.md](m365-current-state-access-diagnostic.md)
   describes the Windows-native, privacy-minimal current Teams/BFF access diagnostic.
+- [BFF request-log triage](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md)
+  describes the separate, initially local check for the established Teams 403.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry

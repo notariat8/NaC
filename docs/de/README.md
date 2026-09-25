@@ -97,6 +97,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   erste Befehle und Architekturregel für neue Funktionen.
 - [m365-current-state-access-diagnostic.md](m365-current-state-access-diagnostic.md):
   Windows-native, datenschutzarme Diagnose des aktuellen Teams-/BFF-Zugriffs.
+- [BFF-Request-Log-Triage](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md):
+  separater, zunächst nur lokaler Prüfpfad für den belegten Teams-403.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische
