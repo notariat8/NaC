@@ -1,5 +1,26 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
+## Stand vom 25. September 2026: Client-HTTP-Zusatzbeleg lokal validiert
+
+Der vorhandene Teams-Beleg zeigt `spfx_subject_available=true` bei `no_access`.
+Damit ist eine fehlende SPFx-Benutzerkennung für diese Beobachtung ausgeschlossen,
+nicht jedoch die Ursache des Zugriffsfehlers geklärt. Der bisherige Client bildet
+HTTP 401 und 403 auf denselben neutralen Text ab. Der neue
+[HTTP-Zusatzbeleg](superpowers/specs/2026-09-25-m365-client-http-observation-design.md)
+soll diese beiden **Clientantworten** getrennt und ohne personenbezogene Daten
+ausweisen. Er beweist nicht, dass die Azure Function den Request erhalten hat.
+Die neue Version ist noch nicht in Teams bereitgestellt; bis dahin gibt es dort
+keinen neuen Button. Der ältere sechs Felder umfassende Beleg und sein
+Staging-Befehl bleiben unverändert. Ein späterer HTTP-Zusatzbeleg wird nicht
+automatisch zum Input des alten #748-Preflights.
+
+Der Quellstand des separaten Read-only-Treibers wurde inzwischen mit
+[PR #752](https://github.com/notariat8/NaC/pull/752) nach main gemergt. Das
+schaltet den echten Microsoft-Lesepfad nicht frei: Der Produktionsport blockiert
+weiterhin vor Credential- oder Providerzugriff mit
+`BLOCKED_NO_REFRESH_CAPABILITY`. Ein Client-HTTP-Befund ersetzt diesen
+Providerabgleich nicht.
+
 ## Stand vom 24. September 2026: Treiber-Release noch nicht bereit
 
 Nach den dokumentierten Merges von [PR #749](https://github.com/notariat8/NaC/pull/749)

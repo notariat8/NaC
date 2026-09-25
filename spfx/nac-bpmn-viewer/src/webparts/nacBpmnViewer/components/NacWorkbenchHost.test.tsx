@@ -10,6 +10,7 @@ import { WorkbenchSnapshot } from '../../../workbench/core/WorkbenchContracts';
 import { VALID_WORKBENCH_SNAPSHOT } from '../../../workbench/core/parseWorkbenchSnapshot.test';
 import { NacWorkbenchHost } from './NacWorkbenchHost';
 import { nacWorkbenchHostStyleSheet } from './NacWorkbenchHost.styles';
+import { NacBffHttpAccessDeniedError } from '../services/NacBffHttpAccessDeniedError';
 
 interface Deferred<T> {
   readonly promise: Promise<T>;
@@ -95,12 +96,14 @@ describe('NaC workbench live host', () => {
 
   it('offers an explicit privacy-minimal receipt for a missing SPFx subject', async () => {
     const downloadReceipt = jest.fn();
+    const downloadHttpReceipt = jest.fn();
     await act(async () => {
       ReactDom.render(<NacWorkbenchHost
         expectedSubjectId={undefined}
         loadSnapshot={jest.fn()}
         detailSurface={<div />}
         downloadReceipt={downloadReceipt}
+        downloadHttpReceipt={downloadHttpReceipt}
       />, root);
       await Promise.resolve();
       await Promise.resolve();
@@ -112,6 +115,12 @@ describe('NaC workbench live host', () => {
     expect(downloadReceipt).toHaveBeenCalledTimes(1);
     const receipt = JSON.parse(downloadReceipt.mock.calls[0][0]);
     expect(receipt.spfx_subject_available).toBe(false);
+    const httpButton = Array.from(root.querySelectorAll('button'))
+      .find(candidate => candidate.textContent === 'HTTP-Diagnosebeleg speichern');
+    expect(httpButton).toBeDefined();
+    act(() => httpButton?.click());
+    expect(downloadHttpReceipt).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(downloadHttpReceipt.mock.calls[0][0]).client_http_class).toBe('none');
     expect(Object.keys(receipt).sort()).toEqual([
       'end_utc',
       'request_correlation_binding_sha256',
@@ -147,6 +156,40 @@ describe('NaC workbench live host', () => {
     act(() => button?.click());
     const receipt = JSON.parse(downloadReceipt.mock.calls[0][0]);
     expect(receipt.spfx_subject_available).toBe(true);
+    expect(root.textContent).not.toContain('HTTP-Diagnosebeleg speichern');
+  });
+
+  it.each([401, 403] as const)('offers a bound HTTP %i companion without automatic download', async status => {
+    const downloadReceipt = jest.fn();
+    const downloadHttpReceipt = jest.fn();
+    const loadSnapshot = jest.fn(async () => { throw new NacBffHttpAccessDeniedError(status); });
+    await act(async () => {
+      ReactDom.render(<NacWorkbenchHost
+        expectedSubjectId="actor:synthetic:001"
+        loadSnapshot={loadSnapshot}
+        detailSurface={<div />}
+        downloadReceipt={downloadReceipt}
+        downloadHttpReceipt={downloadHttpReceipt}
+      />, root);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(root.textContent).toContain('Kein Zugriff auf diesen Arbeitsbereich.');
+    expect(loadSnapshot).toHaveBeenCalledTimes(1);
+    expect(downloadReceipt).not.toHaveBeenCalled();
+    expect(downloadHttpReceipt).not.toHaveBeenCalled();
+    const buttons = Array.from(root.querySelectorAll('button'));
+    expect(buttons.map(button => button.textContent)).toContain('HTTP-Diagnosebeleg speichern');
+    act(() => buttons.find(button => button.textContent === 'Diagnosebeleg speichern')?.click());
+    act(() => buttons.find(button => button.textContent === 'HTTP-Diagnosebeleg speichern')?.click());
+    expect(downloadReceipt).toHaveBeenCalledTimes(1);
+    expect(downloadHttpReceipt).toHaveBeenCalledTimes(1);
+    const baseJson = downloadReceipt.mock.calls[0][0];
+    const sidecar = JSON.parse(downloadHttpReceipt.mock.calls[0][0]);
+    expect(sidecar.client_http_class).toBe(String(status));
+    expect(sidecar.base_receipt_sha256).toBe(createHash('sha256').update(baseJson).digest('hex'));
+    expect(loadSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it('shows the workbench first and retains BPMN as an explicit detail surface', async () => {

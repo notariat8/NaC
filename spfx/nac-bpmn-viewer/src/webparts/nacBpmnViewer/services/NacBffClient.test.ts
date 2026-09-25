@@ -436,12 +436,14 @@ describe('NaC BFF client boundary', () => {
     )).rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
   });
 
-  it.each([401, 403])('maps workbench HTTP %i to the neutral access denial', async status => {
-    await expect(parseWorkbenchResponse(
+  it.each([401, 403])('retains only workbench HTTP %i as a typed neutral denial', async status => {
+    const failure = parseWorkbenchResponse(
       response('{}', false, undefined, status),
       VALID_WORKBENCH_SNAPSHOT.access.subjectId,
       '2026-08-01T09:01:00Z'
-    )).rejects.toThrow('NAC_BFF_ACCESS_DENIED');
+    );
+    await expect(failure).rejects.toThrow('NAC_BFF_ACCESS_DENIED');
+    await expect(failure).rejects.toMatchObject({ clientHttpClass: String(status) });
   });
 
   it.each([
