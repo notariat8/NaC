@@ -17,6 +17,15 @@ generation_stack:
     product: syft
     license_model: opensource
     subscription_required: false
+  windows_frozen_binary_bundle:
+    scope: issue-748-read-driver-only
+    cyclonedx_product: syft
+    spdx_product: syft
+    reason: "Both formats must describe the same sealed Windows bundle, not the Python environment used to build it."
+    requires:
+      - complete_separate_bundle_file_attestation
+      - exact_discovered_package_reconciliation
+      - independently_reviewed_license_and_file_attribution
 
 platform_features:
   github_actions:

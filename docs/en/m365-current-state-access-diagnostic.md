@@ -1,6 +1,24 @@
 # Current-State Diagnostics for Teams and BFF Access
 
-Status: repository and synthetic implementation for Issue #748 complete; merge, SPFx deployment, and the real provider run each remain separately approval-gated
+## Status on September 24, 2026: driver release not ready
+
+After the documented merges of [PR #749](https://github.com/notariat8/NaC/pull/749)
+and [PR #751](https://github.com/notariat8/NaC/pull/751), the client receipt
+control is available. This does not yet explain the Teams error: the new
+[read-only driver design](superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md)
+in Draft PR #752 is a separate delivery boundary. Its current source contract
+blocks Microsoft access with `BLOCKED_NO_REFRESH_CAPABILITY` before consuming
+the one-shot diagnostic gate. A contract test or synthetic diagnostic is
+neither a built Windows release nor a real provider finding. In particular,
+`OFFLINE_REVIEWABLE` still requires a complete bundle, source/runtime/SBOM/
+license evidence, and closed local file attestation. `LIVE_CAPABLE` additionally
+requires a technically proven no-refresh channel, complete projections, and
+separate exactly bound approvals for driver release and one read.
+
+The existing CLI commands gain no free URL, query, token, or login options.
+The lost #739 run and #632 remain untouched.
+
+Historical status of the original #749 draft: repository and synthetic implementation complete; merge, SPFx deployment, and a real provider run were separately approval-gated. See the dated section above for the current status.
 
 The diagnostic examines only the current readable state of `notary_team_01`
 and the “NaC Vorgangsansicht” Teams app. It does not replace the terminal Issue
@@ -99,6 +117,20 @@ Every deviation blocks without retry. The result permits only a new fix plan,
 not a production change.
 
 ## Security Boundary
+
+The separate [read-driver design](superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md)
+has a local-only build and verification path. `python
+scripts/validate_m365_current_state_read_driver.py` checks the checked-in
+contracts only. An actual external package must additionally pass `--candidate
+<absolute-path>` against the current Git commit, source archive contents,
+every bundle file, Windows owner/DACL binding, and CycloneDX, SPDX, and license
+evidence. A passing source check is not proof of a package. Package
+preparation produces only `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; finalization
+requires a separately reviewed, Git-tree-bound [license catalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
+with status `APPROVED` and protected external license evidence. Syft-discovered
+packages and the complete bundle-file manifest are reconciled separately. No
+new package is built in this step. The production port still blocks with
+`BLOCKED_NO_REFRESH_CAPABILITY`; no real read is approved.
 
 - authorization before the port factory and again before every read;
 - seven closed ports, no general provider or search interface;

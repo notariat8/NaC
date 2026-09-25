@@ -408,7 +408,7 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                 target={"opaque": "different"},
             ).teams_tab.read(authorization)
 
-    def test_protected_production_composition_reaches_redacted_result(self) -> None:
+    def test_protected_production_composition_blocks_unreleased_driver_before_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             input_root = root / "input"
@@ -427,36 +427,20 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                 )
             backend = _ScriptedSecurityBackend(evidence_root, input_root)
 
-            classification, first, second = (
-                run_current_state_access_diagnostic_from_protected_inputs(
-                    input_root=input_root,
-                    evidence_root=evidence_root,
-                    repo_root=Path(__file__).resolve().parents[1],
-                    backend=backend,
-                )
-            )
-
-            self.assertEqual(classification, BFF_REQUEST_NOT_OBSERVED)
-            self.assertEqual(first.decision_projection_sha256, second.decision_projection_sha256)
-            self.assertEqual(backend.operations.count("github_gate"), 15)
-            self.assertEqual(backend.operations.count("local_git_gate"), 15)
-            self.assertTrue(any(name.endswith(".result.json") for name in backend.session.files))
-            provider_reads = [
-                operation for operation in backend.operations
-                if operation not in {"github_gate", "local_git_gate"}
-            ]
-            with self.assertRaises(Exception):
-                run_current_state_access_diagnostic_from_protected_inputs(
-                    input_root=input_root,
-                    evidence_root=evidence_root,
-                    repo_root=Path(__file__).resolve().parents[1],
-                    backend=backend,
-                )
-            self.assertEqual(
-                [operation for operation in backend.operations
-                 if operation not in {"github_gate", "local_git_gate"}],
-                provider_reads,
-            )
+            with patch(
+                "nac_bff.current_state_access_composition.consume_current_state_run_gate"
+            ) as consume_gate:
+                with self.assertRaises(DiagnosticBlockedError) as raised:
+                    run_current_state_access_diagnostic_from_protected_inputs(
+                        input_root=input_root,
+                        evidence_root=evidence_root,
+                        repo_root=Path(__file__).resolve().parents[1],
+                        backend=backend,
+                    )
+                consume_gate.assert_not_called()
+            self.assertEqual(raised.exception.code, "BLOCKED_NO_REFRESH_CAPABILITY")
+            self.assertEqual(backend.operations, [])
+            self.assertEqual(backend.session.files, {})
             second_evidence_root = root / "evidence-two"
             second_evidence_root.mkdir()
             second_backend = _ScriptedSecurityBackend(second_evidence_root, input_root)
@@ -469,6 +453,111 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                 )
             self.assertEqual(raised.exception.code, "BLOCKED_APPROVAL_BINDING")
             self.assertEqual(second_backend.operations, [])
+
+    def test_protected_production_composition_reaches_redacted_result(self) -> None:
+        """Retain historical #748 evidence with an explicitly synthetic port proof."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_root, evidence_root = root / "input", root / "evidence"
+            input_root.mkdir()
+            evidence_root.mkdir()
+            driver = root / "bound-reader.exe"
+            driver.write_bytes(b"synthetic-attested-driver")
+            payloads = _protected_payloads(
+                driver, hashlib.sha256(driver.read_bytes()).hexdigest(),
+                {"workspace_id": "notary_team_01", "app_id": "nac-vorgangsansicht"},
+            )
+            for name, value in payloads.items():
+                (input_root / name).write_text(
+                    json.dumps(value, sort_keys=True, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+            backend = _ScriptedSecurityBackend(evidence_root, input_root)
+            with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition._attest_release_before_consume",
+                return_value=None,
+            ):
+                classification, first, second = (
+                    run_current_state_access_diagnostic_from_protected_inputs(
+                        input_root=input_root, evidence_root=evidence_root,
+                        repo_root=Path(__file__).resolve().parents[1], backend=backend,
+                    )
+                )
+            self.assertEqual(classification, BFF_REQUEST_NOT_OBSERVED)
+            self.assertEqual(first.decision_projection_sha256, second.decision_projection_sha256)
+            self.assertTrue(any(name.endswith(".result.json") for name in backend.session.files))
+
+    def test_synthetic_unlocked_port_still_rejects_unreleased_bundle_before_consume(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_root, evidence_root = root / "input", root / "evidence"
+            input_root.mkdir()
+            evidence_root.mkdir()
+            driver = root / "bound-reader.exe"
+            driver.write_bytes(b"synthetic-attested-driver")
+            payloads = _protected_payloads(
+                driver, hashlib.sha256(driver.read_bytes()).hexdigest(),
+                {"workspace_id": "notary_team_01", "app_id": "nac-vorgangsansicht"},
+            )
+            for name, value in payloads.items():
+                (input_root / name).write_text(
+                    json.dumps(value, sort_keys=True, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+            backend = _ScriptedSecurityBackend(evidence_root, input_root)
+            with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition.consume_current_state_run_gate"
+            ) as consume_gate:
+                with self.assertRaises(DiagnosticBlockedError) as raised:
+                    run_current_state_access_diagnostic_from_protected_inputs(
+                        input_root=input_root, evidence_root=evidence_root,
+                        repo_root=Path(__file__).resolve().parents[1], backend=backend,
+                    )
+                consume_gate.assert_not_called()
+            self.assertEqual(raised.exception.code, "BLOCKED_DRIVER_RELEASE_BINDING")
+            self.assertEqual(backend.operations, [])
+            self.assertEqual(backend.session.files, {})
+
+    def test_process_stderr_blocks_without_exposing_raw_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_root, evidence_root = root / "input", root / "evidence"
+            input_root.mkdir()
+            evidence_root.mkdir()
+            driver = root / "bound-reader.exe"
+            driver.write_bytes(b"synthetic-attested-driver")
+            payloads = _protected_payloads(
+                driver, hashlib.sha256(driver.read_bytes()).hexdigest(),
+                {"workspace_id": "notary_team_01", "app_id": "nac-vorgangsansicht"},
+            )
+            for name, value in payloads.items():
+                (input_root / name).write_text(
+                    json.dumps(value, sort_keys=True, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+            backend = _ScriptedSecurityBackend(evidence_root, input_root)
+            backend.stderr_payload = b"synthetic private detail"
+            with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition._attest_release_before_consume",
+                return_value=None,
+            ):
+                with self.assertRaises(RuntimeError) as raised:
+                    run_current_state_access_diagnostic_from_protected_inputs(
+                        input_root=input_root, evidence_root=evidence_root,
+                        repo_root=Path(__file__).resolve().parents[1], backend=backend,
+                    )
+            self.assertIn("CURRENT_STATE_READ_DRIVER_OUTPUT_BLOCKED", str(raised.exception))
+            self.assertNotIn("synthetic private detail", str(raised.exception))
+            self.assertEqual(backend.operations, ["local_git_gate"])
 
     def test_target_scope_and_derived_binding_are_closed(self) -> None:
         for mutation in ("workspace", "extra", "digest"):
@@ -698,7 +787,13 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                 backend = _ScriptedSecurityBackend(
                     evidence_root, input_root, drift_gate=gate
                 )
-                with self.assertRaises(DiagnosticBlockedError) as raised:
+                with patch(
+                    "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                    side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+                ), patch(
+                    "nac_bff.current_state_access_composition._attest_release_before_consume",
+                    return_value=None,
+                ), self.assertRaises(DiagnosticBlockedError) as raised:
                     run_current_state_access_diagnostic_from_protected_inputs(
                         input_root=input_root, evidence_root=evidence_root,
                         repo_root=Path(__file__).resolve().parents[1], backend=backend,
@@ -734,7 +829,13 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
             backend = _ScriptedSecurityBackend(
                 evidence_root, input_root, marker_drift=True
             )
-            with self.assertRaises(Exception):
+            with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition._attest_release_before_consume",
+                return_value=None,
+            ), self.assertRaises(Exception):
                 run_current_state_access_diagnostic_from_protected_inputs(
                     input_root=input_root, evidence_root=evidence_root,
                     repo_root=Path(__file__).resolve().parents[1], backend=backend,
@@ -765,6 +866,12 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
                 )
             backend = _ScriptedSecurityBackend(evidence_root, input_root)
             with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition._attest_release_before_consume",
+                return_value=None,
+            ), patch(
                 "nac_bff.current_state_access_composition._utc_now",
                 side_effect=[
                     datetime(2026, 1, 2, tzinfo=UTC),
@@ -800,6 +907,12 @@ class CurrentStateAccessDiagnosticTests(unittest.TestCase):
             backend = _ScriptedSecurityBackend(evidence_root, input_root)
             valid = datetime(2026, 1, 2, tzinfo=UTC)
             with patch(
+                "nac_bff.current_state_read_driver.create_production_microsoft_port",
+                side_effect=lambda *, credential_provider, transport_provider: transport_provider(),
+            ), patch(
+                "nac_bff.current_state_access_composition._attest_release_before_consume",
+                return_value=None,
+            ), patch(
                 "nac_bff.current_state_access_composition._utc_now",
                 side_effect=[valid] * 6 + [datetime(2100, 1, 2, tzinfo=UTC)],
             ):
@@ -1143,6 +1256,7 @@ class _ScriptedSecurityBackend:
         self.marker_drift = marker_drift
         self.marker_inspections = 0
         self.provider_client_subject = provider_client_subject
+        self.stderr_payload = b""
 
     def inspect_private_path(self, path, purpose):
         if Path(path).parent == self.evidence_root and Path(path).name in self.session.files:
@@ -1215,6 +1329,7 @@ class _ScriptedSecurityBackend:
             payload["authorization_context_sha256"] = spec.arguments[context_index]
         return SimpleNamespace(
             stdout=json.dumps(payload).encode("utf-8"),
+            stderr=self.stderr_payload,
             credential_write_guard_applied=True,
         )
 

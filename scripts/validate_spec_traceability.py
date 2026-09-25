@@ -378,7 +378,10 @@ def validate_plan_traceability(
         return [f"Planpfad aus Spec-Manifest fehlt: {path_label} {plan_value}"]
     plan_text = plan_path.read_text(encoding="utf-8")
     errors: list[str] = []
-    if manifest.get("spec_id") != "m365-current-state-access-diagnostic":
+    if manifest.get("spec_id") not in {
+        "m365-current-state-access-diagnostic",
+        "m365-current-state-read-driver-release",
+    }:
         return errors
     issue = manifest.get("leading_issue")
     if isinstance(issue, str) and issue not in plan_text:

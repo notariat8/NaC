@@ -55,6 +55,13 @@ email address, token, or tenant data. The Issue #748 AI-SBOM decision is
 therefore: no new AI component and no new AI data processing; the existing
 runtime and evidence binding remains authoritative.
 
+The separately versioned Issue #748 read-only driver and its offline tools,
+PyInstaller 6.22.3 and Syft 1.52.0, are classic build/runtime and SBOM
+dependencies, not new AI components. Their real license and file attribution
+has not yet been entered into the [unpopulated read-driver license catalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json),
+which remains expressly `PENDING` until independently reviewed; this establishes neither `OFFLINE_REVIEWABLE`
+nor live status.
+
 ## Initial Artifacts
 
 - Policy: `policies/sbom-policy.yaml`
