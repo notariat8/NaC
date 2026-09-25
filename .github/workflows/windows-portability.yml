@@ -247,6 +247,14 @@ jobs:
           python scripts/validate_m365_current_state_access_diagnostic.py
           python scripts/validate_spec_traceability.py
 
+      - name: Verify Issue 748 read-driver release boundary
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m unittest discover -s tests -p test_m365_current_state_read_driver.py
+          python -m unittest discover -s tests -p test_build_m365_current_state_read_driver.py
+          python scripts/validate_m365_current_state_read_driver.py
+
       - name: Setup Node.js 22 for the SPFx receipt boundary
         uses: actions/setup-node@v6
         with:

@@ -1,6 +1,25 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
-Status: Repository- und synthetische Implementierung für Issue #748 abgeschlossen; Merge, SPFx-Bereitstellung und realer Providerlauf bleiben jeweils separat freigabepflichtig
+## Stand vom 24. September 2026: Treiber-Release noch nicht bereit
+
+Nach den dokumentierten Merges von [PR #749](https://github.com/notariat8/NaC/pull/749)
+und [PR #751](https://github.com/notariat8/NaC/pull/751) ist die
+Client-Receipt-Bedienkante vorhanden. Das erklärt die Teams-Meldung noch nicht:
+Der neue [Read-only-Treiber-Entwurf](superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md)
+in Draft-PR #752 ist eine eigene Liefergrenze. Sein aktueller Quellvertrag
+blockiert Microsoft-Zugriffe mit `BLOCKED_NO_REFRESH_CAPABILITY`, bevor das
+einmalige Diagnose-Gate konsumiert wird. Ein Contract-Test oder eine
+synthetische Diagnose ist weder ein gebautes Windows-Release noch ein realer
+Providerbefund. Für `OFFLINE_REVIEWABLE` fehlen bis zur gesonderten Prüfung
+insbesondere das vollständige Bundle, Source-/Runtime-/SBOM-/Lizenzbelege und
+die geschlossene lokale Dateiattestation. `LIVE_CAPABLE` benötigt darüber
+hinaus einen technisch bewiesenen No-Refresh-Kanal, vollständige Projektionen
+und eigene exakt gebundene Freigaben für Treiber-Release und einen Read.
+
+Die bestehenden CLI-Befehle erhalten keine freien URL-, Query-, Token- oder
+Login-Optionen. Der verlorene #739-Lauf und #632 bleiben unberührt.
+
+Historischer Status des ursprünglichen #749-Drafts: Repository- und synthetische Implementierung abgeschlossen; Merge, SPFx-Bereitstellung und realer Providerlauf waren jeweils separat freigabepflichtig. Für den aktuellen Stand gilt der datierte Abschnitt oben.
 
 Die Diagnose untersucht ausschließlich den aktuellen lesbaren Zustand von
 `notary_team_01` und der Teams-App „NaC Vorgangsansicht“. Sie ersetzt den
@@ -102,6 +121,22 @@ Jede Abweichung blockiert ohne Retry. Das Ergebnis erlaubt nur einen neuen
 Fixplan, keine produktive Änderung.
 
 ## Sicherheitsgrenze
+
+Der separate [Read-driver-Entwurf](superpowers/specs/2026-09-23-m365-current-state-read-driver-design.md)
+besitzt eine rein lokale Build- und Prüfkante. `python
+scripts/validate_m365_current_state_read_driver.py` prüft nur die eingecheckten
+Verträge. Ein tatsächliches externes Paket muss zusätzlich mit `--candidate
+<absoluter-pfad>` gegen den aktuellen Git-Commit, den Source-Archivinhalt,
+sämtliche Bundle-Dateien, die Windows-Eigentümer-/DACL-Bindung sowie
+CycloneDX-, SPDX- und Lizenzbelege geprüft werden. Ein bestandener Quelltest
+ist kein Paketnachweis. Die Paketvorbereitung erzeugt nur
+`AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; erst ein separat geprüfter,
+im Git-Tree gebundener [Lizenzkatalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
+mit Status `APPROVED` und geschützte externe Lizenzbelege erlauben die
+Finalisierung. Syft-entdeckte Pakete und das vollständige Bundle-Dateimanifest
+werden getrennt abgeglichen. In diesem Schritt wird kein neues Paket gebaut.
+Der Produktionsport blockiert weiterhin mit
+`BLOCKED_NO_REFRESH_CAPABILITY`; es gibt keine Freigabe für einen realen Read.
 
 - Autorisierung vor Port-Factory und erneut vor jedem Read;
 - sieben geschlossene Ports, keine allgemeine Provider- oder Suchschnittstelle;

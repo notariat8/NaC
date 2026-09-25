@@ -15,8 +15,15 @@ Diese Seite legt fest, welche Produkte für SBOM verwendet werden und welche dav
 | --- | --- | --- | --- | --- |
 | Python-Komponenten-SBOM | `cyclonedx-python` | CycloneDX JSON | Ja | Nein |
 | Dateisystem-/Artefakt-SBOM | `syft` | SPDX JSON | Ja | Nein |
+| Issue-#748-Windows-Binary-Bundle | `syft` | CycloneDX JSON und SPDX JSON derselben versiegelten Ablage | Ja | Nein |
 | CI-Ausführung | GitHub Actions | Artefakt-Export | Nein (Plattformdienst) | Nein (Basisnutzung) |
 | Erweiterte Security-Auswertung | GitHub Advanced Security | Security-Features | Nein | Ja (optional) |
+
+Die eng begrenzte Bundle-Ausnahme ist in [der SBOM-Policy](../../policies/sbom-policy.yaml)
+festgelegt. `cyclonedx-python` beschreibt die Python-Umgebung, nicht dieselbe
+eingefrorene Windows-Binary-Ablage. Für das Issue-#748-Bundle müssen deshalb
+beide Syft-Formate abgeglichen, sämtliche Dateien separat attestiert und
+Lizenz- sowie Dateizuordnungen unabhängig geprüft werden.
 
 ## SBOM for AI
 

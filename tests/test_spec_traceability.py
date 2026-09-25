@@ -205,6 +205,36 @@ class SpecTraceabilityTest(unittest.TestCase):
             )
         self.assertEqual(errors, [])
 
+    def test_issue748_read_driver_plan_requires_all_acceptance_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            spec = root / "docs/de/superpowers/specs/read-driver-design.md"
+            plan = root / "docs/de/superpowers/plans/read-driver.md"
+            spec.parent.mkdir(parents=True)
+            plan.parent.mkdir(parents=True)
+            spec.write_text("# Read driver\n", encoding="utf-8")
+            plan.write_text(
+                "https://github.com/notariat8/NaC/issues/748\n"
+                "read-driver-design.md\n"
+                "AC-748-RD-01\n",
+                encoding="utf-8",
+            )
+            validate_spec_traceability.REPO_ROOT = root
+            errors = validate_spec_traceability.validate_plan_traceability(
+                {
+                    "spec_id": "m365-current-state-read-driver-release",
+                    "plan": "docs/de/superpowers/plans/read-driver.md",
+                    "leading_issue": "https://github.com/notariat8/NaC/issues/748",
+                    "acceptance_ids": ["AC-748-RD-01", "AC-748-RD-02"],
+                },
+                spec_path=spec,
+                path_label="docs/de/superpowers/specs/read-driver-design.md",
+            )
+        self.assertIn(
+            "Akzeptanz-ID aus Spec fehlt im Plan: docs/de/superpowers/specs/read-driver-design.md AC-748-RD-02",
+            errors,
+        )
+
     def test_validator_reports_missing_acceptance_id_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 from pathlib import Path
+import subprocess
 from typing import Any, Callable, Mapping
 
 from .current_state_access_diagnostic import (
@@ -39,6 +40,58 @@ PROTECTED_INPUT_FILES = (
     "owner-approval.json",
     "toolchain.json",
 )
+
+
+def _attest_release_before_consume(
+    *, toolchain: Mapping[str, Any], contract: Mapping[str, Any],
+    repo_root: Path, backend: Any,
+) -> None:
+    """Require actual offline release files before any future one-shot consume."""
+    from .current_state_read_driver_release import (
+        RESOURCE_PATH, ROOT, _bound_git_bytes, validate_candidate_release,
+        validate_resources,
+    )
+
+    blocked = "BLOCKED_DRIVER_RELEASE_BINDING"
+    try:
+        executable = Path(str(toolchain["read_driver_path"]))
+        if (
+            repo_root.resolve(strict=True) != ROOT.resolve(strict=True)
+            or executable.name != "reader.exe"
+            or executable.parent.name != "bundle"
+        ):
+            raise DiagnosticBlockedError(blocked)
+        commit = str(contract["final_head"])
+        tree = str(contract["final_tree"])
+        actual_tree = _bound_git_bytes(
+            "rev-parse", f"{commit}^{{tree}}"
+        ).decode("ascii").strip()
+        if actual_tree != tree:
+            raise DiagnosticBlockedError(blocked)
+        if validate_resources(json.loads(RESOURCE_PATH.read_bytes())):
+            raise DiagnosticBlockedError(blocked)
+        resources = json.loads(RESOURCE_PATH.read_bytes())
+        if any(not item["projection_proven"] for item in resources["operations"].values()):
+            raise DiagnosticBlockedError("BLOCKED_RESOURCE_PROJECTION_INCOMPLETE")
+        archive = _bound_git_bytes("archive", "--format=tar", commit)
+        candidate = executable.parent.parent
+        if validate_candidate_release(
+            candidate, backend, source_commit=commit,
+            source_tree=tree, source_archive=archive,
+        ):
+            raise DiagnosticBlockedError(blocked)
+        if (
+            hashlib.sha256((candidate / "source.tar").read_bytes()).hexdigest()
+            != toolchain["source_binding_sha256"]
+            or hashlib.sha256((candidate / "cyclonedx.json").read_bytes()).hexdigest()
+            != toolchain["classic_sbom_sha256"]
+            or hashlib.sha256(RESOURCE_PATH.read_bytes()).hexdigest()
+            != toolchain["resource_allowlist_sha256"]
+        ):
+            raise DiagnosticBlockedError(blocked)
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError, AttributeError,
+            subprocess.TimeoutExpired):
+        raise DiagnosticBlockedError(blocked) from None
 
 
 def _utc_now() -> datetime:
@@ -747,15 +800,34 @@ def run_current_state_access_diagnostic_from_protected_inputs(
         evidence_root_binding_sha256=actual_evidence_root_binding,
     )
     authorization = _authorize_protected_current_state_run(pre_gate_input)
-    run_gate_receipt = consume_current_state_run_gate(
-        authorization, evidence_root=evidence_root, backend=backend
-    )
     transport = _AttestedProcessReadTransport(
         backend=backend,
         executable=Path(str(toolchain["read_driver_path"])),
         executable_sha256=str(toolchain["read_driver_sha256"]),
         input_root=input_root,
         repo_root=repo_root,
+    )
+    # An offline-reviewable driver is not a live-capable driver. In particular,
+    # do not consume the one-shot marker before the no-refresh capability exists.
+    from .current_state_read_driver import (
+        ReadDriverBlocked, create_production_microsoft_port,
+    )
+
+    try:
+        proven_transport = create_production_microsoft_port(
+            credential_provider=lambda: None,
+            transport_provider=lambda: transport,
+        )
+    except ReadDriverBlocked as exc:
+        raise DiagnosticBlockedError(exc.code) from None
+    if proven_transport is not transport:
+        raise DiagnosticBlockedError("BLOCKED_NO_REFRESH_CAPABILITY")
+    _attest_release_before_consume(
+        toolchain=toolchain, contract=contract, repo_root=repo_root,
+        backend=backend,
+    )
+    run_gate_receipt = consume_current_state_run_gate(
+        authorization, evidence_root=evidence_root, backend=backend
     )
     transport.bind_consumed_run(authorization, run_gate_receipt)
     verify_consumed_current_state_run_gate(

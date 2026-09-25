@@ -11,6 +11,7 @@ from typing import Any, Callable, Mapping, Protocol
 from .current_state_access_gate import CurrentStateRunAuthorization, RunGateReceipt
 from .current_state_access_ports import PortReadResult
 from .current_state_access_ports import CurrentStateAccessPorts
+from .current_state_read_driver import ReadDriverBlocked, validate_redacted_projection
 
 
 _HEX64 = re.compile(r"[0-9a-f]{64}")
@@ -143,10 +144,14 @@ class _AttestedProcessReadTransport:
         )
         if getattr(result, "credential_write_guard_applied", False) is not True:
             raise RuntimeError("CURRENT_STATE_CREDENTIAL_WRITE_GUARD_NOT_ATTESTED")
+        # Even a successful child may leak raw provider or auth diagnostics on
+        # stderr. Never forward or persist those bytes.
+        if getattr(result, "stderr", b"") not in (b"", None):
+            raise RuntimeError("CURRENT_STATE_READ_DRIVER_OUTPUT_BLOCKED")
         try:
             payload = json.loads(result.stdout.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("CURRENT_STATE_READ_DRIVER_OUTPUT_BLOCKED") from exc
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise RuntimeError("CURRENT_STATE_READ_DRIVER_OUTPUT_BLOCKED") from None
         expected_keys = (
             {"data", "receipt_sha256", "authorization_context_sha256"}
             if provider_operation else {"data", "receipt_sha256"}
@@ -231,6 +236,10 @@ class _BoundReadAdapter:
             or not _HEX64.fullmatch(receipt)
         ):
             raise RuntimeError("CURRENT_STATE_READ_RESPONSE_REDACTION_BLOCKED")
+        try:
+            data = validate_redacted_projection(self.operation, data)
+        except ReadDriverBlocked:
+            raise RuntimeError("CURRENT_STATE_READ_RESPONSE_REDACTION_BLOCKED") from None
         bound_receipt = hashlib.sha256(
             json.dumps(
                 {

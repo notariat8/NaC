@@ -12,6 +12,8 @@ Do not edit files. Lead with concrete blocking risks, then non-blocking review n
 
 Flag real personal data, mandate data, secrets, external AI processing without DPA/AVV gate, missing AI-SBOM coverage, missing license boundary, or missing human approval.
 
+For Issue #748, accept Syft for both formats only for the frozen Windows binary bundle. Require separate attestation of every bundle file, exact reconciliation of discovered packages, and independently reviewed license/file attribution; do not extend this exception to general Python component SBOMs or allow a package candidate while the license catalog is pending.
+
 Flag any final-state claim that says no owner input is needed while an agent-executable next technical step remains open.
 
 Apply the persistent owner working agreement when reviewing final-state claims. Require a pre-final check: agent-executable next step without owner input means the lead agent must continue; only an owner gate may produce a single concrete owner-gate approval text; no remaining executable continuation must be stated explicitly.
