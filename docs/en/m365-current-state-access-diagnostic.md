@@ -1,5 +1,24 @@
 # Current-State Diagnostics for Teams and BFF Access
 
+## Status on 25 September 2026: client HTTP companion validated locally
+
+The existing Teams receipt reports `spfx_subject_available=true` and
+`no_access`. A missing SPFx subject is ruled out for this observation, but the
+access-denial cause is not established. The existing client maps HTTP 401 and
+403 to the same neutral text. The new
+[HTTP companion](superpowers/specs/2026-09-25-m365-client-http-observation-design.md)
+will distinguish these **client responses** without personal data. It does not
+prove that the Azure Function received the request. The new version has not
+been deployed to Teams; there is no new button there yet. The historical
+six-field receipt and staging command remain unchanged. A later companion is
+not automatically accepted by the old #748 preflight.
+
+The separate read-only driver source has since merged into main through
+[PR #752](https://github.com/notariat8/NaC/pull/752). This does not enable the
+real Microsoft read path: its production port still blocks before credential
+or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`. A client HTTP finding
+does not replace provider reconciliation.
+
 ## Status on September 24, 2026: driver release not ready
 
 After the documented merges of [PR #749](https://github.com/notariat8/NaC/pull/749)

@@ -2,6 +2,7 @@ import { AadHttpClient, AadHttpClientFactory } from '@microsoft/sp-http';
 import type { HttpClientResponse } from '@microsoft/sp-http';
 import { WorkbenchSnapshot } from '../../../workbench/core/WorkbenchContracts';
 import { parseNacWorkbenchProjectionJson } from '../../../workbench/nac/NacWorkbenchProjection';
+import { NacBffHttpAccessDeniedError } from './NacBffHttpAccessDeniedError';
 
 export const NAC_BFF_RESOURCE_URI = 'api://funktion8.de/nac-bff';
 export const NAC_BFF_SCOPE = 'Matter.Read';
@@ -128,7 +129,7 @@ export async function parseWorkbenchResponse(
 ): Promise<WorkbenchSnapshot> {
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error('NAC_BFF_ACCESS_DENIED');
+      throw new NacBffHttpAccessDeniedError(response.status);
     }
     throw new Error('NAC_BFF_UNAVAILABLE');
   }

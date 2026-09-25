@@ -68,7 +68,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "10d0ea30ec3b63afb857f2df7cb0154770e7d5a3e10b47ecbd70a9b7be9747f3"
+      "sha256": "299d22796b233ab830412302f5599ceeab47a4baf8841c6b3b80eda7344f1892"
     },
     {
       "id": "VIS-725-06",
@@ -81,21 +81,21 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "8831f82f608520d226107ea552add8ebeca99149c0166422b6d21c9afff440ed"
+      "sha256": "3308158a7a90d8627c09422087d2eba47fc218ad496eac9774db27ea7c7c0190"
     }
   ],
   "sourceBindings": {
     "host": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx",
-      "sha256": "0ac51f3eb92c40579f358c612053a633534c84b2829d58bfca442bb1b5382169"
+      "sha256": "4ce9d83b7e88dbb8253c493481f98a8d7a91626396628ade0c32c94ddd171b7a"
     },
     "styles": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts",
-      "sha256": "815e02eae1b1f97a1d0a58765b053f24801833f388a911fb3f8efbc00030f6ee"
+      "sha256": "8d515bedcd7aced91b3e7c532145e21250e1da312e77e36bcb260220d95e1907"
     },
     "client": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-      "sha256": "f0ae40ae61af34079cecf98347e0c4c430b2c62a5b3a404a8d9c9f6e823d4e56"
+      "sha256": "c6917d234502b4275eba81201e4f4514fcf5c20b57727debd1826bbb1e44cac8"
     },
     "clientReceipt": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
@@ -151,11 +151,11 @@
   "buildArtifacts": [
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.js",
-      "sha256": "29fbdc8167e1c3e364ef5404affd76cab6ff918ad97222901523293b963366d1"
+      "sha256": "d2af99ee0b5e49fc5536fcba27b2285dc6cd1d4db2fe7586b0f5fc6a610ef8cd"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.js",
-      "sha256": "4cf14e9c51256ea7bbd31452b1a2eb17c4b2a1cf1ad6f73d492d09b07ec634c1"
+      "sha256": "70877ac7ee92bfafbac95e4c3b4d96dc3b82920a5d12ca0e7913b059d0a05212"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/webparts/nacBpmnViewer/services/ClientObservationReceipt.js",
@@ -179,8 +179,8 @@
     }
   ],
   "runtime": {
-    "nodeVersion": "v22.14.0",
-    "npmUserAgent": "npm/11.17.0 node/v22.14.0 win32 x64",
+    "nodeVersion": "v22.23.2",
+    "npmUserAgent": "npm/10.9.8 node/v22.23.2 win32 x64 workspaces/false",
     "playwrightVersion": "1.55.0",
     "webpackVersion": "5.105.4",
     "typescriptVersion": "5.8.3",
