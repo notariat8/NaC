@@ -1,6 +1,6 @@
 # HTTP-Zusatzbeleg für die NaC-Registerkarte in Teams
 
-Status: Diagnoseziel freigegeben; rückwärtskompatible Detailentscheidung und Spezifikation zur Owner-Review. Kein Implementierungsplan, Code, Deployment oder realer Providerbefund freigegeben.
+Status: Lokal umgesetzt und auf Windows einschließlich Strict-Doctor validiert; PR, App-Bereitstellung und realer Providerbefund offen.
 
 Datum: 25. September 2026
 
@@ -14,20 +14,34 @@ spec_id: m365-client-http-observation
 leading_issue: https://github.com/notariat8/NaC/issues/748
 risk_gate: Human Approval
 delivery_mode: Protected PR
+plan: docs/de/superpowers/plans/2026-09-25-m365-client-http-observation.md
 review_gates:
   - Privacy
   - Secrets
   - External Service
   - Human Approval
 affected_artifacts:
+  - assets/docs/workbench-live-read-binding/VIS-725-05-deny.png
+  - assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/superpowers/specs/2026-09-25-m365-client-http-observation-design.md
   - docs/en/superpowers/specs/2026-09-25-m365-client-http-observation-design.md
+  - docs/de/superpowers/plans/2026-09-25-m365-client-http-observation.md
+  - docs/en/superpowers/plans/2026-09-25-m365-client-http-observation.md
+  - docs/de/m365-current-state-access-diagnostic.md
+  - docs/en/m365-current-state-access-diagnostic.md
+  - spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffHttpAccessDeniedError.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientHttpObservationReceipt.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts
   - src/nac_bff/client_http_observation_receipt.py
   - workflows/verification-contracts/m365-client-http-observation.verification.json
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientHttpObservationReceipt.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
   - tests/test_m365_client_http_observation_receipt.py
 acceptance_ids:
   - AC-748-HTTP-01
@@ -36,10 +50,13 @@ acceptance_ids:
   - AC-748-HTTP-04
   - AC-748-HTTP-05
 validation_commands:
+  - python -m unittest discover -s tests -p test_m365_client_http_observation_receipt.py
+  - heft test --production
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
   - graft check
+  - python scripts/nac.py doctor --profile strict
 ```
 
 ## Zweck und Ausgangslage
@@ -54,7 +71,7 @@ Ziel dieser Ergänzung ist ausschließlich eine lokale, datensparsame Unterschei
 2. Ein neues Feld direkt im alten JSON wäre für den Nutzer einfacher, würde aber dessen exakte Feldliste, Validator und historische Vertragsbindung brechen. Diese Variante ist ausgeschlossen.
 3. Browser- oder Desktop-Entwicklerwerkzeuge ändern zwar keinen Code, sind für die tatsächlich sichtbare Desktop-Registerkarte nicht zuverlässig ohne zusätzliche UI-/Preview-Voraussetzungen verfügbar und erzeugen leicht unredigierte Netzwerkdetails. Sie sind kein Produktpfad.
 
-Der Zusatzbeleg ist eine **ergänzende lokale Beobachtung**, kein neuer produktiver Read-Treiber und keine Abkürzung um das #748-Gate. Der alte Beleg darf weiter allein verwendet werden; ein Zusatzbeleg ohne passenden Basisbeleg wird nicht als gebundene Evidence akzeptiert. Ein eigener DE/EN-Implementierungsplan und eine neue Verification-Contract-Bindung folgen erst nach der Review dieser Spec.
+Der Zusatzbeleg ist eine **ergänzende lokale Beobachtung**, kein neuer produktiver Read-Treiber und keine Abkürzung um das #748-Gate. Der alte Beleg darf weiter allein verwendet werden; ein Zusatzbeleg ohne passenden Basisbeleg wird nicht als gebundene Evidence akzeptiert. Der [DE/EN-Implementierungsplan](../plans/2026-09-25-m365-client-http-observation.md) und ein eigener Verification Contract binden den lokalen Entwurf.
 
 ## Geschlossene Daten- und UI-Grenze
 
@@ -83,4 +100,4 @@ Der Zusatzbeleg wird nur nach expliziter späterer Freigabe und eigener Validato
 
 ## Risiken und Nicht-Ziele
 
-Eine HTTP-401/403-Antwort kann von einer vorgeschalteten Schicht stammen. Die Clientklasse ist daher ein Wegweiser für den nächsten gezielten Prüfschritt, **keine abschließende Ursache**. Ein Hash schützt die Bindung zweier lokaler Dateien, belegt aber keine Serverauthentizität. Es werden keine bestehenden #748-Snapshots, Release-Gates, Authentifizierungsgrenzen oder alten Issue-#739-/Issue-#632-Artefakte gelockert. Diese Spec autorisiert nur ihre eigene Review; Implementierung, Paket-/App-Release und produktiver Diagnosezugriff bleiben getrennt freigabepflichtig.
+Eine HTTP-401/403-Antwort kann von einer vorgeschalteten Schicht stammen. Die Clientklasse ist daher ein Wegweiser für den nächsten gezielten Prüfschritt, **keine abschließende Ursache**. Ein Hash schützt die Bindung zweier lokaler Dateien, belegt aber keine Serverauthentizität. Es werden keine bestehenden #748-Snapshots, Release-Gates, Authentifizierungsgrenzen oder alten Issue-#739-/Issue-#632-Artefakte gelockert. Der lokale Entwurf autorisiert weder Paket-/App-Release noch produktiven Diagnosezugriff. Es wird kein AI-Modell oder externer AI-Aufruf eingeführt; die AI-SBOM-Oberfläche bleibt unverändert.

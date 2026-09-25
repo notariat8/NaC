@@ -1,6 +1,6 @@
 # HTTP companion receipt for the NaC tab in Teams
 
-Status: Diagnostic objective approved; backward-compatible detail decision and specification for owner review. No implementation plan, code, deployment, or real provider finding approved.
+Status: Implemented and validated locally on Windows including Strict Doctor; PR, app deployment and real provider finding remain open.
 
 Date: 25 September 2026
 
@@ -14,20 +14,34 @@ spec_id: m365-client-http-observation
 leading_issue: https://github.com/notariat8/NaC/issues/748
 risk_gate: Human Approval
 delivery_mode: Protected PR
+plan: docs/en/superpowers/plans/2026-09-25-m365-client-http-observation.md
 review_gates:
   - Privacy
   - Secrets
   - External Service
   - Human Approval
 affected_artifacts:
+  - assets/docs/workbench-live-read-binding/VIS-725-05-deny.png
+  - assets/docs/workbench-live-read-binding/VIS-725-06-unavailable.png
+  - assets/docs/workbench-live-read-binding/VIS-725-manifest.json
   - docs/de/superpowers/specs/2026-09-25-m365-client-http-observation-design.md
   - docs/en/superpowers/specs/2026-09-25-m365-client-http-observation-design.md
+  - docs/de/superpowers/plans/2026-09-25-m365-client-http-observation.md
+  - docs/en/superpowers/plans/2026-09-25-m365-client-http-observation.md
+  - docs/de/m365-current-state-access-diagnostic.md
+  - docs/en/m365-current-state-access-diagnostic.md
+  - spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffHttpAccessDeniedError.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientHttpObservationReceipt.ts
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts
   - src/nac_bff/client_http_observation_receipt.py
   - workflows/verification-contracts/m365-client-http-observation.verification.json
   - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientHttpObservationReceipt.test.ts
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacWorkbenchHost.test.tsx
+  - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts
   - tests/test_m365_client_http_observation_receipt.py
 acceptance_ids:
   - AC-748-HTTP-01
@@ -36,10 +50,13 @@ acceptance_ids:
   - AC-748-HTTP-04
   - AC-748-HTTP-05
 validation_commands:
+  - python -m unittest discover -s tests -p test_m365_client_http_observation_receipt.py
+  - heft test --production
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
   - graft check
+  - python scripts/nac.py doctor --profile strict
 ```
 
 ## Purpose and starting point
@@ -54,7 +71,7 @@ This extension only distinguishes the HTTP class **observed by the SPFx client**
 2. Adding a field directly to the old JSON would be simpler for the user but would break its exact field list, validator, and historical contract binding. That option is excluded.
 3. Browser or desktop developer tools avoid code changes, but they are not reliably available for the actual desktop tab without additional UI/preview prerequisites and can expose unredacted network details. They are not a product workflow.
 
-The companion receipt is a **supplemental local observation**, not a new production read driver or a bypass of the #748 gate. The old receipt remains usable on its own; a companion without the matching base receipt is not accepted as bound evidence. A separate DE/EN implementation plan and a new verification-contract binding follow only after review of this spec.
+The companion receipt is a **supplemental local observation**, not a new production read driver or a bypass of the #748 gate. The old receipt remains usable on its own; a companion without the matching base receipt is not accepted as bound evidence. The [DE/EN implementation plan](../plans/2026-09-25-m365-client-http-observation.md) and a separate verification contract bind the local draft.
 
 ## Closed data and UI boundary
 
@@ -83,4 +100,4 @@ Only after separate future approval and its own validator/CLI extension may the 
 
 ## Risks and non-goals
 
-An HTTP 401/403 response may originate from an upstream layer. The client class is therefore a pointer to the next targeted check, **not a final root cause**. A hash binds two local files but does not prove server authenticity. No existing #748 snapshots, release gates, authentication boundaries, or old Issue #739/#632 artifacts are relaxed. This spec authorizes only its own review; implementation, package/app release, and production diagnostic access remain separately approval-gated.
+An HTTP 401/403 response may originate from an upstream layer. The client class is therefore a pointer to the next targeted check, **not a final root cause**. A hash binds two local files but does not prove server authenticity. No existing #748 snapshots, release gates, authentication boundaries, or old Issue #739/#632 artifacts are relaxed. The local draft authorizes neither package/app release nor production diagnostic access. No AI model or external AI call is introduced; the AI-SBOM surface remains unchanged.

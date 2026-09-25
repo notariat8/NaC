@@ -8,7 +8,7 @@ export const nacWorkbenchHostStyleSheet = `
 .nacWorkbenchHost__tabpanel[hidden]{display:none}
 .nacWorkbenchHost__state{background:#fff;border:1px solid #c8ced5;border-radius:6px;color:#3e4852;padding:18px}
 .nacWorkbenchHost__state[role=alert]{border-color:#a12a32;color:#7d1f26}
-.nacWorkbenchHost__receiptDownload{background:#07535c;border:1px solid #07535c;border-radius:4px;color:#fff;cursor:pointer;font:600 14px Segoe UI,Arial,sans-serif;margin-top:12px;min-height:40px;padding:8px 14px}
+.nacWorkbenchHost__receiptDownload{background:#07535c;border:1px solid #07535c;border-radius:4px;color:#fff;cursor:pointer;font:600 14px Segoe UI,Arial,sans-serif;margin:12px 8px 0 0;min-height:40px;padding:8px 14px}
 .nacWorkbenchHost__receiptDownload:hover{background:#0b6a75;border-color:#0b6a75}
 .nacWorkbenchHost__receiptDownload:focus-visible{outline:3px solid #f5c242;outline-offset:2px}
 @container nac-workbench-host (max-width:820px){.nacWorkbenchHost__tabpanel .nacWorkbench{grid-template-columns:1fr}.nacWorkbenchHost__tabpanel .nacWorkbench nav{display:flex;gap:4px;overflow:auto;padding:10px}.nacWorkbenchHost__tabpanel .nacWorkbench nav strong{margin:8px 10px}.nacWorkbenchHost__tabpanel .nacWorkbench nav button{display:inline-block;min-width:max-content;width:auto}.nacWorkbenchHost__tabpanel .nacWorkbench aside{border-left:0;border-top:1px solid var(--line)}.nacWorkbenchHost__tabpanel .nacWorkbench__grid{grid-template-columns:1fr}}
