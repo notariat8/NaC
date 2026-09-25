@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -360,6 +361,8 @@ def validate_plan_traceability(
 ) -> list[str]:
     plan_value = manifest.get("plan")
     if plan_value is None:
+        if manifest.get("spec_id") == "m365-bff-request-log-triage":
+            return [f"Planpfad im Spec-Manifest fehlt: {path_label}"]
         return []
     if not isinstance(plan_value, str) or not plan_value.strip():
         return [f"Planpfad im Spec-Manifest ist ungültig: {path_label}"]
@@ -381,6 +384,7 @@ def validate_plan_traceability(
     if manifest.get("spec_id") not in {
         "m365-current-state-access-diagnostic",
         "m365-current-state-read-driver-release",
+        "m365-bff-request-log-triage",
     }:
         return errors
     issue = manifest.get("leading_issue")
@@ -393,6 +397,11 @@ def validate_plan_traceability(
                 errors.append(
                     f"Akzeptanz-ID aus Spec fehlt im Plan: {path_label} {acceptance_id}"
                 )
+        if manifest.get("spec_id") == "m365-bff-request-log-triage":
+            expected = {item for item in acceptance_ids if isinstance(item, str)}
+            actual = set(re.findall(r"\bAC-748-TG-\d+\b", plan_text))
+            for extra in sorted(actual - expected):
+                errors.append(f"Zusätzliche Akzeptanz-ID im Plan: {path_label} {extra}")
     if spec_path.name not in plan_text:
         errors.append(f"Plan verweist nicht auf die zugehörige Spec: {path_label}")
     return errors

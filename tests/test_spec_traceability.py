@@ -235,6 +235,62 @@ class SpecTraceabilityTest(unittest.TestCase):
             errors,
         )
 
+    def test_issue748_triage_plan_requires_exact_acceptance_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            spec = root / "docs/de/superpowers/specs/triage-design.md"
+            plan = root / "docs/de/superpowers/plans/triage.md"
+            spec.parent.mkdir(parents=True)
+            plan.parent.mkdir(parents=True)
+            spec.write_text("# Triage\n", encoding="utf-8")
+            plan.write_text(
+                "https://github.com/notariat8/NaC/issues/748\n"
+                "triage-design.md\nAC-748-TG-01\nAC-748-TG-03\n",
+                encoding="utf-8",
+            )
+            validate_spec_traceability.REPO_ROOT = root
+            errors = validate_spec_traceability.validate_plan_traceability(
+                {
+                    "spec_id": "m365-bff-request-log-triage",
+                    "plan": "docs/de/superpowers/plans/triage.md",
+                    "leading_issue": "https://github.com/notariat8/NaC/issues/748",
+                    "acceptance_ids": ["AC-748-TG-01", "AC-748-TG-02"],
+                },
+                spec_path=spec,
+                path_label="docs/de/superpowers/specs/triage-design.md",
+            )
+        self.assertTrue(any("AC-748-TG-02" in error for error in errors))
+        self.assertTrue(any("AC-748-TG-03" in error for error in errors))
+
+    def test_issue748_triage_requires_plan_and_rejects_long_extra_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            spec = root / "docs/en/superpowers/specs/triage-design.md"
+            plan = root / "docs/en/superpowers/plans/triage.md"
+            spec.parent.mkdir(parents=True)
+            plan.parent.mkdir(parents=True)
+            spec.write_text("# Triage\n", encoding="utf-8")
+            plan.write_text(
+                "https://github.com/notariat8/NaC/issues/748\n"
+                "triage-design.md\nAC-748-TG-01\nAC-748-TG-003\n",
+                encoding="utf-8",
+            )
+            validate_spec_traceability.REPO_ROOT = root
+            manifest = {
+                "spec_id": "m365-bff-request-log-triage",
+                "leading_issue": "https://github.com/notariat8/NaC/issues/748",
+                "acceptance_ids": ["AC-748-TG-01"],
+            }
+            missing = validate_spec_traceability.validate_plan_traceability(
+                manifest, spec_path=spec, path_label="triage-design.md"
+            )
+            manifest["plan"] = "docs/en/superpowers/plans/triage.md"
+            extra = validate_spec_traceability.validate_plan_traceability(
+                manifest, spec_path=spec, path_label="triage-design.md"
+            )
+        self.assertTrue(any("Planpfad" in error for error in missing))
+        self.assertTrue(any("AC-748-TG-003" in error for error in extra))
+
     def test_validator_reports_missing_acceptance_id_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -1,6 +1,24 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
-## Stand vom 25. September 2026: Client-HTTP-Zusatzbeleg lokal validiert
+## Stand vom 25. September 2026: Teams-403 belegt, BFF-Ursache offen
+
+Zwei lokal vorhandene, hashgebundene Teams-Belege zeigen für das Fenster
+`2026-09-25T10:42:03.397Z` bis `2026-09-25T10:42:10.487Z` ein vorhandenes
+SPFx-Subject und eine vom Client empfangene HTTP-403-Antwort. Das schließt
+für diese Beobachtung eine fehlende SPFx-Benutzerkennung und HTTP 401 aus;
+Function-Ingress und die konkrete Berechtigungsentscheidung bleiben
+unbewiesen. Die Belege und ihr Korrelationswert bleiben repository-extern.
+
+Der separate [BFF-Request-Log-Triage-Entwurf](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md)
+mit [Implementierungsplan](superpowers/plans/2026-09-25-m365-bff-request-log-triage.md)
+und [Offline-Vertrag](../../workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
+prüft zunächst nur lokale Bindungen. Der neue CLI-Preflight blockiert auch
+nach gültigen Clientbelegen vor einem Microsoft-Read, weil die konkrete
+Application-Insights-App-ID, Queryprojektion, Korrelationsspalte und
+No-Refresh-Fähigkeit noch nicht belegt sind. Ein synthetischer 403-Treffer
+ist kein realer BFF-Befund und keine Freigabe des historischen #748-Laufs.
+
+## Früherer Stand vom 25. September 2026: vor Bereitstellung des HTTP-Zusatzbelegs
 
 Der vorhandene Teams-Beleg zeigt `spfx_subject_available=true` bei `no_access`.
 Damit ist eine fehlende SPFx-Benutzerkennung für diese Beobachtung ausgeschlossen,
@@ -9,8 +27,8 @@ HTTP 401 und 403 auf denselben neutralen Text ab. Der neue
 [HTTP-Zusatzbeleg](superpowers/specs/2026-09-25-m365-client-http-observation-design.md)
 soll diese beiden **Clientantworten** getrennt und ohne personenbezogene Daten
 ausweisen. Er beweist nicht, dass die Azure Function den Request erhalten hat.
-Die neue Version ist noch nicht in Teams bereitgestellt; bis dahin gibt es dort
-keinen neuen Button. Der ältere sechs Felder umfassende Beleg und sein
+Zu diesem früheren Zeitpunkt war die neue Version noch nicht in Teams bereitgestellt;
+es gab dort keinen neuen Button. Der ältere sechs Felder umfassende Beleg und sein
 Staging-Befehl bleiben unverändert. Ein späterer HTTP-Zusatzbeleg wird nicht
 automatisch zum Input des alten #748-Preflights.
 

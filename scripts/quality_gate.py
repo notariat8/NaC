@@ -465,6 +465,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "m365_bff_request_log_triage",
+                    "M365 BFF Request-Log Triage Offline Contract",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_bff_request_log_triage.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [
