@@ -1,6 +1,24 @@
 # Current-State Diagnostics for Teams and BFF Access
 
-## Status on 25 September 2026: client HTTP companion validated locally
+## Status on 25 September 2026: Teams 403 established, BFF cause open
+
+Two locally available, hash-bound Teams receipts show an available SPFx
+subject and an HTTP 403 response received by the client during the window
+`2026-09-25T10:42:03.397Z` through `2026-09-25T10:42:10.487Z`. This rules
+out a missing SPFx subject and HTTP 401 for this observation; Function ingress
+and the actual access decision remain unproven. The receipts and correlation
+value stay outside the repository.
+
+The separate [BFF request-log triage design](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md),
+[implementation plan](superpowers/plans/2026-09-25-m365-bff-request-log-triage.md),
+and [offline contract](../../workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
+initially check local bindings only. The new CLI preflight blocks before any
+Microsoft read even with valid client receipts, because the actual
+Application Insights app ID, query projection, correlation column, and
+no-refresh capability are not yet proven. A synthetic 403 match is not a
+real BFF finding or authorization for the historical #748 run.
+
+## Earlier status on 25 September 2026: before HTTP companion deployment
 
 The existing Teams receipt reports `spfx_subject_available=true` and
 `no_access`. A missing SPFx subject is ruled out for this observation, but the
@@ -8,8 +26,8 @@ access-denial cause is not established. The existing client maps HTTP 401 and
 403 to the same neutral text. The new
 [HTTP companion](superpowers/specs/2026-09-25-m365-client-http-observation-design.md)
 will distinguish these **client responses** without personal data. It does not
-prove that the Azure Function received the request. The new version has not
-been deployed to Teams; there is no new button there yet. The historical
+prove that the Azure Function received the request. At that earlier point the
+new version had not been deployed to Teams; there was no new button yet. The historical
 six-field receipt and staging command remain unchanged. A later companion is
 not automatically accepted by the old #748 preflight.
 

@@ -23,6 +23,21 @@ and the Windows completion path by the
 
 ## Teams/BFF Current-State Diagnostics
 
+The separate [BFF request-log triage](superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md)
+has only a local, blocking preflight:
+
+```text
+nac m365 teams-sharepoint bff-request-log-triage-preflight --bff-triage-input-root <protected-external-root> --format json
+```
+
+The root contains only the fixed files `client-observation-receipt.json` and
+`client-http-observation.json`. The command checks current-user-only access,
+both exact file hashes, companion binding, and the closed UTC window. Even
+after valid receipts it currently stops with `BLOCKED_TARGET_UNBOUND`:
+the app ID, query projection, correlation column, and no-refresh channel are
+unproven. There is no Microsoft read, free URL/KQL/token option, or release of
+the historical diagnostic or live path.
+
 Issue #748 adds three strictly separated Windows-native surfaces:
 
 ```text

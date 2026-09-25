@@ -764,6 +764,7 @@ def build_parser() -> argparse.ArgumentParser:
             "current-state-access-diagnostic-preflight",
             "current-state-access-diagnostic-run-read-only",
             "current-state-access-client-receipt-stage",
+            "bff-request-log-triage-preflight",
             "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
@@ -1361,6 +1362,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--current-state-access-client-receipt",
         type=Path,
         help="Absoluter repository-externer Pfad zum lokalen SPFx-Clientbeleg.",
+    )
+    teams_sharepoint.add_argument(
+        "--bff-triage-input-root",
+        type=Path,
+        help="Absoluter geschützter externer Root mit zwei festen Clientbelegen; nur Offline-Preflight.",
     )
     teams_sharepoint.add_argument("--bff-attestation-azure-cli", type=Path)
     teams_sharepoint.add_argument("--bff-attestation-m365-cli", type=Path)
@@ -2633,6 +2639,19 @@ def _current_state_access_block_payload(reason_code: str) -> dict:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "bff-request-log-triage-preflight":
+            from nac_bff.bff_request_log_triage import run_offline_preflight
+
+            payload = run_offline_preflight(
+                repo_root=repo_root,
+                input_root=getattr(args, "bff_triage_input_root", None),
+            )
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(f"STATUS: {payload['status']}")
+                print(f"ERROR: {payload['reason_code']}")
+            return 2
         if (
             args.teams_sharepoint_command
             == "current-state-access-client-receipt-stage"
@@ -8161,6 +8180,9 @@ def _current_state_access_argument_error(argv: list[str]) -> bool:
             "--repo-root", "--format", "--current-state-access-input-root",
             "--current-state-access-client-receipt", "-h", "--help",
         },
+        "bff-request-log-triage-preflight": {
+            "--repo-root", "--format", "--bff-triage-input-root", "-h", "--help",
+        },
     }
     for command, allowed in command_names.items():
         marker = ["m365", "teams-sharepoint", command]
@@ -8193,6 +8215,28 @@ def _emit_current_state_access_argument_error(output_format: str) -> int:
     return 2
 
 
+def _emit_bff_triage_argument_error(output_format: str) -> int:
+    payload = {
+        "schema_version": "nac.m365-bff-request-log-triage-preflight/v0.1",
+        "status": "BLOCKED",
+        "reason_code": "BLOCKED_ARGUMENTS",
+        "network_reads": 0,
+        "provider_ports_created": 0,
+        "credential_reads": 0,
+        "credential_writes": 0,
+        "provider_writes": 0,
+        "logins": 0,
+        "token_refreshes": 0,
+        "provider_read_authorized": False,
+    }
+    if output_format == "json":
+        print_json(payload)
+    else:
+        print("STATUS: BLOCKED")
+        print("ERROR: BLOCKED_ARGUMENTS")
+    return 2
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -8200,6 +8244,10 @@ def main(
 ) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
     if _current_state_access_argument_error(effective_argv):
+        if "bff-request-log-triage-preflight" in effective_argv:
+            return _emit_bff_triage_argument_error(
+                _requested_output_format(effective_argv)
+            )
         return _emit_current_state_access_argument_error(
             _requested_output_format(effective_argv)
         )

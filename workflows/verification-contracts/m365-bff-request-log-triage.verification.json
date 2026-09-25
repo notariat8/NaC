@@ -1,0 +1,93 @@
+{
+  "schema_version": "nac.m365-bff-request-log-triage/v0.1",
+  "contract_id": "m365-bff-request-log-triage",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/748",
+  "delivery_mode": "Protected PR",
+  "risk_gate": "Human Approval",
+  "status": "OFFLINE_ONLY_NOT_LIVE_CAPABLE",
+  "specifications": {
+    "de": "docs/de/superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md",
+    "en": "docs/en/superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md"
+  },
+  "plans": {
+    "de": "docs/de/superpowers/plans/2026-09-25-m365-bff-request-log-triage.md",
+    "en": "docs/en/superpowers/plans/2026-09-25-m365-bff-request-log-triage.md"
+  },
+  "acceptance_ids": [
+    "AC-748-TG-01",
+    "AC-748-TG-02",
+    "AC-748-TG-03",
+    "AC-748-TG-04",
+    "AC-748-TG-05",
+    "AC-748-TG-06"
+  ],
+  "historical_contract_bindings": {
+    "workflows/verification-contracts/m365-current-state-access-diagnostic.verification.yaml": "bbd3f80729f5407145ae69642699649978e7a470c0663f4d5a08977230d16a57",
+    "workflows/contracts/m365-current-state-read-driver-resources.contract.json": "fdf33849689d4bf1077db5daaeaf8ece5c9af917c4c1efdcfc2427390bc00f01"
+  },
+  "target_scope": {
+    "workspace": "notary_team_01",
+    "function": "func-nac-bff-test-funktion8",
+    "teams_app": "NaC Vorgangsansicht",
+    "application_insights_app_id": "PROTECTED_EXTERNAL_EVIDENCE_REQUIRED"
+  },
+  "receipts": {
+    "base_receipt_sha256": "ed89c1171a02fc79c80314512375c7db84be2fce1528c7ba6596d7c24d805e40",
+    "http_receipt_sha256": "daf4cc55f0f95f38b118155d8bef33d36a0a68809848ba96b049f1f129b80bda",
+    "window_start_utc": "2026-09-25T10:42:03.397Z",
+    "window_end_utc": "2026-09-25T10:42:10.487Z",
+    "required_spfx_subject_available": true,
+    "required_client_http_class": "403"
+  },
+  "resource": {
+    "method": "GET",
+    "origin": "https://api.applicationinsights.io",
+    "fixed_path_template": "/v1/apps/{app_id}/query",
+    "maximum_reads": 1,
+    "request_body": false,
+    "follow_redirects": false,
+    "automatic_retries": 0,
+    "pagination": false,
+    "free_url_or_query_input": false,
+    "query_template_id": "issue748-requests-correlation-window-v1",
+    "query_sha256": "PROTECTED_SCHEMA_PROOF_REQUIRED",
+    "allowed_result_fields": [
+      "request_observed",
+      "http_class",
+      "request_correlation_binding_sha256"
+    ],
+    "maximum_response_bytes": 65536
+  },
+  "target_binding_proven": false,
+  "query_projection_proven": false,
+  "correlation_capture_proven": false,
+  "no_refresh_capability_proven": false,
+  "provider_read_authorized": false,
+  "terminal_blockers": [
+    "BLOCKED_INPUTS_REQUIRED",
+    "BLOCKED_RECEIPT_BINDING",
+    "BLOCKED_TARGET_UNBOUND",
+    "BLOCKED_QUERY_PROJECTION_UNPROVEN",
+    "BLOCKED_CORRELATION_UNPROVEN",
+    "BLOCKED_AMBIGUOUS_MATCH",
+    "BLOCKED_NO_REFRESH_CAPABILITY",
+    "BLOCKED_SINGLE_PRINCIPAL"
+  ],
+  "local_preparation_side_effects": {
+    "network_reads": 0,
+    "provider_ports_created": 0,
+    "credential_reads": 0,
+    "credential_writes": 0,
+    "provider_writes": 0,
+    "logins": 0,
+    "token_refreshes": 0
+  },
+  "result_boundary": {
+    "unique_correlated_403": "FUNCTION_TELEMETRY_MATCH_403",
+    "empty_log_is_not": "BFF_REQUEST_NOT_OBSERVED",
+    "does_not_prove": ["python_endpoint_response", "bff_access_rule"]
+  },
+  "historical_issue_739_release_authorized": false,
+  "historical_issue_632_live_authorized": false,
+  "pr_754_authorized": false
+}
