@@ -9,6 +9,12 @@ import {
   completeClientObservation,
   downloadClientObservationReceipt
 } from '../services/ClientObservationReceipt';
+import {
+  ClientHttpClass,
+  completeClientHttpObservation,
+  downloadClientHttpObservationReceipt
+} from '../services/ClientHttpObservationReceipt';
+import { NacBffHttpAccessDeniedError } from '../services/NacBffHttpAccessDeniedError';
 import { nacWorkbenchHostStyleSheet } from './NacWorkbenchHost.styles';
 
 const LOAD_TIMEOUT_MS = 10_000;
@@ -19,7 +25,7 @@ type HostSurface = 'workbench' | 'detail';
 
 type HostState =
   | { readonly kind: 'loading' }
-  | { readonly kind: 'accessDenied'; readonly receiptJson?: string }
+  | { readonly kind: 'accessDenied'; readonly receiptJson?: string; readonly httpReceiptJson?: string }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'ready'; readonly snapshot: WorkbenchSnapshot };
 
@@ -31,6 +37,7 @@ export interface NacWorkbenchHostProps {
   ) => Promise<WorkbenchSnapshot>;
   readonly detailSurface: React.ReactNode;
   readonly downloadReceipt?: (canonicalJson: string) => void;
+  readonly downloadHttpReceipt?: (canonicalJson: string) => void;
 }
 
 export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactElement {
@@ -50,7 +57,8 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
     const closeDeniedObservation = (
       observation: ClientObservation | undefined,
       spfxSubjectAvailable: boolean,
-      requestGeneration: number
+      requestGeneration: number,
+      clientHttpClass?: ClientHttpClass
     ): void => {
       if (disposed || generation.current !== requestGeneration) return;
       setState({ kind: 'accessDenied' });
@@ -63,9 +71,17 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
         observation,
         spfxSubjectAvailable,
         endUtc
-      ).then(completed => {
+      ).then(async completed => {
+        const httpCompleted = clientHttpClass === undefined
+          ? undefined
+          : await completeClientHttpObservation(completed.canonicalJson, clientHttpClass)
+            .catch(() => undefined);
         if (!disposed && generation.current === requestGeneration) {
-          setState({ kind: 'accessDenied', receiptJson: completed.canonicalJson });
+          setState({
+            kind: 'accessDenied',
+            receiptJson: completed.canonicalJson,
+            httpReceiptJson: httpCompleted?.canonicalJson
+          });
         }
       }).catch(() => {
         // The product remains fail-closed and neutral; only the optional receipt is omitted.
@@ -80,7 +96,7 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
       } catch {
         observation = undefined;
       }
-      closeDeniedObservation(observation, false, requestGeneration);
+      closeDeniedObservation(observation, false, requestGeneration, 'none');
       return () => {
         disposed = true;
         generation.current += 1;
@@ -173,7 +189,10 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
         if (failure === 'accessDenied') {
           clearAllTimers();
           setSurface('workbench');
-          closeDeniedObservation(observation, true, requestGeneration);
+          const clientHttpClass = error instanceof NacBffHttpAccessDeniedError
+            ? error.clientHttpClass
+            : undefined;
+          closeDeniedObservation(observation, true, requestGeneration, clientHttpClass);
         } else {
           discard(failure, requestGeneration);
         }
@@ -194,6 +213,7 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
   }
   if (state.kind === 'accessDenied') {
     const receiptJson = state.receiptJson;
+    const httpReceiptJson = state.httpReceiptJson;
     return <div className="nacWorkbenchHost" data-nac-component="workbench-host-denied">
       <style>{nacWorkbenchHostStyleSheet}</style>
       <HostMessage kind="alert">Kein Zugriff auf diesen Arbeitsbereich.</HostMessage>
@@ -204,6 +224,13 @@ export function NacWorkbenchHost(props: NacWorkbenchHostProps): React.ReactEleme
           receiptJson
         )}
       >Diagnosebeleg speichern</button>}
+      {httpReceiptJson !== undefined && <button
+        type="button"
+        className="nacWorkbenchHost__receiptDownload"
+        onClick={() => (props.downloadHttpReceipt ?? downloadClientHttpObservationReceipt)(
+          httpReceiptJson
+        )}
+      >HTTP-Diagnosebeleg speichern</button>}
     </div>;
   }
   if (state.kind === 'unavailable') {

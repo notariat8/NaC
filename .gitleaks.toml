@@ -20,3 +20,10 @@ regexes = [
   '''^mutation\.s5_idempotency_key$''',
   '''30927974be4fd41f6c90c62be62aeab5a75abedd247762527afa92f0c77df060''',
 ]
+
+[[allowlists]]
+description = "Allow only the exact public SHA-256 of the Issue 748 HTTP error source, misclassified as an API key"
+regexTarget = "secret"
+regexes = [
+  '''dc1afdda00772f4989873d34044e42f8a4dfab569a30b112fd97b2322c5db5c3''',
+]
