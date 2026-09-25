@@ -1,12 +1,14 @@
 # Versioned read-only driver for the Teams current-state diagnostic
 
-Status: Specification and plan approved; offline builder repair in Draft PR, package candidate, driver release, and real provider run not approved
+Status: Specification and plan approved; protected offline package preparation approved on 25 September 2026, finalization, driver release, and real provider run not approved
 
 Date: September 23, 2026
 
 Leading issue: [#748](https://github.com/notariat8/NaC/issues/748)
 
 Base: `main` commit `1b65259b9b4953a3b048be850c7953897b8eab83`, tree `1723094af6a398077be25f7897888faf0159069c`; delivered [PR #749](https://github.com/notariat8/NaC/pull/749) and [PR #751](https://github.com/notariat8/NaC/pull/751). This spec is a new forward change and does not rewrite their historical bindings.
+
+The later owner approval on `main` commit `862c87e1e378657f0066faed1bd36b830be2146d` and tree `3b1cfe5a4cfd7972912b961bfad46b713469f9fa` permits only test-first, protected, repository-external preparation of a Windows package candidate. Its preparation record remains `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; the separately gated release candidate, finalization, a usable no-refresh authentication channel, and any real Microsoft read remain blocked. The two locally validated client receipts from 25 September report an available SPFx subject and an HTTP-403 response; they do not prove the server-side access decision.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -93,7 +95,7 @@ The existing [#748 diagnostic contract](../../../../workflows/verification-contr
 
 This design authorizes neither a Microsoft read nor consumption of the one-shot diagnostic gate. Terminal Issue #739 and Issue #632 remain separate.
 The `--candidate` command in traceability is a **later** package gate and is
-not run under the current repair approval; without a real, separately approved
+not run under the current preparation-only approval; without a finalized, separately approved
 package, AC-748-RD-01 remains open at artifact level.
 
 ## Scope and design decisions
@@ -126,7 +128,7 @@ Microsoft documents [Teams tab GET](https://learn.microsoft.com/en-us/graph/api/
 - An apparent GET in a CLI may trigger a refresh. `az rest` and the M365 CLI are therefore not connected as production transport without proof; an offline mock cannot supply that proof.
 - One GET may not provide all facts for a port. The outcome is then `BLOCKED_RESOURCE_PROJECTION_INCOMPLETE`; no extra request, POST batch, or broader search is improvised.
 - A bundle may contain libraries outside the attested entry executable. Without full bundle and license/SBOM proof, the outcome is `BLOCKED_DRIVER_RELEASE_BINDING`.
-- Preparation produces only a current-user-only bundle and `preparation.json` with `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, not a release record. The first preparation is review evidence; once the catalog is approved on a new commit, a fresh preparation with **identical** file, tool, SBOM, driver-source, and resource digests is required. Finalization needs the reviewed license catalog bound to the Git tree and protected external license texts. A catalog entry is reviewable evidence, not automatic authenticity verification of a third-party download server. Until its source hashes and license texts are independently checked, `BLOCKED_LICENSE_PROVENANCE` applies; no new package candidate is built under this approval.
+- Preparation produces only a current-user-only bundle and `preparation.json` with `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, not a release record. The first preparation is review evidence; once the catalog is approved on a new commit, a fresh preparation with **identical** file, tool, SBOM, driver-source, and resource digests is required. Finalization needs the reviewed license catalog bound to the Git tree and protected external license texts. A catalog entry is reviewable evidence, not automatic authenticity verification of a third-party download server. Until its source hashes and license texts are independently checked, `BLOCKED_LICENSE_PROVENANCE` applies; the original repair approval allowed no candidate, while the later approval bound above allows only its preparation.
 - A client receipt proves neither a BFF request nor request telemetry. Missing, uncorrelated, or non-redactable log evidence blocks; it is not guessed to be `BFF_REQUEST_NOT_OBSERVED`.
 - The #748 account/principal rules remain unchanged. Without a specifically cited applicable external two-person duty, `OWNER_SOLO_APPROVAL` is permitted and records `four_eyes_satisfied=false`. A specifically cited applicable duty with only one principal blocks as `BLOCKED_SINGLE_PRINCIPAL`. Multiple accounts of one principal neither constitute four-eyes approval nor expand provider permission.
 
