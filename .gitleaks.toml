@@ -22,7 +22,8 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Allow the exact Issue 748 pinned source SHA-256 false positive; no other commit or line is exempt"
-fingerprints = [
-  "2d330f2367b1eebec5333b6dec21b017fe6f4681:spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs:generic-api-key:24",
+description = "Allow only the exact public SHA-256 of the Issue 748 HTTP error source, misclassified as an API key"
+regexTarget = "secret"
+regexes = [
+  '''dc1afdda00772f4989873d34044e42f8a4dfab569a30b112fd97b2322c5db5c3''',
 ]
