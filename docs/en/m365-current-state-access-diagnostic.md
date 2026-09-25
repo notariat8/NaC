@@ -1,6 +1,26 @@
 # Current-State Diagnostics for Teams and BFF Access
 
-## Status on 25 September 2026: client HTTP companion validated locally
+## Status on 25 September 2026: client observed HTTP 403
+
+After [PR #753](https://github.com/notariat8/NaC/pull/753) was merged, the receipt-capable test app was overwritten in the
+existing app catalog, deployed, and upgraded on the bound test site. The two
+subsequently downloaded and locally validated receipts belong to the same
+observation: `no_access`, `spfx_subject_available=true`, and
+`client_http_class=403` within the closed window 10:42:03–10:42:10 UTC.
+The HTTP class comes from the response to the existing workbench-snapshot
+request. This rules out a missing SPFx subject and a missing HTTP response
+for this observation, but proves neither that the Azure Function itself saw
+the request nor which server-side rule produced 403. Another Teams click is
+not needed for this narrowing. The receipts are not placed in the repository;
+the HTTP companion is not an input to the historical #748 preflight.
+
+The current owner approval permits only protected offline preparation of a
+Windows read-driver package on `main` commit
+`862c87e1e378657f0066faed1bd36b830be2146d`. Release, provider reads,
+login, and token refresh remain blocked. The production port factory still
+returns `BLOCKED_NO_REFRESH_CAPABILITY`.
+
+## Earlier status on 25 September 2026: client HTTP companion validated locally
 
 The existing Teams receipt reports `spfx_subject_available=true` and
 `no_access`. A missing SPFx subject is ruled out for this observation, but the
@@ -147,9 +167,15 @@ evidence. A passing source check is not proof of a package. Package
 preparation produces only `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; finalization
 requires a separately reviewed, Git-tree-bound [license catalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
 with status `APPROVED` and protected external license evidence. Syft-discovered
-packages and the complete bundle-file manifest are reconciled separately. No
-new package is built in this step. The production port still blocks with
+packages and the complete bundle-file manifest are reconciled separately. The
+older no-build statement concerned the diagnostic step; the current approval
+permits protected offline preparation only, not package finalization or release.
+The production port still blocks with
 `BLOCKED_NO_REFRESH_CAPABILITY`; no real read is approved.
+The [new silent-refresh design](../../workflows/contracts/m365-current-state-silent-refresh.design.json)
+is an inactive design revision only. It currently permits no token refresh,
+credential write, or Microsoft access; later use would require new contracts,
+technical negative tests, and separate approvals.
 
 - authorization before the port factory and again before every read;
 - seven closed ports, no general provider or search interface;

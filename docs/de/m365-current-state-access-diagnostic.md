@@ -1,6 +1,27 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
-## Stand vom 25. September 2026: Client-HTTP-Zusatzbeleg lokal validiert
+## Stand vom 25. September 2026: Client sieht HTTP 403
+
+Die Receipt-fähige Test-App wurde nach dem Merge von [PR #753](https://github.com/notariat8/NaC/pull/753) im bestehenden
+App-Catalog ersetzt, bereitgestellt und auf der gebundenen Testsite aktualisiert.
+Die beiden danach ausdrücklich heruntergeladenen, lokal validierten Belege
+gehören zur selben Beobachtung: `no_access`, `spfx_subject_available=true`,
+`client_http_class=403` im geschlossenen Fenster 10:42:03–10:42:10 UTC.
+Der HTTP-Wert stammt aus der Antwort auf den vorhandenen Workbench-Snapshot-
+Aufruf. Das schließt eine fehlende SPFx-Benutzerkennung und eine fehlende
+HTTP-Antwort für diese Beobachtung aus, beweist aber weder, dass die Azure
+Function selbst den Request gesehen hat, noch welche serverseitige Regel
+den 403 erzeugte. Ein weiterer Teams-Klick ist für diese Eingrenzung nicht
+nötig. Die Belege werden nicht ins Repository übernommen; der HTTP-Zusatzbeleg
+ist kein Input für den historischen #748-Preflight.
+
+Die aktuelle Owner-Freigabe erlaubt auf `main`-Commit
+`862c87e1e378657f0066faed1bd36b830be2146d` nur die geschützte
+Offline-Vorbereitung eines Windows-Read-Driver-Pakets. Release, Provider-Read,
+Login und Token-Refresh bleiben gesperrt. Die Produktions-Port-Factory
+blockiert weiter mit `BLOCKED_NO_REFRESH_CAPABILITY`.
+
+## Früherer Stand vom 25. September 2026: Client-HTTP-Zusatzbeleg lokal validiert
 
 Der vorhandene Teams-Beleg zeigt `spfx_subject_available=true` bei `no_access`.
 Damit ist eine fehlende SPFx-Benutzerkennung für diese Beobachtung ausgeschlossen,
@@ -155,9 +176,15 @@ ist kein Paketnachweis. Die Paketvorbereitung erzeugt nur
 im Git-Tree gebundener [Lizenzkatalog](../../workflows/contracts/m365-current-state-read-driver-license-catalog.json)
 mit Status `APPROVED` und geschützte externe Lizenzbelege erlauben die
 Finalisierung. Syft-entdeckte Pakete und das vollständige Bundle-Dateimanifest
-werden getrennt abgeglichen. In diesem Schritt wird kein neues Paket gebaut.
+werden getrennt abgeglichen. Diese Aussage beschrieb den früheren reinen
+Diagnoseschritt; die jetzige Freigabe erlaubt nur die geschützte Offline-
+Vorbereitung, noch keine Paketfinalisierung oder Veröffentlichung.
 Der Produktionsport blockiert weiterhin mit
 `BLOCKED_NO_REFRESH_CAPABILITY`; es gibt keine Freigabe für einen realen Read.
+Der [neue Silent-Refresh-Entwurf](../../workflows/contracts/m365-current-state-silent-refresh.design.json)
+ist ausschließlich eine inaktive Designrevision. Er erlaubt derzeit weder einen
+Token-Refresh noch einen Credential-Write oder Microsoft-Zugriff; dafür wären
+später neue Verträge, technische Negativtests und getrennte Freigaben nötig.
 
 - Autorisierung vor Port-Factory und erneut vor jedem Read;
 - sieben geschlossene Ports, keine allgemeine Provider- oder Suchschnittstelle;

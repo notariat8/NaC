@@ -1,12 +1,14 @@
 # Versioned read-only driver for the Teams current-state diagnostic
 
-Status: Specification and plan approved; offline builder repair in Draft PR, package candidate, driver release, and real provider run not approved
+Status: Specification and plan approved; protected offline package preparation and inactive authentication design revision approved on 25 September 2026, finalization, driver release, and real provider run not approved
 
 Date: September 23, 2026
 
 Leading issue: [#748](https://github.com/notariat8/NaC/issues/748)
 
 Base: `main` commit `1b65259b9b4953a3b048be850c7953897b8eab83`, tree `1723094af6a398077be25f7897888faf0159069c`; delivered [PR #749](https://github.com/notariat8/NaC/pull/749) and [PR #751](https://github.com/notariat8/NaC/pull/751). This spec is a new forward change and does not rewrite their historical bindings.
+
+The later owner approval on `main` commit `862c87e1e378657f0066faed1bd36b830be2146d` and tree `3b1cfe5a4cfd7972912b961bfad46b713469f9fa` permits only test-first, protected, repository-external preparation of a Windows package candidate. Its preparation record remains `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; the separately gated release candidate, finalization, a usable no-refresh authentication channel, and any real Microsoft read remain blocked. The two locally validated client receipts from 25 September report an available SPFx subject and an HTTP-403 response; they do not prove the server-side access decision.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -31,6 +33,7 @@ affected_artifacts:
   - docs/de/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - docs/en/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
+  - workflows/contracts/m365-current-state-silent-refresh.design.json
   - workflows/contracts/m365-current-state-read-driver-license-catalog.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
@@ -93,7 +96,7 @@ The existing [#748 diagnostic contract](../../../../workflows/verification-contr
 
 This design authorizes neither a Microsoft read nor consumption of the one-shot diagnostic gate. Terminal Issue #739 and Issue #632 remain separate.
 The `--candidate` command in traceability is a **later** package gate and is
-not run under the current repair approval; without a real, separately approved
+not run under the current preparation-only approval; without a finalized, separately approved
 package, AC-748-RD-01 remains open at artifact level.
 
 ## Scope and design decisions
@@ -105,6 +108,12 @@ package, AC-748-RD-01 remains open at artifact level.
 5. A dedicated HTTP transport accepts only `GET`, no body, redirect, or retry. Unexpected HTTP status, `Location`, pagination links, authentication challenges, oversized or non-redactable responses block before another request. Raw responses, headers, tokens, request URLs and queries, target IDs, and personal data are neither emitted nor persisted, including in errors or process logs. The existing reduced port schemas remain exact.
 6. Microsoft authentication is a separate capability. Existing Azure/M365 CLIs are not evidence of no-refresh behavior because they may refresh internally before a GET. Until an established channel technically and testably guarantees no refresh, the Microsoft transport factory is disabled and ends **before** credential, authentication, or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`. Token export/import, browser, broker, or device-code login is not a fallback.
 7. The new release contract references the historical #748 contract by file digest prospectively; that historical contract file and PR #749/#751 commit, tree, parent, and scope evidence remain unchanged. The spec-traceability validator must check AC and plan parity for this new `spec_id` too; an empty command list or placeholder is not evidence. Before one-shot gate consumption, the #748 composition rechecks the real release record, resource manifest, and attested runtime. `LIVE_CAPABLE` is possible only in conjunction with every existing #748 gate: protected DPA/AVV agreement and receipt bindings, provider/tenant/target scope, account-specific read permission, `principal_id`, exactly bound owner decision, remote checks, one-shot marker, and authorization before port factory and each read. Driver-release approval and approval for exactly one real read are distinct decisions.
+
+## Approved design revision of 25 September 2026 – not executable
+
+The [prospective silent-refresh design](../../../../workflows/contracts/m365-current-state-silent-refresh.design.json) describes a **later** diagnostic path using the existing, exactly and protectively bound Funktion8 account. The real account ID and its principal mapping remain outside the repository; an account name proves neither `principal_id` nor read permission. This revision changes neither the historical #748 diagnostic contract nor the current read-driver release contract: both still enforce zero token refresh and zero credential write, `LIVE_CAPABLE` remains disabled, and the production port blocks before authentication or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`.
+
+A later path would need a separately approved, forward-versioned contract, validator, test, and runtime change that technically counts refresh attempts for closed resource audiences: at most one silent attempt per exactly bound audience and at most four in total, without retry. If the actual audiences or cache-write effects cannot be fully observed and restricted to the existing current-user-only auth store, the path remains blocked. Silent refresh is a RED-classified, dedicated credential operation, not a pure read, and requires separate exactly bound owner approval. Browser, broker, or device-code login, account switching, token import/export, free audiences, extra GETs, and provider writes are not fallbacks. Protected DPA/AVV, target, receipt, principal, solo-owner, and permission bindings, plus separate driver-release and one-real-read approvals, remain additional conditions. The design approval authorizes none of these steps.
 
 ## Closed resource families
 
@@ -126,7 +135,7 @@ Microsoft documents [Teams tab GET](https://learn.microsoft.com/en-us/graph/api/
 - An apparent GET in a CLI may trigger a refresh. `az rest` and the M365 CLI are therefore not connected as production transport without proof; an offline mock cannot supply that proof.
 - One GET may not provide all facts for a port. The outcome is then `BLOCKED_RESOURCE_PROJECTION_INCOMPLETE`; no extra request, POST batch, or broader search is improvised.
 - A bundle may contain libraries outside the attested entry executable. Without full bundle and license/SBOM proof, the outcome is `BLOCKED_DRIVER_RELEASE_BINDING`.
-- Preparation produces only a current-user-only bundle and `preparation.json` with `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, not a release record. The first preparation is review evidence; once the catalog is approved on a new commit, a fresh preparation with **identical** file, tool, SBOM, driver-source, and resource digests is required. Finalization needs the reviewed license catalog bound to the Git tree and protected external license texts. A catalog entry is reviewable evidence, not automatic authenticity verification of a third-party download server. Until its source hashes and license texts are independently checked, `BLOCKED_LICENSE_PROVENANCE` applies; no new package candidate is built under this approval.
+- Preparation produces only a current-user-only bundle and `preparation.json` with `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, not a release record. The first preparation is review evidence; once the catalog is approved on a new commit, a fresh preparation with **identical** file, tool, SBOM, driver-source, and resource digests is required. Finalization needs the reviewed license catalog bound to the Git tree and protected external license texts. A catalog entry is reviewable evidence, not automatic authenticity verification of a third-party download server. Until its source hashes and license texts are independently checked, `BLOCKED_LICENSE_PROVENANCE` applies; the original repair approval allowed no candidate, while the later approval bound above allows only its preparation.
 - A client receipt proves neither a BFF request nor request telemetry. Missing, uncorrelated, or non-redactable log evidence blocks; it is not guessed to be `BFF_REQUEST_NOT_OBSERVED`.
 - The #748 account/principal rules remain unchanged. Without a specifically cited applicable external two-person duty, `OWNER_SOLO_APPROVAL` is permitted and records `four_eyes_satisfied=false`. A specifically cited applicable duty with only one principal blocks as `BLOCKED_SINGLE_PRINCIPAL`. Multiple accounts of one principal neither constitute four-eyes approval nor expand provider permission.
 
