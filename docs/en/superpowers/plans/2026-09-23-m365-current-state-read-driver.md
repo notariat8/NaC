@@ -1,6 +1,6 @@
 # Versioned read-only driver for the Teams current-state diagnostic – implementation plan
 
-Status: Plan approved; protected offline package preparation approved on 25 September 2026, finalization, driver release, and real read not approved
+Status: Plan approved; protected offline package preparation and inactive authentication design revision approved on 25 September 2026, finalization, driver release, and real read not approved
 
 Date: September 23, 2026
 
@@ -29,6 +29,12 @@ from `repository_external_release_candidate=false`. Preparation is the only
 approved external file creation and produces no release record. The original
 repair approval stopped before any candidate; the later approval bound above
 extends preparation only.
+
+## Plan for the approved design revision – no runtime authorization
+
+The new [silent-refresh design](../../../../workflows/contracts/m365-current-state-silent-refresh.design.json) is `DESIGN_ONLY_NOT_AUTHORIZED`. The historical #748 contract, current release contract, and their validators remain unchanged; in particular, `token_refresh=0`, `credential_write=0`, `LIVE_CAPABLE=false`, and `BLOCKED_NO_REFRESH_CAPABILITY` remain effective. AC-748-RD-04 and its zero-effect tests continue to govern the **current** path. The design revision alone proves no authentication capability and authorizes no package candidate, release, or Microsoft read.
+
+For a **later, separately approved** implementation, the sequence is: (1) map the six GET resources to a closed audience set and prove that refresh attempts and cache-write effects are technically observable; (2) test-first design a credential adapter with at most one silent attempt per bound audience and four in total, without retry, browser/broker/device-code login, account switching, or token import/export; (3) protectively bind account, tenant, `principal_id`, and the current-user-only auth store without publishing identity mappings or tokens in Git/evidence; (4) forward-version the historical contracts, replace only refresh-specific zero counters with technically bound limits, and preserve every other gate with validators and negative tests; (5) obtain separate exactly bound owner approval before any RED-classified, dedicated credential operation, then separately approve driver release and exactly one real read. Unobservable effects, audience drift, missing permission, or incomplete DPA/AVV/receipt binding block before provider access. Independent license review remains a separate outstanding gate.
 
 ## Evidence matrix
 

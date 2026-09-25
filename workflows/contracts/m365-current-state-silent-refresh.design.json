@@ -1,0 +1,49 @@
+{
+  "schema_version": "nac.m365-current-state-silent-refresh-design/v0.1",
+  "contract_id": "m365-current-state-silent-refresh-design",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/748",
+  "status": "DESIGN_ONLY_NOT_AUTHORIZED",
+  "supersedes_existing_contracts": false,
+  "current_runtime_effects": {
+    "login": 0,
+    "token_refresh": 0,
+    "credential_write": 0,
+    "microsoft_provider_read": 0
+  },
+  "future_prerequisites": [
+    "separate_owner_approval_for_exact_credential_operation",
+    "forward_versioned_diagnostic_and_release_contracts_with_validator_and_test_updates",
+    "existing_account_and_tenant_bound_in_protected_repository_external_resolver",
+    "stable_principal_id_and_applicable_two_person_duty_checked_without_account_alias_shortcut",
+    "protected_avv_dpa_target_client_receipt_and_owner_decision_bindings",
+    "closed_audience_map_derived_from_six_get_resource_contract",
+    "technical_proof_of_refresh_attempt_and_cache_write_limits",
+    "independent_license_evidence_and_separate_driver_release_approval",
+    "separate_exactly_one_real_read_approval_and_one_shot_gate"
+  ],
+  "future_governance_outcomes": {
+    "no_cited_applicable_external_two_person_duty": "OWNER_SOLO_APPROVAL_WITH_FOUR_EYES_FALSE",
+    "cited_applicable_two_person_duty_with_one_principal": "BLOCKED_SINGLE_PRINCIPAL",
+    "same_principal_account_aliases_can_satisfy_four_eyes": false
+  },
+  "proposed_credential_boundary": {
+    "operation_classification": "RED_DEDICATED_CREDENTIAL_RUN_REQUIRES_EXACT_OWNER_APPROVAL",
+    "existing_account_only": true,
+    "interactive_login_allowed": false,
+    "device_code_allowed": false,
+    "account_switch_allowed": false,
+    "token_import_export_allowed": false,
+    "refresh_attempts_per_bound_audience_max": 1,
+    "refresh_attempts_total_max": 4,
+    "refresh_retry_allowed": false,
+    "cache_write_location": "existing_current_user_only_repository_external_auth_store_only",
+    "unverified_audience_or_unobservable_effect": "FAIL_CLOSED_BEFORE_PROVIDER_READ"
+  },
+  "provider_boundary": {
+    "resource_contract": "workflows/contracts/m365-current-state-read-driver-resources.contract.json",
+    "new_get_operations_allowed": false,
+    "redirect_allowed": false,
+    "request_retry_allowed": false,
+    "provider_write_allowed": false
+  }
+}

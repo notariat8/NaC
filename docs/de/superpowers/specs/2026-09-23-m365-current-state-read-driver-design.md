@@ -1,6 +1,6 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose
 
-Status: Spec und Plan freigegeben; geschützte Offline-Paketvorbereitung am 25. September 2026 genehmigt, Finalisierung, Treiber-Release und realer Providerlauf nicht freigegeben
+Status: Spec und Plan freigegeben; geschützte Offline-Paketvorbereitung und inaktive Authentifizierungs-Designrevision am 25. September 2026 genehmigt, Finalisierung, Treiber-Release und realer Providerlauf nicht freigegeben
 
 Datum: 23. September 2026
 
@@ -33,6 +33,7 @@ affected_artifacts:
   - docs/de/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - docs/en/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
+  - workflows/contracts/m365-current-state-silent-refresh.design.json
   - workflows/contracts/m365-current-state-read-driver-license-catalog.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
@@ -107,6 +108,12 @@ separat genehmigtes Paket bleibt AC-748-RD-01 auf Artefaktebene offen.
 5. Ein eigener HTTP-Transport akzeptiert nur `GET`, keinen Body, keinen Redirect und keinen Retry. Unerwartete HTTP-Statuswerte, `Location`, Pagination-Links, Authentifizierungs-Challenges, größenüberschreitende oder nicht redigierbare Antworten blockieren vor einem weiteren Request. Rohantworten, Header, Tokens, Request-URLs und -Querys, Ziel-IDs und personenbezogene Daten werden weder ausgegeben noch persistiert – auch nicht in Fehlermeldungen oder Prozesslogs. Die vorhandenen reduzierten Port-Schemas bleiben exakt.
 6. Die Microsoft-Authentifizierung ist eine gesonderte Fähigkeit. Die bestehende Azure-/M365-CLI darf nicht als No-Refresh-Beleg gelten, weil sie vor einem GET intern Token erneuern kann. Solange kein bestehender Kanal die Nicht-Erneuerung technisch und testbar garantiert, ist die Microsoft-Transport-Factory deaktiviert und endet **vor** Credential-, Authentifizierungs- und Providerzugriff mit `BLOCKED_NO_REFRESH_CAPABILITY`. Weder Tokenexport/-import noch Browser-, Broker- oder Gerätecode-Login ist ein Fallback.
 7. Der neue Release-Vertrag referenziert den historischen #748-Vertrag mit dessen Dateidigest vorwärtsgerichtet; die historische Vertragsdatei und PR-#749-/PR-#751-Commit-, Tree-, Parent- und Scope-Evidence bleiben unverändert. Der Spec-Traceability-Validator muss die AC- und Plan-Parität auch für diesen neuen `spec_id` prüfen; eine leere Befehlsliste oder bloße Platzhalter zählen nicht als Nachweis. Vor dem einmaligen Gate-Consume prüft die #748-Komposition den realen Release-Beleg, das Ressourcenmanifest und die attestierte Runtime erneut. `LIVE_CAPABLE` ist nur konjunktiv mit allen bestehenden #748-Gates möglich: geschützte AVV-/DPA-Vertrags- und Receipt-Bindung, Provider-/Tenant-/Zielscope, kontospezifische Leseberechtigung, `principal_id`, exakt gebundene Owner-Entscheidung, Remote-Checks, One-Shot-Marker und Autorisierung vor Port-Factory sowie vor jedem Read. Treiber-Release-Freigabe und Freigabe genau eines realen Reads sind zwei getrennte Entscheidungen.
+
+## Freigegebene Designrevision vom 25. September 2026 – noch nicht ausführbar
+
+Der [prospektive Silent-Refresh-Entwurf](../../../../workflows/contracts/m365-current-state-silent-refresh.design.json) beschreibt einen **späteren** Diagnosepfad mit dem bereits vorhandenen, exakt und geschützt gebundenen Funktion8-Konto. Die reale Konto-ID und ihre Principal-Zuordnung bleiben repository-extern; ein Accountname beweist weder `principal_id` noch Leseberechtigung. Diese Revision ändert weder den historischen #748-Diagnosevertrag noch den aktuellen Read-Driver-Release-Vertrag: Beide erzwingen weiterhin null Token-Refresh und null Credential-Write, `LIVE_CAPABLE` bleibt deaktiviert und der Produktionsport blockiert vor Authentifizierung und Providerzugriff mit `BLOCKED_NO_REFRESH_CAPABILITY`.
+
+Für einen späteren Pfad müsste eine getrennt freigegebene, vorwärtsversionierte Vertrags-, Validator-, Test- und Runtime-Änderung den geschlossenen Ressourcenaudiences einen technischen Refresh-Zähler zuordnen: höchstens ein stiller Versuch je exakt gebundener Audience und höchstens vier insgesamt, ohne Wiederholung. Falls die tatsächlichen Audiences oder Cache-Schreibwirkungen nicht vollständig beobachtbar und auf den bestehenden Current-User-only-Auth-Speicher begrenzbar sind, bleibt der Pfad gesperrt. Ein stiller Refresh ist eine RED-eingestufte, dedizierte Credential-Operation, kein reiner Read; er erfordert eine eigene exakt gebundene Owner-Freigabe. Browser-/Broker-/Gerätecode-Login, Kontowechsel, Tokenimport/-export, freie Audiences, zusätzliche GETs und Provider-Schreibaktionen sind keine Ausweichwege. Geschützte AVV-/DPA-, Target-, Receipt-, Principal-, Solo-Owner- und Berechtigungsbindung sowie separate Treiber-Release- und Einmal-Read-Freigaben bleiben zusätzliche Bedingungen. Die Designfreigabe autorisiert keinen dieser Schritte.
 
 ## Geschlossene Ressourcenfamilien
 

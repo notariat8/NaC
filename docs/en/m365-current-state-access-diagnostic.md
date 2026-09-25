@@ -172,6 +172,10 @@ older no-build statement concerned the diagnostic step; the current approval
 permits protected offline preparation only, not package finalization or release.
 The production port still blocks with
 `BLOCKED_NO_REFRESH_CAPABILITY`; no real read is approved.
+The [new silent-refresh design](../../workflows/contracts/m365-current-state-silent-refresh.design.json)
+is an inactive design revision only. It currently permits no token refresh,
+credential write, or Microsoft access; later use would require new contracts,
+technical negative tests, and separate approvals.
 
 - authorization before the port factory and again before every read;
 - seven closed ports, no general provider or search interface;

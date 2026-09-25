@@ -1,6 +1,6 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose – Implementierungsplan
 
-Status: Plan freigegeben; geschützte Offline-Paketvorbereitung am 25. September 2026 genehmigt, Finalisierung, Treiber-Release und Real-Read nicht freigegeben
+Status: Plan freigegeben; geschützte Offline-Paketvorbereitung und inaktive Authentifizierungs-Designrevision am 25. September 2026 genehmigt, Finalisierung, Treiber-Release und Real-Read nicht freigegeben
 
 Datum: 23. September 2026
 
@@ -29,6 +29,12 @@ von `repository_external_release_candidate=false`. Die Vorbereitung ist die
 einzige freigegebene externe Dateierstellung; sie erzeugt keinen Release-Beleg.
 Die ursprüngliche Reparaturfreigabe endete vor jedem Kandidaten; die spätere
 oben gebundene Freigabe erweitert nur die Vorbereitung.
+
+## Plan der genehmigten Designrevision – ohne Laufzeitfreigabe
+
+Der neue [Silent-Refresh-Entwurf](../../../../workflows/contracts/m365-current-state-silent-refresh.design.json) ist `DESIGN_ONLY_NOT_AUTHORIZED`. Der historische #748-Vertrag, der aktuelle Release-Vertrag und ihre Validatoren bleiben unverändert; insbesondere bleiben `token_refresh=0`, `credential_write=0`, `LIVE_CAPABLE=false` und `BLOCKED_NO_REFRESH_CAPABILITY` wirksam. AC-748-RD-04 und seine Null-Effekt-Tests gelten für den **aktuellen** Pfad unverändert. Die Designrevision allein erfüllt keinen Authentifizierungsnachweis und autorisiert keinen Paketkandidaten, Release oder Microsoft-Read.
+
+Für eine **später separat zu genehmigende** Implementierung lautet die Reihenfolge: (1) die sechs GET-Ressourcen auf eine geschlossene Audience-Menge abbilden und die technische Beobachtbarkeit von Refresh-Versuch und Cache-Schreibwirkung nachweisen; (2) test-first einen Credential-Adapter mit höchstens einem stillen Versuch je gebundener Audience, höchstens vier insgesamt, ohne Retry, Browser-/Broker-/Gerätecode-Login, Kontowechsel oder Tokenimport/-export entwerfen; (3) Konto, Tenant, `principal_id` und Current-User-only-Auth-Speicher geschützt binden, ohne Identitätszuordnung oder Token in Git/Evidence auszugeben; (4) historische Verträge nur vorwärtsversionieren, ausschließlich Refresh-spezifische Nullzähler durch technisch gebundene Grenzen ersetzen und alle übrigen Gates mit Validatoren und Negativtests erhalten; (5) vor jeder RED-eingestuften, dedizierten Credential-Operation eine eigene exakt gebundene Owner-Freigabe einholen und Treiber-Release sowie genau einen realen Read danach getrennt freigeben. Bei nicht beobachtbaren Wirkungen, Audience-Drift, fehlender Berechtigung oder unvollständiger AVV-/DPA-/Receipt-Bindung stoppt der Pfad vor Providerzugriff. Die weiterhin ausstehende unabhängige Lizenzprüfung bleibt ein eigenes Gate.
 
 ## Nachweismatrix
 

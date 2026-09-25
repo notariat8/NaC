@@ -181,6 +181,10 @@ Diagnoseschritt; die jetzige Freigabe erlaubt nur die geschützte Offline-
 Vorbereitung, noch keine Paketfinalisierung oder Veröffentlichung.
 Der Produktionsport blockiert weiterhin mit
 `BLOCKED_NO_REFRESH_CAPABILITY`; es gibt keine Freigabe für einen realen Read.
+Der [neue Silent-Refresh-Entwurf](../../workflows/contracts/m365-current-state-silent-refresh.design.json)
+ist ausschließlich eine inaktive Designrevision. Er erlaubt derzeit weder einen
+Token-Refresh noch einen Credential-Write oder Microsoft-Zugriff; dafür wären
+später neue Verträge, technische Negativtests und getrennte Freigaben nötig.
 
 - Autorisierung vor Port-Factory und erneut vor jedem Read;
 - sieben geschlossene Ports, keine allgemeine Provider- oder Suchschnittstelle;

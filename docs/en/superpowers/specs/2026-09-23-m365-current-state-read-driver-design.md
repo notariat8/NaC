@@ -1,6 +1,6 @@
 # Versioned read-only driver for the Teams current-state diagnostic
 
-Status: Specification and plan approved; protected offline package preparation approved on 25 September 2026, finalization, driver release, and real provider run not approved
+Status: Specification and plan approved; protected offline package preparation and inactive authentication design revision approved on 25 September 2026, finalization, driver release, and real provider run not approved
 
 Date: September 23, 2026
 
@@ -33,6 +33,7 @@ affected_artifacts:
   - docs/de/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - docs/en/superpowers/plans/2026-09-23-m365-current-state-read-driver.md
   - workflows/contracts/m365-current-state-read-driver-resources.contract.json
+  - workflows/contracts/m365-current-state-silent-refresh.design.json
   - workflows/contracts/m365-current-state-read-driver-license-catalog.json
   - workflows/verification-contracts/m365-current-state-read-driver.verification.json
   - src/nac_bff/current_state_read_driver.py
@@ -107,6 +108,12 @@ package, AC-748-RD-01 remains open at artifact level.
 5. A dedicated HTTP transport accepts only `GET`, no body, redirect, or retry. Unexpected HTTP status, `Location`, pagination links, authentication challenges, oversized or non-redactable responses block before another request. Raw responses, headers, tokens, request URLs and queries, target IDs, and personal data are neither emitted nor persisted, including in errors or process logs. The existing reduced port schemas remain exact.
 6. Microsoft authentication is a separate capability. Existing Azure/M365 CLIs are not evidence of no-refresh behavior because they may refresh internally before a GET. Until an established channel technically and testably guarantees no refresh, the Microsoft transport factory is disabled and ends **before** credential, authentication, or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`. Token export/import, browser, broker, or device-code login is not a fallback.
 7. The new release contract references the historical #748 contract by file digest prospectively; that historical contract file and PR #749/#751 commit, tree, parent, and scope evidence remain unchanged. The spec-traceability validator must check AC and plan parity for this new `spec_id` too; an empty command list or placeholder is not evidence. Before one-shot gate consumption, the #748 composition rechecks the real release record, resource manifest, and attested runtime. `LIVE_CAPABLE` is possible only in conjunction with every existing #748 gate: protected DPA/AVV agreement and receipt bindings, provider/tenant/target scope, account-specific read permission, `principal_id`, exactly bound owner decision, remote checks, one-shot marker, and authorization before port factory and each read. Driver-release approval and approval for exactly one real read are distinct decisions.
+
+## Approved design revision of 25 September 2026 – not executable
+
+The [prospective silent-refresh design](../../../../workflows/contracts/m365-current-state-silent-refresh.design.json) describes a **later** diagnostic path using the existing, exactly and protectively bound Funktion8 account. The real account ID and its principal mapping remain outside the repository; an account name proves neither `principal_id` nor read permission. This revision changes neither the historical #748 diagnostic contract nor the current read-driver release contract: both still enforce zero token refresh and zero credential write, `LIVE_CAPABLE` remains disabled, and the production port blocks before authentication or provider access with `BLOCKED_NO_REFRESH_CAPABILITY`.
+
+A later path would need a separately approved, forward-versioned contract, validator, test, and runtime change that technically counts refresh attempts for closed resource audiences: at most one silent attempt per exactly bound audience and at most four in total, without retry. If the actual audiences or cache-write effects cannot be fully observed and restricted to the existing current-user-only auth store, the path remains blocked. Silent refresh is a RED-classified, dedicated credential operation, not a pure read, and requires separate exactly bound owner approval. Browser, broker, or device-code login, account switching, token import/export, free audiences, extra GETs, and provider writes are not fallbacks. Protected DPA/AVV, target, receipt, principal, solo-owner, and permission bindings, plus separate driver-release and one-real-read approvals, remain additional conditions. The design approval authorizes none of these steps.
 
 ## Closed resource families
 
