@@ -20,3 +20,9 @@ regexes = [
   '''^mutation\.s5_idempotency_key$''',
   '''30927974be4fd41f6c90c62be62aeab5a75abedd247762527afa92f0c77df060''',
 ]
+
+[[allowlists]]
+description = "Allow the exact Issue 748 pinned source SHA-256 false positive; no other commit or line is exempt"
+fingerprints = [
+  "2d330f2367b1eebec5333b6dec21b017fe6f4681:spfx/nac-bpmn-viewer/scripts/validate-read-only-boundary.cjs:generic-api-key:24",
+]
