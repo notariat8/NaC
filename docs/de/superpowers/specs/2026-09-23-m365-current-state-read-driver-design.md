@@ -1,12 +1,14 @@
 # Versionierter Read-only-Treiber für die Teams-Current-State-Diagnose
 
-Status: Spec und Plan freigegeben; Offline-Builder-Reparatur in Draft-PR, Paketkandidat, Treiber-Release und realer Providerlauf nicht freigegeben
+Status: Spec und Plan freigegeben; geschützte Offline-Paketvorbereitung am 25. September 2026 genehmigt, Finalisierung, Treiber-Release und realer Providerlauf nicht freigegeben
 
 Datum: 23. September 2026
 
 Führendes Issue: [#748](https://github.com/notariat8/NaC/issues/748)
 
 Ausgangsbasis: `main`-Commit `1b65259b9b4953a3b048be850c7953897b8eab83`, Tree `1723094af6a398077be25f7897888faf0159069c`; gelieferte [PR #749](https://github.com/notariat8/NaC/pull/749) und [PR #751](https://github.com/notariat8/NaC/pull/751). Diese Spec ist eine neue Vorwärtsänderung und schreibt deren historische Bindungen nicht um.
+
+Die spätere Owner-Freigabe auf `main`-Commit `862c87e1e378657f0066faed1bd36b830be2146d` und Tree `3b1cfe5a4cfd7972912b961bfad46b713469f9fa` erlaubt test-first ausschließlich die geschützte, repository-externe Vorbereitung eines Windows-Paketkandidaten. Der Vorbereitungsbeleg bleibt `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`; der im Vertrag getrennte Release-Kandidat, seine Finalisierung, ein nutzbarer No-Refresh-Authentifizierungskanal und der reale Microsoft-Lauf bleiben gesperrt. Die beiden am 25. September lokal validierten Clientbelege melden eine vorhandene SPFx-Subject-Bindung und eine HTTP-403-Antwort; sie beweisen keine serverseitige Zugriffsentscheidung.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -93,7 +95,7 @@ Der bestehende [#748-Diagnosevertrag](../../../../workflows/verification-contrac
 
 Dieses Design autorisiert weder einen Microsoft-Read noch das Konsumieren des einmaligen Diagnose-Gates. Der terminale Issue-#739-Lauf und Issue #632 bleiben unberührt.
 Der `--candidate`-Befehl in der Traceability ist ein **späteres** Paket-Gate und
-wird unter der aktuellen Reparaturfreigabe nicht ausgeführt; ohne reales,
+wird durch die jetzige reine Vorbereitungsfreigabe nicht ausgeführt; ohne finales,
 separat genehmigtes Paket bleibt AC-748-RD-01 auf Artefaktebene offen.
 
 ## Scope und Designentscheidungen
@@ -126,7 +128,7 @@ Microsoft dokumentiert die [Teams-Tab-GET-API](https://learn.microsoft.com/en-us
 - Ein GET kann im aufgerufenen CLI-Client einen Refresh auslösen. Deshalb werden `az rest` und M365-CLI nicht ungeprüft als produktiver Transport eingehängt; ein Offline-Mock beweist dies ebenfalls nicht.
 - Ein einzelner GET kann für einen Port nicht alle benötigten Fakten liefern. Dann lautet das Ergebnis `BLOCKED_RESOURCE_PROJECTION_INCOMPLETE`; eine zusätzliche Abfrage, ein POST-Batch oder eine verallgemeinerte Suche wird nicht improvisiert.
 - Ein Build-Bundle kann Bibliotheken außerhalb des attestierten Einstiegs enthalten. Ohne vollständigen Bundle- und Lizenz-/SBOM-Nachweis lautet das Ergebnis `BLOCKED_DRIVER_RELEASE_BINDING`.
-- Die Vorbereitung erzeugt nur ein Current-User-only-Bundle mit `preparation.json` und dem Status `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, aber keinen Release-Beleg. Die erste Vorbereitung ist Review-Evidence; nach Freigabe des Katalogs auf einem neuen Commit muss eine frische Vorbereitung mit **identischen** Datei-, Tool-, SBOM-, Treiberquell- und Ressourcen-Hashes erfolgen. Die Finalisierung braucht den im Git-Tree gebundenen, ausdrücklich reviewten Lizenzkatalog und geschützte externe Lizenztexte. Ein Katalogeintrag ist ein nachvollziehbarer Review-Nachweis, keine automatische Authentizitätsprüfung eines fremden Download-Servers. Ohne unabhängige Prüfung seiner Quell-Hashes und Lizenztexte bleibt `BLOCKED_LICENSE_PROVENANCE`; in diesem Auftrag wird kein neuer Paketkandidat gebaut.
+- Die Vorbereitung erzeugt nur ein Current-User-only-Bundle mit `preparation.json` und dem Status `AWAITING_INDEPENDENT_LICENSE_EVIDENCE`, aber keinen Release-Beleg. Die erste Vorbereitung ist Review-Evidence; nach Freigabe des Katalogs auf einem neuen Commit muss eine frische Vorbereitung mit **identischen** Datei-, Tool-, SBOM-, Treiberquell- und Ressourcen-Hashes erfolgen. Die Finalisierung braucht den im Git-Tree gebundenen, ausdrücklich reviewten Lizenzkatalog und geschützte externe Lizenztexte. Ein Katalogeintrag ist ein nachvollziehbarer Review-Nachweis, keine automatische Authentizitätsprüfung eines fremden Download-Servers. Ohne unabhängige Prüfung seiner Quell-Hashes und Lizenztexte bleibt `BLOCKED_LICENSE_PROVENANCE`; die ursprüngliche Reparaturfreigabe erlaubte noch keinen Kandidaten, die spätere oben gebundene Freigabe erlaubt nur dessen Vorbereitung.
 - Ein aktiver Clientbeleg beweist weder einen Request im BFF noch vorhandene Request-Telemetrie. Fehlende, nicht korrelationsgebundene oder nicht redigierbare Log-Evidence blockiert; sie wird nicht zu `BFF_REQUEST_NOT_OBSERVED` geraten.
 - Die Konto-/Principal-Regeln des #748-Gates gelten unverändert. Ohne konkret zitierte anwendbare externe Zwei-Personen-Pflicht ist `OWNER_SOLO_APPROVAL` zulässig und dokumentiert `four_eyes_satisfied=false`. Eine konkret zitierte anwendbare Pflicht mit nur einem Principal blockiert `BLOCKED_SINGLE_PRINCIPAL`. Verschiedene Accounts desselben Principals sind keine Vier-Augen-Trennung und erweitern keine Providerberechtigung.
 

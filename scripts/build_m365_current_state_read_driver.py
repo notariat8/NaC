@@ -718,7 +718,7 @@ def prepare_candidate(
     *, repo: Path, output: Path, expected_head: str, expected_tree: str,
     syft: str,
 ) -> Path:
-    require_candidate_contract_gate(repo)
+    require_candidate_contract_gate(repo, phase="prepare")
     backend, windows = require_windows_security()
     if repo.resolve() != ROOT.resolve():
         raise BuildBlocked("BLOCKED_SOURCE_REPOSITORY_MISMATCH")
@@ -803,18 +803,21 @@ def _reviewed_catalog(repo: Path) -> dict:
     return catalog
 
 
-def require_candidate_contract_gate(repo: Path) -> None:
-    """This repair cannot create a new package until a later contract change."""
+def require_candidate_contract_gate(repo: Path, *, phase: str = "release") -> None:
+    """Keep offline preparation separate from release-candidate finalization."""
     try:
         contract = json.loads((repo / "workflows/verification-contracts"
                                / "m365-current-state-read-driver.verification.json")
                               .read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError):
         raise BuildBlocked("BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED") from None
-    if (not isinstance(contract, dict)
+    permission = {
+        "prepare": "repository_external_preparation_candidate",
+        "release": "repository_external_release_candidate",
+    }.get(phase)
+    if (permission is None or not isinstance(contract, dict)
             or not isinstance(contract.get("side_effects_allowed_offline"), dict)
-            or contract["side_effects_allowed_offline"].get(
-                "repository_external_release_candidate") is not True):
+            or contract["side_effects_allowed_offline"].get(permission) is not True):
         raise BuildBlocked("BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED")
 
 

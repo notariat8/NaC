@@ -103,6 +103,7 @@ _RELEASE_ARTIFACTS = {
 _OFFLINE_EFFECTS = {
     "repository_change": True,
     "synthetic_test_files": True,
+    "repository_external_preparation_candidate": True,
     "repository_external_release_candidate": False,
     "microsoft_provider_read": False,
     "real_run_gate_consume": False,

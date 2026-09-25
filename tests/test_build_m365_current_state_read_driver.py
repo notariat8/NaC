@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
+from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -18,22 +21,42 @@ SPEC.loader.exec_module(builder)
 
 
 class CandidateBuilderBoundaryTests(unittest.TestCase):
-    def test_current_contract_blocks_new_candidate_before_build(self) -> None:
+    def test_current_contract_allows_preparation_but_blocks_release(self) -> None:
+        builder.require_candidate_contract_gate(builder.ROOT, phase="prepare")
         with self.assertRaisesRegex(
             builder.BuildBlocked, "BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED",
         ):
-            builder.require_candidate_contract_gate(builder.ROOT)
+            builder.require_candidate_contract_gate(builder.ROOT, phase="release")
 
-    def test_cli_modes_block_without_creating_output_or_touching_toolchain(self) -> None:
+    def test_preparation_needs_explicit_contract_flag(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
-            for mode in ("prepare", "build", "finalize"):
+            root = Path(folder)
+            path = root / "workflows" / "verification-contracts"
+            path.mkdir(parents=True)
+            (path / "m365-current-state-read-driver.verification.json").write_text(
+                json.dumps({"side_effects_allowed_offline": {
+                    "repository_external_preparation_candidate": False,
+                    "repository_external_release_candidate": False,
+                }}), encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                builder.BuildBlocked, "BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED",
+            ):
+                builder.require_candidate_contract_gate(root, phase="prepare")
+            with self.assertRaisesRegex(
+                builder.BuildBlocked, "BLOCKED_RELEASE_CANDIDATE_NOT_AUTHORIZED",
+            ):
+                builder.require_candidate_contract_gate(root, phase="unknown")
+
+    def test_release_modes_block_without_creating_output_or_touching_toolchain(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            for mode in ("build", "finalize"):
                 output = Path(folder) / mode
                 arguments = [
                     "--mode", mode, "--output", str(output),
                     "--expected-head", "a" * 40, "--expected-tree", "b" * 40,
                 ]
-                if mode != "prepare":
-                    arguments.extend(("--license-evidence-dir", folder))
+                arguments.extend(("--license-evidence-dir", folder))
                 with self.subTest(mode=mode):
                     with mock.patch.object(builder, "require_windows_security") as security:
                         with mock.patch.object(builder, "_tool_versions") as tools:
@@ -41,6 +64,30 @@ class CandidateBuilderBoundaryTests(unittest.TestCase):
                             self.assertFalse(output.exists())
                             security.assert_not_called()
                             tools.assert_not_called()
+
+    def test_preparation_still_rejects_wrong_source_before_toolchain_or_output(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "candidate"
+            with mock.patch.object(
+                builder, "require_windows_security",
+                return_value=(mock.Mock(), mock.Mock()),
+            ), mock.patch.object(
+                builder, "validate_output_path", return_value=output,
+            ), mock.patch.object(
+                builder, "validate_source_state",
+                side_effect=builder.BuildBlocked("BLOCKED_SOURCE_HEAD_MISMATCH"),
+            ) as source, mock.patch.object(builder, "_tool_versions") as tools:
+                status = io.StringIO()
+                with redirect_stdout(status):
+                    self.assertEqual(builder.main([
+                        "--mode", "prepare", "--output", str(output),
+                        "--expected-head", "a" * 40,
+                        "--expected-tree", "b" * 40,
+                    ]), 1)
+                self.assertIn("BLOCKED_SOURCE_HEAD_MISMATCH", status.getvalue())
+                source.assert_called_once()
+                self.assertFalse(output.exists())
+                tools.assert_not_called()
 
     def test_reviewed_catalog_is_independent_of_operator_inventory(self) -> None:
         component = {

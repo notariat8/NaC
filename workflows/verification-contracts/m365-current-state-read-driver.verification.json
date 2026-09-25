@@ -61,6 +61,7 @@
   "side_effects_allowed_offline": {
     "repository_change": true,
     "synthetic_test_files": true,
+    "repository_external_preparation_candidate": true,
     "repository_external_release_candidate": false,
     "microsoft_provider_read": false,
     "real_run_gate_consume": false
