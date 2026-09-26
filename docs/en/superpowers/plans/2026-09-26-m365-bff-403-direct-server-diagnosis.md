@@ -1,0 +1,54 @@
+# Direct server diagnosis of the Teams 403 – implementation plan
+
+Status: synchronized DE/EN plan for review; neither implementation, provider access nor deployment is approved.
+
+Date: September 26, 2026
+
+Leading issue: [#756](https://github.com/notariat8/NaC/issues/756); delivery mode: Protected PR; risk gate: Human Approval.
+
+Approved [EN specification](../specs/2026-09-26-m365-bff-403-diagnostic-event-design.md): `m365-bff-403-direct-server-diagnosis`, `AC-756-SD-01` through `AC-756-SD-05`, commit `a76a1a0e9769cdf7f775e73d0812367ad408c066`, tree `6d95fea5fbc2038068eda0602ca06693e0e47cc4`. The [inactive v1 implementation in Draft PR #757](https://github.com/notariat8/NaC/pull/757) and its existing [v1 contract](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json) are a separate, unchanged scope.
+
+## Purpose and order
+
+The existing Teams receipts show an available SPFx subject and HTTP 403, but not an unambiguously attributed BFF request or a concrete denial reason. The order is therefore fixed:
+
+1. **Stage A:** bind existing, actually deployed server state and request telemetry with evidence, then perform only the narrowly bounded read.
+2. **Only if A is insufficient – Stage B:** refine the inactive #756 event with a request-local, privacy-reviewed reason. Only a separately approved deployment and new Teams observation could then produce additional evidence.
+
+No new SPFx receipt, generic diagnostic driver or BFF deployment is built speculatively. A proven non-deployment finding ends the instrumentation path. Empty, expired or ambiguous logs remain `UNPROVEN`, not “no BFF request.”
+
+## Plan → review → fix: local work packages
+
+### A1. Bind target and contract before code (AC-756-SD-01, -02)
+
+- Inventory existing protected client-receipt hashes, the observation window and repository-local deployment hints only as candidates; never reconstruct lost #739 artifacts. Local statements or repository configuration do not prove an actual deployment.
+- Prepare a **new**, forward-versioned follow-on contract at `workflows/verification-contracts/m365-bff-403-direct-server-diagnosis.verification.json`. It binds exactly test workspace `notary_team_01`, app ID, the active BFF/Function/Application Insights target, tenant, package version, existing read permission of the provider-qualified account, stable governance `principal_id`, approved source evidence and closed observation window. Account routing expands neither principal nor read permission. Unknown values remain explicitly `UNBOUND`; they are not guessed through search or list requests.
+- The repository contains only schema, checked hash/opaque bindings or `UNBOUND`, never real account/principal/tenant mappings, client-receipt content or private sources. Concrete identities and evidence remain in protected repository-external storage; the validator rejects raw personal or matter data and secrets. Tokens and credentials are neither stored nor hashed.
+- Give each later required metadata GET an individually named endpoint, exact response projection and separate read budget. Bind the historical request query to its exact byte hash, precisely `request_observed`, `http_class`, `request_correlation_binding_sha256`, and at most **one** GET without redirect, retry or paging. Only a technically proven no-refresh channel may even prepare a read approval. The historical [triage contract](https://github.com/notariat8/NaC/blob/d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b/workflows/verification-contracts/m365-bff-request-log-triage.verification.json) remains unchanged and `OFFLINE_ONLY_NOT_LIVE_CAPABLE`.
+- The port factory and **each individual** permitted metadata or query GET revalidate target, principal, auth, query and evidence bindings immediately beforehand and atomically consume their own budgets. A preflight passed once cannot authorize a later drifted request.
+- Start contract and validator with `provider_read_authorized=false`, `maximum_provider_reads=0` and no login or deployment capability. A new contract is not approval.
+
+### A2. Test-first local read-gate verification (AC-756-SD-01, -02)
+
+- Before a production transport, add focused synthetic negative tests for missing or mismatched target, tenant, package, principal, query, permission, observation window, retention and no-refresh bindings. They must block before credential or network access. Also reject free-form resource discovery, unexpected fields, raw personal data, redirects, retries, paging, extra requests and every write method.
+- Reuse only the closed projection in [current_state_read_driver.py](../../../../src/nac_bff/current_state_read_driver.py) where its fields and limits fit. Its production port currently remains `BLOCKED_NO_REFRESH_CAPABILITY`; do not bypass it with Azure/M365 CLI, token export or another generic driver-release chain. Without a technically controlled read channel, Stage A ends with a named capability blocker, not a fictional finding.
+- Test the evidence evaluator with synthetic responses only: an authoritatively proven undeployed Function, `REQUEST_ATTRIBUTED_STATUS_ONLY` for an unambiguously correlated 401/403 request, and `UNPROVEN` for missing capture, expired retention, empty or ambiguous matches, or 403/404 without reliable target/permission evidence. Even a uniquely correlated 403 proves ingress and response class only; Python branch, specific permission and cause remain `UNPROVEN` without independent protected server evidence. A contemporaneous 403 or matching hash without protected receipt provenance is not a causal finding.
+- Only after implementation review submit a possible exactly bound **read-only** run as a separate owner decision. No local test suite or PR approval authorizes the real GET.
+
+### B1. Only on `UNPROVEN`: test-first terminal decision stages (AC-756-SD-03, -04)
+
+- Do not run Stage B when Stage A reliably proves **non-deployment** or the concrete root cause. A proven deployed BFF with a still-unexplained denial is eligible for B; deployment alone is not a root-cause finding. When ingress evidence is missing, name the telemetry and correlation gap first rather than silently assuming a BFF denial. First record a forward-versioned diagnostic-result/port contract with closed classes `GRAPH_READ_UNAVAILABLE`, `CASE_BINDING_INVALID`, `ACTOR_ASSIGNMENT_MISSING`, `DEPUTY_GRANT_INVALID`, `GRANT_AUDIT_INVALID`, `DECISION_PROJECTION_INVALID` and unknown fallback `DENIAL_UNCLASSIFIED`; the [v1 contract](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json) and its inactive sink remain unchanged.
+- First extend `tests/test_nac_bff_403_diagnostic_event.py`, `tests/test_nac_bff_live_synthetic_workspace.py`, `tests/test_nac_bff_workbench_endpoint.py` and `tests/test_nac_bff_azure_function_host.py` with negative and concurrency cases. They prove that only the **terminal** branch of one request is classified; Graph failures, empty or ambiguous case results and intermediate checks must not be mislabelled as missing assignment or invalid grant. Public 403 bytes, headers, access, provider call order and fail-closed behavior remain unchanged.
+- Only then pass the terminal reason from [live_access_decision.py](../../../../src/nac_bff/live_access_decision.py) to a request-local port before today's exception collapse; change [workbench_endpoint.py](../../../../src/nac_bff/workbench_endpoint.py), [fastapi_adapter.py](../../../../src/nac_bff/fastapi_adapter.py) and [bff_403_diagnostic_event.py](../../../../src/nac_bff/bff_403_diagnostic_event.py) only as necessary for closed internal propagation. No global error state, reason in the response/Teams receipt, or extra provider reads.
+- `ACTOR_ASSIGNMENT_MISSING`, `DEPUTY_GRANT_INVALID` and `GRANT_AUDIT_INVALID` are inference-bearing protected metadata. Before activation bind each class to a documented privacy assessment, DPA/AVV basis, qualified readers, access protection and short retention; otherwise fall back to `ACCESS_DECISION_REJECTED`. No IDs, existence flags, Graph data or exception text in the event, Git or public logs.
+
+### B2. Review and later operating boundary (AC-756-SD-05)
+
+- Keep DE/EN spec and plan, traceability, follow-on contract, validator and tests synchronized. Before release, check the classical SBOM for changed code or dependencies; update AI-SBOM only for an actual effect on an AI-governed surface. Review licensing and attribution for AGPL code/executable contracts versus CC-BY documentation. The frozen #748 bundle exception creates neither a package candidate nor a Syft exception here. If an operator control becomes necessary, add a separate `nac` CLI contract before implementing it; the internal v1 event alone needs no new CLI function.
+- `implement → review → fix` reviews the two stages separately for privacy, security boundaries and DE/EN parity. Before any publication review the complete `main...HEAD` file and commit diff. Push, merge and real provider read remain separate gates. A later deployment exactly binds the target BFF, package, commit/tree, principal, DPA/AVV basis, retention and qualified readership; exactly **one** new Teams observation then needs its own approval and protected receipt match. No unambiguous correlation means no root-cause claim and no automatic retry. The actual permission correction remains separate; #739 and #632 stay blocked.
+
+## Evidence and stop conditions
+
+The later local implementation specifically runs `python scripts/validate_m365_bff_403_direct_server_diagnosis.py`, `python scripts/validate_m365_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py`, `python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py`, `python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py`, `python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py`, `python scripts/validate_spec_traceability.py`, `python scripts/validate_language_parity.py`, `python scripts/validate_doc_links.py`, `graft build`, `graft check`, `git diff --check` and `python scripts/nac.py doctor --profile strict`. The new validator and Stage A test arise only during implementation. Mandatory remote CI follows only an independently authorized push. These are **planned** gates, not results already obtained.
+
+This plan grants no implementation, push, login, token-refresh, credential, Microsoft/provider-read, deployment or live-test approval. Any missing binding, forbidden output or write request stops before the next phase. A blocked real run is never retried automatically.

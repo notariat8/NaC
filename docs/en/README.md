@@ -76,7 +76,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/m365-current-state-access-diagnostic.md](m365-current-state-access-diagnostic.md)
   describes the Windows-native, privacy-minimal current Teams/BFF access diagnostic.
 - [Internal BFF 403 diagnostic event](superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md)
-  designs a future protected reproduction with a coarse denial class.
+  covers inactive v1 and the approved design for staged direct server diagnosis,
+  starting with existing telemetry. Its [EN implementation plan](superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md)
+  is still under review; no real access or deployment is approved.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry

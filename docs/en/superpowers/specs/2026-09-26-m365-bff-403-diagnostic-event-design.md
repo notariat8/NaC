@@ -1,6 +1,6 @@
 # Internal BFF diagnostic event for the Teams 403
 
-Status: server-diagnosis design revision for review; inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed
+Status: server-diagnosis design revision approved by the owner; synchronized DE/EN follow-on plan for review. Inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed.
 
 Date: September 26, 2026
 
@@ -47,10 +47,11 @@ validation_commands:
 The traceability block, six existing ACs and linked implementation plan apply
 **only to the published inactive v1**. That plan binds its earlier specification
 approval to an older commit. Stage A/B below is a new design revision, not an
-extension of that approval. Its separate acceptance IDs appear below. A plan
-path is added only after review of this specification and creation of the
-synchronized DE/EN plan; implementation also requires a forward-versioned
-contract. Until then, the
+extension of that approval. The owner approved this revision on commit
+`a76a1a0e9769cdf7f775e73d0812367ad408c066` and tree
+`6d95fea5fbc2038068eda0602ca06693e0e47cc4` as the basis for the
+synchronized DE/EN follow-on plan. The new plan is not yet approved;
+implementation also requires a forward-versioned contract. Until then, the
 [v1 contract](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
 remains unchanged.
 
@@ -58,6 +59,7 @@ remains unchanged.
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-direct-server-diagnosis
 leading_issue: https://github.com/notariat8/NaC/issues/756
+plan: docs/en/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
@@ -73,11 +75,21 @@ acceptance_ids:
   - AC-756-SD-04
   - AC-756-SD-05
 validation_commands:
+  - python scripts/validate_m365_bff_403_direct_server_diagnosis.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py
+  - python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
+  - graft build
+  - graft check
+  - python scripts/nac.py doctor --profile strict
   - git diff --check
 ```
+
+The new validator and Stage A test are **planned** implementation targets,
+not checks that already exist or have passed.
 
 ## Purpose and evidence boundary
 

@@ -1,6 +1,6 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403
 
-Status: Serverdiagnose-Designrevision zur Review; inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt
+Status: Serverdiagnose-Designrevision vom Owner freigegeben; DE/EN-Folgeplan zur Review. Inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt.
 
 Datum: 26. September 2026
 
@@ -48,10 +48,12 @@ Der Traceability-Block, die sechs bestehenden ACs und der verlinkte
 Implementierungsplan gelten **nur für die veröffentlichte inaktive v1**. Der
 Plan bindet die frühere Spec-Freigabe an einen älteren Commit. Die unten
 beschriebene Stufe A/B ist eine neue Designrevision, keine Ausweitung dieser
-Freigabe. Die eigenen Akzeptanzkennungen stehen unten. Ein Planpfad wird
-erst nach der Spec-Review und Erstellung des synchronisierten DE/EN-Plans
-ergänzt; vor der Umsetzung ist außerdem ein vorwärtsversionierter Vertrag
-erforderlich. Bis dahin bleibt der
+Freigabe. Der Owner hat diese Revision auf Commit
+`a76a1a0e9769cdf7f775e73d0812367ad408c066` und Tree
+`6d95fea5fbc2038068eda0602ca06693e0e47cc4` als Grundlage für den
+DE/EN-Folgeplan freigegeben. Der neue Plan ist noch nicht freigegeben; vor
+der Umsetzung ist außerdem ein vorwärtsversionierter Vertrag erforderlich.
+Bis dahin bleibt der
 [v1-Vertrag](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
 unverändert.
 
@@ -59,6 +61,7 @@ unverändert.
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-direct-server-diagnosis
 leading_issue: https://github.com/notariat8/NaC/issues/756
+plan: docs/de/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
@@ -74,11 +77,21 @@ acceptance_ids:
   - AC-756-SD-04
   - AC-756-SD-05
 validation_commands:
+  - python scripts/validate_m365_bff_403_direct_server_diagnosis.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py
+  - python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
+  - graft build
+  - graft check
+  - python scripts/nac.py doctor --profile strict
   - git diff --check
 ```
+
+Der neue Validator und der neue A-Test sind **geplante** Implementierungsziele,
+keine bereits vorhandenen oder bestandenen Prüfungen.
 
 ## Zweck und Evidenzgrenze
 
