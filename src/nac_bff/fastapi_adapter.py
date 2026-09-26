@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 import asyncio
 from contextvars import ContextVar
+from datetime import UTC, datetime
 from functools import partial
 import math
 import re
@@ -15,6 +16,14 @@ from .azure_performance_lease_broker import (
     AzurePerformanceLeaseBroker,
     BrokerRoleScopeClaims,
     LeaseBrokerError,
+)
+from .bff_403_diagnostic_event import (
+    DENIAL_UNCLASSIFIED,
+    DenialReasonState,
+    InactiveDiagnosticBuffer,
+    build_event,
+    correlation_binding_from_scope,
+    is_bounded_workbench_get,
 )
 from .test_environment import TestEnvironmentBff, ValidatedClaims
 from .workbench_endpoint import WorkbenchEndpoint, WorkbenchResponse
@@ -35,6 +44,7 @@ def create_fastapi_app(
     performance_lease_broker: AzurePerformanceLeaseBroker | None = None,
     performance_lease_claims_dependency: Callable[..., BrokerRoleScopeClaims]
     | None = None,
+    diagnostic_buffer: InactiveDiagnosticBuffer | None = None,
     ready: bool = True,
 ) -> Any:
     """Create the ASGI adapter around already validated Entra claims.
@@ -59,9 +69,21 @@ def create_fastapi_app(
         openapi_url=None,
     )
     readiness = _StagedReadiness(ready=ready)
+    if diagnostic_buffer is not None and type(diagnostic_buffer) is not InactiveDiagnosticBuffer:
+        raise TypeError("only the inactive local diagnostic buffer is accepted")
 
     @app.middleware("http")
     async def request_boundary(request: Request, call_next):
+        diagnostic_state = DenialReasonState()
+        request.state.bff_403_diagnostic_state = diagnostic_state
+        diagnostic_route = is_bounded_workbench_get(
+            path=request.scope.get("path"), method=request.method
+        )
+        diagnostic_binding = (
+            correlation_binding_from_scope(request.scope)
+            if diagnostic_route and diagnostic_buffer is not None
+            else None
+        )
         correlation_id = _correlation_id(request.headers.get("X-Correlation-ID"))
         request.state.correlation_id = correlation_id
         deadline_token = _REQUEST_DEADLINE.set(
@@ -109,6 +131,25 @@ def create_fastapi_app(
         if _should_emit_instance_epoch(request.url.path, response.status_code):
             response.headers["X-NaC-Instance-Epoch"] = _INSTANCE_EPOCH
         response.headers["X-Correlation-ID"] = correlation_id
+        if (
+            diagnostic_route
+            and response.status_code == 403
+            and diagnostic_binding is not None
+            and diagnostic_buffer is not None
+        ):
+            try:
+                diagnostic_buffer.record_nowait(
+                    build_event(
+                        reason_class=(
+                            diagnostic_state.reason_class or DENIAL_UNCLASSIFIED
+                        ),
+                        correlation_binding_sha256=diagnostic_binding,
+                        observed_at=datetime.now(UTC),
+                    )
+                )
+            except Exception:
+                # Optional, local evidence can never change access.
+                pass
         return response
 
     @app.get("/healthz", include_in_schema=False)
@@ -181,6 +222,7 @@ def create_fastapi_app(
                 matter_id=matter_id,
                 purpose=purpose,
                 request_filters=request_filters,
+                _diagnostic_state=request.state.bff_403_diagnostic_state,
             )
             if response.status_code == 200:
                 readiness.mark_ready()

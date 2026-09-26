@@ -1,0 +1,91 @@
+{
+  "schema_version": "nac.bff-403-diagnostic-event.verification/v1",
+  "contract_id": "m365-bff-403-diagnostic-event",
+  "status": "LOCAL_INACTIVE_ONLY",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/756",
+  "historical_issue": "https://github.com/notariat8/NaC/issues/748",
+  "delivery_mode": "Protected PR",
+  "risk_gate": "Human Approval",
+  "specifications": {
+    "de": "docs/de/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md",
+    "en": "docs/en/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md"
+  },
+  "plans": {
+    "de": "docs/de/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md",
+    "en": "docs/en/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md"
+  },
+  "acceptance_ids": [
+    "AC-748-BD-01",
+    "AC-748-BD-02",
+    "AC-748-BD-03",
+    "AC-748-BD-04",
+    "AC-748-BD-05",
+    "AC-748-BD-06"
+  ],
+  "target": {
+    "workspace_class": "synthetic_notary_team_01",
+    "route_class": "workbench_snapshot",
+    "method": "GET",
+    "http_class": 403
+  },
+  "event": {
+    "schema_version": "nac.bff-403-diagnostic-event/v1",
+    "field_allowlist": [
+      "schema_version",
+      "observed_at_utc",
+      "route_class",
+      "method",
+      "http_class",
+      "reason_class",
+      "request_correlation_binding_sha256"
+    ],
+    "reason_classes": [
+      "REQUEST_SCOPE_REJECTED",
+      "ACCESS_DECISION_UNAVAILABLE",
+      "ACCESS_DECISION_REJECTED",
+      "DENIAL_UNCLASSIFIED"
+    ],
+    "unbound_correlation_behavior": "NO_EVENT_NO_FALLBACK_HASH",
+    "positive_attribution_requires_protected_receipt_match": true,
+    "public_403_body": "{\"status\":403,\"error\":{\"code\":\"ACCESS_DENIED\"}}",
+    "maximum_events_per_request": 1
+  },
+  "approval_boundary": {
+    "evidence_status": "NOT_CREATED",
+    "same_principal_accounts_are_distinct_approvers": false,
+    "solo_without_cited_two_person_duty": "OWNER_SOLO_APPROVAL",
+    "solo_four_eyes_satisfied": false,
+    "uncited_two_person_duty": "BLOCKED_REQUIREMENT_CITATION_MISSING",
+    "cited_two_person_duty_with_one_principal": "BLOCKED_SINGLE_PRINCIPAL"
+  },
+  "gates": {
+    "sink_enabled_by_default": false,
+    "provider_read_authorized": false,
+    "credential_access_authorized": false,
+    "token_refresh_authorized": false,
+    "deployment_authorized": false,
+    "new_reproduction_authorized": false,
+    "issue_739_release_authorized": false,
+    "issue_632_live_authorized": false,
+    "maximum_provider_reads": 0,
+    "maximum_tenant_writes": 0,
+    "maximum_deployments": 0
+  },
+  "future_activation_requires": [
+    "separate_owner_approval",
+    "target_and_package_commit_tree_binding",
+    "dpa_avv_basis",
+    "retention_and_access_group",
+    "telemetry_capture_proof",
+    "protected_client_receipt_binding",
+    "principal_qualification_and_source_bound_approval"
+  ],
+  "validation_commands": [
+    "python scripts/validate_m365_bff_403_diagnostic_event.py",
+    "python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py",
+    "python scripts/validate_spec_traceability.py",
+    "python scripts/validate_language_parity.py",
+    "graft check",
+    "python scripts/nac.py doctor --profile strict"
+  ]
+}

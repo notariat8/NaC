@@ -1,20 +1,20 @@
 # Internal BFF diagnostic event for the Teams 403
 
-Status: specification approved; implementation plan submitted for owner review; no implementation
+Status: specification and implementation plan approved; local inactive implementation in progress; no publication or activation
 
 Date: September 26, 2026
 
-Leading issue: [#748](https://github.com/notariat8/NaC/issues/748)
+Leading issue: [#756](https://github.com/notariat8/NaC/issues/756); historical context: [#748](https://github.com/notariat8/NaC/issues/748)
 
-Baseline: branch `codex/748-bff-request-log-triage`, commit
-`d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b`. This forward-looking
+Baseline: `main` commit `862c87e1e378657f0066faed1bd36b830be2146d`
+on branch `codex/756-bff-403-diagnostic-event`. This forward-looking
 specification supplements the [historical request-log triage](https://github.com/notariat8/NaC/blob/d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b/docs/en/superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md) without changing its receipts,
 contract or approval state.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-diagnostic-event
-leading_issue: https://github.com/notariat8/NaC/issues/748
+leading_issue: https://github.com/notariat8/NaC/issues/756
 plan: docs/en/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
@@ -70,10 +70,11 @@ specific Graph or role defect.
    to return the byte-identical 403 body
    `{"status":403,"error":{"code":"ACCESS_DENIED"}}`. The internal reason
    never appears in the status, body, headers or SPFx receipt. Diagnostic
-   sink failure must not grant access or alter the response, access-decision
+   a full or absent diagnostic buffer must not grant access or alter the response, access-decision
    port or provider call; missing telemetry is **not** positive evidence.
    The endpoint passes the internal class only through request-local,
-   non-serialized state to a sink invoked once. If a 403 arises before the
+   non-serialized state to a bounded, inactive in-memory buffer with no external
+   callback. If a 403 arises before the
    endpoint, the HTTP boundary uses `DENIAL_UNCLASSIFIED`; multiple layers
    must not emit multiple events for the same request.
 3. The event has a fixed field allowlist: schema version, bounded UTC time,
@@ -92,7 +93,8 @@ specific Graph or role defect.
    match; the protected receipt comparison is also required. The raw value
    is not persisted. The existing public fallback response must not become
    false correlation evidence.
-5. The sink is inactive by default. Future activation is limited to the
+5. The in-memory buffer is inactive by default and is not live telemetry.
+   Future activation is limited to the
    bound test BFF, a short closed observation window and authorized log
    access. Before activation, the DPA/AVV basis, retention period, access
    group, package/commit/tree binding and actual telemetry capture must be

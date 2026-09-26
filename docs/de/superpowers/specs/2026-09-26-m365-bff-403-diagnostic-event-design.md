@@ -1,20 +1,20 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403
 
-Status: Spezifikation freigegeben; Implementierungsplan zur Owner-Review; keine Implementierung
+Status: Spezifikation und Implementierungsplan freigegeben; lokale inaktive Umsetzung in Arbeit; keine Veröffentlichung oder Aktivierung
 
 Datum: 26. September 2026
 
-Führendes Issue: [#748](https://github.com/notariat8/NaC/issues/748)
+Führendes Issue: [#756](https://github.com/notariat8/NaC/issues/756); historischer Bezug: [#748](https://github.com/notariat8/NaC/issues/748)
 
-Ausgangsstand: Branch `codex/748-bff-request-log-triage`, Commit
-`d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b`. Diese neue
+Ausgangsstand: `main`-Commit `862c87e1e378657f0066faed1bd36b830be2146d`
+auf Branch `codex/756-bff-403-diagnostic-event`. Diese neue
 Vorwärtsspezifikation ergänzt die [historische Request-Log-Triage](https://github.com/notariat8/NaC/blob/d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b/docs/de/superpowers/specs/2026-09-25-m365-bff-request-log-triage-design.md), ohne deren Belege,
 Vertrag oder Freigabestatus zu verändern.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-diagnostic-event
-leading_issue: https://github.com/notariat8/NaC/issues/748
+leading_issue: https://github.com/notariat8/NaC/issues/756
 plan: docs/de/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
@@ -73,12 +73,12 @@ Rollenfehler.
    jeden 403 weiterhin bytegleich
    `{"status":403,"error":{"code":"ACCESS_DENIED"}}` aus. Der interne
    Grund erscheint weder in Status, Body, Header noch im SPFx-Beleg. Ein
-   Fehler des Diagnose-Sinks darf weder eine Freigabe bewirken noch die
+   Ein voller oder fehlender Diagnosepuffer darf weder eine Freigabe bewirken noch die
    Antwort, den Access-Decision-Port oder den Provideraufruf verändern;
    fehlende Telemetrie ist **kein** positiver Diagnosebeleg.
    Der Endpunkt übergibt die interne Klasse ausschließlich über einen
-   request-lokalen, nicht serialisierten Zustand an den einmalig aufgerufenen
-   Sink. Entsteht der 403 vor dem Endpunkt, verwendet der HTTP-Rand
+   request-lokalen, nicht serialisierten Zustand an einen begrenzten,
+   inaktiven In-Memory-Puffer ohne externen Callback. Entsteht der 403 vor dem Endpunkt, verwendet der HTTP-Rand
    `DENIAL_UNCLASSIFIED`; mehrere Schichten dürfen nicht mehrere Einträge
    für denselben Request erzeugen.
 3. Der Eintrag hat eine feste Feld-Allowlist: Schema-Version, begrenzter
@@ -99,7 +99,8 @@ Rollenfehler.
    Receipt-Abgleich ist zusätzlich nötig. Der Klarwert wird nicht
    persistiert. Die bestehende öffentliche Fallback-Antwort darf dabei
    nicht zur fälschlichen Korrelations-Evidence werden.
-5. Der Sink ist standardmäßig inaktiv. Eine spätere Aktivierung wird auf den
+5. Der In-Memory-Puffer ist standardmäßig inaktiv und keine Live-Telemetrie.
+   Eine spätere Aktivierung wird auf den
    gebundenen Test-BFF, ein kurzes geschlossenes Beobachtungsfenster und
    autorisierten Logzugriff begrenzt. Vor ihr müssen AVV-/DPA-Bezug,
    Aufbewahrungsfrist, Zugriffskreis, Paket-/Commit-/Tree-Bindung und die
