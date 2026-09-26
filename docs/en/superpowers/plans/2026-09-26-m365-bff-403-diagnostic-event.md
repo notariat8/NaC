@@ -1,6 +1,6 @@
 # Internal BFF diagnostic event for the Teams 403 – implementation plan
 
-Status: plan approved; local inactive implementation in progress; no publication, activation or real diagnosis
+Status: v1 plan approved; inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), with no activation, deployment or real diagnosis. The later server-diagnosis design revision is not part of this plan approval.
 
 Date: September 26, 2026
 

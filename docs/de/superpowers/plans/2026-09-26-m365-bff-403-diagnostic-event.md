@@ -1,6 +1,6 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403 – Implementierungsplan
 
-Status: Plan freigegeben; lokale inaktive Umsetzung in Arbeit; keine Veröffentlichung, Aktivierung oder reale Diagnose
+Status: v1-Plan freigegeben; inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, keine Aktivierung, Bereitstellung oder reale Diagnose. Die spätere Serverdiagnose-Designrevision ist nicht Teil dieser Planfreigabe.
 
 Datum: 26. September 2026
 
