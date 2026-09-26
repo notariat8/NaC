@@ -1,6 +1,6 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403
 
-Status: Design freigegeben; Spezifikation zur Owner-Review; keine Implementierung
+Status: Spezifikation freigegeben; Implementierungsplan zur Owner-Review; keine Implementierung
 
 Datum: 26. September 2026
 
@@ -15,6 +15,7 @@ Vertrag oder Freigabestatus zu verändern.
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-diagnostic-event
 leading_issue: https://github.com/notariat8/NaC/issues/748
+plan: docs/de/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:

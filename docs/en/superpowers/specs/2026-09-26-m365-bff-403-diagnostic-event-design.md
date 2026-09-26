@@ -1,6 +1,6 @@
 # Internal BFF diagnostic event for the Teams 403
 
-Status: design approved; specification submitted for owner review; no implementation
+Status: specification approved; implementation plan submitted for owner review; no implementation
 
 Date: September 26, 2026
 
@@ -15,6 +15,7 @@ contract or approval state.
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-diagnostic-event
 leading_issue: https://github.com/notariat8/NaC/issues/748
+plan: docs/en/superpowers/plans/2026-09-26-m365-bff-403-diagnostic-event.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
