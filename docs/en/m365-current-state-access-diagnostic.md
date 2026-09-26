@@ -1,5 +1,46 @@
 # Current-State Diagnostics for Teams and BFF Access
 
+## Status on 26 September 2026: Teams client 403 observed, cause open
+
+After the merge of [PR #753](https://github.com/notariat8/NaC/pull/753), two
+client receipts explicitly downloaded in Teams on 25 September are retained
+outside the repository. The base receipt has SHA-256
+`ed89c1171a02fc79c80314512375c7db84be2fce1528c7ba6596d7c24d805e40`;
+the HTTP companion has SHA-256
+`daf4cc55f0f95f38b118155d8bef33d36a0a68809848ba96b049f1f129b80bda`.
+Their neutral fields show `spfx_subject_available=true`, `ui_state=no_access`,
+and a client HTTP 403 for the bound Workbench GET. Thus the statement below
+that there was “no new button yet” describes an earlier point that day, not
+the current status. These client receipts prove neither the exact
+package/provider state nor Function ingress, a Python BFF denial branch, or
+a particular permission: the origin remains `CLIENT_403_ORIGIN_UNKNOWN`, and
+the specific permission remains `UNKNOWN`.
+
+The repository-local suitability assessment of existing request telemetry
+shows that the [resource contract](../../workflows/contracts/m365-current-state-read-driver-resources.contract.json)
+binds only a query template ID, not a proven executable query projection.
+The target app ID and actual correlation capture are not established by the
+repository artifacts. Protected evidence outside the repository was not
+examined in this local inventory. In the contract,
+`projection_proven=false`; the #748 production port blocks with
+`BLOCKED_NO_REFRESH_CAPABILITY` and the license catalog is `PENDING`.
+Without proven capture, a missing log row would not establish “no BFF
+request.” A single telemetry query, if separately approved later, would not
+replace the formal #748 diagnosis with two independent, identical snapshots.
+Only if historical telemetry demonstrably cannot answer the question is the
+separate, inactive [#756 follow-up](https://github.com/notariat8/NaC/issues/756)
+considered.
+
+Only redacted status, hashes, and blocker codes enter this repository. Real
+target, tenant, and account bindings for this diagnostic path, raw
+correlations, query/source evidence, personal data, and credential contents
+remain protected outside it; credential
+contents are not read for this inventory. Neither this status nor the
+[EN specification](superpowers/specs/2026-09-26-m365-teams-mvp-simplification-design.md)
+and [EN plan](superpowers/plans/2026-09-26-m365-teams-mvp-simplification.md)
+authorize login, token refresh, provider access, deployment, a new Teams
+request, #739 release, or #632 live activation.
+
 ## Status on 25 September 2026: client HTTP companion validated locally
 
 The existing Teams receipt reports `spfx_subject_available=true` and
