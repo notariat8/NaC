@@ -8,6 +8,12 @@ from typing import Any, ContextManager
 
 from nac_mvp_test_environment import BUSINESS_CASE_TYPE_ID
 
+from .bff_403_diagnostic_event import (
+    ACCESS_DECISION_REJECTED,
+    ACCESS_DECISION_UNAVAILABLE,
+    REQUEST_SCOPE_REJECTED,
+    DenialReasonState,
+)
 from .test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -100,6 +106,7 @@ class WorkbenchEndpoint:
         purpose: str,
         request_filters: Mapping[str, object] | None = None,
         _budget_bound: bool = False,
+        _diagnostic_state: DenialReasonState | None = None,
     ) -> WorkbenchResponse:
         if not isinstance(claims, ValidatedClaims):
             return _error(401, "AUTHENTICATION_REQUIRED")
@@ -113,6 +120,8 @@ class WorkbenchEndpoint:
             or not isinstance(request_filters, (Mapping, type(None)))
             or bool(request_filters)
         ):
+            if _diagnostic_state is not None:
+                _diagnostic_state.record(REQUEST_SCOPE_REJECTED)
             return _error(403, "ACCESS_DENIED")
 
         if self._request_budget_factory is not None and not _budget_bound:
@@ -125,6 +134,7 @@ class WorkbenchEndpoint:
                         purpose=purpose,
                         request_filters=request_filters,
                         _budget_bound=True,
+                        _diagnostic_state=_diagnostic_state,
                     )
             except Exception:
                 return _error(503, "SERVICE_UNAVAILABLE")
@@ -138,6 +148,8 @@ class WorkbenchEndpoint:
                 purpose=ALLOWED_PURPOSE,
             )
         except Exception:
+            if _diagnostic_state is not None:
+                _diagnostic_state.record(ACCESS_DECISION_UNAVAILABLE)
             return _error(403, "ACCESS_DENIED")
 
         try:
@@ -150,6 +162,8 @@ class WorkbenchEndpoint:
             observed_at=decision_observed_at,
         )
         if access is None:
+            if _diagnostic_state is not None:
+                _diagnostic_state.record(ACCESS_DECISION_REJECTED)
             return _error(403, "ACCESS_DENIED")
 
         try:
