@@ -1,27 +1,25 @@
 # Internal BFF diagnostic event for the Teams 403 – implementation plan
 
-Status: plan submitted for owner review; no implementation, activation or real diagnosis
+Status: plan approved; local inactive implementation in progress; no publication, activation or real diagnosis
 
 Date: September 26, 2026
 
-Leading issue: [#748](https://github.com/notariat8/NaC/issues/748)
+Leading issue: [#756](https://github.com/notariat8/NaC/issues/756)
 
 Approved specification: [internal BFF diagnostic event](../specs/2026-09-26-m365-bff-403-diagnostic-event-design.md)
 (`m365-bff-403-diagnostic-event`, `AC-748-BD-01` through `AC-748-BD-06`).
 The specification was approved at commit
 `166ef85665e7b90efdfcc8560926ffcde16ffc53` and tree
 `2653fb02da349a6954534f29dbd229571285671a`.
-Delivery Mode: Protected PR; Risk Gate: Human Approval. This plan grants
-neither implementation nor live approval.
+Delivery Mode: Protected PR; Risk Gate: Human Approval. The owner approved
+local test-first implementation; this plan grants no push, live or deployment
+approval.
 
-Scope note: [#748](https://github.com/notariat8/NaC/issues/748) is already
-closed as completed. Its original scope covers the Windows current-state
-path with `AC-CSD-01` through `AC-CSD-08`, not this new internal 403 event.
-The approved specification still refers to #748 as its starting point;
-before implementation or publication, a separate open, appropriately
-scoped leading task must exist and specification traceability must be
-synchronized to it and revalidated. This plan does not pre-empt a GitHub
-change.
+Scope note: [#748](https://github.com/notariat8/NaC/issues/748) remains
+closed as the completed Windows current-state task. Open issue #756 leads
+the new internal 403 event. The six `AC-748-BD-*` identifiers from the
+originally approved specification remain stable identifiers and are each
+mapped in the new issue; they do not reopen or expand #748.
 
 ## Goal and boundary
 
@@ -29,7 +27,7 @@ A new, separately approved future Teams test should use one protected
 internal BFF event to identify the coarse branch that caused the workbench
 403. Existing client receipts prove an available SPFx subject and HTTP 403,
 not the BFF or authorization cause. The public response remains unchanged.
-The historical [request-log triage contract](../../../../workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
+The historical [request-log triage contract](https://github.com/notariat8/NaC/blob/d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b/workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
 remains `OFFLINE_ONLY_NOT_LIVE_CAPABLE`; #739 and #632 stay blocked.
 
 ## Test-first implementation after plan approval
@@ -66,14 +64,14 @@ remains `OFFLINE_ONLY_NOT_LIVE_CAPABLE`; #739 and #632 stay blocked.
    determine the reason at the existing decision points in
    [workbench_endpoint.py](../../../../src/nac_bff/workbench_endpoint.py).
    Transfer it only through request-local, non-serialized state to the
-   once-invoked sink at the [FastAPI boundary](../../../../src/nac_bff/fastapi_adapter.py);
-   a 403 before the endpoint is `DENIAL_UNCLASSIFIED`. The sink remains
+   bounded, inactive in-memory buffer at the [FastAPI boundary](../../../../src/nac_bff/fastapi_adapter.py);
+   a 403 before the endpoint is `DENIAL_UNCLASSIFIED`. The buffer remains
    inactive by default and accepts only schema version, bounded UTC time,
    constant `workbench_snapshot` route class, `GET` method, `403` HTTP
    class, closed reason class and
    `request_correlation_binding_sha256`. No free-text or metadata field, new
    mandatory SDK or change to access-decision/provider semantics. Treat
-   sink failure as missing evidence; it must not grant access or alter the
+   a full or absent buffer as missing evidence; it must not grant access or alter the
    response or provider call.
 4. **Forward contract and fail-closed gates (AC-748-BD-05, -06).** Create a
    separate forward-versioned contract at

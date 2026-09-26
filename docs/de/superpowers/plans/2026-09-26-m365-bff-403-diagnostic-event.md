@@ -1,26 +1,25 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403 – Implementierungsplan
 
-Status: Plan zur Owner-Review; keine Implementierung, Aktivierung oder reale Diagnose
+Status: Plan freigegeben; lokale inaktive Umsetzung in Arbeit; keine Veröffentlichung, Aktivierung oder reale Diagnose
 
 Datum: 26. September 2026
 
-Führendes Issue: [#748](https://github.com/notariat8/NaC/issues/748)
+Führendes Issue: [#756](https://github.com/notariat8/NaC/issues/756)
 
 Freigegebene Spec: [Interner BFF-Diagnoseeintrag](../specs/2026-09-26-m365-bff-403-diagnostic-event-design.md)
 (`m365-bff-403-diagnostic-event`, `AC-748-BD-01` bis `AC-748-BD-06`).
 Die Spec wurde auf Commit `166ef85665e7b90efdfcc8560926ffcde16ffc53`
 und Tree `2653fb02da349a6954534f29dbd229571285671a` freigegeben.
-Delivery Mode: Protected PR; Risk Gate: Human Approval. Dieser Plan erteilt
-keine Implementierungs- oder Live-Freigabe.
+Delivery Mode: Protected PR; Risk Gate: Human Approval. Die lokale test-first
+Umsetzung wurde vom Owner genehmigt; dieser Plan erteilt keine Push-, Live-
+oder Deployment-Freigabe.
 
-Scope-Hinweis: [#748](https://github.com/notariat8/NaC/issues/748) ist
-bereits als erledigt geschlossen. Sein ursprünglicher Auftrag deckt den
-Windows-Current-State-Pfad mit `AC-CSD-01` bis `AC-CSD-08` ab, nicht diesen
-neuen internen 403-Eintrag. Die freigegebene Spec referenziert #748 noch als
-Ausgangspunkt; vor Umsetzung oder Veröffentlichung muss ein eigener offener,
-passend abgegrenzter führender Auftrag feststehen und die Spec-Traceability
-darauf synchron angepasst und erneut geprüft werden. Dieser Plan nimmt eine
-solche GitHub-Änderung nicht vorweg.
+Scope-Hinweis: [#748](https://github.com/notariat8/NaC/issues/748) bleibt
+als erledigter Windows-Current-State-Auftrag geschlossen. Das offene #756
+führt den neuen internen 403-Eintrag. Die sechs in der ursprünglich
+freigegebenen Spec definierten `AC-748-BD-*`-Kennungen bleiben als stabile
+Kennungen erhalten und sind im neuen Issue einzeln zugeordnet; sie
+behaupten keine Wiederöffnung oder Erweiterung von #748.
 
 ## Ziel und Abgrenzung
 
@@ -29,7 +28,7 @@ geschützten internen BFF-Eintrags erkennen lassen, welcher grobe Zweig den
 Workbench-403 auslöste. Die vorhandenen Clientbelege beweisen nur ein
 verfügbares SPFx-Subject und einen HTTP 403, nicht die BFF- oder
 Berechtigungsursache. Die öffentliche Antwort bleibt unverändert. Der
-historische [Request-Log-Triage-Vertrag](../../../../workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
+historische [Request-Log-Triage-Vertrag](https://github.com/notariat8/NaC/blob/d92b47e0a67b6e5bc2f4387742c84ddfe9d2518b/workflows/verification-contracts/m365-bff-request-log-triage.verification.json)
 bleibt `OFFLINE_ONLY_NOT_LIVE_CAPABLE`; #739 und #632 bleiben gesperrt.
 
 ## Test-first-Umsetzung nach Planfreigabe
@@ -66,16 +65,16 @@ bleibt `OFFLINE_ONLY_NOT_LIVE_CAPABLE`; #739 und #632 bleiben gesperrt.
    Grundklasse an den bestehenden Entscheidungspunkten in
    [workbench_endpoint.py](../../../../src/nac_bff/workbench_endpoint.py)
    bestimmen. Sie geht ausschließlich über request-lokalen,
-   nicht serialisierten Zustand an den einmalig aufgerufenen Sink am
+   nicht serialisierten Zustand an einen begrenzten, inaktiven In-Memory-Puffer am
    [FastAPI-Rand](../../../../src/nac_bff/fastapi_adapter.py); ein vor dem
-   Endpunkt entstandener 403 ist `DENIAL_UNCLASSIFIED`. Der Sink bleibt
+   Endpunkt entstandener 403 ist `DENIAL_UNCLASSIFIED`. Der Puffer bleibt
    standardmäßig inaktiv und nimmt ausschließlich Schema-Version,
    begrenzten UTC-Zeitpunkt, feste Routenklasse `workbench_snapshot`,
    Methode `GET`, HTTP-Klasse `403`, geschlossene Grundklasse und
    `request_correlation_binding_sha256` an. Keine freie Text- oder
    Metadatenfläche, kein neuer SDK-Zwang, keine Änderung der
-   Access-Decision- oder Provider-Semantik. Fehler des Sinks werden als
-   fehlende Evidence behandelt und dürfen weder Zugang gewähren noch
+   Access-Decision- oder Provider-Semantik. Ein voller oder fehlender Puffer gilt als
+   fehlende Evidence und darf weder Zugang gewähren noch
    Antwort oder Provideraufruf ändern.
 4. **Vorwärtsvertrag und Fail-closed-Gates (AC-748-BD-05, -06).** Einen
    getrennten vorwärtsversionierten Vertrag unter
