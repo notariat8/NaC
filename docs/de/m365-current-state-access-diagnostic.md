@@ -1,5 +1,47 @@
 # Current-State-Diagnose für Teams- und BFF-Zugriff
 
+## Stand vom 26. September 2026: Teams-Client-403 belegt, Ursache offen
+
+Nach dem Merge von [PR #753](https://github.com/notariat8/NaC/pull/753) liegen
+zwei ausdrücklich in Teams heruntergeladene, repository-extern aufbewahrte
+Clientbelege vom 25. September vor. Der Basisbeleg hat SHA-256
+`ed89c1171a02fc79c80314512375c7db84be2fce1528c7ba6596d7c24d805e40`,
+der HTTP-Zusatzbeleg SHA-256
+`daf4cc55f0f95f38b118155d8bef33d36a0a68809848ba96b049f1f129b80bda`.
+Die neutralen Felder zeigen `spfx_subject_available=true`, `ui_state=no_access`
+und eine beim Client eingetroffene HTTP-403-Antwort für den gebundenen
+Workbench-GET. Damit ist die unten dokumentierte Aussage „noch kein neuer
+Button“ nur der frühere Stand dieses Tages, nicht der aktuelle Status. Diese
+Clientbelege beweisen weder den exakten Paket-/Providerzustand noch
+Function-Ingress, einen Python-BFF-Ablehnungszweig oder eine bestimmte
+Berechtigung: Der Ursprung bleibt `CLIENT_403_ORIGIN_UNKNOWN`, die konkrete
+Berechtigung bleibt `UNKNOWN`.
+
+Die repo-lokale Eignungsprüfung der vorhandenen Request-Telemetrie zeigt:
+Der [Ressourcenvertrag](../../workflows/contracts/m365-current-state-read-driver-resources.contract.json)
+bindet nur eine Query-Template-ID, keine ausführbar belegte Query-Projektion.
+Ziel-App-ID und tatsächliche Korrelationsaufzeichnung sind aus den
+Repository-Artefakten nicht nachgewiesen. Geschützte repository-externe
+Nachweise wurden bei dieser rein lokalen Bestandsaufnahme nicht geprüft.
+Im Vertrag steht `projection_proven=false`; der #748-Produktionsport
+blockiert mit `BLOCKED_NO_REFRESH_CAPABILITY` und der Lizenzkatalog ist
+`PENDING`. Eine fehlende Logzeile wäre ohne bewiesene Erfassung kein Nachweis
+für „kein BFF-Request“. Eine einzelne später gesondert freizugebende
+Telemetrieabfrage ersetzt nicht die formale #748-Diagnose mit zwei
+unabhängigen, identischen Snapshots. Erst wenn die historische Telemetrie
+nachweislich nicht ausreicht, wird der getrennte, inaktive
+[#756-Folgeweg](https://github.com/notariat8/NaC/issues/756) bewertet.
+
+In dieses Repository gelangen nur redigierter Status, Hashes und Blockiercodes.
+Reale Ziel-/Tenant-/Account-Bindungen dieses Diagnosepfads, Rohkorrelation,
+Query-/Quellbelege, personenbezogene Daten und Credential-Inhalte bleiben geschützt
+repository-extern; Credential-Inhalte werden für diese Bestandsaufnahme nicht
+gelesen. Weder dieser Status noch die
+[DE-Spezifikation](superpowers/specs/2026-09-26-m365-teams-mvp-simplification-design.md)
+und der [DE-Plan](superpowers/plans/2026-09-26-m365-teams-mvp-simplification.md)
+autorisieren Login, Token-Refresh, Providerzugriff, Deployment, einen neuen
+Teams-Request, #739-Freigabe oder #632-Live-Aktivierung.
+
 ## Stand vom 25. September 2026: Client-HTTP-Zusatzbeleg lokal validiert
 
 Der vorhandene Teams-Beleg zeigt `spfx_subject_available=true` bei `no_access`.

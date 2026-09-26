@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-08-03
+Last update: 2026-09-26
 Branch: `main`
 
 ## What Is Being Built
@@ -49,7 +49,7 @@ for Fachpersonal without exposing `value` fields.
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 | Microsoft-first / on-prem AI target architecture | Planned baseline implemented | `docs/de/architecture/microsoft-first-onprem-target-architecture.md`, `workflows/contracts/microsoft-first-onprem-target-architecture.contract.json`, `scripts/validate_microsoft_first_onprem_target_architecture.py` |
-| M365 MVP test environment in `notary_team_01` | Final BFF live closure pending (#620/#632) | The 2026-07-14 baseline one-shot passed site-scoped SPFx/Teams deployment plus synthetic Graph REST v1.0 write, readback and cleanup. The bounded BFF endpoint/scope/site grant exists; a current complete 12-step run, idempotency, full tamper matrix and SharePoint/Teams render evidence remain open. |
+| M365 MVP test environment in `notary_team_01` | Final BFF live closure pending (#620/#632) | The 2026-07-14 baseline one-shot passed site-scoped SPFx/Teams deployment plus synthetic Graph REST v1.0 write, readback and cleanup. The bounded BFF endpoint/scope/site grant exists; a current complete 12-step run, idempotency, full tamper matrix and SharePoint/Teams render evidence remain open. The 2026-09-25 paired Teams client receipts show a client HTTP 403 with subject available, but origin and specific permission remain unknown; the [dated current-state diagnosis](../docs/de/m365-current-state-access-diagnostic.md) tracks the telemetry-first blocker without claiming live BFF closure. |
 | SPFx roles and deadline cockpit | Implemented offline (#710) | Read-only roles/deputy state, explicit-time deadline traffic light, task filters, Current/Selected BPMN navigation, retry/empty states, container-responsive light/dark layout, 82 SPFx tests and six synthetic visual-contract evidence views; no tenant access or write path. |
 | Generic Workbench live-read binding | Protected PR in progress (#725) | A bounded `AadHttpClient -> NaC BFF` snapshot route binds the generic Workbench to the single synthetic matter in `notary_team_01`; exact Entra subject/tenant, assigned/deputy access, no-store, 128 KiB, stale-response and fail-closed contracts are enforced. Tenant deployment remains blocked until reviewed main. |
 | Azure Functions BFF for the M365 test environment | Final live closure pending (#620/#632) | Python/FastAPI, Entra validation, Graph v1.0 projection, deployment and bounded permissions are prepared. Close only after the current complete 12-step run, idempotency, tamper matrix and SharePoint/Teams render evidence pass. |
