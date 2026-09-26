@@ -1,6 +1,6 @@
 # Teams MVP Goal and Staged Diagnostic Path
 
-Status: design approved; specification for review; no implementation or live approval
+Status: design and specification approved; implementation plan for review; no implementation or live approval
 
 Date: 26 September 2026
 
@@ -10,6 +10,7 @@ Leading issue: [#620](https://github.com/notariat8/NaC/issues/620). Related, sep
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-teams-mvp-simplification
 leading_issue: https://github.com/notariat8/NaC/issues/620
+plan: docs/en/superpowers/plans/2026-09-26-m365-teams-mvp-simplification.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
