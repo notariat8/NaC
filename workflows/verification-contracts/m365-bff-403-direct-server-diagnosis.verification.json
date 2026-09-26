@@ -1,0 +1,118 @@
+{
+  "schema_version": "nac.bff-403-direct-server-diagnosis.verification/v1",
+  "contract_id": "m365-bff-403-direct-server-diagnosis",
+  "status": "LOCAL_INACTIVE_ONLY",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/756",
+  "historical_issue": "https://github.com/notariat8/NaC/issues/748",
+  "delivery_mode": "Protected PR",
+  "risk_gate": "Human Approval",
+  "specifications": {
+    "de": "docs/de/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md",
+    "en": "docs/en/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md"
+  },
+  "plans": {
+    "de": "docs/de/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md",
+    "en": "docs/en/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md"
+  },
+  "acceptance_ids": [
+    "AC-756-SD-01",
+    "AC-756-SD-02",
+    "AC-756-SD-03",
+    "AC-756-SD-04",
+    "AC-756-SD-05"
+  ],
+  "target": {
+    "workspace_class": "synthetic_notary_team_01",
+    "workspace_binding_sha256": "UNBOUND",
+    "app_id_binding_sha256": "UNBOUND",
+    "function_binding_sha256": "UNBOUND",
+    "application_insights_binding_sha256": "UNBOUND",
+    "tenant_binding_sha256": "UNBOUND",
+    "package_binding_sha256": "UNBOUND",
+    "account_binding_sha256": "UNBOUND",
+    "principal_id_binding_sha256": "UNBOUND",
+    "permission_binding_sha256": "UNBOUND",
+    "source_evidence_binding_sha256": "UNBOUND",
+    "avv_dpa_binding_sha256": "UNBOUND",
+    "observation_window_binding_sha256": "UNBOUND",
+    "receipt_binding_sha256": "UNBOUND",
+    "retention_binding_sha256": "UNBOUND",
+    "no_refresh_capability_binding_sha256": "UNBOUND",
+    "commit_binding_sha256": "UNBOUND",
+    "tree_binding_sha256": "UNBOUND",
+    "toolchain_binding_sha256": "UNBOUND"
+  },
+  "resources": [
+    {
+      "id": "azure_function_metadata",
+      "method": "GET",
+      "endpoint_binding_sha256": "UNBOUND",
+      "projection": ["deployment_class", "configuration_digest"],
+      "maximum_reads": 0
+    },
+    {
+      "id": "application_insights_metadata",
+      "method": "GET",
+      "endpoint_binding_sha256": "UNBOUND",
+      "projection": ["capture_enabled", "retention_covers_window"],
+      "maximum_reads": 0
+    },
+    {
+      "id": "azure_function_request_log",
+      "method": "GET",
+      "endpoint_binding_sha256": "UNBOUND",
+      "query_sha256": "UNBOUND",
+      "projection": ["request_observed", "http_class", "request_correlation_binding_sha256"],
+      "maximum_reads": 0
+    }
+  ],
+  "read_policy": {
+    "required_before_port_factory": true,
+    "required_before_every_read": true,
+    "atomic_budget_consume": true,
+    "maximum_historical_query_gets": 1,
+    "redirect_allowed": false,
+    "retry_allowed": false,
+    "paging_allowed": false,
+    "body_allowed": false,
+    "resource_discovery_allowed": false,
+    "no_refresh_proof_required": true,
+    "receipt_provenance_required": true
+  },
+  "evidence_states": [
+    "BFF_NOT_DEPLOYED",
+    "REQUEST_ATTRIBUTED_STATUS_ONLY",
+    "UNPROVEN"
+  ],
+  "approval_boundary": {
+    "evidence_status": "NOT_CREATED",
+    "same_principal_accounts_are_distinct_approvers": false,
+    "solo_without_cited_two_person_duty": "OWNER_SOLO_APPROVAL",
+    "solo_four_eyes_satisfied": false,
+    "uncited_two_person_duty": "BLOCKED_REQUIREMENT_CITATION_MISSING",
+    "cited_two_person_duty_with_one_principal": "BLOCKED_SINGLE_PRINCIPAL"
+  },
+  "gates": {
+    "provider_read_authorized": false,
+    "credential_access_authorized": false,
+    "no_refresh_capability_proven": false,
+    "token_refresh_authorized": false,
+    "login_authorized": false,
+    "tenant_write_authorized": false,
+    "deployment_authorized": false,
+    "new_reproduction_authorized": false,
+    "issue_739_release_authorized": false,
+    "issue_632_live_authorized": false,
+    "maximum_provider_reads": 0,
+    "maximum_tenant_writes": 0,
+    "maximum_deployments": 0
+  },
+  "validation_commands": [
+    "python scripts/validate_m365_bff_403_direct_server_diagnosis.py",
+    "python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py",
+    "python scripts/validate_spec_traceability.py",
+    "python scripts/validate_language_parity.py",
+    "graft check",
+    "python scripts/nac.py doctor --profile strict"
+  ]
+}

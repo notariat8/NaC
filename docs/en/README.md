@@ -78,7 +78,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [Internal BFF 403 diagnostic event](superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md)
   covers inactive v1 and the approved design for staged direct server diagnosis,
   starting with existing telemetry. Its [EN implementation plan](superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md)
-  is still under review; no real access or deployment is approved.
+  is approved; only inactive local Stage A is being implemented, with no real access or deployment.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry

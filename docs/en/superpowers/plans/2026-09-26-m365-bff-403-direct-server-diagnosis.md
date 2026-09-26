@@ -1,6 +1,6 @@
 # Direct server diagnosis of the Teams 403 – implementation plan
 
-Status: synchronized DE/EN plan for review; neither implementation, provider access nor deployment is approved.
+Status: synchronized DE/EN plan approved; only local, inactive Stage A is being implemented test-first. Provider access, Stage B and deployment are not approved.
 
 Date: September 26, 2026
 
@@ -49,6 +49,6 @@ No new SPFx receipt, generic diagnostic driver or BFF deployment is built specul
 
 ## Evidence and stop conditions
 
-The later local implementation specifically runs `python scripts/validate_m365_bff_403_direct_server_diagnosis.py`, `python scripts/validate_m365_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py`, `python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py`, `python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py`, `python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py`, `python scripts/validate_spec_traceability.py`, `python scripts/validate_language_parity.py`, `python scripts/validate_doc_links.py`, `graft build`, `graft check`, `git diff --check` and `python scripts/nac.py doctor --profile strict`. The new validator and Stage A test arise only during implementation. Mandatory remote CI follows only an independently authorized push. These are **planned** gates, not results already obtained.
+The local Stage A implementation specifically runs `python scripts/validate_m365_bff_403_direct_server_diagnosis.py`, `python scripts/validate_m365_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py`, `python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py`, `python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py`, `python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py`, `python -m unittest discover -s tests -p test_nac_bff_azure_function_host.py`, `python scripts/validate_spec_traceability.py`, `python scripts/validate_language_parity.py`, `python scripts/validate_doc_links.py`, `graft build`, `graft check`, `git diff --check` and `python scripts/nac.py doctor --profile strict`. The new validator and Stage A test have been added for the approved local work; final validation remains to be proven. Mandatory remote CI follows only an independently authorized push. This list does not claim final gates have already passed.
 
-This plan grants no implementation, push, login, token-refresh, credential, Microsoft/provider-read, deployment or live-test approval. Any missing binding, forbidden output or write request stops before the next phase. A blocked real run is never retried automatically.
+The current owner approval covers only local, inactive Stage A implementation. This plan itself grants no push, login, token-refresh, credential, Microsoft/provider-read, deployment, Stage B or live-test approval. The synthetic gate checks hash bindings but is neither a production transport nor an independent account/principal/permission proof. Any missing binding, forbidden output or write request stops before the next phase. A blocked real run is never retried automatically.

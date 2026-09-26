@@ -1,6 +1,6 @@
 # Internal BFF diagnostic event for the Teams 403
 
-Status: server-diagnosis design revision approved by the owner; synchronized DE/EN follow-on plan for review. Inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed.
+Status: server-diagnosis design revision and synchronized DE/EN follow-on plan approved; only local, inactive Stage A is approved for test-first implementation. Inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed.
 
 Date: September 26, 2026
 
@@ -50,8 +50,10 @@ approval to an older commit. Stage A/B below is a new design revision, not an
 extension of that approval. The owner approved this revision on commit
 `a76a1a0e9769cdf7f775e73d0812367ad408c066` and tree
 `6d95fea5fbc2038068eda0602ca06693e0e47cc4` as the basis for the
-synchronized DE/EN follow-on plan. The new plan is not yet approved;
-implementation also requires a forward-versioned contract. Until then, the
+synchronized DE/EN follow-on plan. The plan is now approved; current
+implementation is limited to an inactive, forward-versioned Stage A contract,
+validator, synthetic tests and a fail-closed read gate. It does not approve
+provider access or Stage B. The
 [v1 contract](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
 remains unchanged.
 
@@ -88,8 +90,10 @@ validation_commands:
   - git diff --check
 ```
 
-The new validator and Stage A test are **planned** implementation targets,
-not checks that already exist or have passed.
+The new validator and Stage A test are part of the approved local
+implementation. Their existence or a local test pass does not authorize a
+real provider read; target, account, principal, permission, DPA/AVV and
+no-refresh evidence require separate verification.
 
 ## Purpose and evidence boundary
 
@@ -262,7 +266,7 @@ as the complete cause or as a resolved Teams incident.
   for each publication. The commands above are validation targets, not
   claims of completed checks.
 
-### New design revision, not yet approved for implementation
+### New design revision with limited local Stage A approval
 
 - **AC-756-SD-01:** A follow-on contract binds the active test BFF, package
   version, App ID, Function, tenant, existing permission, individually allowed
@@ -270,9 +274,10 @@ as the complete cause or as a resolved Teams incident.
   block rather than select another tenant or a free-form query.
 - **AC-756-SD-02:** The historical query remains byte-hashed, restricted to
   exactly three output fields and at most one GET without redirect, retry or
-  paging. Only a server finding unambiguously correlated with the protected
-  receipt supports a root-cause claim; empty, expired or ambiguous logs
-  remain `UNPROVEN`.
+  paging. A 401/403 unambiguously correlated with the protected receipt
+  proves ingress and response class only, not the concrete denial cause;
+  that would require additional independent protected server evidence.
+  Empty, expired or ambiguous logs remain `UNPROVEN`.
 - **AC-756-SD-03:** A forward-versioned, request-local diagnostic result/port
   contract classifies terminal denial branches only. Negative and concurrency
   tests exclude false attribution for Graph failures, empty or ambiguous

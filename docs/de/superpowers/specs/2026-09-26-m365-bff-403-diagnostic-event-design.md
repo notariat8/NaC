@@ -1,6 +1,6 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403
 
-Status: Serverdiagnose-Designrevision vom Owner freigegeben; DE/EN-Folgeplan zur Review. Inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt.
+Status: Serverdiagnose-Designrevision und DE/EN-Folgeplan freigegeben; ausschließlich die lokale, inaktive Stufe A ist zur test-first Umsetzung freigegeben. Inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt.
 
 Datum: 26. September 2026
 
@@ -51,9 +51,10 @@ beschriebene Stufe A/B ist eine neue Designrevision, keine Ausweitung dieser
 Freigabe. Der Owner hat diese Revision auf Commit
 `a76a1a0e9769cdf7f775e73d0812367ad408c066` und Tree
 `6d95fea5fbc2038068eda0602ca06693e0e47cc4` als Grundlage für den
-DE/EN-Folgeplan freigegeben. Der neue Plan ist noch nicht freigegeben; vor
-der Umsetzung ist außerdem ein vorwärtsversionierter Vertrag erforderlich.
-Bis dahin bleibt der
+DE/EN-Folgeplan freigegeben. Der Folgeplan ist inzwischen freigegeben;
+die aktuelle Umsetzung ist auf einen inaktiven, vorwärtsversionierten
+Stufe-A-Vertrag, Validator, synthetische Tests und ein fail-closed Read-Gate
+begrenzt. Sie ist keine Freigabe für Providerzugriff oder Stufe B. Der
 [v1-Vertrag](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
 unverändert.
 
@@ -90,8 +91,10 @@ validation_commands:
   - git diff --check
 ```
 
-Der neue Validator und der neue A-Test sind **geplante** Implementierungsziele,
-keine bereits vorhandenen oder bestandenen Prüfungen.
+Der neue Validator und der Stufe-A-Test sind Teil der freigegebenen lokalen
+Umsetzung. Ihre Existenz oder ein lokaler Testerfolg autorisiert keinen
+realen Provider-Read; dessen Ziel-, Account-, Principal-, Berechtigungs-,
+AVV-/DPA- und No-Refresh-Nachweis bleibt separat zu prüfen.
 
 ## Zweck und Evidenzgrenze
 
@@ -275,7 +278,7 @@ vollständige Ursache oder behobene Teams-Störung ausgegeben werden.
   Veröffentlichung synchron geprüft. Die oben genannten Befehle sind
   Prüfziele, keine bereits bestandenen Nachweise.
 
-### Neue Designrevision, noch ohne Implementierungsfreigabe
+### Neue Designrevision mit begrenzter lokaler Stufe-A-Freigabe
 
 - **AC-756-SD-01:** Ein Folge-Vertrag bindet vor jedem Read den aktiven
   Test-BFF, Paketstand, App-ID, Function, Tenant, bestehende Berechtigung,
@@ -283,9 +286,10 @@ vollständige Ursache oder behobene Teams-Störung ausgegeben werden.
   blockieren statt einen anderen Tenant oder eine freie Abfrage zu nutzen.
 - **AC-756-SD-02:** Die historische Abfrage bleibt bytegehasht, auf genau
   drei Ausgabefelder und höchstens einen GET ohne Redirect, Retry oder Paging
-  beschränkt. Nur ein eindeutig mit dem geschützten Receipt korrelierter
-  Serverbefund trägt eine Ursachenbehauptung; leere, abgelaufene oder
-  mehrdeutige Logs bleiben `UNPROVEN`.
+  beschränkt. Ein eindeutig mit dem geschützten Receipt korrelierter 401/403
+  belegt nur Eingang und Antwortklasse, nicht die konkrete Ablehnungsursache;
+  dafür wäre zusätzliche unabhängige geschützte Server-Evidence nötig.
+  Leere, abgelaufene oder mehrdeutige Logs bleiben `UNPROVEN`.
 - **AC-756-SD-03:** Ein vorwärtsversionierter, request-lokaler
   Diagnose-Result-/Port-Vertrag klassifiziert nur terminale Ablehnungszweige.
   Negativ- und Nebenläufigkeitstests schließen falsche Zuordnungen bei
