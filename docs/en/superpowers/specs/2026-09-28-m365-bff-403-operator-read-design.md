@@ -32,6 +32,8 @@ acceptance_ids:
   - AC-756-OR-04
   - AC-756-OR-05
 validation_commands:
+  - python scripts/validate_m365_bff_403_operator_read.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_operator_read.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py

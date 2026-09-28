@@ -465,6 +465,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "m365_bff_403_operator_read",
+                    "M365 BFF 403 Inactive Operator Read Contract",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_bff_403_operator_read.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [

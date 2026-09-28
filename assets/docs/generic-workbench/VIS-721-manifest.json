@@ -29,7 +29,7 @@
     },
     {
       "relativePath": "scripts/quality_gate.py",
-      "sha256": "51bcaac97f9b9051dcb90793e344592842cb50d88e0b94513aa77c5d217f045c"
+      "sha256": "2000c88a6d9d2f858630363fbc6e0eeea181cb614208375ea98b99ff95d42672"
     },
     {
       "relativePath": "scripts/validate_generic_workbench_foundation.py",
