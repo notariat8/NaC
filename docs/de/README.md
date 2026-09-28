@@ -100,7 +100,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [Interner BFF-403-Diagnoseeintrag](superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md):
   inaktive v1 und freigegebener Entwurf für eine gestufte direkte Serverdiagnose
   mit vorhandener Telemetrie zuerst. Der [DE-Implementierungsplan](superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md)
-  ist freigegeben; nur die inaktive lokale Stufe A wird umgesetzt, kein realer Zugriff oder Deployment.
+  ist freigegeben; Stufe A und die inaktive lokale Stufe-B-Vorbereitung werden geprüft, kein realer Zugriff, Diagnose-Sink oder Deployment.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische

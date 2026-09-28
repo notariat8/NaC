@@ -14,6 +14,14 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_bff.live_access_decision import LiveAccessDecisionAdapter  # noqa: E402
+from nac_bff.bff_403_terminal_reason import (  # noqa: E402
+    ACTOR_ASSIGNMENT_MISSING,
+    CASE_BINDING_INVALID,
+    DENIAL_UNCLASSIFIED,
+    DEPUTY_GRANT_INVALID,
+    GRAPH_READ_UNAVAILABLE,
+    GRANT_AUDIT_INVALID,
+)
 from nac_bff.live_synthetic_workspace import SYNTHETIC_LIVE_ACTOR_ID  # noqa: E402
 from nac_bff.synthetic_workspace_graph import (  # noqa: E402
     AZURE_HTTP_LIMIT_SECONDS,
@@ -457,6 +465,45 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
             matter_id=ALLOWED_MATTER_ID,
             purpose=ALLOWED_PURPOSE,
         )
+
+    def _diagnose(self, adapter: LiveAccessDecisionAdapter, actor_id: str):
+        return adapter.decide_with_terminal_reason(
+            actor_id=actor_id,
+            tenant_id="synthetic-tenant",
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+
+    def test_private_terminal_reason_is_only_the_final_denial_branch(self) -> None:
+        cases = (
+            ((GraphRequestError("sensitive graph body"),), "actor-deputy", GRAPH_READ_UNAVAILABLE, 1),
+            ((_page(),), "actor-deputy", CASE_BINDING_INVALID, 1),
+            ((_page(_access_case(), _access_case()),), "actor-deputy", CASE_BINDING_INVALID, 1),
+            ((_page(_access_case()), _page()), "actor-deputy", ACTOR_ASSIGNMENT_MISSING, 2),
+            ((_page(_access_case()), _page(_grant(Status="Widerrufen"))), "actor-deputy", DEPUTY_GRANT_INVALID, 2),
+            ((_page(_access_case()), _page(_grant()), _page(_audit(Action="GrantRequested"))), "actor-deputy", GRANT_AUDIT_INVALID, 3),
+            ((_page(_access_case()), _page(_grant()), _page(_audit())), "actor-deputy", None, 3),
+        )
+        for responses, actor, expected, reads in cases:
+            with self.subTest(expected=expected):
+                adapter, client = self._adapter(*responses)
+                result = self._diagnose(adapter, actor)
+                self.assertEqual(result.reason_class, expected)
+                self.assertEqual(len(client.paths), reads)
+                self.assertIs(
+                    result.decision.mode,
+                    AccessMode.DEPUTY if expected is None else AccessMode.DENY,
+                )
+                self.assertNotIn("sensitive graph body", repr(result))
+
+    def test_private_terminal_reason_does_not_turn_unknown_errors_into_personal_claims(self) -> None:
+        adapter, client = self._adapter(AssertionError("sensitive unexpected failure"))
+        result = self._diagnose(adapter, "actor-deputy")
+        self.assertIs(result.decision.mode, AccessMode.DENY)
+        self.assertEqual(result.reason_class, DENIAL_UNCLASSIFIED)
+        self.assertEqual(len(client.paths), 1)
+        self.assertNotIn("sensitive unexpected failure", repr(result))
 
     def test_lead_notary_and_assigned_clerk_are_assigned_without_grant_read(self) -> None:
         for actor, role in (

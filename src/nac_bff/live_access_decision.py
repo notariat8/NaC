@@ -5,8 +5,19 @@ from typing import Any, Callable, Mapping
 
 from nac_bff.synthetic_workspace_graph import (
     GraphGetClient,
+    GraphRequestError,
+    GraphResponseError,
     read_bounded_collection,
     synthetic_list_binding,
+)
+from nac_bff.bff_403_terminal_reason import (
+    ACTOR_ASSIGNMENT_MISSING,
+    CASE_BINDING_INVALID,
+    DENIAL_UNCLASSIFIED,
+    DEPUTY_GRANT_INVALID,
+    GRAPH_READ_UNAVAILABLE,
+    GRANT_AUDIT_INVALID,
+    PrivateDecisionResult,
 )
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
@@ -14,6 +25,7 @@ from nac_bff.test_environment import (
     ALLOWED_DEPUTY_REASON,
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
+    AccessMode,
 )
 
 
@@ -73,6 +85,38 @@ class LiveAccessDecisionAdapter:
             # collapse to one result so callers cannot infer matter existence.
             return AccessDecision.deny()
 
+    def decide_with_terminal_reason(
+        self,
+        *,
+        actor_id: str,
+        tenant_id: str,
+        workspace_id: str,
+        matter_id: str,
+        purpose: str,
+    ) -> PrivateDecisionResult:
+        """Return an inactive, request-local result; never emit it to a sink."""
+
+        recorded: list[str] = []
+        try:
+            decision = self._decide(
+                actor_id=actor_id,
+                tenant_id=tenant_id,
+                workspace_id=workspace_id,
+                matter_id=matter_id,
+                purpose=purpose,
+                _record_terminal=recorded.append,
+            )
+        except (GraphRequestError, GraphResponseError):
+            return PrivateDecisionResult(AccessDecision.deny(), GRAPH_READ_UNAVAILABLE)
+        except Exception:
+            return PrivateDecisionResult(AccessDecision.deny(), DENIAL_UNCLASSIFIED)
+        if decision.mode is AccessMode.DENY:
+            return PrivateDecisionResult(
+                decision,
+                recorded[0] if len(recorded) == 1 else DENIAL_UNCLASSIFIED,
+            )
+        return PrivateDecisionResult(decision, None)
+
     def _decide(
         self,
         *,
@@ -81,7 +125,13 @@ class LiveAccessDecisionAdapter:
         workspace_id: object,
         matter_id: object,
         purpose: object,
+        _record_terminal: Callable[[str], None] | None = None,
     ) -> AccessDecision:
+        def deny(reason: str) -> AccessDecision:
+            if _record_terminal is not None:
+                _record_terminal(reason)
+            return AccessDecision.deny()
+
         if (
             type(actor_id) is not str
             or not actor_id
@@ -91,7 +141,7 @@ class LiveAccessDecisionAdapter:
             or matter_id != ALLOWED_MATTER_ID
             or purpose != ALLOWED_PURPOSE
         ):
-            return AccessDecision.deny()
+            return deny(DENIAL_UNCLASSIFIED)
 
         live_lookup_mode = actor_id.lower() == SYNTHETIC_LIVE_ACTOR_ID
         actor_person_id = (
@@ -115,13 +165,13 @@ class LiveAccessDecisionAdapter:
             max_items=2,
         )
         if len(cases) != 1:
-            return AccessDecision.deny()
+            return deny(CASE_BINDING_INVALID)
         case = cases[0]
         if (
             case.get("NacCaseId") != ALLOWED_MATTER_ID
             or case.get("NotarTeam") != SYNTHETIC_NOTARY_TEAM
         ):
-            return AccessDecision.deny()
+            return deny(CASE_BINDING_INVALID)
 
         notaries = _user_ids(
             case.get(person_field("FederfuehrenderNotar")), allow_multiple=False
@@ -130,7 +180,7 @@ class LiveAccessDecisionAdapter:
             case.get(person_field("Sachbearbeitung")), allow_multiple=True
         )
         if len(notaries) != 1:
-            return AccessDecision.deny()
+            return deny(CASE_BINDING_INVALID)
         lead_notary = next(iter(notaries))
         reference = _reference_time(self)
         if actor_person_id == lead_notary:
@@ -175,7 +225,7 @@ class LiveAccessDecisionAdapter:
             == actor_person_id
         ]
         if len(matching) != 1:
-            return AccessDecision.deny()
+            return deny(ACTOR_ASSIGNMENT_MISSING)
         grant = matching[0]
         if not _valid_grant(
             grant,
@@ -184,7 +234,7 @@ class LiveAccessDecisionAdapter:
             from_user_field=person_field("FromUser"),
             approved_by_field=person_field("ApprovedBy"),
         ):
-            return AccessDecision.deny()
+            return deny(DEPUTY_GRANT_INVALID)
 
         correlation_id = _text(grant.get("AuditCorrelationId"))
         audits = read_bounded_collection(
@@ -199,7 +249,7 @@ class LiveAccessDecisionAdapter:
             max_items=2,
         )
         if len(audits) != 1 or not _valid_audit(audits[0], grant):
-            return AccessDecision.deny()
+            return deny(GRANT_AUDIT_INVALID)
         return _allowed_decision(
             mode="deputy",
             actor_id=actor_id,

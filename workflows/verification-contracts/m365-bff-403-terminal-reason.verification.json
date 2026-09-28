@@ -1,0 +1,73 @@
+{
+  "schema_version": "nac.bff-403-terminal-reason.verification/v2",
+  "contract_id": "m365-bff-403-terminal-reason",
+  "status": "LOCAL_INACTIVE_ONLY",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/756",
+  "base_contract": "workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json",
+  "specifications": {
+    "de": "docs/de/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md",
+    "en": "docs/en/superpowers/specs/2026-09-26-m365-bff-403-diagnostic-event-design.md"
+  },
+  "plans": {
+    "de": "docs/de/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md",
+    "en": "docs/en/superpowers/plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md"
+  },
+  "acceptance_ids": ["AC-756-SD-03", "AC-756-SD-04", "AC-756-SD-05"],
+  "result": {
+    "scope": "single_request_in_process_only",
+    "reason_classes": [
+      "GRAPH_READ_UNAVAILABLE",
+      "CASE_BINDING_INVALID",
+      "ACTOR_ASSIGNMENT_MISSING",
+      "DEPUTY_GRANT_INVALID",
+      "GRANT_AUDIT_INVALID",
+      "DECISION_PROJECTION_INVALID",
+      "DENIAL_UNCLASSIFIED"
+    ],
+    "terminal_branch_only": true,
+    "maximum_reasons_per_request": 1,
+    "unclassified_fallback": "DENIAL_UNCLASSIFIED",
+    "existing_public_403_body": "{\"status\":403,\"error\":{\"code\":\"ACCESS_DENIED\"}}"
+  },
+  "privacy": {
+    "inference_bearing_classes": [
+      "ACTOR_ASSIGNMENT_MISSING",
+      "DEPUTY_GRANT_INVALID",
+      "GRANT_AUDIT_INVALID"
+    ],
+    "default_external_reason": "ACCESS_DECISION_REJECTED",
+    "raw_graph_values_allowed": false,
+    "subject_identifiers_allowed": false,
+    "request_payload_allowed": false,
+    "class_specific_external_output_authorized": false,
+    "class_specific_output_requires": [
+      "separate_owner_approval",
+      "class_specific_dpa_avv_basis",
+      "class_specific_readership",
+      "class_specific_retention",
+      "bound_deployment_and_new_client_observation"
+    ]
+  },
+  "gates": {
+    "sink_authorized": false,
+    "provider_read_authorized": false,
+    "credential_access_authorized": false,
+    "token_refresh_authorized": false,
+    "deployment_authorized": false,
+    "new_teams_observation_authorized": false,
+    "issue_739_release_authorized": false,
+    "issue_632_live_authorized": false,
+    "maximum_provider_reads": 0,
+    "maximum_tenant_writes": 0,
+    "maximum_deployments": 0
+  },
+  "validation_commands": [
+    "python scripts/validate_m365_bff_403_terminal_reason.py",
+    "python -m unittest discover -s tests -p test_nac_bff_403_terminal_reason.py",
+    "python -m unittest discover -s tests -p test_nac_bff_live_graph_ports.py",
+    "python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py",
+    "python scripts/validate_spec_traceability.py",
+    "python scripts/validate_language_parity.py",
+    "graft check"
+  ]
+}

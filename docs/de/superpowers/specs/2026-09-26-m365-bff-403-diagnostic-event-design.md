@@ -1,6 +1,6 @@
 # Interner BFF-Diagnoseeintrag für den Teams-403
 
-Status: Serverdiagnose-Designrevision und DE/EN-Folgeplan freigegeben; ausschließlich die lokale, inaktive Stufe A ist zur test-first Umsetzung freigegeben. Inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt.
+Status: Serverdiagnose-Designrevision und DE/EN-Folgeplan freigegeben; Stufe A und die lokale, inaktive Vorbereitung der Stufe B sind zur Review in Arbeit. Inaktive v1-Umsetzung in [Draft-PR #757](https://github.com/notariat8/NaC/pull/757) veröffentlicht, nicht aktiviert oder bereitgestellt.
 
 Datum: 26. September 2026
 
@@ -54,9 +54,13 @@ Freigabe. Der Owner hat diese Revision auf Commit
 DE/EN-Folgeplan freigegeben. Der Folgeplan ist inzwischen freigegeben;
 die aktuelle Umsetzung ist auf einen inaktiven, vorwärtsversionierten
 Stufe-A-Vertrag, Validator, synthetische Tests und ein fail-closed Read-Gate
-begrenzt. Sie ist keine Freigabe für Providerzugriff oder Stufe B. Der
+begrenzt. Die anschließende Owner-Entscheidung erlaubt zusätzlich die ausschließlich
+lokale, inaktive Vorbereitung der Stufe B zur Review. Der neue
+[Stufe-B-Vertrag](../../../../workflows/verification-contracts/m365-bff-403-terminal-reason.verification.json)
+bindet diese Vorbereitung; ein Diagnose-Sink, Providerzugriff, Deployment und
+eine neue Teams-Beobachtung bleiben gesperrt. Der
 [v1-Vertrag](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
-unverändert.
+bleibt unverändert.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -79,6 +83,10 @@ acceptance_ids:
   - AC-756-SD-05
 validation_commands:
   - python scripts/validate_m365_bff_403_direct_server_diagnosis.py
+  - python scripts/validate_m365_bff_403_terminal_reason.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_terminal_reason.py
+  - python -m unittest discover -s tests -p test_nac_bff_live_graph_ports.py
+  - python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py
   - python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py
   - python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py
   - python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py
@@ -278,7 +286,7 @@ vollständige Ursache oder behobene Teams-Störung ausgegeben werden.
   Veröffentlichung synchron geprüft. Die oben genannten Befehle sind
   Prüfziele, keine bereits bestandenen Nachweise.
 
-### Neue Designrevision mit begrenzter lokaler Stufe-A-Freigabe
+### Neue Designrevision mit begrenzter lokaler Freigabe für Stufe A und inaktive Stufe-B-Vorbereitung
 
 - **AC-756-SD-01:** Ein Folge-Vertrag bindet vor jedem Read den aktiven
   Test-BFF, Paketstand, App-ID, Function, Tenant, bestehende Berechtigung,

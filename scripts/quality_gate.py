@@ -473,6 +473,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "m365_bff_403_terminal_reason",
+                    "M365 BFF 403 Inactive Terminal Reason Contract",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_bff_403_terminal_reason.py",
+                    ],
+                ),
+                (
                     "m365_azure_bff_performance_acceptance",
                     "M365 Azure BFF Performance Acceptance",
                     [

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import UTC, datetime
 import json
 from pathlib import Path
@@ -11,6 +13,13 @@ from nac_bff.bpmn_asset import (
     CanonicalBpmnAssetFilePort,
 )
 from nac_bff.fastapi_adapter import create_fastapi_app, _should_emit_instance_epoch
+from nac_bff.bff_403_terminal_reason import (
+    ACTOR_ASSIGNMENT_MISSING,
+    CASE_BINDING_INVALID,
+    DECISION_PROJECTION_INVALID,
+    PrivateDecisionResult,
+    TerminalReasonCapture,
+)
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -104,6 +113,144 @@ class _BpmnPort:
 
 
 class WorkbenchEndpointTests(unittest.TestCase):
+    def test_private_reason_is_discarded_if_later_clock_or_budget_fails(self) -> None:
+        class _PrivatePort:
+            def decide(self, **_: str) -> AccessDecision:
+                raise AssertionError("diagnostic port was not used")
+
+            def decide_with_terminal_reason(self, **_: str) -> PrivateDecisionResult:
+                return PrivateDecisionResult(AccessDecision.deny(), ACTOR_ASSIGNMENT_MISSING)
+
+        def failed_clock() -> datetime:
+            raise RuntimeError("clock unavailable")
+
+        @contextmanager
+        def failed_budget():
+            yield
+            raise RuntimeError("budget release failed")
+
+        claims = ValidatedClaims(object_id=ACTOR_ID, tenant_id=TENANT_ID, subject=ACTOR_ID)
+        for clock, budget in ((failed_clock, None), (lambda: NOW, failed_budget)):
+            with self.subTest(budget=budget is not None):
+                endpoint = WorkbenchEndpoint(
+                    expected_tenant_id=TENANT_ID,
+                    access_decision_port=_PrivatePort(),
+                    graph_rest_port=_GraphPort(),
+                    bpmn_asset_port=_BpmnPort(),
+                    clock=clock,
+                    request_budget_factory=budget,
+                )
+                capture = TerminalReasonCapture()
+                response = endpoint.get_snapshot(
+                    claims=claims,
+                    workspace_id=ALLOWED_WORKSPACE_ID,
+                    matter_id=ALLOWED_MATTER_ID,
+                    purpose=ALLOWED_PURPOSE,
+                    _terminal_capture=capture,
+                )
+                self.assertEqual(response.status_code, 503)
+                self.assertIsNone(capture.reason_class)
+
+    def test_private_terminal_capture_is_isolated_across_concurrent_requests(self) -> None:
+        class _PrivatePort:
+            def decide(self, **_: str) -> AccessDecision:
+                raise AssertionError("diagnostic port was not used")
+
+            def decide_with_terminal_reason(self, **request: str) -> PrivateDecisionResult:
+                reason = (
+                    ACTOR_ASSIGNMENT_MISSING
+                    if request["actor_id"] == "actor:synthetic:a"
+                    else CASE_BINDING_INVALID
+                )
+                return PrivateDecisionResult(AccessDecision.deny(), reason)
+
+        endpoint = WorkbenchEndpoint(
+            expected_tenant_id=TENANT_ID,
+            access_decision_port=_PrivatePort(),
+            graph_rest_port=_GraphPort(),
+            bpmn_asset_port=_BpmnPort(),
+            clock=lambda: NOW,
+        )
+
+        def invoke(actor_id: str) -> tuple[bytes, str | None]:
+            capture = TerminalReasonCapture()
+            response = endpoint.get_snapshot(
+                claims=ValidatedClaims(
+                    object_id=actor_id, tenant_id=TENANT_ID, subject=actor_id
+                ),
+                workspace_id=ALLOWED_WORKSPACE_ID,
+                matter_id=ALLOWED_MATTER_ID,
+                purpose=ALLOWED_PURPOSE,
+                _terminal_capture=capture,
+            )
+            return response.body_bytes, capture.reason_class
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(invoke, ("actor:synthetic:a", "actor:synthetic:b")))
+        self.assertEqual(
+            results,
+            [
+                (b'{"status":403,"error":{"code":"ACCESS_DENIED"}}', ACTOR_ASSIGNMENT_MISSING),
+                (b'{"status":403,"error":{"code":"ACCESS_DENIED"}}', CASE_BINDING_INVALID),
+            ],
+        )
+
+    def test_private_terminal_result_never_changes_public_403(self) -> None:
+        class _PrivatePort:
+            def decide(self, **_: str) -> AccessDecision:
+                raise AssertionError("diagnostic port was not used")
+
+            def decide_with_terminal_reason(self, **_: str) -> PrivateDecisionResult:
+                return PrivateDecisionResult(AccessDecision.deny(), ACTOR_ASSIGNMENT_MISSING)
+
+        endpoint = WorkbenchEndpoint(
+            expected_tenant_id=TENANT_ID,
+            access_decision_port=_PrivatePort(),
+            graph_rest_port=_GraphPort(),
+            bpmn_asset_port=_BpmnPort(),
+            clock=lambda: NOW,
+        )
+        capture = TerminalReasonCapture()
+        response = endpoint.get_snapshot(
+            claims=ValidatedClaims(object_id=ACTOR_ID, tenant_id=TENANT_ID, subject=ACTOR_ID),
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+            _terminal_capture=capture,
+        )
+        self.assertEqual(response.body_bytes, b'{"status":403,"error":{"code":"ACCESS_DENIED"}}')
+        self.assertNotIn(ACTOR_ASSIGNMENT_MISSING, str(response.body))
+        self.assertEqual(capture.reason_class, ACTOR_ASSIGNMENT_MISSING)
+        self.assertNotIn(ACTOR_ID, repr(capture))
+
+    def test_invalid_decision_projection_is_a_distinct_terminal_reason(self) -> None:
+        class _PrivatePort:
+            def decide(self, **_: str) -> AccessDecision:
+                raise AssertionError("diagnostic port was not used")
+
+            def decide_with_terminal_reason(self, **_: str) -> PrivateDecisionResult:
+                return PrivateDecisionResult(
+                    _assigned_decision(subject_id="other-actor"), None
+                )
+
+        endpoint = WorkbenchEndpoint(
+            expected_tenant_id=TENANT_ID,
+            access_decision_port=_PrivatePort(),
+            graph_rest_port=_GraphPort(),
+            bpmn_asset_port=_BpmnPort(),
+            clock=lambda: NOW,
+        )
+        capture = TerminalReasonCapture()
+        response = endpoint.get_snapshot(
+            claims=ValidatedClaims(object_id=ACTOR_ID, tenant_id=TENANT_ID, subject=ACTOR_ID),
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+            _terminal_capture=capture,
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(capture.reason_class, DECISION_PROJECTION_INVALID)
+
     def test_instance_epoch_is_scoped_to_successful_workbench_response(self) -> None:
         path = (
             f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/"

@@ -14,6 +14,12 @@ from .bff_403_diagnostic_event import (
     REQUEST_SCOPE_REJECTED,
     DenialReasonState,
 )
+from .bff_403_terminal_reason import (
+    DECISION_PROJECTION_INVALID,
+    DENIAL_UNCLASSIFIED,
+    PrivateDecisionResult,
+    TerminalReasonCapture,
+)
 from .test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -21,8 +27,8 @@ from .test_environment import (
     ALLOWED_TENANT_ID,
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
-    AccessDecisionPort,
     AccessMode,
+    AccessDecisionPort,
     BpmnAssetPort,
     GraphRestPort,
     ValidatedClaims,
@@ -107,7 +113,13 @@ class WorkbenchEndpoint:
         request_filters: Mapping[str, object] | None = None,
         _budget_bound: bool = False,
         _diagnostic_state: DenialReasonState | None = None,
+        _terminal_capture: TerminalReasonCapture | None = None,
     ) -> WorkbenchResponse:
+        if _terminal_capture is not None and (
+            type(_terminal_capture) is not TerminalReasonCapture
+            or _terminal_capture.reason_class is not None
+        ):
+            raise TypeError("private terminal capture must be fresh")
         if not isinstance(claims, ValidatedClaims):
             return _error(401, "AUTHENTICATION_REQUIRED")
 
@@ -126,8 +138,11 @@ class WorkbenchEndpoint:
 
         if self._request_budget_factory is not None and not _budget_bound:
             try:
+                inner_capture = (
+                    TerminalReasonCapture() if _terminal_capture is not None else None
+                )
                 with self._request_budget_factory():
-                    return self.get_snapshot(
+                    response = self.get_snapshot(
                         claims=claims,
                         workspace_id=workspace_id,
                         matter_id=matter_id,
@@ -135,19 +150,42 @@ class WorkbenchEndpoint:
                         request_filters=request_filters,
                         _budget_bound=True,
                         _diagnostic_state=_diagnostic_state,
+                        _terminal_capture=inner_capture,
                     )
+                if (
+                    _terminal_capture is not None
+                    and inner_capture is not None
+                    and response.status_code == 403
+                    and inner_capture.reason_class is not None
+                ):
+                    _terminal_capture.record(inner_capture.reason_class)
+                return response
             except Exception:
                 return _error(503, "SERVICE_UNAVAILABLE")
 
+        private_reason: str | None = None
         try:
-            decision = self._access_decision_port.decide(
-                actor_id=claims.object_id,
-                tenant_id=claims.tenant_id,
-                workspace_id=ALLOWED_WORKSPACE_ID,
-                matter_id=ALLOWED_MATTER_ID,
-                purpose=ALLOWED_PURPOSE,
-            )
+            request = {
+                "actor_id": claims.object_id,
+                "tenant_id": claims.tenant_id,
+                "workspace_id": ALLOWED_WORKSPACE_ID,
+                "matter_id": ALLOWED_MATTER_ID,
+                "purpose": ALLOWED_PURPOSE,
+            }
+            private_decider = getattr(
+                self._access_decision_port, "decide_with_terminal_reason", None
+            ) if _terminal_capture is not None else None
+            if callable(private_decider):
+                private_result = private_decider(**request)
+                if type(private_result) is not PrivateDecisionResult:
+                    raise TypeError("invalid private decision result")
+                decision = private_result.decision
+                private_reason = private_result.reason_class
+            else:
+                decision = self._access_decision_port.decide(**request)
         except Exception:
+            if _terminal_capture is not None and _terminal_capture.reason_class is None:
+                _terminal_capture.record(DENIAL_UNCLASSIFIED)
             if _diagnostic_state is not None:
                 _diagnostic_state.record(ACCESS_DECISION_UNAVAILABLE)
             return _error(403, "ACCESS_DENIED")
@@ -162,6 +200,16 @@ class WorkbenchEndpoint:
             observed_at=decision_observed_at,
         )
         if access is None:
+            if _terminal_capture is not None and _terminal_capture.reason_class is None:
+                _terminal_capture.record(
+                    private_reason
+                    or (
+                        DECISION_PROJECTION_INVALID
+                        if isinstance(decision, AccessDecision)
+                        and decision.mode in {AccessMode.ASSIGNED, AccessMode.DEPUTY}
+                        else DENIAL_UNCLASSIFIED
+                    )
+                )
             if _diagnostic_state is not None:
                 _diagnostic_state.record(ACCESS_DECISION_REJECTED)
             return _error(403, "ACCESS_DENIED")

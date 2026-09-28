@@ -1,6 +1,6 @@
 # Internal BFF diagnostic event for the Teams 403
 
-Status: server-diagnosis design revision and synchronized DE/EN follow-on plan approved; only local, inactive Stage A is approved for test-first implementation. Inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed.
+Status: server-diagnosis design revision and synchronized DE/EN follow-on plan approved; Stage A and local, inactive Stage B preparation are under review. Inactive v1 implementation published in [Draft PR #757](https://github.com/notariat8/NaC/pull/757), neither activated nor deployed.
 
 Date: September 26, 2026
 
@@ -52,8 +52,11 @@ extension of that approval. The owner approved this revision on commit
 `6d95fea5fbc2038068eda0602ca06693e0e47cc4` as the basis for the
 synchronized DE/EN follow-on plan. The plan is now approved; current
 implementation is limited to an inactive, forward-versioned Stage A contract,
-validator, synthetic tests and a fail-closed read gate. It does not approve
-provider access or Stage B. The
+validator, synthetic tests and a fail-closed read gate. The later owner decision
+also permits exclusively local, inactive Stage B preparation for review. The new
+[Stage B contract](../../../../workflows/verification-contracts/m365-bff-403-terminal-reason.verification.json)
+binds that preparation; a diagnostic sink, provider access, deployment and a
+new Teams observation remain barred. The
 [v1 contract](../../../../workflows/verification-contracts/m365-bff-403-diagnostic-event.verification.json)
 remains unchanged.
 
@@ -78,6 +81,10 @@ acceptance_ids:
   - AC-756-SD-05
 validation_commands:
   - python scripts/validate_m365_bff_403_direct_server_diagnosis.py
+  - python scripts/validate_m365_bff_403_terminal_reason.py
+  - python -m unittest discover -s tests -p test_nac_bff_403_terminal_reason.py
+  - python -m unittest discover -s tests -p test_nac_bff_live_graph_ports.py
+  - python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py
   - python -m unittest discover -s tests -p test_nac_bff_403_direct_server_diagnosis.py
   - python -m unittest discover -s tests -p test_nac_bff_403_diagnostic_event.py
   - python -m unittest discover -s tests -p test_nac_bff_live_synthetic_workspace.py
@@ -266,7 +273,7 @@ as the complete cause or as a resolved Teams incident.
   for each publication. The commands above are validation targets, not
   claims of completed checks.
 
-### New design revision with limited local Stage A approval
+### New design revision with limited local approval for Stage A and inactive Stage B preparation
 
 - **AC-756-SD-01:** A follow-on contract binds the active test BFF, package
   version, App ID, Function, tenant, existing permission, individually allowed
