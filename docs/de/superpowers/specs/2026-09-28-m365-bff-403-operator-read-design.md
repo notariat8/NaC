@@ -1,18 +1,21 @@
 # Einmaliger operatorischer Server-Read für die Teams-403-Störung
 
-Status: lokale Designrevision zur Owner-Review; kein produktiver Read, keine
+Status: DE/EN-Spezifikation auf Commit `9ba12333897ed62306c8a807d6c73ceb4a969178`
+und Tree `8519b9b7232d2d0a396f5540d8f1e1b065b8ef99` im Task vom Owner
+für Plan und lokale Umsetzung freigegeben; kein produktiver Read, keine
 Anmeldung, kein Token-Refresh und keine Änderung des inaktiven #756-Vertrags.
 
 Datum: 28. September 2026. Führendes [Issue #756](https://github.com/notariat8/NaC/issues/756).
 Die [bestehende Stufe-A-Spezifikation](2026-09-26-m365-bff-403-diagnostic-event-design.md)
 und ihr [Folgeplan](../plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md)
-bleiben bis zur Review unverändert. Dieser Entwurf ersetzt weder die
+bleiben als eigener Scope unverändert. Diese Spezifikation ersetzt weder die
 historischen #739-/#632-Gates noch autorisiert er einen Providerzugriff.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-operator-read
 leading_issue: https://github.com/notariat8/NaC/issues/756
+plan: docs/de/superpowers/plans/2026-09-28-m365-bff-403-operator-read.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
@@ -90,8 +93,9 @@ höchstens einen GET und nur die genannten Ausgabefelder:
    Tokens und andere nicht erlaubte Felder dürfen weder ausgegeben,
    gespeichert noch gehasht werden. Da die API solche Felder in der Antwort
    enthalten kann, muss ihre technische Projektion **vor** diesem GET
-   unabhängig nachgewiesen sein; andernfalls stoppt der Lauf hier. Die tatsächliche Verknüpfung zum
-   erwarteten BFF bleibt separat zu belegen; bloße Namensähnlichkeit genügt
+   unabhängig nachgewiesen sein; andernfalls stoppt der Lauf hier. Die
+   tatsächliche Verknüpfung zum erwarteten BFF bleibt separat zu belegen;
+   bloße Namensähnlichkeit genügt
    nicht.
 4. Bei workspace-basierter Erfassung nur für den exakt aus Schritt 3
    gebundenen Workspace:

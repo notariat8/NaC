@@ -1,18 +1,22 @@
 # One-shot operator server read for the Teams 403 incident
 
-Status: local design revision for owner review; no production read, sign-in,
-token refresh, or change to the inactive #756 contract.
+Status: DE/EN specification approved in this task by the owner at commit
+`9ba12333897ed62306c8a807d6c73ceb4a969178` and tree
+`8519b9b7232d2d0a396f5540d8f1e1b065b8ef99` for planning and local
+implementation; no production read, sign-in, token refresh, or change to the
+inactive #756 contract.
 
 Date: 28 September 2026. Leading [Issue #756](https://github.com/notariat8/NaC/issues/756).
 The [existing Stage A specification](2026-09-26-m365-bff-403-diagnostic-event-design.md)
 and its [follow-up plan](../plans/2026-09-26-m365-bff-403-direct-server-diagnosis.md)
-remain unchanged until review. This draft neither supersedes the historic
+remain unchanged as a separate scope. This specification neither supersedes the historic
 #739/#632 gates nor authorizes provider access.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
 spec_id: m365-bff-403-operator-read
 leading_issue: https://github.com/notariat8/NaC/issues/756
+plan: docs/en/superpowers/plans/2026-09-28-m365-bff-403-operator-read.md
 risk_gate: Human Approval
 delivery_mode: Protected PR
 review_gates:
@@ -85,8 +89,8 @@ and only the stated output fields:
    store, or hash `ConnectionString`, `InstrumentationKey`, tokens, or other
    excluded fields. Because the API may return those fields, technically
    prove response projection **before** this GET or stop here. The actual
-   link to the expected BFF needs separate
-   proof; a similar name is insufficient.
+   link to the expected BFF needs separate proof; a similar name is
+   insufficient.
 4. For workspace-based ingestion, only for the exact workspace bound in step
    3:
    `GET https://management.azure.com{bound_workspace}?api-version=2025-07-01`.
