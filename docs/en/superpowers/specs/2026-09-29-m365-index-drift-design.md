@@ -2,6 +2,24 @@
 
 Status: design for owner review; no live execution.
 
+```nac-spec-traceability
+schema_version: nac.spec-traceability/v0.1
+spec_id: m365-index-drift
+leading_issue: https://github.com/notariat8/NaC/issues/760
+risk_gate: External Service
+delivery_mode: Protected PR
+acceptance_ids:
+  - AC-760-1
+  - AC-760-2
+  - AC-760-3
+  - AC-760-4
+  - AC-760-5
+validation_commands:
+  - python scripts/validate_spec_traceability.py
+  - python -m unittest tests.test_teams_sharepoint_graph_data_plane
+  - python scripts/nac.py doctor --profile strict
+```
+
 ## Purpose and finding
 
 The Teams MVP configuration declares indexed SharePoint columns in
