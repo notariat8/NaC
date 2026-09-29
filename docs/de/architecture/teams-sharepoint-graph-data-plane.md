@@ -150,6 +150,7 @@ Erlaubte Graph-Endpunkte im MVP:
 - `GET /teams/{team-id}/channels`
 - `GET /teams/{team-id}/channels/{channel-id}/filesFolder`
 - `GET /groups/{group-id}/sites/root`
+- `GET /sites/{site-id}`
 - `GET /sites/{site-id}/lists`
 - `POST /sites/{site-id}/lists`
 - `GET /sites/{site-id}/lists/{list-id}/columns`
@@ -255,7 +256,7 @@ python3 scripts/nac.py m365 teams-sharepoint plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-policy-smoke --format json
-python3 scripts/nac.py m365 teams-sharepoint drift --format json
+python3 scripts/nac.py m365 teams-sharepoint drift --workspace-id notary_team_01 --format json
 python3 scripts/nac.py m365 teams-sharepoint export --format json
 ```
 
@@ -264,9 +265,16 @@ python3 scripts/nac.py m365 teams-sharepoint export --format json
 [deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json](../../../deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json)
 und den nicht-geheimen Provisionierungsstand, um die nächste Iteration vor
 jedem Live-Apply als Graph-REST-Operationsliste sichtbar zu machen.
-`privileged-apply`, `drift` und `export` brauchen Umgebungsvariablen für
-Tenant, App und Credential. Die M365-Schicht speichert keine Tokens, Secrets
-oder Rohdaten im Repo.
+`privileged-apply` und `export` brauchen Umgebungsvariablen für Tenant, App
+und Credential. `drift` prüft in Issue #760 vor jedem Credential-Zugriff die
+gebundene Workspace-, Site- und Listenstruktur. Der echte Tenant-Read bleibt
+auch mit `--owner-approved` gesperrt, bis eine separate, exakt gebundene
+Lesefreigabe technisch geprüft werden kann. Der lokale Vergleich mit einem
+synthetischen In-Memory-Snapshot prüft nur Site-, Listen- und Spaltenmetadaten
+gegen `indexed_columns`, ohne Einträge, Dateien oder Graph-Schreibzugriffe. Seine
+Ausgabe enthält nur Status, feste Fehlercodes und Zähler; unvollständige,
+doppelte oder paginierte Antworten blockieren. Die M365-Schicht speichert
+keine Tokens, Secrets oder Rohdaten im Repo.
 `matter-access-apply-policy-smoke` bleibt offline, nutzt nur einen Fake-Graph-
 Client und prüft negative Vertretungsfreigabe-Fälle wie fehlende Begründung,
 abgelaufene Vertretung, falschen Workspace, fehlendes Cleanup und fehlenden

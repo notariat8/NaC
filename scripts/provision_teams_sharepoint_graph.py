@@ -21,6 +21,7 @@ from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
     validate_bpmn_viewer_provisioning_config,
 )
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
+from nac_m365_graph.index_drift import index_drift_binding_valid  # noqa: E402
 from nac_m365_graph.mvp_test_environment_deploy import (  # noqa: E402
     DEFAULT_MVP_TEST_ENVIRONMENT_DEPLOY_OUTPUT,
     EXPECTED_WORKSPACE_ID,
@@ -281,6 +282,10 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_PROVISIONED_STATE,
         help="Path to the non-secret provisioned Teams/SharePoint state export.",
+    )
+    parser.add_argument(
+        "--workspace-id",
+        help="Exact workspace binding for the read-only index drift preflight.",
     )
     parser.add_argument(
         "--privileged-applied-state",
@@ -1429,6 +1434,31 @@ def main() -> int:
             args.json,
         )
 
+    if args.command == "drift":
+        if not args.workspace_id:
+            return _emit(
+                {"status": "BLOCKED", "reason_code": "WORKSPACE_REQUIRED"},
+                args.json,
+                return_code=2,
+            )
+        try:
+            drift_schema = load_schema(args.schema)
+            drift_state = load_provisioned_state(args.provisioned_state)
+            binding_valid = index_drift_binding_valid(drift_schema, drift_state, args.workspace_id)
+        except (OSError, ValueError, TypeError, KeyError):
+            binding_valid = False
+        if not binding_valid:
+            return _emit(
+                {"status": "BLOCKED", "reason_code": "TARGET_BINDING_INVALID"},
+                args.json,
+                return_code=2,
+            )
+        return _emit(
+            {"status": "BLOCKED", "reason_code": "LIVE_READ_APPROVAL_BINDING_UNAVAILABLE"},
+            args.json,
+            return_code=2,
+        )
+
     schema = load_schema(args.schema)
     errors = validate_schema(schema)
     if errors:
@@ -1625,6 +1655,8 @@ def _emit(payload: dict, as_json: bool, return_code: int = 0) -> int:
         return return_code
 
     print(f"STATUS: {payload['status']}")
+    if payload.get("reason_code"):
+        print(f"REASON: {payload['reason_code']}")
     if payload.get("message"):
         print(payload["message"])
     if payload.get("summary"):

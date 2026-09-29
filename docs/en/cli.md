@@ -549,6 +549,15 @@ credential. The live BFF, delegated BFF scope, and Entra token validation
 remain `DEFERRED`; until their separate activation, the visible UI uses
 the package-bound synthetic projection only.
 
+`nac m365 teams-sharepoint drift --workspace-id notary_team_01 --format json`
+checks the bound provisioned state before any credential access. A real
+tenant read remains blocked in Issue #760 even with `--owner-approved` until
+a separate, exact read approval can be verified. The locally tested synthetic
+comparison processes only an in-memory snapshot keyed by fixed GET paths for
+site, list and column metadata, checks the expected indexes from
+`indexed_columns`, and emits only fixed
+error codes and counts. It reads no list items or files and performs no PATCH.
+
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
 the discovered lists and document libraries against the declarative MVP schema.
 Both commands also write redacted artifacts to

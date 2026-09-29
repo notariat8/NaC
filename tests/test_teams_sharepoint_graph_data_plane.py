@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import subprocess
@@ -28,6 +29,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
 )
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.index_drift import run_index_drift  # noqa: E402
 from nac_m365_graph.runtime_metadata import (  # noqa: E402
     build_runtime_metadata_snapshot,
     redact_runtime_metadata_snapshot,
@@ -331,7 +333,67 @@ class FakeGraphWriteClient:
         raise AssertionError(f"unknown site id {site_id}")
 
 
+class SyntheticIndexDriftSnapshot:
+    def __init__(self, schema: dict, state: dict) -> None:
+        workspace = state["workspaces"][0]
+        site_id = urllib.parse.quote(workspace["site_id"], safe=",")
+        site_path = f"/sites/{site_id}?$select=id"
+        lists_path = f"/sites/{site_id}/lists?$select=id,displayName"
+        self.get_paths_template: dict = {"site": site_path, "lists": lists_path, "columns": {}}
+        self.responses = {
+            site_path: {"id": workspace["site_id"]},
+            lists_path: {
+                "value": [
+                    {"id": workspace["lists"][item["display_name"]]["id"], "displayName": item["display_name"]}
+                    for item in schema["sharepoint"]["lists"]
+                ]
+            },
+        }
+        for list_def in schema["sharepoint"]["lists"]:
+            name = list_def["display_name"]
+            list_id = workspace["lists"][name]["id"]
+            path = f"/sites/{site_id}/lists/{list_id}/columns?$select=id,name,indexed"
+            self.get_paths_template["columns"][name] = path
+            self.responses[path] = {
+                "value": [
+                    {
+                        "id": f"column-{name}-{column['name']}",
+                        "name": column["name"],
+                        "indexed": column["name"] in list_def["indexed_columns"],
+                    }
+                    for column in list_def["columns"]
+                ]
+            }
+
+
 class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
+    def test_contract_binds_index_drift_to_closed_read_only_metadata(self) -> None:
+        payload = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        drift = payload["index_drift"]
+
+        self.assertEqual(drift["schema_source"], "indexed_columns")
+        self.assertEqual(drift["workspace_binding"], "provisioned_state_site_and_list_ids")
+        self.assertTrue(drift["offline_metadata_snapshot_only"])
+        self.assertEqual(
+            drift["allowed_get_paths"],
+            [
+                "/sites/{site-id}?$select=id",
+                "/sites/{site-id}/lists?$select=id,displayName",
+                "/sites/{site-id}/lists/{list-id}/columns?$select=id,name,indexed",
+            ],
+        )
+        for flag in (
+            "item_reads_allowed",
+            "file_reads_allowed",
+            "writes_allowed",
+            "pagination_allowed",
+            "raw_provider_data_in_output_allowed",
+            "live_read_enabled_now",
+        ):
+            self.assertIs(drift[flag], False)
+        self.assertTrue(drift["separate_exact_owner_read_binding_required"])
+        self.assertEqual(TEAMS_SHAREPOINT_VALIDATOR._validate_contract(payload), [])
+
     def test_contract_sets_graph_rest_only_decision(self) -> None:
         payload = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
@@ -1146,6 +1208,158 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertTrue(payload["enforceUniqueValues"])
         self.assertTrue(payload["indexed"])
 
+    def test_every_declared_index_is_in_the_column_plan(self) -> None:
+        schema = load_schema(DEFAULT_SCHEMA)
+        operations = build_plan(schema)
+        columns = {
+            operation.target: operation.payload
+            for operation in operations
+            if operation.workspace_id == "notary_team_01" and operation.action == "ensure_column"
+        }
+        for list_def in schema["sharepoint"]["lists"]:
+            indexed = set(list_def["indexed_columns"])
+            for column in list_def["columns"]:
+                target = f"{list_def['display_name']}.{column['name']}"
+                self.assertEqual(columns[target].get("indexed", False), column["name"] in indexed, target)
+        for target in (
+            "Akten.NacCaseId",
+            "Vertretungsfreigaben.NacCaseId",
+            "AuditJournalLite.NacCaseId",
+            "AuditJournalLite.CorrelationId",
+        ):
+            self.assertTrue(columns[target]["indexed"], target)
+
+    def test_schema_rejects_missing_duplicate_unknown_and_unique_index_declarations(self) -> None:
+        schema = load_schema(DEFAULT_SCHEMA)
+        for mutation in ("missing", "duplicate", "unknown", "unique_omitted"):
+            with self.subTest(mutation=mutation):
+                candidate = copy.deepcopy(schema)
+                akten = candidate["sharepoint"]["lists"][0]
+                if mutation == "missing":
+                    del akten["indexed_columns"]
+                elif mutation == "duplicate":
+                    akten["indexed_columns"].append("NacCaseId")
+                elif mutation == "unknown":
+                    akten["indexed_columns"].append("UnknownColumn")
+                else:
+                    akten["indexed_columns"].remove("NacCaseId")
+                self.assertIn("indexed_columns", " ".join(validate_schema(candidate)))
+                with self.assertRaises(ValueError):
+                    build_plan(candidate)
+
+    def test_index_drift_accepts_only_bound_get_metadata(self) -> None:
+        schema, state, client = self._index_drift_fixture()
+        result = run_index_drift(client.responses, schema, state, workspace_id="notary_team_01")
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["checked_lists"], len(schema["sharepoint"]["lists"]))
+        self.assertTrue(all(path.startswith("/sites/") for path in client.responses))
+        self.assertFalse(any("/items" in path or "/drive" in path for path in client.responses))
+        self.assertEqual(result["summary"]["graph_get_requests"], 0)
+        self.assertEqual(result["summary"]["graph_write_requests"], 0)
+        serialized = json.dumps(result)
+        self.assertNotIn(state["workspaces"][0]["site_id"], serialized)
+        self.assertNotIn(state["tenant"]["tenant_id"], serialized)
+
+    def test_index_drift_fails_before_provider_for_unbound_workspace(self) -> None:
+        schema, state, client = self._index_drift_fixture()
+        result = run_index_drift(client.responses, schema, state, workspace_id="other_workspace")
+        self.assertEqual(result["status"], "FAILED")
+        self.assertEqual(result["reason_code"], "TARGET_BINDING_INVALID")
+        self.assertEqual(result["summary"]["metadata_entries_compared"], 0)
+
+    def test_index_drift_rejects_provider_client_without_calling_it(self) -> None:
+        schema, state, _fixture = self._index_drift_fixture()
+
+        class LiveClient:
+            calls = 0
+
+            def get(self, path: str) -> dict:
+                self.calls += 1
+                raise AssertionError("real provider must not be called")
+
+        provider = LiveClient()
+        result = run_index_drift(provider, schema, state, workspace_id="notary_team_01")
+        self.assertEqual(result["reason_code"], "OFFLINE_METADATA_REQUIRED")
+        self.assertEqual(provider.calls, 0)
+
+    def test_index_drift_fails_closed_on_site_list_and_index_mismatch(self) -> None:
+        schema, state, client = self._index_drift_fixture()
+        site_path = client.get_paths_template["site"]
+        client.responses[site_path]["id"] = "wrong-site"
+        self.assertEqual(
+            run_index_drift(client.responses, schema, state, workspace_id="notary_team_01")["reason_code"],
+            "SITE_BINDING_MISMATCH",
+        )
+        schema, state, client = self._index_drift_fixture()
+        client.responses[client.get_paths_template["lists"]]["value"][0]["id"] = "wrong-list"
+        self.assertEqual(
+            run_index_drift(client.responses, schema, state, workspace_id="notary_team_01")["reason_code"],
+            "LIST_BINDING_MISMATCH",
+        )
+        schema, state, client = self._index_drift_fixture()
+        columns = client.responses[client.get_paths_template["columns"]["Akten"]]["value"]
+        next(item for item in columns if item["name"] == "NacCaseId")["indexed"] = False
+        self.assertEqual(
+            run_index_drift(client.responses, schema, state, workspace_id="notary_team_01")["reason_code"],
+            "INDEX_MISMATCH",
+        )
+
+    def test_index_drift_rejects_incomplete_duplicate_paged_and_failed_reads(self) -> None:
+        for mutation, expected in (
+            ("missing_column", "COLUMN_METADATA_INVALID"),
+            ("duplicate_column", "COLUMN_METADATA_INVALID"),
+            ("paged", "PAGINATED_METADATA"),
+            ("graph_error", "GRAPH_READ_FAILED"),
+            ("missing_path", "OFFLINE_METADATA_INVALID"),
+            ("extra_path", "OFFLINE_METADATA_INVALID"),
+            ("invalid_index_type", "COLUMN_METADATA_INVALID"),
+        ):
+            with self.subTest(mutation=mutation):
+                schema, state, client = self._index_drift_fixture()
+                path = client.get_paths_template["columns"]["Akten"]
+                if mutation == "missing_column":
+                    client.responses[path]["value"] = [
+                        item for item in client.responses[path]["value"] if item["name"] != "NacCaseId"
+                    ]
+                elif mutation == "duplicate_column":
+                    client.responses[path]["value"].append(copy.deepcopy(client.responses[path]["value"][0]))
+                elif mutation == "paged":
+                    client.responses[path]["@odata.nextLink"] = "https://example.test/private"
+                elif mutation == "graph_error":
+                    client.responses[path] = {"error": "private secret in provider error"}
+                elif mutation == "missing_path":
+                    del client.responses[path]
+                elif mutation == "extra_path":
+                    client.responses["/sites/private/items"] = {"value": []}
+                else:
+                    client.responses[path]["value"][0]["indexed"] = "false"
+                result = run_index_drift(client.responses, schema, state, workspace_id="notary_team_01")
+                self.assertEqual(result["reason_code"], expected)
+                self.assertNotIn("private", json.dumps(result))
+                self.assertNotIn("secret", json.dumps(result))
+                self.assertEqual(result["summary"]["graph_write_requests"], 0)
+
+    @staticmethod
+    def _index_drift_fixture() -> tuple[dict, dict, "SyntheticIndexDriftSnapshot"]:
+        schema = load_schema(DEFAULT_SCHEMA)
+        state = {
+            "state_version": "nac.m365.teams-sharepoint.provisioned/v0.1",
+            "source_schema": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+            "tenant": {"tenant_id": "00000000-0000-4000-8000-000000000001"},
+            "graph": {"base_url": "https://graph.microsoft.com/v1.0"},
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "site_id": "example.test,site-01,web-01",
+                    "lists": {
+                        item["display_name"]: {"id": f"list-{i}"}
+                        for i, item in enumerate(schema["sharepoint"]["lists"])
+                    },
+                }
+            ],
+        }
+        return schema, state, SyntheticIndexDriftSnapshot(schema, state)
+
     def test_validator_accepts_repository_state(self) -> None:
         result = subprocess.run(
             [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
@@ -1324,6 +1538,39 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("runtime-metadata requires --owner-approved", payload["errors"])
+
+    def test_cli_drift_blocks_without_workspace_or_bound_live_approval(self) -> None:
+        for extra, reason in (
+            ([], "WORKSPACE_REQUIRED"),
+            (["--workspace-id", "notary_team_01", "--owner-approved"], "LIVE_READ_APPROVAL_BINDING_UNAVAILABLE"),
+        ):
+            with self.subTest(extra=extra):
+                result = subprocess.run(
+                    [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "drift", *extra, "--json"],
+                    cwd=REPO_ROOT,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["status"], "BLOCKED")
+                self.assertEqual(payload["reason_code"], reason)
+                self.assertNotIn("tenant_id", result.stdout)
+
+    def test_nac_cli_exposes_drift_gate_without_credentials(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable, "scripts/nac.py", "--repo-root", str(REPO_ROOT),
+                "m365", "teams-sharepoint", "drift", "--workspace-id", "notary_team_01", "--format", "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout)["reason_code"], "LIVE_READ_APPROVAL_BINDING_UNAVAILABLE")
 
     def test_nac_cli_exposes_m365_teams_sharepoint_privileged_plan(self) -> None:
         result = subprocess.run(

@@ -1,6 +1,6 @@
 # Issue #760: Reproducible SharePoint indexes and read-only drift check
 
-Status: design for owner review; no live execution.
+Status: design approved; local implementation, no live execution.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -69,9 +69,10 @@ omit three indexes.
   and indexed column matches in the selected workspace. Negative tests cover
   missing, duplicate, and unindexed columns, wrong bindings, and incomplete
   responses.
-- **AC-760-4:** The drift check emits metadata GET requests and a redacted
-  result only. Synthetic tests prove zero writes, zero item/file reads, and
-  zero real provider calls.
+- **AC-760-4:** The drift check compares only an in-memory snapshot keyed by
+  fixed metadata GET paths and emits redacted results. Synthetic tests prove
+  zero Graph GETs, zero writes, zero item/file reads, and zero real provider
+  calls.
 - **AC-760-5:** DE/EN documentation, CLI, spec traceability, and required
   gates remain synchronized; the complete PR diff and remote CI are reviewed.
 

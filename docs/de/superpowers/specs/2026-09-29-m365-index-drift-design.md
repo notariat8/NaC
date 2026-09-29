@@ -1,6 +1,6 @@
 # Issue #760: Reproduzierbare SharePoint-Indizes und lesende Drift-Prüfung
 
-Status: Design zur Owner-Review, keine Live-Ausführung.
+Status: Design freigegeben; lokale Implementierung, keine Live-Ausführung.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -71,9 +71,10 @@ Provisionierungscode drei Indizes erneut auslassen.
   Listen und Indexspalten im ausgewählten Workspace exakt passen. Negative
   Tests decken fehlende, doppelte und nicht indizierte Spalten, falsche
   Bindungen und unvollständige Antworten ab.
-- **AC-760-4:** Die Drift-Prüfung erzeugt ausschließlich GET-Anfragen für
-  Metadaten und eine redigierte Ausgabe. Synthetische Tests belegen null
-  Schreibaufrufe, null Item-/Dateiabrufe und null echte Provideraufrufe.
+- **AC-760-4:** Die Drift-Prüfung vergleicht ausschließlich einen
+  In-Memory-Snapshot mit fest gebundenen Metadaten-GET-Pfaden und gibt nur
+  redigierte Ergebnisse aus. Synthetische Tests belegen null Graph-GETs,
+  null Schreibaufrufe, null Item-/Dateiabrufe und null echte Provideraufrufe.
 - **AC-760-5:** DE/EN-Dokumentation, CLI, Spec-Traceability und Pflichtprüfungen
   sind synchron; vollständiger PR-Diff und Remote-CI werden geprüft.
 

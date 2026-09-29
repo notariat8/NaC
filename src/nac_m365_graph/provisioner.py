@@ -69,6 +69,7 @@ def build_plan(schema: dict[str, Any]) -> list[PlanOperation]:
         )
 
         for list_def in lists:
+            indexed_names = set(list_def["indexed_columns"])
             operations.append(
                 PlanOperation(
                     action="ensure_list",
@@ -88,7 +89,10 @@ def build_plan(schema: dict[str, Any]) -> list[PlanOperation]:
                         graph_method="POST",
                         graph_path="/sites/{site-id}/lists/{list-id}/columns",
                         target=f"{list_def['display_name']}.{column_def['name']}",
-                        payload=column_create_payload(column_def),
+                        payload=column_create_payload(
+                            column_def,
+                            indexed=column_def["name"] in indexed_names,
+                        ),
                         owner_gate_required=True,
                     )
                 )
