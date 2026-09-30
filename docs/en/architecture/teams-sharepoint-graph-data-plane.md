@@ -144,6 +144,7 @@ Allowed Graph endpoints in the MVP:
 - `GET /teams/{team-id}/channels`
 - `GET /teams/{team-id}/channels/{channel-id}/filesFolder`
 - `GET /groups/{group-id}/sites/root`
+- `GET /sites/{site-id}`
 - `GET /sites/{site-id}/lists`
 - `POST /sites/{site-id}/lists`
 - `GET /sites/{site-id}/lists/{list-id}/columns`
@@ -244,7 +245,7 @@ python3 scripts/nac.py m365 teams-sharepoint plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-policy-smoke --format json
-python3 scripts/nac.py m365 teams-sharepoint drift --format json
+python3 scripts/nac.py m365 teams-sharepoint drift --workspace-id notary_team_01 --format json
 python3 scripts/nac.py m365 teams-sharepoint export --format json
 ```
 
@@ -252,9 +253,16 @@ python3 scripts/nac.py m365 teams-sharepoint export --format json
 `privileged-plan` uses
 [deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json](../../../deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json)
 and the non-secret provisioned state to expose the next iteration as a Graph
-REST operation list before any live apply. `privileged-apply`, `drift` and
-`export` need environment variables for tenant, app and credential. The M365
-layer does not store tokens, secret values or raw data in the repository.
+REST operation list before any live apply. `privileged-apply` and `export`
+need environment variables for tenant, app and credential. In Issue #760,
+`drift` checks the bound workspace, site and list structure before any
+credential access. A real tenant read remains blocked even with
+`--owner-approved` until a separate, exact read approval can be technically
+verified. The local comparison with a synthetic in-memory snapshot checks
+only site, list and column metadata against `indexed_columns`, without items, files or
+Graph writes. Its output contains only status, fixed error codes and counts;
+incomplete, duplicate or paginated responses block. The M365 layer does not
+store tokens, secret values or raw data in the repository.
 `matter-access-apply-policy-smoke` stays offline, uses only a fake Graph
 client and checks negative deputy-grant cases such as missing reason, expired
 deputy access, wrong workspace, missing cleanup and missing audit readback.

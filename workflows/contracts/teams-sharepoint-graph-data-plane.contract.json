@@ -40,6 +40,7 @@
       "GET /teams/{team-id}/channels",
       "GET /teams/{team-id}/channels/{channel-id}/filesFolder",
       "GET /groups/{group-id}/sites/root",
+      "GET /sites/{site-id}",
       "GET /sites/{site-id}/lists",
       "POST /sites/{site-id}/lists",
       "GET /sites/{site-id}/lists/{list-id}/columns",
@@ -204,6 +205,23 @@
     "export_requires_credentials": true,
     "stores_secret_values_in_repo": false,
     "stores_tenant_specific_ids_in_public_contract": false
+  },
+  "index_drift": {
+    "schema_source": "indexed_columns",
+    "workspace_binding": "provisioned_state_site_and_list_ids",
+    "offline_metadata_snapshot_only": true,
+    "allowed_get_paths": [
+      "/sites/{site-id}?$select=id",
+      "/sites/{site-id}/lists?$select=id,displayName",
+      "/sites/{site-id}/lists/{list-id}/columns?$select=id,name,indexed"
+    ],
+    "item_reads_allowed": false,
+    "file_reads_allowed": false,
+    "writes_allowed": false,
+    "pagination_allowed": false,
+    "raw_provider_data_in_output_allowed": false,
+    "live_read_enabled_now": false,
+    "separate_exact_owner_read_binding_required": true
   },
   "workspace_templates": [
     {

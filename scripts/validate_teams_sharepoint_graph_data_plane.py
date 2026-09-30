@@ -75,6 +75,7 @@ REQUIRED_ALLOWED_ENDPOINTS = {
     "GET /teams/{team-id}/channels",
     "GET /teams/{team-id}/channels/{channel-id}/filesFolder",
     "GET /groups/{group-id}/sites/root",
+    "GET /sites/{site-id}",
     "GET /sites/{site-id}/lists",
     "POST /sites/{site-id}/lists",
     "GET /sites/{site-id}/lists/{list-id}/columns",
@@ -480,6 +481,35 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
         for flag in ("live_apply_by_default", "stores_secret_values_in_repo", "stores_tenant_specific_ids_in_public_contract"):
             if provisioning.get(flag) is not False:
                 errors.append(f"provisioning_model.{flag} must be false")
+
+    drift = payload.get("index_drift")
+    if not isinstance(drift, dict):
+        errors.append("index_drift must be an object")
+    else:
+        for key, expected_value in (
+            ("schema_source", "indexed_columns"),
+            ("workspace_binding", "provisioned_state_site_and_list_ids"),
+        ):
+            if drift.get(key) != expected_value:
+                errors.append(f"index_drift.{key} must be {expected_value}")
+        expected_paths = [
+            "/sites/{site-id}?$select=id",
+            "/sites/{site-id}/lists?$select=id,displayName",
+            "/sites/{site-id}/lists/{list-id}/columns?$select=id,name,indexed",
+        ]
+        if drift.get("allowed_get_paths") != expected_paths:
+            errors.append("index_drift.allowed_get_paths must be the closed metadata GET list")
+        if drift.get("offline_metadata_snapshot_only") is not True:
+            errors.append("index_drift.offline_metadata_snapshot_only must be true")
+        for flag in (
+            "item_reads_allowed", "file_reads_allowed", "writes_allowed",
+            "pagination_allowed", "raw_provider_data_in_output_allowed",
+            "live_read_enabled_now",
+        ):
+            if drift.get(flag) is not False:
+                errors.append(f"index_drift.{flag} must be false")
+        if drift.get("separate_exact_owner_read_binding_required") is not True:
+            errors.append("index_drift.separate_exact_owner_read_binding_required must be true")
 
     workspace_templates = payload.get("workspace_templates")
     if not isinstance(workspace_templates, list):

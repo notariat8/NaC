@@ -860,6 +860,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optionaler nicht-geheimer provisionierter Teams/SharePoint-State.",
     )
     teams_sharepoint.add_argument(
+        "--workspace-id",
+        help="Exakte Workspace-Bindung für die lesende Index-Drift-Prüfung.",
+    )
+    teams_sharepoint.add_argument(
         "--privileged-applied-state",
         type=Path,
         help="Optionaler nicht-geheimer angewendeter Privileged-Change-State.",
@@ -3259,6 +3263,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--privileged-config", str(args.privileged_config)])
         if args.provisioned_state:
             script_args.extend(["--provisioned-state", str(args.provisioned_state)])
+        if args.workspace_id:
+            script_args.extend(["--workspace-id", args.workspace_id])
         if args.privileged_applied_state:
             script_args.extend(["--privileged-applied-state", str(args.privileged_applied_state)])
         if args.mcp_contract:

@@ -120,7 +120,7 @@ def list_create_payload(list_def: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def column_create_payload(column_def: dict[str, Any]) -> dict[str, Any]:
+def column_create_payload(column_def: dict[str, Any], *, indexed: bool = False) -> dict[str, Any]:
     name = column_def["name"]
     column_type = column_def["type"]
     payload: dict[str, Any] = {
@@ -130,6 +130,7 @@ def column_create_payload(column_def: dict[str, Any]) -> dict[str, Any]:
     }
     if column_def.get("enforce_unique_values") is True:
         payload["enforceUniqueValues"] = True
+    if indexed or column_def.get("enforce_unique_values") is True:
         payload["indexed"] = True
 
     if column_type == "text":
@@ -167,6 +168,7 @@ def _validate_list_definition(value: object) -> list[str]:
         errors.append(f"list {display_name} columns must be a non-empty list")
         return errors
     names: set[str] = set()
+    unique_names: set[str] = set()
     for column in columns:
         if not isinstance(column, dict):
             errors.append(f"list {display_name} column entries must be objects")
@@ -178,6 +180,10 @@ def _validate_list_definition(value: object) -> list[str]:
             errors.append(f"list {display_name} has duplicate column {name}")
         else:
             names.add(name)
+        if "enforce_unique_values" in column and not isinstance(column["enforce_unique_values"], bool):
+            errors.append(f"list {display_name} column {name} enforce_unique_values must be boolean")
+        if column.get("enforce_unique_values") is True and isinstance(name, str):
+            unique_names.add(name)
         column_type = column.get("type")
         if column_type not in SUPPORTED_COLUMN_TYPES:
             errors.append(f"list {display_name} column {name} has unsupported type {column_type}")
@@ -185,4 +191,20 @@ def _validate_list_definition(value: object) -> list[str]:
             errors.append(f"list {display_name} column {name} conflicts with a SharePoint system field")
         if column_type == "choice" and not column.get("choices"):
             errors.append(f"list {display_name} choice column {name} must define choices")
+    indexed_columns = value.get("indexed_columns")
+    if not isinstance(indexed_columns, list):
+        errors.append(f"list {display_name} indexed_columns must be a list")
+        return errors
+    indexed_names: set[str] = set()
+    for name in indexed_columns:
+        if not isinstance(name, str) or not name:
+            errors.append(f"list {display_name} indexed_columns entries must be non-empty strings")
+        elif name in indexed_names:
+            errors.append(f"list {display_name} indexed_columns contains duplicate {name}")
+        elif name not in names:
+            errors.append(f"list {display_name} indexed_columns refers to unknown column {name}")
+        else:
+            indexed_names.add(name)
+    for name in sorted(unique_names - indexed_names):
+        errors.append(f"list {display_name} indexed_columns missing unique column {name}")
     return errors

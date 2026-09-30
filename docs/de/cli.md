@@ -561,6 +561,15 @@ Entra-Tokenvalidierung bleiben `DEFERRED`; die sichtbare Oberfläche
 verwendet bis zu deren separater Aktivierung ausschließlich die
 paketgebundene synthetische Projektion.
 
+`nac m365 teams-sharepoint drift --workspace-id notary_team_01 --format json`
+prüft den gebundenen Provisionierungsstand vor jedem Credential-Zugriff.
+Der echte Tenant-Read bleibt in Issue #760 auch mit `--owner-approved`
+gesperrt, bis eine separate, exakt gebundene Lesefreigabe verifizierbar ist.
+Der lokal synthetisch geprüfte Vergleich verarbeitet ausschließlich einen
+In-Memory-Snapshot für feste Site-, Listen- und Spaltenmetadaten-GET-Pfade,
+prüft die Sollindizes aus `indexed_columns` und gibt nur feste Fehlercodes und Zähler aus. Er liest
+keine Listeneinträge oder Dateien und führt keinen PATCH aus.
+
 `runtime-smoke` und `runtime-metadata` lesen dabei nur Graph-REST-Metadaten und
 prüfen die gefundenen Listen und Dokumentbibliotheken gegen das deklarative
 MVP-Schema. Beide Befehle schreiben zusätzlich redigierte Artefakte unter
