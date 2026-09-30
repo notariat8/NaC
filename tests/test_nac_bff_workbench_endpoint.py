@@ -6,10 +6,12 @@ from pathlib import Path
 import unittest
 
 from nac_bff.bpmn_asset import (
+    BpmnAssetError,
     CANONICAL_BPMN_MODEL_KEY,
     CANONICAL_BPMN_SHA256,
     CanonicalBpmnAssetFilePort,
 )
+from nac_bff.synthetic_workspace_graph import GraphRequestError, GraphResponseError
 from nac_bff.fastapi_adapter import create_fastapi_app, _should_emit_instance_epoch
 from nac_bff.test_environment import (
     ALLOWED_MATTER_ID,
@@ -127,6 +129,9 @@ class WorkbenchEndpointTests(unittest.TestCase):
         decision: AccessDecision | None = None,
         projection: object = None,
         redaction_verifier=None,
+        diagnostic_sink=None,
+        clock=None,
+        request_budget_factory=None,
     ) -> tuple[WorkbenchEndpoint, _AccessPort, _GraphPort, _BpmnPort]:
         access = _AccessPort(decision or _assigned_decision())
         graph = _GraphPort(projection)
@@ -136,8 +141,10 @@ class WorkbenchEndpointTests(unittest.TestCase):
             access_decision_port=access,
             graph_rest_port=graph,
             bpmn_asset_port=bpmn,
-            clock=lambda: NOW,
+            clock=clock or (lambda: NOW),
             redaction_verifier=redaction_verifier,
+            request_budget_factory=request_budget_factory,
+            unavailable_diagnostic_sink=diagnostic_sink,
         )
         return endpoint, access, graph, bpmn
 
@@ -429,6 +436,134 @@ class WorkbenchEndpointTests(unittest.TestCase):
         )
         self.assertNotIn(b"sensitive-token", response.body_bytes)
 
+    def test_503_diagnostic_classifies_only_fixed_internal_stages(self) -> None:
+        cases = (
+            (GraphRequestError("Bearer sensitive-token"), "GRAPH_REQUEST"),
+            (GraphResponseError("Bearer sensitive-token"), "GRAPH_RESPONSE"),
+            (RuntimeError("Bearer sensitive-token"), "GRAPH_UNEXPECTED"),
+        )
+        for failure, expected_stage in cases:
+            with self.subTest(stage=expected_stage):
+                stages: list[str] = []
+                endpoint, _, graph, _ = self._endpoint(diagnostic_sink=stages.append)
+
+                def fail_graph(**_: str) -> None:
+                    raise failure
+
+                graph.read_synthetic_workspace = fail_graph
+                response = endpoint.get_snapshot(
+                    claims=self.claims,
+                    workspace_id=ALLOWED_WORKSPACE_ID,
+                    matter_id=ALLOWED_MATTER_ID,
+                    purpose=ALLOWED_PURPOSE,
+                )
+                self.assertEqual(response.status_code, 503)
+                self.assertEqual(stages, [expected_stage])
+                self.assertNotIn(b"sensitive-token", response.body_bytes)
+
+    def test_503_diagnostic_distinguishes_missing_graph_bpmn_and_projection(self) -> None:
+        stages: list[str] = []
+        endpoint, _, graph, bpmn = self._endpoint(diagnostic_sink=stages.append)
+        graph.projection = []
+        response = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(stages, ["GRAPH_RESULT_INVALID"])
+
+        stages.clear()
+        graph.projection = _workspace_projection()
+
+        def fail_bpmn() -> None:
+            raise BpmnAssetError("Bearer sensitive-token")
+
+        bpmn.read_canonical_bpmn = fail_bpmn
+        response = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(stages, ["BPMN_ASSET"])
+
+        stages.clear()
+        endpoint, _, _, _ = self._endpoint(
+            diagnostic_sink=stages.append,
+            redaction_verifier=lambda _: (_ for _ in ()).throw(
+                ValueError("Bearer sensitive-token")
+            ),
+        )
+        response = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(stages, ["PROJECTION"])
+
+    def test_503_diagnostic_sink_failure_never_changes_neutral_response(self) -> None:
+        def fail_sink(_: str) -> None:
+            raise RuntimeError("Bearer sensitive-token")
+
+        endpoint, _, graph, _ = self._endpoint(diagnostic_sink=fail_sink)
+        graph.projection = []
+        response = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        self.assertEqual(
+            response.body_bytes,
+            b'{"status":503,"error":{"code":"SERVICE_UNAVAILABLE"}}',
+        )
+
+    def test_503_diagnostic_classifies_budget_and_clock_without_details(self) -> None:
+        def fail_with_secret() -> None:
+            raise RuntimeError("Bearer sensitive-token")
+
+        for override, expected_stage in (
+            ({"request_budget_factory": fail_with_secret}, "REQUEST_BUDGET"),
+            ({"clock": fail_with_secret}, "CLOCK"),
+        ):
+            with self.subTest(stage=expected_stage):
+                stages: list[str] = []
+                endpoint, _, _, _ = self._endpoint(
+                    diagnostic_sink=stages.append, **override
+                )
+                response = endpoint.get_snapshot(
+                    claims=self.claims,
+                    workspace_id=ALLOWED_WORKSPACE_ID,
+                    matter_id=ALLOWED_MATTER_ID,
+                    purpose=ALLOWED_PURPOSE,
+                )
+                self.assertEqual(response.status_code, 503)
+                self.assertEqual(stages, [expected_stage])
+                self.assertNotIn(b"sensitive-token", response.body_bytes)
+
+    def test_success_and_access_denial_emit_no_503_diagnostic(self) -> None:
+        stages: list[str] = []
+        endpoint, _, _, _ = self._endpoint(diagnostic_sink=stages.append)
+        success = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        denied = endpoint.get_snapshot(
+            claims=self.claims,
+            workspace_id="another-workspace",
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        self.assertEqual((success.status_code, denied.status_code), (200, 403))
+        self.assertEqual(stages, [])
+
     def test_recursive_verifier_rejects_numbers_and_unpaired_surrogates(self) -> None:
         verifier = RecursiveRedactionVerifier(clock=lambda: NOW)
         for payload in (
@@ -547,11 +682,13 @@ class WorkbenchEndpointTests(unittest.TestCase):
             def get_snapshot(self, **_: object):
                 raise RuntimeError("sensitive backend detail")
 
+        stages: list[str] = []
         unavailable_client = TestClient(
             create_fastapi_app(
                 bff=legacy_bff,
                 workbench_endpoint=_UnavailableWorkbench(),
                 validated_claims_dependency=validated_claims,
+                unavailable_diagnostic_sink=stages.append,
             )
         )
         unavailable = unavailable_client.get(path, params={"purpose": ALLOWED_PURPOSE})
@@ -564,6 +701,25 @@ class WorkbenchEndpointTests(unittest.TestCase):
         )
         self.assertEqual(unavailable.headers["cache-control"], "no-store")
         self.assertNotIn("sensitive backend detail", unavailable.text)
+        self.assertEqual(stages, ["BOUNDARY_UNEXPECTED"])
+
+        class _TimedOutWorkbench:
+            def get_snapshot(self, **_: object):
+                raise TimeoutError("Bearer sensitive-token")
+
+        stages.clear()
+        timeout_client = TestClient(
+            create_fastapi_app(
+                bff=legacy_bff,
+                workbench_endpoint=_TimedOutWorkbench(),
+                validated_claims_dependency=validated_claims,
+                unavailable_diagnostic_sink=stages.append,
+            )
+        )
+        timed_out = timeout_client.get(path, params={"purpose": ALLOWED_PURPOSE})
+        self.assertEqual(timed_out.status_code, 503)
+        self.assertEqual(stages, ["REQUEST_TIMEOUT"])
+        self.assertNotIn("sensitive-token", timed_out.text)
 
     def test_existing_v0_2_route_body_is_unchanged(self) -> None:
         try:

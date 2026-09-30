@@ -8,6 +8,7 @@ from typing import Any, ContextManager
 
 from nac_mvp_test_environment import BUSINESS_CASE_TYPE_ID
 
+from .synthetic_workspace_graph import GraphRequestError, GraphResponseError
 from .test_environment import (
     ALLOWED_MATTER_ID,
     ALLOWED_PURPOSE,
@@ -39,6 +40,18 @@ REDACTION_CLASSIFIER_ID = "synthetic-redaction-verifier"
 REDACTION_CLASSIFIER_VERSION = "v1"
 ALLOWED_ASSIGNED_ROLES = frozenset({"notary", "notary_clerk"})
 ALLOWED_DEPUTY_ROLES = frozenset({"deputy_notary", "deputy_clerk"})
+UNAVAILABLE_STAGES = frozenset({
+    "REQUEST_BUDGET",
+    "CLOCK",
+    "GRAPH_REQUEST",
+    "GRAPH_RESPONSE",
+    "GRAPH_UNEXPECTED",
+    "GRAPH_RESULT_INVALID",
+    "BPMN_ASSET",
+    "PROJECTION",
+    "REQUEST_TIMEOUT",
+    "BOUNDARY_UNEXPECTED",
+})
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,9 +93,12 @@ class WorkbenchEndpoint:
         clock: Callable[[], datetime] | None = None,
         redaction_verifier: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
         request_budget_factory: Callable[[], ContextManager[None]] | None = None,
+        unavailable_diagnostic_sink: Callable[[str], None] | None = None,
     ) -> None:
         if not isinstance(expected_tenant_id, str) or not expected_tenant_id.strip():
             raise ValueError("expected_tenant_id is required")
+        if unavailable_diagnostic_sink is not None and not callable(unavailable_diagnostic_sink):
+            raise TypeError("unavailable diagnostic sink must be callable")
         self._expected_tenant_id = expected_tenant_id
         self._access_decision_port = access_decision_port
         self._graph_rest_port = graph_rest_port
@@ -90,6 +106,19 @@ class WorkbenchEndpoint:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._redaction_verifier = redaction_verifier
         self._request_budget_factory = request_budget_factory
+        self._unavailable_diagnostic_sink = unavailable_diagnostic_sink
+
+    def _record_unavailable(self, stage: str) -> None:
+        """Best-effort private fixed class; never publish exception text or IDs."""
+
+        if stage not in UNAVAILABLE_STAGES:
+            raise ValueError("unknown unavailable stage")
+        sink = self._unavailable_diagnostic_sink
+        if sink is not None:
+            try:
+                sink(stage)
+            except Exception:
+                pass
 
     def get_snapshot(
         self,
@@ -127,6 +156,7 @@ class WorkbenchEndpoint:
                         _budget_bound=True,
                     )
             except Exception:
+                self._record_unavailable("REQUEST_BUDGET")
                 return _error(503, "SERVICE_UNAVAILABLE")
 
         try:
@@ -143,6 +173,7 @@ class WorkbenchEndpoint:
         try:
             decision_observed_at = _clock_value(self._clock)
         except Exception:
+            self._record_unavailable("CLOCK")
             return _error(503, "SERVICE_UNAVAILABLE")
         access = _validated_access_projection(
             decision,
@@ -157,9 +188,24 @@ class WorkbenchEndpoint:
                 workspace_id=ALLOWED_WORKSPACE_ID,
                 matter_id=ALLOWED_MATTER_ID,
             )
-            if not isinstance(raw, Mapping):
-                raise WorkbenchProjectionError("matter projection is unavailable")
+        except GraphRequestError:
+            self._record_unavailable("GRAPH_REQUEST")
+            return _error(503, "SERVICE_UNAVAILABLE")
+        except GraphResponseError:
+            self._record_unavailable("GRAPH_RESPONSE")
+            return _error(503, "SERVICE_UNAVAILABLE")
+        except Exception:
+            self._record_unavailable("GRAPH_UNEXPECTED")
+            return _error(503, "SERVICE_UNAVAILABLE")
+        if not isinstance(raw, Mapping):
+            self._record_unavailable("GRAPH_RESULT_INVALID")
+            return _error(503, "SERVICE_UNAVAILABLE")
+        try:
             bpmn = self._bpmn_asset_port.read_canonical_bpmn()
+        except Exception:
+            self._record_unavailable("BPMN_ASSET")
+            return _error(503, "SERVICE_UNAVAILABLE")
+        try:
             generated = _clock_value(self._clock)
             generated_at = _wire_timestamp(generated)
             verifier = self._redaction_verifier or RecursiveRedactionVerifier(
@@ -197,6 +243,7 @@ class WorkbenchEndpoint:
             )
             return _success(payload)
         except Exception:
+            self._record_unavailable("PROJECTION")
             return _error(503, "SERVICE_UNAVAILABLE")
 
 

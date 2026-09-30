@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from dataclasses import dataclass
 import math
+import logging
 import os
 import threading
 import time
@@ -30,7 +31,7 @@ from .synthetic_workspace_graph import (
     SyntheticWorkspaceGraphRestAdapter,
 )
 from .test_environment import TestEnvironmentBff, ValidatedClaims
-from .workbench_endpoint import WorkbenchEndpoint
+from .workbench_endpoint import UNAVAILABLE_STAGES, WorkbenchEndpoint
 
 
 _ENTRA_JWKS_URI = "https://login.microsoftonline.com/common/discovery/v2.0/keys"
@@ -40,6 +41,15 @@ _TOKEN_REFRESH_SKEW_SECONDS = 60.0
 # Stable composition-root export; the implementation retains the fixed
 # workspace/site/list allowlist enforced by the Graph adapter.
 ConfiguredGraphRestPort = SyntheticWorkspaceGraphRestAdapter
+_UNAVAILABLE_LOGGER = logging.getLogger("nac_bff.workbench_unavailable")
+
+
+def _record_workbench_unavailable(stage: str) -> None:
+    """Only a fixed stage code enters internal runtime telemetry."""
+
+    if stage not in UNAVAILABLE_STAGES:
+        raise ValueError("unknown workbench unavailable stage")
+    _UNAVAILABLE_LOGGER.warning("NAC_BFF_503_STAGE=%s", stage)
 
 
 class CompositionError(ValueError):
@@ -242,6 +252,7 @@ def build_configured_app(
         graph_rest_port=workspace_port,
         bpmn_asset_port=bpmn_asset_port,
         request_budget_factory=request_budget_factory,
+        unavailable_diagnostic_sink=_record_workbench_unavailable,
     )
     performance_lease_broker = None
     performance_lease_claims_dependency = None
@@ -267,6 +278,7 @@ def build_configured_app(
         ),
         performance_lease_broker=performance_lease_broker,
         performance_lease_claims_dependency=performance_lease_claims_dependency,
+        unavailable_diagnostic_sink=_record_workbench_unavailable,
         ready=False,
     )
 

@@ -31,10 +31,12 @@ from nac_bff.composition import (  # noqa: E402
     CompositionError,
     ConfiguredGraphRestPort,
     ManagedIdentityGraphTokenProvider,
+    _record_workbench_unavailable,
     create_app_from_env,
     managed_identity_token_provider_from_env,
 )
 from nac_bff.synthetic_workspace_graph import (  # noqa: E402
+    GraphResponseError,
     SyntheticWorkspaceGraphRestAdapter,
 )
 from nac_bff.test_environment import (  # noqa: E402
@@ -94,6 +96,16 @@ class _WorkspacePort:
 
 
 class AzureBffCompositionTests(unittest.TestCase):
+    def test_503_runtime_log_accepts_only_fixed_non_sensitive_stage(self) -> None:
+        with patch("nac_bff.composition._UNAVAILABLE_LOGGER.warning") as warning:
+            _record_workbench_unavailable("GRAPH_RESPONSE")
+            warning.assert_called_once_with(
+                "NAC_BFF_503_STAGE=%s", "GRAPH_RESPONSE"
+            )
+            with self.assertRaises(ValueError):
+                _record_workbench_unavailable("Bearer sensitive-token")
+            self.assertEqual(warning.call_count, 1)
+
     def test_configured_graph_port_export_keeps_the_fixed_adapter(self) -> None:
         self.assertIs(ConfiguredGraphRestPort, SyntheticWorkspaceGraphRestAdapter)
 
@@ -262,6 +274,7 @@ class AzureBffCompositionTests(unittest.TestCase):
         validator_thread_ids: set[int] = set()
         bff_thread_ids: set[int] = set()
         event_loop_thread_ids: set[int] = set()
+        workspace_should_fail = [False]
 
         class _RecordingAccess:
             def decide(self, **request: str) -> AccessDecision:
@@ -283,6 +296,8 @@ class AzureBffCompositionTests(unittest.TestCase):
         class _RecordingWorkspace:
             def read_synthetic_workspace(self, **_: str) -> dict:
                 bff_thread_ids.add(threading.get_ident())
+                if workspace_should_fail[0]:
+                    raise GraphResponseError("Bearer sensitive-token")
                 return _projection()
 
         def validator_factory(**configuration: object):
@@ -371,6 +386,22 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(validator_configuration["required_scopes"], {"Matter.Read"})
         self.assertTrue(validator_thread_ids)
         self.assertTrue(bff_thread_ids)
+
+        workspace_should_fail[0] = True
+        with patch("nac_bff.composition._UNAVAILABLE_LOGGER.warning") as warning:
+            unavailable = client.get(
+                f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/"
+                f"{ALLOWED_MATTER_ID}/workbench-snapshot",
+                params={"purpose": ALLOWED_PURPOSE},
+                headers={"Authorization": "Bearer test-token"},
+            )
+        self.assertEqual(unavailable.status_code, 503)
+        self.assertEqual(
+            unavailable.content,
+            b'{"status":503,"error":{"code":"SERVICE_UNAVAILABLE"}}',
+        )
+        warning.assert_called_once_with("NAC_BFF_503_STAGE=%s", "GRAPH_RESPONSE")
+        self.assertNotIn(b"sensitive-token", unavailable.content)
 
     def test_request_timeout_bounds_authentication_and_bff_work(self) -> None:
         try:
