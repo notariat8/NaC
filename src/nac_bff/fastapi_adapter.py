@@ -35,6 +35,7 @@ def create_fastapi_app(
     performance_lease_broker: AzurePerformanceLeaseBroker | None = None,
     performance_lease_claims_dependency: Callable[..., BrokerRoleScopeClaims]
     | None = None,
+    unavailable_diagnostic_sink: Callable[[str], None] | None = None,
     ready: bool = True,
 ) -> Any:
     """Create the ASGI adapter around already validated Entra claims.
@@ -60,6 +61,13 @@ def create_fastapi_app(
     )
     readiness = _StagedReadiness(ready=ready)
 
+    def record_boundary_unavailable(stage: str) -> None:
+        if unavailable_diagnostic_sink is not None:
+            try:
+                unavailable_diagnostic_sink(stage)
+            except Exception:
+                pass
+
     @app.middleware("http")
     async def request_boundary(request: Request, call_next):
         correlation_id = _correlation_id(request.headers.get("X-Correlation-ID"))
@@ -70,6 +78,8 @@ def create_fastapi_app(
         try:
             response = await call_next(request)
         except TimeoutError:
+            if _is_workbench_path(request.url.path):
+                record_boundary_unavailable("REQUEST_TIMEOUT")
             response = (
                 _workbench_http_response(Response, _workbench_error(503))
                 if _is_workbench_path(request.url.path)
@@ -79,6 +89,8 @@ def create_fastapi_app(
                 )
             )
         except Exception:
+            if _is_workbench_path(request.url.path):
+                record_boundary_unavailable("BOUNDARY_UNEXPECTED")
             response = (
                 _workbench_http_response(Response, _workbench_error(503))
                 if _is_workbench_path(request.url.path)
