@@ -2,7 +2,7 @@
   "schema_version": "nac.verification-contract/v0.1",
   "contract_id": "verification.m365_mvp_test_environment",
   "title": "M365 MVP test environment verification",
-  "status": "live_deployment_verified_bff_final_live_run_pending",
+  "status": "historical_deployment_verified_current_state_acceptance_incomplete",
   "leading_issue": "https://github.com/notariat8/NaC/issues/620",
   "spec_id": "m365-mvp-test-environment",
   "delivery_mode": "Protected PR",
@@ -45,7 +45,7 @@
     "production_data_allowed": false,
     "credential_changes_allowed": false,
     "unbounded_permission_changes_allowed": false,
-    "exact_owner_gated_binding_create_or_reuse_allowed": true
+    "exact_owner_gated_binding_create_or_reuse_allowed": false
   },
   "ui_package": {
     "framework_exact": "SPFx",
@@ -67,7 +67,7 @@
       "Keine Mandatsdaten"
     ],
     "delegated_api_target_exact": "NaC BFF",
-    "delegated_api_activation_status_exact": "PROVISIONED_FINAL_LIVE_VERIFICATION_PENDING"
+    "delegated_api_activation_status_exact": "CURRENT_READ_OBSERVED_ACCEPTANCE_INCOMPLETE"
   },
   "data_plane": {
     "browser_graph_calls_allowed": false,
@@ -104,7 +104,7 @@
     "dynamic_path_exact": "SPFx/Teams -> NaC BFF -> Microsoft Graph REST v1.0",
     "server_side_role_case_purpose_deputy_gate_required": true,
     "redacted_dto_only": true,
-    "live_activation_status_exact": "FINAL_LIVE_RUN_PENDING",
+    "live_activation_status_exact": "CURRENT_READ_OBSERVED_ACCEPTANCE_INCOMPLETE",
     "activation_prerequisites": [
       "provisioned_public_https_endpoint",
       "provisioned_delegated_entra_scope"
@@ -144,14 +144,14 @@
     ]
   },
   "checks": [
-    "python3 -m unittest tests.test_m365_mvp_test_environment_verification_contract",
-    "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton tests.test_m365_bpmn_viewer_runtime_readiness tests.test_m365_sharepoint_bpmn_viewer_adapter tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_smoke tests.test_m365_mvp_test_environment_deploy tests.test_m365_test_environment_bff tests.test_m365_runtime_env_bootstrap",
-    "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
-    "python3 scripts/validate_spec_traceability.py",
-    "python3 scripts/validate_language_parity.py",
-    "python3 scripts/validate_doc_links.py",
-    "python3 scripts/nac.py contracts verify",
-    "python3 scripts/nac.py doctor --profile strict",
+    "python -m unittest tests.test_m365_mvp_test_environment_verification_contract",
+    "python -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton tests.test_m365_bpmn_viewer_runtime_readiness tests.test_m365_sharepoint_bpmn_viewer_adapter tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_smoke tests.test_m365_mvp_test_environment_deploy tests.test_m365_test_environment_bff tests.test_m365_runtime_env_bootstrap",
+    "python scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
+    "python scripts/validate_spec_traceability.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/nac.py contracts verify",
+    "python scripts/nac.py doctor --profile strict",
     "git diff --check"
   ],
   "required_evidence": [
@@ -180,15 +180,15 @@
     },
     {
       "id": "AC-620-02",
-      "requirement": "SPFx never requests Microsoft Graph permissions or calls Graph directly; its only permitted dynamic API target is the delegated NaC BFF scope Matter.Read provisioned under owner-gated Issue #632, with final live verification still pending."
+      "requirement": "SPFx never requests Microsoft Graph permissions or calls Graph directly; its only permitted dynamic API target is the delegated NaC BFF scope Matter.Read. Current package, exact scope and host delivery evidence must be bound in the read-only acceptance; historical Issue #632 grants no new mutation authority."
     },
     {
       "id": "AC-620-03",
-      "requirement": "The BFF derives user identity only from a validated Entra access token and resolves workspace, site and list identifiers exclusively through a server-side allowlist; final live token validation is required in the current twelve-step closure run."
+      "requirement": "The BFF derives user identity only from a validated Entra access token and resolves workspace, site and list identifiers exclusively through a server-side allowlist; current live token validation evidence and causal deployment-input/readback binding are required, without repeating the historical activation."
     },
     {
       "id": "AC-620-04",
-      "requirement": "An assigned user receives only a redacted projection containing synthetic matter status, tasks, due date and BPMN; the current SharePoint and Teams delivery path requires final live verification on current main."
+      "requirement": "An assigned user receives only a redacted projection containing synthetic matter status, tasks, due date and BPMN; current SharePoint and Teams render/version bindings and a current valid-deputy decision are required for complete acceptance."
     },
     {
       "id": "AC-620-05",
@@ -200,7 +200,7 @@
     },
     {
       "id": "AC-620-07",
-      "requirement": "The closure run creates no credential or unbounded permission, touches no production data and performs no operation in any workspace other than notary_team_01; under the bounded Issue #632 supersession it may create an absent exact binding or reuse an exact existing binding only for Matter.Read plus runtime Sites.Selected with site role read; any mismatched, duplicate or broader binding fails closed without in-place repair."
+      "requirement": "The current read-only acceptance creates no credential or unbounded permission, touches no production data and performs no operation in any workspace other than notary_team_01; it verifies existing Matter.Read plus runtime Sites.Selected with site role read. Any absent, mismatched, duplicate or broader binding fails closed without in-place repair; the bounded Issue #632 supersession is historical only and authorizes no create, approve, role or assignment write."
     }
   ],
   "pass_condition": {
@@ -212,20 +212,24 @@
     "cleanup_complete": true,
     "passed_result_bound_to_versioned_attestation": true,
     "bounded_permission_supersession_documented": true,
-    "bff_final_live_run_required": true,
+    "current_state_acceptance_required": true,
+    "historical_activation_replay_required": false,
     "no_credential_or_unbounded_permission_change_in_closure_run": true
   },
   "failure_behavior": {
     "wrong_workspace_site_team_or_package_hash": "fail_before_first_write",
     "spfx_graph_permission_or_direct_graph_dependency": "block_deployment",
     "production_like_data": "block_execution",
-    "readback_or_role_mismatch": "FAILED_then_targeted_run_owned_cleanup",
-    "cleanup_incomplete": "FAILED_with_redacted_evidence",
+    "readback_or_role_mismatch": "INCOMPLETE_without_cleanup_mutation",
+    "cleanup_incomplete": "INCOMPLETE_without_new_cleanup_writes",
     "missing_or_mismatched_attestation_hash_or_pr_binding": "invalidate_PASSED_result",
-    "unexpected_duplicate_or_broader_bff_scope_or_site_grant": "block_final_live_run",
-    "missing_exact_bff_binding": "owner_gated_create_absent_exact_binding_then_exact_readback"
+    "unexpected_duplicate_or_broader_bff_scope_or_site_grant": "block_current_acceptance_without_repair",
+    "missing_exact_bff_binding": "block_current_acceptance_without_creation",
+    "open_or_missing_current_acceptance_check": "INCOMPLETE_never_PASSED",
+    "historical_or_offline_evidence_claimed_as_current_release": "invalidate_current_acceptance"
   },
   "deployment_control_plane": {
+    "applies_to_exact": "historical_deployment_only_not_current_acceptance",
     "tool_exact": "Microsoft 365 CLI",
     "purpose_exact": "site-scoped App Catalog, SharePoint page and Teams package deployment",
     "allowed_operations_exact": [
@@ -239,6 +243,7 @@
     "tenant_wide_deployment_allowed": false
   },
   "permission_boundary_supersession": {
+    "applies_to_exact": "historical_issue_632_activation_only",
     "issue_exact": "https://github.com/notariat8/NaC/issues/632",
     "scope_exact": "Matter.Read",
     "runtime_graph_permission_exact": "Sites.Selected",
@@ -248,10 +253,22 @@
     "exact_create_or_reuse_allowed_in_closure_run": true,
     "in_place_permission_repair_allowed": false
   },
+  "historical_data_plane_failure_behavior": {
+    "applies_to_exact": "historical_run_owned_smoke_only",
+    "readback_or_role_mismatch": "FAILED_then_targeted_run_owned_cleanup",
+    "cleanup_incomplete": "FAILED_with_redacted_evidence",
+    "grants_current_write_authority": false
+  },
   "final_bff_live_verification": {
-    "status_exact": "PENDING",
-    "leading_issue_exact": "https://github.com/notariat8/NaC/issues/632",
-    "runner_exact": "twelve-step owner-gated Azure BFF live activation",
+    "status_exact": "INCOMPLETE",
+    "leading_issue_exact": "https://github.com/notariat8/NaC/issues/620",
+    "runner_exact": "bounded current-state read-only acceptance reconciliation",
+    "evidence_path_exact": "workflows/verification-contracts/evidence/m365-mvp-current-state-acceptance.redacted.json",
+    "evidence_sha256_exact": "494b751ef701ca6c592046056e8762f421ed79a7a3fe13f452ea0a5a20a9d981",
+    "observed_runtime_source_commit_exact": "65a2b8df4637fd21375f2b0291fcd9db39b8f74d",
+    "observed_runtime_source_tree_exact": "8850b12b4a514892cf57fcdf3e99d1d01f3760c9",
+    "all_acceptance_checks_required": true,
+    "issue_632_activation_required": false,
     "current_main_passed_evidence_required": true,
     "tamper_dimensions_required_exact": [
       "workspace",
@@ -261,7 +278,36 @@
     ],
     "sharepoint_and_teams_render_proof_required": true,
     "idempotency_required": true,
-    "latest_attempt_result_exact": "FAILED_PARTIAL",
-    "passed_attestation_present": false
+    "idempotency_mode_exact": "read-only convergence without replaying writes",
+    "remote_built_binary_digest_required": false,
+    "causal_deployment_input_and_readbacks_required": true,
+    "valid_deputy_current_evidence_required": true,
+    "unassigned_no_valid_deputy_prestate_required": true,
+    "historical_cleanup_reuse_allowed": true,
+    "new_cleanup_writes_required": false,
+    "new_login_allowed": false,
+    "token_refresh_allowed": false,
+    "provider_write_allowed": false,
+    "deployment_allowed": false,
+    "permission_or_assignment_write_allowed": false,
+    "automatic_retry_allowed": false,
+    "issue_739_reconstruction_allowed": false,
+    "required_checks_by_ac": {
+      "AC-620-01": ["package_manifest", "current_package_deployment_binding"],
+      "AC-620-02": ["bff_only_package_scope", "installed_package_source_binding"],
+      "AC-620-03": ["current_identity_allowlist", "current_deployment_implementation_binding"],
+      "AC-620-04": ["current_assigned_projection_bpmn", "current_valid_deputy", "current_teams_render", "current_sharepoint_render"],
+      "AC-620-05": ["current_authenticated_denial", "unassigned_prestate", "current_tamper_matrix"],
+      "AC-620-06": ["historical_deployment_write_cleanup", "current_release_input_readbacks", "current_readonly_convergence"],
+      "AC-620-07": ["current_exact_permission_boundary", "no_unapproved_mutations"]
+    },
+    "historical_activation": {
+      "leading_issue_exact": "https://github.com/notariat8/NaC/issues/632",
+      "runner_exact": "twelve-step owner-gated Azure BFF live activation",
+      "latest_attempt_result_exact": "FAILED_PARTIAL",
+      "passed_attestation_present": false,
+      "rerun_allowed": false,
+      "issue_739_terminal_state_exact": "FUNCTION_DEPLOYMENT_PROVENANCE_LOST"
+    }
   }
 }
