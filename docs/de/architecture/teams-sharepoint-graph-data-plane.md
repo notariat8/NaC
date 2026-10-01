@@ -469,6 +469,56 @@ Erste Tool-Grenzen:
 - `audit_append`
 - `document_list`
 
+## BFF-Bindung von Entra-Benutzern an SharePoint-Personen
+
+Für die Zugriffsprüfung in Issue #620 sind eine validierte Entra-Object-ID
+und eine native SharePoint-Personen-Lookup-ID unterschiedliche Identifier.
+Der [Live-Access-Adapter](../../../src/nac_bff/live_access_decision.py)
+verwendet deshalb für alle Benutzer ausschließlich die nativen
+`*LookupId`-Felder und eine explizite serverseitige Zuordnung. Eine feste
+Hauptbenutzer-Ausnahme oder ein Vergleich mit Namen, E-Mail-Adressen und
+optionalen JWT-Claims ist kein Ersatz für diese Bindung.
+
+Die [BFF-Komposition](../../../src/nac_bff/composition.py) erwartet
+`NAC_BFF_PERSON_BINDINGS_JSON` als geschützte Runtime-Konfiguration. Das
+[geschlossene Format](../../../src/nac_bff/sharepoint_person_binding.py)
+hat `schema_version=nac.sharepoint-person-bindings/v1`, `tenant_id`,
+`site_id` und `subjects`. Jeder Eintrag in `subjects` enthält ausschließlich
+`subject_id` und `lookup_id`: eine kanonische Entra-UUID und eine positive
+kanonische dezimale SharePoint-ID als String. Tenant und Site müssen exakt
+zur bestehenden BFF-/Graph-Konfiguration und zur festen synthetischen
+Test-Site passen. Höchstens 128 eindeutige Zuordnungen und 32 KiB UTF-8 sind
+zulässig; doppelte JSON-Schlüssel, OIDs, Lookup-IDs und zusätzliche Felder
+werden abgewiesen. Die Zuordnung wird unveränderlich übernommen.
+
+Reale Zuordnungen sind personenbezogene Betriebsdaten. Sie müssen durch
+einen autorisierten Operator unabhängig nachgewiesen und im geschützten
+Serverkontext bereitgestellt werden, nicht in Git, GitHub-Kommentaren,
+Browser-Requests oder öffentlichen Logs. Die Zuordnung erteilt keine Rolle
+und aktiviert keine Vertretung. Aktenzuweisung, Rolle, Zweck, gültige aktive
+Vertretungsfreigabe, Genehmigung und Audit bleiben separate Prüfungen.
+Das Decision-Subject bleibt die validierte Entra-ID, nicht die Lookup-ID.
+
+Fehlende oder ungültige Konfiguration blockiert die konfigurierte App-Komposition vor sämtlichen
+Validator-, Token- und Graph-Factories: Health bleibt erreichbar, Readiness
+bleibt 503 und beide Datenrouten bleiben geschlossen. Eine unbekannte OID
+wird vor dem ersten Graph-Aufruf neutral abgewiesen. Dieser Konfigurations-
+oder Zuordnungsfehler ist kein bestandener fachlicher Negativnachweis.
+Es entstehen keine Directory-Reads, neuen Graph-Rechte oder Tenant-Schreibpfade.
+
+Lokaler Nachweis:
+
+```powershell
+python -m unittest tests.test_nac_bff_sharepoint_person_binding tests.test_nac_bff_live_graph_ports tests.test_nac_bff_azure_function_host tests.test_nac_bff_entra_access_token tests.test_nac_bff_workbench_endpoint
+```
+
+Die [synthetischen Tests](../../../tests/test_nac_bff_sharepoint_person_binding.py)
+und [HTTP-Integrationstests](../../../tests/test_nac_bff_azure_function_host.py)
+belegen die lokale Umsetzung, nicht die Richtigkeit einer realen Zuordnung,
+ein Deployment oder eine abgeschlossene Live-Abnahme. Die Live-Abnahme nach
+dem [bestehenden Vertrag](../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json)
+bleibt getrennt und wird durch diesen Bugfix nicht auf `PASSED` gesetzt.
+
 ## Nicht Ziele
 
 Nicht Teil des MVP:

@@ -449,6 +449,53 @@ Initial tool boundaries:
 - `audit_append`
 - `document_list`
 
+## BFF Binding Between Entra Users and SharePoint Persons
+
+For the Issue #620 access decision, a validated Entra object ID and a native
+SharePoint person LookupId are different identifiers. The
+[live access adapter](../../../src/nac_bff/live_access_decision.py) therefore
+uses native `*LookupId` fields for every user and an explicit server-side
+mapping. A fixed primary-user exception or a comparison with names, email
+addresses and optional JWT claims is not a substitute for this binding.
+
+The [BFF composition](../../../src/nac_bff/composition.py) requires
+`NAC_BFF_PERSON_BINDINGS_JSON` as protected runtime configuration. The
+[closed format](../../../src/nac_bff/sharepoint_person_binding.py) contains
+`schema_version=nac.sharepoint-person-bindings/v1`, `tenant_id`, `site_id`
+and `subjects`. Each subject entry contains only `subject_id` and
+`lookup_id`: a canonical Entra UUID and a positive canonical decimal
+SharePoint ID as a string. Tenant and site must match the existing BFF/Graph
+configuration and fixed synthetic test site exactly. At most 128 unique
+mappings and 32 KiB UTF-8 are allowed; duplicate JSON keys, OIDs, LookupIds
+and extra fields are rejected. The mapping is captured immutably.
+
+Real mappings are personal operational data. An authorized operator must
+independently verify them and supply them in the protected server context,
+not in Git, GitHub comments, browser requests or public logs. A mapping does
+not grant a role or activate a deputy grant. Case assignment, role, purpose,
+active time-valid deputy grant, approval and audit remain separate checks.
+The decision subject remains the validated Entra ID, not the LookupId.
+
+Missing or invalid configuration blocks composition before any validator,
+token or Graph factory: health remains reachable, readiness stays 503 and
+both data routes remain closed. An unknown OID is neutrally denied before
+the first Graph request. This configuration or mapping failure is not a
+passed business-level negative test. No directory reads, additional Graph
+permissions or tenant-write paths are introduced.
+
+Local verification:
+
+```powershell
+python -m unittest tests.test_nac_bff_sharepoint_person_binding tests.test_nac_bff_live_graph_ports tests.test_nac_bff_azure_function_host tests.test_nac_bff_entra_access_token tests.test_nac_bff_workbench_endpoint
+```
+
+The [synthetic tests](../../../tests/test_nac_bff_sharepoint_person_binding.py)
+and [HTTP integration tests](../../../tests/test_nac_bff_azure_function_host.py)
+prove the local implementation, not a real mapping, deployment or completed
+live acceptance. Live acceptance under the
+[existing contract](../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json)
+remains separate and is not changed to `PASSED` by this bugfix.
+
 ## Non-Goals
 
 Not part of the MVP:
