@@ -1,0 +1,99 @@
+{
+  "schema_version": "nac.m365-mvp-current-state-acceptance/v0.1",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "recorded_on": "2026-10-01",
+  "status": "INCOMPLETE",
+  "complete_mvp_acceptance": false,
+  "scope": {
+    "workspace_id": "notary_team_01",
+    "matter_id": "NAC-SYN-MATTER-001",
+    "data_class": "synthetic_only",
+    "mode": "current_state_read_only_reconciliation"
+  },
+  "sources": {
+    "historical": {
+      "kind": "historical_live_attestation",
+      "path": "workflows/verification-contracts/evidence/m365-mvp-test-environment-deploy.redacted.json",
+      "sha256": "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea",
+      "recorded_on": "2026-07-14"
+    },
+    "implementation": {
+      "kind": "repository_inspection",
+      "commit": "65a2b8df4637fd21375f2b0291fcd9db39b8f74d",
+      "tree": "8850b12b4a514892cf57fcdf3e99d1d01f3760c9",
+      "recorded_on": "2026-10-01"
+    },
+    "package": {
+      "kind": "local_package_inspection",
+      "sha256": "0564e892ad1821134bcdea320fd11aa25d8ba18c0b59d94a5fa5b021ce1a74ca",
+      "version": "0.3.0.0",
+      "not_a_live_upload_receipt": true,
+      "recorded_on": "2026-10-01"
+    },
+    "positive": {
+      "kind": "current_live_receipt",
+      "url": "https://github.com/notariat8/NaC/issues/620#issuecomment-5932777104",
+      "recorded_on": "2026-10-01"
+    },
+    "negative": {
+      "kind": "current_live_receipt",
+      "url": "https://github.com/notariat8/NaC/issues/620#issuecomment-5934493891",
+      "recorded_on": "2026-10-01"
+    },
+    "teams": {
+      "kind": "current_host_observation",
+      "url": "https://github.com/notariat8/NaC/issues/620#issuecomment-5918874200",
+      "recorded_on": "2026-09-30"
+    }
+  },
+  "criteria": [
+    {"id": "AC-620-01", "checks": {
+      "package_manifest": {"status": "VERIFIED", "sources": ["implementation", "package"]},
+      "current_package_deployment_binding": {"status": "OPEN", "sources": []}
+    }},
+    {"id": "AC-620-02", "checks": {
+      "bff_only_package_scope": {"status": "VERIFIED", "sources": ["implementation", "package"]},
+      "installed_package_source_binding": {"status": "OPEN", "sources": []}
+    }},
+    {"id": "AC-620-03", "checks": {
+      "current_identity_allowlist": {"status": "VERIFIED", "sources": ["positive", "implementation"]},
+      "current_deployment_implementation_binding": {"status": "OPEN", "sources": []}
+    }},
+    {"id": "AC-620-04", "checks": {
+      "current_assigned_projection_bpmn": {"status": "VERIFIED", "sources": ["positive"]},
+      "current_valid_deputy": {"status": "OPEN", "sources": []},
+      "current_teams_render": {"status": "VERIFIED", "sources": ["teams"]},
+      "current_sharepoint_render": {"status": "OPEN", "sources": []}
+    }},
+    {"id": "AC-620-05", "checks": {
+      "current_authenticated_denial": {"status": "VERIFIED", "sources": ["negative"]},
+      "unassigned_prestate": {"status": "OPEN", "sources": []},
+      "current_tamper_matrix": {"status": "VERIFIED", "sources": ["positive"]}
+    }},
+    {"id": "AC-620-06", "checks": {
+      "historical_deployment_write_cleanup": {"status": "VERIFIED", "sources": ["historical"]},
+      "current_release_input_readbacks": {"status": "OPEN", "sources": []},
+      "current_readonly_convergence": {"status": "OPEN", "sources": []}
+    }},
+    {"id": "AC-620-07", "checks": {
+      "current_exact_permission_boundary": {"status": "OPEN", "sources": []},
+      "no_unapproved_mutations": {"status": "VERIFIED", "sources": ["positive", "negative"]}
+    }}
+  ],
+  "observation_limits": {
+    "authenticated_denial_does_not_prove_unassigned_prestate": true,
+    "historical_deputy_does_not_prove_current_valid_deputy": true,
+    "host_observation_requires_separate_release_version_binding": true,
+    "local_package_hash_does_not_prove_live_upload": true,
+    "offline_candidate_or_fixture_is_not_live_release_evidence": true,
+    "sdk_timeout_does_not_prove_authentication_failure": true,
+    "historical_activation_passthrough_or_reconstruction_allowed": false
+  },
+  "redaction": {
+    "accounts_or_principal_ids_included": false,
+    "tenant_or_user_ids_included": false,
+    "authentication_contents_included": false,
+    "raw_provider_responses_included": false,
+    "personal_or_mandate_data_included": false
+  }
+}

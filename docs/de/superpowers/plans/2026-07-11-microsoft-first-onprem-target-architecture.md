@@ -31,13 +31,19 @@ Owner-Gate.
 
 ## Slice 3: SPFx Read-only Workspace
 
-Status 28. Juli 2026: Der Baseline-Live-One-Shot in `notary_team_01` war
-erfolgreich; #632 stellte die begrenzten BFF-Bindungen bereit. Der aktuelle
-vollständige 12-Step-Abschlusslauf und Live-Entra-Nachweis bleiben offen.
+Status 1. Oktober 2026: Der historische Baseline-Live-One-Shot in
+`notary_team_01` war erfolgreich; #632 bleibt separate Aktivierungshistorie.
+Die aktuelle begrenzte Read-only-Abnahme unter #620 ist `INCOMPLETE`: Release-/
+Host-/Versionsbindung, gültige Vertretung, unabhängiger unzugeordneter
+Vorzustand ohne gültige Vertretung, SharePoint-Render sowie exakte
+Berechtigungs- und Konvergenznachweise bleiben offen. Ein neuer
+12-Step-Aktivierungslauf ist keine Voraussetzung; #739 bleibt terminal in
+`FUNCTION_DEPLOYMENT_PROVENANCE_LOST`.
 
 Nachweisbindung: [Issue #620](https://github.com/notariat8/NaC/issues/620),
-[Verification Contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json)
-und [versionierte redigierte Live-Attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json).
+[Verification Contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json),
+die [historische redigierte Live-Attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json)
+und [versionierte Current-state-Evidence](../../../../workflows/verification-contracts/evidence/m365-mvp-current-state-acceptance.redacted.json).
 
 - [x] Aktenstatus, Aufgaben und Fristen read-only anzeigen.
 - [ ] Dokumentzeiger read-only anzeigen.

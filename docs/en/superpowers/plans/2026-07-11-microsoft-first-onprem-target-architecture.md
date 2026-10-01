@@ -29,13 +29,18 @@ PR and a separate owner gate for live, credential or deployment actions.
 
 ## Slice 3: SPFx Read-Only Workspace
 
-Status 28 July 2026: The baseline Live-One-Shot in `notary_team_01`
-succeeded; #632 provisioned the bounded BFF bindings. The current complete
-12-step closure run and live Entra proof remain outstanding.
+Status 1 October 2026: The historical baseline Live-One-Shot in
+`notary_team_01` succeeded; #632 remains separate activation history. Current
+bounded read-only acceptance under #620 is `INCOMPLETE`: release/host/version
+binding, valid deputy, independent unassigned prestate without a valid deputy,
+SharePoint render, and exact permission and convergence evidence remain open.
+A new 12-step activation run is not a prerequisite; #739 remains terminal in
+`FUNCTION_DEPLOYMENT_PROVENANCE_LOST`.
 
 Evidence binding: [Issue #620](https://github.com/notariat8/NaC/issues/620),
 [verification contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json),
-and [versioned redacted live attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json).
+the [historical redacted live attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json),
+and [versioned current-state evidence](../../../../workflows/verification-contracts/evidence/m365-mvp-current-state-acceptance.redacted.json).
 
 - [x] Show matter status, tasks and deadlines read-only.
 - [ ] Show document pointers read-only.

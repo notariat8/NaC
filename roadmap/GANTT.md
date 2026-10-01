@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-07-29
+Letzte Aktualisierung: 2026-10-01
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter
@@ -214,8 +214,21 @@ hashverkettetem Ledger und exakt allowlisteter Evidence vorbereitet. Resume
 ist für den MVP bis zu providerspezifischer read-only Reconciliation aller
 Write-Schritte und Crash-Fenster deaktiviert. Der begrenzte NaC-BFF-Endpunkt,
 delegierte Scope und Site-Grant sind unter Issue #632 bereitgestellt. Offen
-bleiben der aktuelle zwölfstufige Abschlusslauf, Idempotenz, die vollständige
-Manipulationsmatrix sowie SharePoint-/Teams-Render-Evidence.
+bleiben für den damaligen Aktivierungsvertrag dessen eigene Nachweise; er ist
+kein Auftrag, die heutige MVP-Abnahme durch erneute Schreibschritte zu erzeugen.
+
+M365-Statushinweis 2026-10-01: [Issue #620](https://github.com/notariat8/NaC/issues/620)
+führt die gebündelte **Read-only-Abnahme** des bestehenden synthetischen Systems.
+Der [aktuelle redigierte AC-Abgleich](../workflows/verification-contracts/evidence/m365-mvp-current-state-acceptance.redacted.json)
+bleibt `INCOMPLETE`: positive Workspace-/Workbench-/BPMN-Reads, anonymer Deny,
+die vier Manipulationsproben und authentifizierter Deny sind dokumentiert.
+Offen sind aktuelle Release-Eingabe-/Readback- und Host-/Versionsbindungen,
+gültige Vertretung, unabhängiger Unassigned-Vorzustand, SharePoint-Rendernachweis,
+exakte Permission-Bindung und Read-only-Konvergenz. Historisches laufgebundenes
+Cleanup wird erhalten, nicht wiederholt. Kein neuer #632-Lauf, keine
+#739-Rekonstruktion und kein Deployment; #739 bleibt terminal mit
+`FUNCTION_DEPLOYMENT_PROVENANCE_LOST`. Ein Remote-Binary-Digest ist kein
+zusätzliches Gate. Der AC-Abgleich allein ist keine vollständige MVP-Abnahme.
 
 M365-Statushinweis 2026-08-01: Issue #725 bindet die generische Workbench-
 Oberfläche an einen neuen, strikt read-only ausgelegten NaC-BFF-Snapshotpfad.
