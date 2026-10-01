@@ -14,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_bff.live_access_decision import LiveAccessDecisionAdapter  # noqa: E402
+from nac_bff.sharepoint_person_binding import SharePointPersonBindings  # noqa: E402
 from nac_bff.live_synthetic_workspace import SYNTHETIC_LIVE_ACTOR_ID  # noqa: E402
 from nac_bff.synthetic_workspace_graph import (  # noqa: E402
     AZURE_HTTP_LIMIT_SECONDS,
@@ -22,6 +23,7 @@ from nac_bff.synthetic_workspace_graph import (  # noqa: E402
     GRAPH_REQUEST_DEADLINE_SECONDS,
     MAX_BFF_GRAPH_REQUESTS,
     MAX_RESPONSE_BYTES,
+    SYNTHETIC_SITE_ID,
     GraphRequestError,
     GraphResponseError,
     RawGraphV1Client,
@@ -44,6 +46,19 @@ from nac_mvp_test_environment import (  # noqa: E402
     MATTER_STATUS,
     TASKS,
 )
+
+SUBJECT_IDS = {
+    "actor-notary": "00000000-0000-0000-0000-000000000005",
+    "actor-clerk": "00000000-0000-0000-0000-000000000003",
+    "actor-deputy": "00000000-0000-0000-0000-000000000004",
+}
+PERSON_IDS = {"actor-notary": "7", "actor-clerk": "8", "actor-deputy": "9"}
+
+
+def _person(value: object) -> object:
+    if isinstance(value, list):
+        return [_person(item) for item in value]
+    return PERSON_IDS.get(value, value) if isinstance(value, str) else value
 
 
 class _FakeGraphClient:
@@ -163,8 +178,8 @@ def _access_case(*, notary: object = "actor-notary", clerks: object = ["actor-cl
     return {
         "NacCaseId": ALLOWED_MATTER_ID,
         "NotarTeam": "NaC-Notar-01",
-        "FederfuehrenderNotar": notary,
-        "Sachbearbeitung": clerks,
+        "FederfuehrenderNotarLookupId": _person(notary),
+        "SachbearbeitungLookupId": _person(clerks),
     }
 
 
@@ -183,6 +198,10 @@ def _grant(**changes: object) -> dict:
         "AuditCorrelationId": "NAC-SYN-AUDIT-001",
     }
     value.update(changes)
+    for name in ("FromUser", "ToUser", "ApprovedBy"):
+        if name in value:
+            person = value.pop(name)
+            value.setdefault(name + "LookupId", _person(person))
     return value
 
 
@@ -444,6 +463,14 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
             LiveAccessDecisionAdapter(
                 client,
                 expected_tenant_id="synthetic-tenant",
+                person_bindings=SharePointPersonBindings(
+                    tenant_id="synthetic-tenant",
+                    site_id=SYNTHETIC_SITE_ID,
+                    subjects={
+                        **{SUBJECT_IDS[name]: lookup for name, lookup in PERSON_IDS.items()},
+                        SYNTHETIC_LIVE_ACTOR_ID: "11",
+                    },
+                ),
                 reference_time="2026-07-14T12:00:00Z",
             ),
             client,
@@ -451,7 +478,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
 
     def _decide(self, adapter: LiveAccessDecisionAdapter, actor_id: str):
         return adapter.decide(
-            actor_id=actor_id,
+            actor_id=SUBJECT_IDS.get(actor_id, actor_id),
             tenant_id="synthetic-tenant",
             workspace_id=ALLOWED_WORKSPACE_ID,
             matter_id=ALLOWED_MATTER_ID,
@@ -467,7 +494,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
                 adapter, client = self._adapter(_page(_access_case()))
                 decision = self._decide(adapter, actor)
                 self.assertIs(decision.mode, AccessMode.ASSIGNED)
-                self.assertEqual(decision.subject_id, actor)
+                self.assertEqual(decision.subject_id, SUBJECT_IDS[actor])
                 self.assertEqual(decision.role, role)
                 self.assertEqual(decision.decision_id, "access:NAC-SYN-MATTER-001:1")
                 self.assertEqual(decision.decision_version, "policy-v1")
@@ -475,7 +502,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
                 self.assertEqual(decision.expires_at, "2026-07-14T12:05:00Z")
                 self.assertIsNone(decision.reason)
                 self.assertEqual(len(client.paths), 1)
-                self.assertIn("FederfuehrenderNotar,Sachbearbeitung", client.paths[0])
+                self.assertIn("FederfuehrenderNotarLookupId,SachbearbeitungLookupId", client.paths[0])
 
     def test_fixed_live_actor_uses_person_lookup_ids_for_assigned_and_deputy(self) -> None:
         assigned_case = {
@@ -503,9 +530,6 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
             ToUserLookupId="11",
             ApprovedByLookupId="12",
         )
-        del deputy_grant["FromUser"]
-        del deputy_grant["ToUser"]
-        del deputy_grant["ApprovedBy"]
         deputy, _ = self._adapter(
             _page(deputy_case),
             _page(deputy_grant),
@@ -526,7 +550,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
 
         decision = self._decide(adapter, "actor-deputy")
         self.assertIs(decision.mode, AccessMode.DEPUTY)
-        self.assertEqual(decision.subject_id, "actor-deputy")
+        self.assertEqual(decision.subject_id, SUBJECT_IDS["actor-deputy"])
         self.assertEqual(decision.role, "deputy_clerk")
         self.assertEqual(decision.reason, "Synthetische Urlaubsvertretung")
         self.assertEqual(decision.expires_at, "2026-07-14T12:05:00Z")
@@ -536,6 +560,50 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
         self.assertIn("/lists/ec12d339-d9b7-45e9-be45-38dadd917746/items?", client.paths[1])
         self.assertIn("/lists/327181c2-e402-48e9-bcfa-1f5081b45d9c/items?", client.paths[2])
         self.assertIn("CorrelationId", client.paths[2])
+
+    def test_second_entra_subject_with_native_person_fields_is_deputy(self) -> None:
+        actor = "00000000-0000-0000-0000-000000000004"
+        adapter, client = self._adapter(
+            _page({
+                "NacCaseId": ALLOWED_MATTER_ID,
+                "NotarTeam": "NaC-Notar-01",
+                "FederfuehrenderNotarLookupId": "7",
+            }),
+            _page(_grant(
+                FromUserLookupId="7", ToUserLookupId="9",
+                ApprovedByLookupId="7",
+            )),
+            _page(_audit()),
+        )
+
+        decision = self._decide(adapter, actor)
+
+        self.assertIs(decision.mode, AccessMode.DEPUTY)
+        self.assertEqual(decision.subject_id, actor)
+        self.assertEqual(len(client.paths), 3)
+
+    def test_native_deputy_identity_tampering_is_denied_before_audit(self) -> None:
+        for changes in (
+            {"FromUserLookupId": "6"},
+            {"FromUserLookupId": SUBJECT_IDS["actor-notary"]},
+            {"FromUserLookupId": "07"},
+            {"ApprovedByLookupId": "6"},
+            {"ApprovedByLookupId": True},
+            {"ToUserLookupId": SUBJECT_IDS["actor-deputy"]},
+            {"ToUserLookupId": ["9"]},
+            {"Status": "Inaktiv"},
+        ):
+            with self.subTest(changes=changes):
+                adapter, client = self._adapter(_page(_access_case()), _page(_grant(**changes)))
+                self.assertIs(self._decide(adapter, "actor-deputy").mode, AccessMode.DENY)
+                self.assertEqual(len(client.paths), 2)
+
+    def test_noncanonical_primary_and_clerk_person_fields_are_denied(self) -> None:
+        for invalid in ("07", " 7", "7 ", 7, True, "alias@example.com", ["7"]):
+            with self.subTest(invalid=invalid):
+                adapter, client = self._adapter(_page(_access_case(notary=invalid)))
+                self.assertIs(self._decide(adapter, "actor-notary").mode, AccessMode.DENY)
+                self.assertEqual(len(client.paths), 1)
 
     def test_notary_deputy_grant_maps_to_canonical_role(self) -> None:
         adapter, _ = self._adapter(
@@ -582,7 +650,7 @@ class LiveAccessDecisionAdapterTests(unittest.TestCase):
         )
         for changes in requests:
             request = {
-                "actor_id": "actor-notary",
+                "actor_id": SUBJECT_IDS["actor-notary"],
                 "tenant_id": "synthetic-tenant",
                 "workspace_id": ALLOWED_WORKSPACE_ID,
                 "matter_id": ALLOWED_MATTER_ID,

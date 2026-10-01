@@ -13,6 +13,7 @@ import tempfile
 import types
 import unittest
 from unittest.mock import patch
+from urllib.parse import unquote
 import zipfile
 
 
@@ -37,6 +38,7 @@ from nac_bff.composition import (  # noqa: E402
 )
 from nac_bff.synthetic_workspace_graph import (  # noqa: E402
     GraphResponseError,
+    SYNTHETIC_SITE_ID,
     SyntheticWorkspaceGraphRestAdapter,
 )
 from nac_bff.test_environment import (  # noqa: E402
@@ -64,6 +66,15 @@ def _environment() -> dict[str, str]:
         "NAC_BFF_GRAPH_MANAGED_IDENTITY_CLIENT_ID": "uami-client-id",
         "NAC_BFF_AUDIENCE": "api://00000000-0000-0000-0000-000000000002",
         "NAC_BFF_REQUIRED_SCOPE": "Matter.Read",
+        "NAC_BFF_PERSON_BINDINGS_JSON": json.dumps({
+            "schema_version": "nac.sharepoint-person-bindings/v1",
+            "tenant_id": TENANT_ID,
+            "site_id": SYNTHETIC_SITE_ID,
+            "subjects": [{
+                "subject_id": "00000000-0000-0000-0000-000000000005",
+                "lookup_id": "7",
+            }],
+        }),
     }
 
 
@@ -96,6 +107,100 @@ class _WorkspacePort:
 
 
 class AzureBffCompositionTests(unittest.TestCase):
+    def test_second_subject_native_deputy_through_both_http_endpoints(self) -> None:
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("FastAPI runtime dependencies are not installed")
+        subject = "00000000-0000-0000-0000-00000000000a"
+        env = _environment()
+        env["NAC_BFF_TENANT_ID"] = ALLOWED_TENANT_ID
+        env["M365_TENANT_ID"] = ALLOWED_TENANT_ID
+        binding = json.loads(env["NAC_BFF_PERSON_BINDINGS_JSON"])
+        binding["tenant_id"] = ALLOWED_TENANT_ID
+        binding["subjects"] = [{"subject_id": subject, "lookup_id": "9"}]
+        env["NAC_BFF_PERSON_BINDINGS_JSON"] = json.dumps(binding)
+        now = datetime.now(UTC)
+
+        class _Graph:
+            base_url = "https://graph.microsoft.com/v1.0"
+            redirects_allowed = False
+            retains_error_body = False
+
+            def __init__(self):
+                self.paths = []
+
+            def get(self, path):
+                self.paths.append(path)
+                if "/lists/588d4a41-f538-4f37-acfb-63ff283e0910/" in path:
+                    fields = {"NacCaseId": ALLOWED_MATTER_ID, "NotarTeam": "NaC-Notar-01", "FederfuehrenderNotarLookupId": "7"}
+                elif "/lists/ec12d339-d9b7-45e9-be45-38dadd917746/" in path:
+                    fields = {
+                        "NacCaseId": ALLOWED_MATTER_ID, "GrantId": "NAC-SYN-GRANT-001",
+                        "FromUserLookupId": "7", "ToUserLookupId": "9", "ApprovedByLookupId": "7",
+                        "GrantedRole": "SachbearbeitungVertretung", "Reason": "Synthetische Urlaubsvertretung",
+                        "ValidFrom": (now - timedelta(hours=1)).isoformat(),
+                        "ValidUntil": (now + timedelta(hours=1)).isoformat(),
+                        "Status": "Aktiv", "AuditCorrelationId": "NAC-SYN-AUDIT-001",
+                    }
+                elif "/lists/327181c2-e402-48e9-bcfa-1f5081b45d9c/" in path:
+                    fields = {"NacCaseId": ALLOWED_MATTER_ID, "Action": "GrantApproved", "ObjectId": "NAC-SYN-GRANT-001", "CorrelationId": "NAC-SYN-AUDIT-001"}
+                else:
+                    raise AssertionError("unexpected Graph target")
+                return {"value": [{"id": "synthetic-item", "fields": fields}]}
+
+        graph = _Graph()
+        app = create_app_from_env(
+            env, validator_factory=lambda **_: lambda _: ValidatedClaims(
+                object_id=subject, tenant_id=ALLOWED_TENANT_ID, subject=subject,
+            ),
+            token_provider_factory=lambda _: object(), graph_client_factory=lambda _: graph,
+            workspace_port_factory=lambda _: _WorkspacePort(),
+        )
+        with TestClient(app) as client:
+            for suffix in ("", "/workbench-snapshot"):
+                response = client.get(
+                    f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/{ALLOWED_MATTER_ID}{suffix}",
+                    params={"purpose": ALLOWED_PURPOSE}, headers={"Authorization": "Bearer offline-test"},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers["cache-control"], "no-store")
+                self.assertNotIn(b"LookupId", response.content)
+        self.assertEqual(len(graph.paths), 6)
+        self.assertTrue(all(unquote(path).startswith("/sites/" + SYNTHETIC_SITE_ID + "/lists/") for path in graph.paths))
+
+    def test_missing_person_binding_config_is_unready_before_factories(self) -> None:
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("FastAPI runtime dependencies are not installed")
+        calls = []
+
+        def unexpected(*args, **kwargs):
+            calls.append("factory")
+            raise AssertionError("no factory may run")
+
+        for value in (None, "PRIVATE_BINDING_SENTINEL"):
+            env = _environment()
+            if value is None:
+                env.pop("NAC_BFF_PERSON_BINDINGS_JSON")
+            else:
+                env["NAC_BFF_PERSON_BINDINGS_JSON"] = value
+            with self.subTest(value=value), TestClient(create_app_from_env(
+                env, validator_factory=unexpected, token_provider_factory=unexpected,
+                graph_client_factory=unexpected, access_port_factory=unexpected,
+            )) as client:
+                self.assertEqual(client.get("/healthz").status_code, 200)
+                self.assertEqual(client.get("/readyz").status_code, 503)
+                for suffix in ("", "/workbench-snapshot"):
+                    response = client.get(
+                        f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/{ALLOWED_MATTER_ID}{suffix}",
+                        params={"purpose": ALLOWED_PURPOSE}, headers={"Authorization": "Bearer offline-test"},
+                    )
+                    self.assertEqual(response.status_code, 401)
+                    self.assertNotIn(b"PRIVATE_BINDING_SENTINEL", response.content)
+        self.assertEqual(calls, [])
+
     def test_503_runtime_log_accepts_only_fixed_non_sensitive_stage(self) -> None:
         with patch("nac_bff.composition._UNAVAILABLE_LOGGER.warning") as warning:
             _record_workbench_unavailable("GRAPH_RESPONSE")
@@ -318,6 +423,9 @@ class AzureBffCompositionTests(unittest.TestCase):
         environment = _environment()
         environment["NAC_BFF_TENANT_ID"] = ALLOWED_TENANT_ID
         environment["M365_TENANT_ID"] = ALLOWED_TENANT_ID
+        bindings = json.loads(environment["NAC_BFF_PERSON_BINDINGS_JSON"])
+        bindings["tenant_id"] = ALLOWED_TENANT_ID
+        environment["NAC_BFF_PERSON_BINDINGS_JSON"] = json.dumps(bindings)
         app = create_app_from_env(
             environment,
             validator_factory=validator_factory,

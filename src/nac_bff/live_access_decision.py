@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, Mapping
 
+from nac_bff.sharepoint_person_binding import SharePointPersonBindings, canonical_lookup_id
 from nac_bff.synthetic_workspace_graph import (
     GraphGetClient,
+    SYNTHETIC_SITE_ID,
     read_bounded_collection,
     synthetic_list_binding,
 )
@@ -18,8 +20,6 @@ from nac_bff.test_environment import (
 
 
 SYNTHETIC_NOTARY_TEAM = "NaC-Notar-01"
-SYNTHETIC_LIVE_ACTOR_ID = "94f4a71c-ff52-4074-b215-8cc138be329b"
-SYNTHETIC_LIVE_ACTOR_LOOKUP_ID = "11"
 ALLOWED_DEPUTY_ROLES = frozenset({"NotarVertretung", "SachbearbeitungVertretung"})
 WORKBENCH_DEPUTY_ROLES = {
     "NotarVertretung": "deputy_notary",
@@ -39,6 +39,7 @@ class LiveAccessDecisionAdapter:
         client: GraphGetClient,
         *,
         expected_tenant_id: str,
+        person_bindings: SharePointPersonBindings | None = None,
         reference_time: str | datetime | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
@@ -46,7 +47,14 @@ class LiveAccessDecisionAdapter:
             raise ValueError("expected_tenant_id is required")
         if reference_time is not None and clock is not None:
             raise ValueError("reference_time and clock are mutually exclusive")
+        if person_bindings is not None and (
+            type(person_bindings) is not SharePointPersonBindings
+            or person_bindings.tenant_id != expected_tenant_id
+            or person_bindings.site_id != SYNTHETIC_SITE_ID
+        ):
+            raise ValueError("SharePoint person bindings are invalid")
         self._client = client
+        self._person_bindings = person_bindings
         self._expected_tenant_id = expected_tenant_id
         self._reference_time = reference_time
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -93,13 +101,16 @@ class LiveAccessDecisionAdapter:
         ):
             return AccessDecision.deny()
 
-        live_lookup_mode = actor_id.lower() == SYNTHETIC_LIVE_ACTOR_ID
-        actor_person_id = (
-            SYNTHETIC_LIVE_ACTOR_LOOKUP_ID if live_lookup_mode else actor_id
+        if self._person_bindings is None:
+            return AccessDecision.deny()
+        actor_person_id = self._person_bindings.resolve(
+            tenant_id=tenant_id, site_id=SYNTHETIC_SITE_ID, subject_id=actor_id
         )
+        if actor_person_id is None:
+            return AccessDecision.deny()
 
         def person_field(name: str) -> str:
-            return f"{name}LookupId" if live_lookup_mode else name
+            return f"{name}LookupId"
 
         cases = read_bounded_collection(
             self._client,
@@ -311,16 +322,15 @@ def _wire_timestamp(value: datetime) -> str:
 
 
 def _user_ids(value: object, *, allow_multiple: bool) -> frozenset[str]:
-    if isinstance(value, str):
-        text = value.strip()
-        return frozenset({text}) if text else frozenset()
-    if allow_multiple and type(value) is list:
-        if any(not isinstance(item, str) or not item.strip() for item in value):
-            return frozenset()
-        normalized = [item.strip() for item in value]
-        if len(set(normalized)) != len(normalized):
-            return frozenset()
-        return frozenset(normalized)
+    try:
+        if type(value) is str:
+            return frozenset({canonical_lookup_id(value)})
+        if allow_multiple and type(value) is list:
+            normalized = [canonical_lookup_id(item) for item in value]
+            if len(set(normalized)) == len(normalized):
+                return frozenset(normalized)
+    except ValueError:
+        pass
     return frozenset()
 
 

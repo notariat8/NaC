@@ -25,6 +25,7 @@ from .fastapi_adapter import (
     run_sync_with_request_budget,
 )
 from .live_access_decision import LiveAccessDecisionAdapter
+from .sharepoint_person_binding import parse_person_bindings
 from .synthetic_workspace_graph import (
     GRAPH_TOKEN_ACQUISITION_TIMEOUT_SECONDS,
     RawGraphV1Client,
@@ -218,6 +219,13 @@ def build_configured_app(
 
     values = os.environ if env is None else env
     settings = BffSettings.from_env(values)
+    try:
+        person_bindings = parse_person_bindings(
+            values.get("NAC_BFF_PERSON_BINDINGS_JSON"),
+            expected_tenant_id=settings.tenant_id,
+        )
+    except ValueError:
+        raise CompositionError("SharePoint person bindings are invalid") from None
     validator = validator_factory(
         expected_tenant_id=settings.tenant_id,
         expected_audience=settings.audience,
@@ -236,6 +244,7 @@ def build_configured_app(
     access_port = access_port_factory(
         graph_client,
         expected_tenant_id=settings.tenant_id,
+        person_bindings=person_bindings,
     )
     workspace_port = workspace_port_factory(graph_client)
     bpmn_asset_port = bpmn_asset_port_factory()
