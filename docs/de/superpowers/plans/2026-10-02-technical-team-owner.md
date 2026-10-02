@@ -16,8 +16,9 @@ Status: lokale Korrektur beauftragt; kein Tenant-Apply.
 4. Policy, Verträge, Validatoren, DE/EN-Architektur, Einstieg und relevante
    Codex-/pi-Profile synchronisieren. Lizenz-, Principal- und Akten-Gates
    weder entfernen noch durch Team-Ownership ersetzen.
-5. Fokussierte Tests, Contract-/Governance-/Sprach-/Traceability-Validatoren
-   und Graft prüfen; vollständige `main...HEAD`-Diff unabhängig reviewen.
+5. Fokussierte Tests, Privacy-Lint, Contract-/Governance-/Sprach-/Traceability-
+   Validatoren und frisch gebauten Graft-Graph prüfen; vollständige
+   `main...HEAD`-Diff unabhängig reviewen.
    Danach lokale Commits und normaler Push in Draft-PR. Vollständiger lokaler
    Strict-Doctor und Remote-CI dürfen parallel laufen; ein laufendes oder
    fehlgeschlagenes Gate wird nicht als bestanden dargestellt.
@@ -29,3 +30,14 @@ AC-OWNER-01 bis AC-OWNER-05 werden durch die in der Spec genannten Tests und
 Validatoren belegt. Die vorhandene `nac m365 teams-sharepoint plan`-/
 `privileged-plan`-/`application-owner-readiness`-Bedienkante wird genutzt;
 kein neuer Live-Executor entsteht.
+
+## Windows-Prüflauf
+
+Der vollständige Lauf übernimmt die native Windows-Kodierung. Ein pauschaler
+UTF-8-Modus ist kein Ersatz für passende Unterprozess-Kodierungen: Python,
+Node und Windows-Systemprogramme können unterschiedliche Ausgabeformate
+verwenden. Auf dem geprüften Arbeitsplatz werden `PYTHONUTF8=0` und
+`PYTHONIOENCODING=cp1252` ausschließlich prozesslokal genutzt; System- und
+Benutzereinstellungen bleiben unverändert. Bei einem Fehler zunächst genau
+die betroffenen Tests reproduzieren und erst nach deren Erfolg den finalen
+vollständigen Strict-Doctor starten. Keine Prüfung wird ausgelassen.

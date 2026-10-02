@@ -16,8 +16,9 @@ Status: local correction commissioned; no tenant apply.
 4. Synchronize policy, contracts, validators, DE/EN architecture, onboarding
    and relevant Codex/pi profiles. Do not remove license, principal or matter
    gates or replace them with Team ownership.
-5. Run focused tests, contract/governance/language/traceability validators
-   and Graft. Independently review the complete `main...HEAD` diff; then
+5. Run focused tests, privacy lint, contract/governance/language/traceability
+   validators and a freshly built Graft graph. Independently review the
+   complete `main...HEAD` diff; then
    create local commits and normally push to a draft PR. The complete local
    strict doctor and remote CI may run concurrently; never represent a
    running or failed gate as passed.
@@ -29,3 +30,13 @@ AC-OWNER-01 through AC-OWNER-05 are covered by the tests and validators listed
 in the spec. Reuse the existing `nac m365 teams-sharepoint plan`,
 `privileged-plan` and `application-owner-readiness` CLI edges; do not create
 a new live executor.
+
+## Windows validation run
+
+The full run uses native Windows encoding. A blanket UTF-8 mode does not
+replace matching subprocess encodings: Python, Node and Windows system tools
+may produce different output formats. On the verified workstation,
+`PYTHONUTF8=0` and `PYTHONIOENCODING=cp1252` are process-local only; system and
+user settings remain unchanged. When a check fails, first reproduce exactly
+the affected tests and only after they pass start the final full strict
+doctor. No check is omitted.
