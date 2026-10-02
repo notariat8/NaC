@@ -37,6 +37,14 @@ def build_plan(schema: dict[str, Any]) -> list[PlanOperation]:
             "description": workspace["team_description"],
             "visibility": workspace["visibility"],
             "firstChannelName": workspace.get("first_channel_name", "Akten"),
+            "members": [{
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                "roles": ["owner"],
+                "user@odata.bind": (
+                    "https://graph.microsoft.com/v1.0/users('"
+                    + schema["team_ownership"]["technical_owner_user_principal_name"] + "')"
+                ),
+            }],
         }
         operations.append(
             PlanOperation(

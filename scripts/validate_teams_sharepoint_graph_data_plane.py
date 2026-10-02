@@ -29,6 +29,7 @@ from nac_m365_graph.mcp_runtime import (  # noqa: E402
     validate_mcp_contract,
 )
 from nac_m365_graph.schema import validate_schema  # noqa: E402
+from nac_m365_graph.team_ownership import TECHNICAL_OWNER_UPN, TEAM_OWNER_POLICY  # noqa: E402
 
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
@@ -58,6 +59,7 @@ PROVISIONER_SCRIPT = REPO_ROOT / "scripts" / "provision_teams_sharepoint_graph.p
 PACKAGE_ROOT = REPO_ROOT / "src" / "nac_m365_graph"
 PRIVILEGED_APPLY_SOURCE = PACKAGE_ROOT / "privileged_apply.py"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
+TEAM_OWNERSHIP_POLICY = REPO_ROOT / "policies" / "m365-team-ownership-policy.json"
 
 REQUIRED_LISTS = {
     "Akten",
@@ -125,6 +127,30 @@ def main() -> int:
 def validate() -> list[str]:
     errors: list[str] = []
     contract = _read_json(CONTRACT, errors)
+    owner_policy = _read_json(TEAM_OWNERSHIP_POLICY, errors)
+    expected_owner_policy = {
+        "schema_version": "nac.m365-team-ownership-policy/v0.1",
+        **TEAM_OWNER_POLICY,
+        "account_kind": "technical_user",
+        "personal_user_authentication_required": True,
+        "oauth_app_only_implied": False,
+        "notarial_qualification_implied": False,
+        "nac_matter_authorization_implied": False,
+        "additional_natural_principal_implied": False,
+        "incomplete_owner_evidence_allowed": False,
+        "historical_owner_evidence_proves_current_state": False,
+        "provider_customer_approval_and_dpa_required": True,
+        "license_terms_review_required": True,
+    }
+    if json.dumps(owner_policy, sort_keys=True) != json.dumps(expected_owner_policy, sort_keys=True):
+        errors.append("M365 Team ownership policy must match the closed technical-user/member model")
+    onboarding = _read_json(REPO_ROOT / "workflows/contracts/customer-tenant-onboarding.contract.json", errors)
+    target = onboarding.get("m365_target_model", {})
+    if (target.get("technical_owner_user") != TECHNICAL_OWNER_UPN
+            or target.get("technical_user_sole_team_owner_required") is not True
+            or target.get("standard_user_team_role") != "member"
+            or target.get("customer_admin_team_owner") is not False):
+        errors.append("customer onboarding must preserve the sole technical Team owner and personal members")
     mcp_contract = _read_json(MCP_CONTRACT, errors)
     schema = _read_json(SCHEMA, errors)
     bpmn_viewer_config = _read_json(BPMN_VIEWER_CONFIG, errors)
@@ -159,12 +185,14 @@ def validate() -> list[str]:
                     "ensure_application",
                     "assign_direct_application_owner",
                     "grant_runtime_sites_selected_site_permission",
-                    "verify_human_team_owner",
+                    "verify_technical_group_owner",
+                    "verify_technical_team_owner",
+                    "verify_delegated_technical_owner",
                 }
                 actions = set(summary["by_action"])
                 for action in sorted(required_actions - actions):
                     errors.append(f"privileged change plan missing action {action}")
-            except ValueError as exc:
+            except (ValueError, RuntimeError) as exc:
                 errors.append(str(exc))
     if bpmn_viewer_config and schema:
         errors.extend(validate_bpmn_viewer_provisioning_config(bpmn_viewer_config))
@@ -434,10 +462,9 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             "application_governance_group_required",
             "direct_application_owner_must_be_user_or_service_principal",
             "technical_application_owner_user_allowed",
-            "human_team_owner_still_required",
+            "technical_user_sole_team_owner_required",
+            "standard_users_team_members_only",
             "technical_bootstrap_owner_user_allowed",
-            "technical_bootstrap_owner_user_must_not_be_sole_owner",
-            "licensed_human_team_owner_required",
             "technical_owner_must_not_hold_m365_admin_roles",
             "technical_owner_use_requires_license_terms_review",
             "privileged_change_audit_required",
@@ -452,6 +479,13 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("permission_model.technical_application_owner_user_target must be funktion8@funktion8.de")
         if permissions.get("technical_bootstrap_owner_user_target") != "funktion8@funktion8.de":
             errors.append("permission_model.technical_bootstrap_owner_user_target must be funktion8@funktion8.de")
+        if permissions.get("team_ownership_policy") != "policies/m365-team-ownership-policy.json":
+            errors.append("permission_model must reference the canonical Team ownership policy")
+        for obsolete in ("human_team_owner_still_required",
+                         "technical_bootstrap_owner_user_must_not_be_sole_owner",
+                         "licensed_human_team_owner_required"):
+            if obsolete in permissions:
+                errors.append(f"permission_model contains obsolete owner requirement {obsolete}")
 
     roadmap = payload.get("next_iteration_roadmap")
     if not isinstance(roadmap, list):
@@ -979,6 +1013,8 @@ def _validate_privileged_applied_state(
                 continue
             if check.get("team_id") != provisioned_workspaces.get(workspace_id, {}).get("team_id"):
                 errors.append(f"privileged applied {workspace_id} team_id must match provisioned state")
+            # Historical snapshot structure only: this is not the active owner
+            # policy or a current operational readiness assertion.
             if not isinstance(check.get("licensed_human_owner_count"), int) or check["licensed_human_owner_count"] < 1:
                 errors.append(f"privileged applied {workspace_id} must retain at least one licensed human owner")
 
@@ -1201,7 +1237,8 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "Privilegierte Änderungen Über App/API"),
         (DOC_DE, "M365 Provisioning"),
         (DOC_DE, "Microsoft-Graph-Grenzen"),
-        (DOC_DE, "technische Bootstrap-Owner-User `technical_owner_user`"),
+        (DOC_DE, "policies/m365-team-ownership-policy.json"),
+        (DOC_DE, "Team-Ownership-Policy"),
         (DOC_DE, "privileged-plan"),
         (DOC_DE, "CLI for Microsoft 365"),
         (DOC_DE, "`teams-sharepoint-data-mcp`"),
@@ -1222,7 +1259,8 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "Privileged Changes Through App/API"),
         (DOC_EN, "M365 Provisioning"),
         (DOC_EN, "Microsoft Graph boundary"),
-        (DOC_EN, "technical bootstrap owner user `technical_owner_user`"),
+        (DOC_EN, "policies/m365-team-ownership-policy.json"),
+        (DOC_EN, "Team ownership policy"),
         (DOC_EN, "privileged-plan"),
         (DOC_EN, "CLI for Microsoft 365"),
         (DOC_EN, "`teams-sharepoint-data-mcp`"),

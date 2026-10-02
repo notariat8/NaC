@@ -1,6 +1,12 @@
 version: 1
 status: mandatory
 
+m365_team_ownership:
+  policy: policies/m365-team-ownership-policy.json
+  technical_user_is_sole_team_owner: true
+  standard_users_are_members_only: true
+  team_owner_is_not_notarial_qualification: true
+
 source_of_truth:
   access_rules_live_only_in: policies/
   forbid_direct_rule_only_changes: true

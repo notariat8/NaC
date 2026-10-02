@@ -8,6 +8,13 @@
     "sdk_allowed": false,
     "legacy_sharepoint_api_allowed": false
   },
+  "team_ownership": {
+    "technical_owner_user_principal_name": "funktion8@funktion8.de",
+    "sole_team_owner_required": true,
+    "standard_user_team_role": "member",
+    "verify_group_and_team_owners_before_first_write": true,
+    "automatic_existing_owner_migration_allowed": false
+  },
   "workspaces": [
     {
       "id": "notary_team_01",

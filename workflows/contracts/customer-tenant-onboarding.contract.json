@@ -30,6 +30,9 @@
     "tenant_binding": "microsoft_365_group_membership",
     "workspace_strategy": "team_per_notary_team",
     "technical_owner_user": "funktion8@funktion8.de",
+    "technical_user_sole_team_owner_required": true,
+    "standard_user_team_role": "member",
+    "customer_admin_team_owner": false,
     "productive_write_gate": "owner_apply_approval",
     "graph_rest_only": true
   },
