@@ -15,7 +15,7 @@ keine interaktive Anmeldung aus.
 
 Für von NaC angelegte Teams gilt die
 [Team-Ownership-Policy](../../policies/m365-team-ownership-policy.json):
-`funktion8@funktion8.de` ist der alleinige technische Benutzer-Owner;
+Das dort exakt gebundene technische Benutzerkonto ist der alleinige Team-Owner;
 Fachnutzer melden sich persönlich an und bleiben Mitglieder, nicht Owner.
 Dies ist kein OAuth-App-only-Modell und verleiht weder notarielle Qualifikation
 noch NaC-Aktenberechtigung oder einen zweiten natürlichen Principal. Bestehende

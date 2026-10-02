@@ -15,7 +15,7 @@ and do not start interactive authentication.
 
 For NaC-created Teams, the
 [Team ownership policy](../../policies/m365-team-ownership-policy.json) applies:
-`funktion8@funktion8.de` is the sole technical user owner; personal users
+The technical user account exactly bound there is the sole Team owner; personal users
 authenticate individually and remain members, not owners. This is not an
 OAuth app-only model and grants no notarial qualification, NaC matter
 authorization or second natural principal. Existing Teams are not migrated

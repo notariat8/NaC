@@ -212,7 +212,7 @@ Notarial and substitution decisions remain matter-bound, reasoned, time-limited
 and audited. The app is the technical change path, not subject-matter approval.
 
 Under the [Team ownership policy](../../../policies/m365-team-ownership-policy.json),
-`funktion8@funktion8.de` is the sole technical **user** owner of all NaC-created
+the technical **user** account exactly bound there is the sole owner of all NaC-created
 Teams. Personal users authenticate individually and remain members;
 `nac-tenant-admin` does not grant a Team-owner role either. “Application user”
 means this technical user account, not OAuth app-only access. The offline

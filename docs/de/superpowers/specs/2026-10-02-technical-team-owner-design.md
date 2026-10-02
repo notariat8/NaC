@@ -26,7 +26,8 @@ validation_commands:
 
 ## Ziel und Grenze
 
-Das technische Benutzerkonto `funktion8@funktion8.de` ist der alleinige
+Das in der [Team-Ownership-Policy](../../../../policies/m365-team-ownership-policy.json)
+exakt gebundene technische Benutzerkonto ist der alleinige
 Team-Owner der von NaC angelegten Teams. Fachnutzer melden sich mit eigenen
 Konten an und sind ausschließlich Mitglieder. „Application User“ bezeichnet
 hier einen technischen Benutzer, nicht OAuth-App-only. Delegierte technische

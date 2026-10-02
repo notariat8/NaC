@@ -26,7 +26,8 @@ validation_commands:
 
 ## Objective and boundary
 
-The technical user account `funktion8@funktion8.de` is the sole Team owner of
+The technical user account exactly bound in the
+[Team ownership policy](../../../../policies/m365-team-ownership-policy.json) is the sole Team owner of
 Teams created by NaC. Ordinary users sign in individually and are members
 only. “Application User” means a technical user here, not OAuth app-only.
 Delegated technical administration, application runtime and notarial approval

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import unittest
+from pathlib import Path
 
 from tests.test_teams_sharepoint_graph_data_plane import (
     FakeGraphWriteClient,
@@ -50,6 +51,16 @@ class OwnerClient(FakeGraphWriteClient):
 
 
 class TechnicalTeamOwnerTests(unittest.TestCase):
+    def test_localized_documentation_links_policy_without_real_account_address(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        for language in ("de", "en"):
+            for relative in ("START_HERE.md", "architecture/teams-sharepoint-graph-data-plane.md",
+                             "superpowers/specs/2026-10-02-technical-team-owner-design.md"):
+                with self.subTest(language=language, relative=relative):
+                    text = (root / "docs" / language / relative).read_text(encoding="utf-8")
+                    self.assertFalse(OWNER_UPN in text, "Account address must remain in the canonical policy binding")
+                    self.assertIn("policies/m365-team-ownership-policy.json", text)
+
     def setUp(self) -> None:
         self.config = load_privileged_change_config()
 

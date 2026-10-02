@@ -224,7 +224,7 @@ befristet und auditiert. Die App ist der technische Änderungsweg, nicht die
 fachliche Freigabe.
 
 Nach [Team-Ownership-Policy](../../../policies/m365-team-ownership-policy.json)
-ist `funktion8@funktion8.de` der alleinige technische **Benutzer**-Owner aller
+ist das dort exakt gebundene technische **Benutzerkonto** der alleinige Owner aller
 von NaC angelegten Teams. Fachnutzer melden sich persönlich an und bleiben
 Mitglieder; auch `nac-tenant-admin` erzeugt keine Team-Owner-Rolle. „Application
 User“ bezeichnet dieses technische Benutzerkonto, nicht OAuth-App-only.
