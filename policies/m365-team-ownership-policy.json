@@ -1,0 +1,18 @@
+{
+  "schema_version": "nac.m365-team-ownership-policy/v0.1",
+  "technical_owner_user_principal_name": "funktion8@funktion8.de",
+  "account_kind": "technical_user",
+  "sole_team_owner_required": true,
+  "standard_user_team_role": "member",
+  "personal_user_authentication_required": true,
+  "oauth_app_only_implied": false,
+  "notarial_qualification_implied": false,
+  "nac_matter_authorization_implied": false,
+  "additional_natural_principal_implied": false,
+  "automatic_existing_owner_migration_allowed": false,
+  "verify_group_and_team_owners_before_first_write": true,
+  "incomplete_owner_evidence_allowed": false,
+  "historical_owner_evidence_proves_current_state": false,
+  "provider_customer_approval_and_dpa_required": true,
+  "license_terms_review_required": true
+}

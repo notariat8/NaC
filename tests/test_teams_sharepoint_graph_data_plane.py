@@ -122,17 +122,22 @@ class FakeGraphWriteClient:
                     }
                 ]
             }
-        if path.startswith("/groups/") and "/owners/" in path:
+        if path.startswith("/groups/") and "/owners" in path:
             return {
                 "value": [
                     {
-                        "id": "licensed-human-owner",
-                        "displayName": "Owner",
-                        "userPrincipalName": "owner@example.test",
-                        "assignedLicenses": [{"skuId": "m365"}],
+                        "@odata.type": "#microsoft.graph.user",
+                        "id": "technical-owner",
+                        "userPrincipalName": "funktion8@funktion8.de",
                     }
                 ]
             }
+        if path.startswith("/teams/") and "/members" in path:
+            return {"value": [{
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                "id": "synthetic-owner-membership",
+                "userId": "technical-owner", "roles": ["owner"],
+            }]}
         if path.startswith("/groups?"):
             return {"value": [] if self.group is None else [self.group]}
         if path.startswith("/servicePrincipals?"):
@@ -451,11 +456,11 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertTrue(permission_model["direct_application_owner_must_be_user_or_service_principal"])
         self.assertTrue(permission_model["technical_application_owner_user_allowed"])
         self.assertEqual(permission_model["technical_application_owner_user_target"], "funktion8@funktion8.de")
-        self.assertTrue(permission_model["human_team_owner_still_required"])
+        self.assertTrue(permission_model["technical_user_sole_team_owner_required"])
+        self.assertTrue(permission_model["standard_users_team_members_only"])
         self.assertTrue(permission_model["technical_bootstrap_owner_user_allowed"])
         self.assertEqual(permission_model["technical_bootstrap_owner_user_target"], "funktion8@funktion8.de")
-        self.assertTrue(permission_model["technical_bootstrap_owner_user_must_not_be_sole_owner"])
-        self.assertTrue(permission_model["licensed_human_team_owner_required"])
+        self.assertNotIn("licensed_human_team_owner_required", permission_model)
         self.assertTrue(permission_model["technical_owner_must_not_hold_m365_admin_roles"])
         self.assertTrue(permission_model["technical_owner_use_requires_license_terms_review"])
 
@@ -659,7 +664,8 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(summary["by_action"]["ensure_governance_group"], 1)
         self.assertEqual(summary["by_action"]["ensure_application"], 2)
         self.assertEqual(summary["by_action"]["assign_direct_application_owner"], 2)
-        self.assertEqual(summary["by_action"]["verify_human_team_owner"], 2)
+        self.assertEqual(summary["by_action"]["verify_technical_group_owner"], 2)
+        self.assertEqual(summary["by_action"]["verify_technical_team_owner"], 2)
         self.assertEqual(summary["by_action"]["grant_runtime_sites_selected_site_permission"], 2)
 
     def test_application_owner_readiness_is_offline_and_redacted(self) -> None:
@@ -670,7 +676,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         serialized = json.dumps(readiness)
         checks = {check["id"]: check for check in readiness["checks"]}
 
-        self.assertEqual(readiness["status"], "PASSED")
+        self.assertEqual(readiness["status"], "REVIEW_REQUIRED")
         self.assertFalse(readiness["summary"]["executes_graph_requests"])
         self.assertFalse(readiness["summary"]["executes_graph_writes"])
         self.assertFalse(readiness["summary"]["mandate_data_allowed"])
@@ -702,7 +708,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             checks["site_permission_administration_applied"]["status"],
             "PASSED",
         )
-        self.assertTrue(
+        self.assertFalse(
             readiness["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertEqual(checks["secret_material_not_stored"]["status"], "PASSED")
@@ -1413,10 +1419,10 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "PASSED")
-        self.assertTrue(
+        self.assertEqual(payload["status"], "REVIEW_REQUIRED")
+        self.assertFalse(
             payload["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertFalse(payload["summary"]["executes_graph_requests"])
@@ -1615,10 +1621,10 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "PASSED")
-        self.assertTrue(
+        self.assertEqual(payload["status"], "REVIEW_REQUIRED")
+        self.assertFalse(
             payload["summary"]["historical_applied_state_operationally_accepted"]
         )
         self.assertFalse(payload["summary"]["executes_graph_requests"])

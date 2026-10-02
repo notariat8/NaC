@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .team_ownership import matches_owner_policy
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCHEMA = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.teams-sharepoint.json"
@@ -38,6 +40,8 @@ def load_schema(path: Path = DEFAULT_SCHEMA) -> dict[str, Any]:
 
 def validate_schema(schema: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    if not matches_owner_policy(schema.get("team_ownership")):
+        errors.append("team_ownership must bind the sole technical owner and standard members")
     if schema.get("schema_version") != "nac.teams-sharepoint-graph-data-plane/v0.1":
         errors.append("schema_version must be nac.teams-sharepoint-graph-data-plane/v0.1")
     graph = schema.get("graph")

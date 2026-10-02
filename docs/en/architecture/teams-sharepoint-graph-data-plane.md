@@ -207,26 +207,39 @@ users, the associated service principal or another service principal, but not an
 Entra group. A small group such as `nac_platform_admins` is therefore the
 governance and operations group, not the direct `owners/$ref` entry of the app.
 
-This is safer than permanent admin permissions for standard users, but it does
-not replace human subject-matter responsibility. Teams still needs human team
-owners. Notarial and substitution decisions remain matter-bound, reasoned,
-time-limited and audited. The app is the technical change path, not the
-subject-matter approval.
+Technical administration does not replace human subject-matter responsibility.
+Notarial and substitution decisions remain matter-bound, reasoned, time-limited
+and audited. The app is the technical change path, not subject-matter approval.
 
-The dedicated technical bootstrap owner user `technical_owner_user` may be used as a
-non-personal creation anchor when Microsoft Teams requires a user in the owner
-member list for `POST /teams`. This user is not a replacement for the
-provisioning app and must not be the sole team owner, must not hold permanent
-Microsoft 365 admin roles, and needs an explicit license/usage-boundary review
-before production use. At least one real licensed human team owner remains
-mandatory.
+Under the [Team ownership policy](../../../policies/m365-team-ownership-policy.json),
+`funktion8@funktion8.de` is the sole technical **user** owner of all NaC-created
+Teams. Personal users authenticate individually and remain members;
+`nac-tenant-admin` does not grant a Team-owner role either. “Application user”
+means this technical user account, not OAuth app-only access. The offline
+creation plan explicitly binds this owner through `members`; the
+[Microsoft Graph documentation](https://learn.microsoft.com/en-us/graph/api/team-post?view=graph-rest-1.0)
+describes owner assignment for `POST /teams`.
+
+Before the first write, the existing delegated bootstrap verifies both the
+unfiltered group-owner list and Team-member roles for **every** bound target.
+Missing, additional, duplicate, non-user, malformed or paginated evidence stops
+without writes; continuation pages are never requested. There is no automatic
+owner migration. Historical applied evidence remains unchanged and does not
+prove current conformance; `application-owner-readiness` therefore reports
+`REVIEW_REQUIRED` with exit code 1.
+
+Team ownership grants no NaC matter authorization, notarial qualification or
+second natural principal. This does not claim that a Team owner's privileged
+Microsoft platform capabilities have disappeared. License/usage review,
+customer approval of role assignments and DPA boundaries remain required;
+the technical account must not hold permanent Microsoft 365 admin roles.
 
 Roadmap item for the next iteration:
 
 - dedicated `NaC M365 Provisioning` app separate from the runtime app,
 - direct technical app ownership through `technical_owner_user` or a service principal,
 - governance and four-eyes control through `nac_platform_admins`,
-- optional technical bootstrap owner user `technical_owner_user` only as a creation anchor,
+- technical user `technical_owner_user` as sole Team owner, personal users as members only,
 - privileged mutations only through a Graph REST API with owner gate,
 - runtime app then limited to `Sites.Selected` per approved site,
 - drift and export evidence before and after privileged changes.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from nac_identity.tenant_readiness import check_domain_ready
+from nac_m365_graph.team_ownership import TECHNICAL_OWNER_UPN
 
 
 def build_customer_tenant_plan(
@@ -49,6 +50,10 @@ def build_customer_tenant_plan(
                 "strategy": "team_per_notary_team",
                 "team_display_name": f"NaC {normalized_slug}",
                 "mail_nickname": team_mail_nickname[:64],
+                "technical_owner_user_principal_name": TECHNICAL_OWNER_UPN,
+                "sole_team_owner_required": True,
+                "standard_user_team_role": "member",
+                "customer_admin_team_owner": False,
             },
             "data_plane": {
                 "strategy": "teams_sharepoint_graph_rest",

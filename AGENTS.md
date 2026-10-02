@@ -56,6 +56,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Mindestvoraussetzungen für Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) und müssen in der SBOM/AI-SBOM gespiegelt werden.
 - Rollen und Qualifikationsgrenzen sind verbindlich nach [policies/role-model-policy.yaml](policies/role-model-policy.yaml).
 - Rollen-, Rechte- und Issue-Sichtbarkeitsvorgaben sind verbindlich nach [policies/access-control-policy.yaml](policies/access-control-policy.yaml).
+- Für von NaC angelegte Teams gilt die [Team-Ownership-Policy](policies/m365-team-ownership-policy.json): `funktion8@funktion8.de` ist der alleinige technische Benutzer-Owner, Fachnutzer bleiben persönlich angemeldete Mitglieder. Dies impliziert weder OAuth-App-only, notarielle Qualifikation, NaC-Aktenberechtigung noch einen zweiten natürlichen Principal; bestehende Teams werden nicht automatisch migriert.
 - Revisionssichere Ereignisablage ist verbindlich nach [policies/revisionssicherheit-eventstream-policy.yaml](policies/revisionssicherheit-eventstream-policy.yaml).
 - Technische Umsetzungsvarianten stehen in [docs/de/eventstream/implementation-templates.md](docs/de/eventstream/implementation-templates.md).
 - Cloud-Runbooks sind für AWS, Azure, GCP und OCI gleichwertig zu pflegen.

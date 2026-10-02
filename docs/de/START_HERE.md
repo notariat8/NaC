@@ -1,7 +1,7 @@
 # START_HERE: Operativer Einstieg in NaC
 
 Status: verbindlicher Startpfad
-Letzte inhaltliche Anpassung: 2026-09-19
+Letzte inhaltliche Anpassung: 2026-10-02
 
 Für Governance-Entscheidungen zählt der stabile Principal, nicht die Anzahl
 seiner Accounts. Ohne konkret zitierte externe Zwei-Personen-Pflicht ist
@@ -12,6 +12,14 @@ bleiben vor Credential-, Netzwerk- und Providerzugriff gesperrt und lösen
 keine interaktive Anmeldung aus.
 
 ## Warum dieses Dokument neben dem README existiert
+
+Für von NaC angelegte Teams gilt die
+[Team-Ownership-Policy](../../policies/m365-team-ownership-policy.json):
+`funktion8@funktion8.de` ist der alleinige technische Benutzer-Owner;
+Fachnutzer melden sich persönlich an und bleiben Mitglieder, nicht Owner.
+Dies ist kein OAuth-App-only-Modell und verleiht weder notarielle Qualifikation
+noch NaC-Aktenberechtigung oder einen zweiten natürlichen Principal. Bestehende
+Teams werden nicht automatisch migriert; Kundenfreigabe und AVV bleiben nötig.
 
 [README.md](../../README.md) und [docs/de/README.md](README.md) sind Projektübersicht und Index. Dieses
 Dokument ist die operative Startsequenz für Arbeit im laufenden NaC-Projekt.

@@ -5,6 +5,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .team_ownership import bound_workspaces, matches_owner_policy
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PRIVILEGED_CHANGE_CONFIG = (
@@ -86,7 +88,8 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
         for flag in (
             "standard_users_must_not_hold_m365_admin_permissions",
             "privileged_changes_must_run_through_app_or_api",
-            "human_team_owner_still_required",
+            "technical_user_sole_team_owner_required",
+            "standard_users_team_members_only",
             "privileged_change_audit_required",
             "owner_gate_required_for_live_apply",
         ):
@@ -117,7 +120,7 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
         for flag in (
             "allowed_as_direct_application_owner",
             "allowed_as_team_creation_anchor",
-            "must_not_be_sole_team_owner",
+            "must_be_sole_team_owner",
             "must_not_hold_m365_admin_roles",
             "license_terms_review_required",
         ):
@@ -231,18 +234,12 @@ def validate_privileged_change_config(config: dict[str, Any]) -> list[str]:
                 if application.get("runtime_allowed") is not True:
                     errors.append("m365_runtime_app.runtime_allowed must be true")
 
-    team_owner_policy = config.get("team_owner_policy")
-    if not isinstance(team_owner_policy, dict):
-        errors.append("team_owner_policy must be an object")
-    else:
-        for flag in (
-            "technical_owner_user_may_be_owner",
-            "technical_owner_user_must_not_be_sole_owner",
-            "licensed_human_team_owner_required",
-            "verify_existing_team_owners_before_membership_mutation",
-        ):
-            if team_owner_policy.get(flag) is not True:
-                errors.append(f"team_owner_policy.{flag} must be true")
+    if not matches_owner_policy(config.get("team_owner_policy")):
+        errors.append("team_owner_policy must bind the sole technical owner and standard members")
+    if isinstance(governance, dict) and "human_team_owner_still_required" in governance:
+        errors.append("obsolete human-owner requirement is not allowed")
+    if isinstance(technical_owner, dict) and "must_not_be_sole_team_owner" in technical_owner:
+        errors.append("obsolete sole-owner prohibition is not allowed")
 
     live_apply = config.get("live_apply")
     if not isinstance(live_apply, dict):
@@ -283,6 +280,22 @@ def build_privileged_change_plan(
             notes=[f"Resolve {technical_owner_upn} before any direct owner or team-owner operation."],
         )
     )
+    operations.append(PrivilegedChangeOperation(
+        action="verify_delegated_technical_owner", graph_method="GET", graph_path="/me",
+        target=technical_owner_upn, owner_gate_required=False,
+        notes=["Bind the delegated actor to the resolved technical user before the first write."],
+    ))
+    workspaces = bound_workspaces(provisioned_state)
+    for workspace in workspaces:
+        for action, path in (
+            ("verify_technical_group_owner", f"/groups/{workspace['team_id']}/owners"),
+            ("verify_technical_team_owner", f"/teams/{workspace['team_id']}/members"),
+        ):
+            operations.append(PrivilegedChangeOperation(
+                action=action, graph_method="GET", graph_path=path,
+                target=workspace["team_display_name"], owner_gate_required=False,
+                notes=["Require the sole technical owner; reject incomplete evidence before any write."],
+            ))
     operations.append(
         PrivilegedChangeOperation(
             action="ensure_governance_group",
@@ -341,19 +354,8 @@ def build_privileged_change_plan(
             ]
         )
 
-    for workspace in _workspaces(provisioned_state):
-        team_id = workspace["team_id"]
+    for workspace in workspaces:
         site_id = workspace["site_id"]
-        operations.append(
-            PrivilegedChangeOperation(
-                action="verify_human_team_owner",
-                graph_method="GET",
-                graph_path=f"/groups/{team_id}/owners",
-                target=workspace["team_display_name"],
-                owner_gate_required=False,
-                notes=[f"Technical owner {technical_owner_upn} must not be the only team owner."],
-            )
-        )
         operations.append(
             PrivilegedChangeOperation(
                 action="grant_runtime_sites_selected_site_permission",
@@ -478,7 +480,6 @@ def build_application_owner_readiness(
         and applied_provisioner_permissions == expected_provisioner_permissions
     )
     technical_owner_license_count = _technical_owner_license_count(applied_state)
-    technical_owner_license_review_required = technical_owner_license_count in (None, 0)
 
     checks = [
         _readiness_check(
@@ -537,9 +538,14 @@ def build_application_owner_readiness(
             owner_gate_required=True,
         ),
         _readiness_check(
-            "human_team_owner_required",
+            "technical_user_sole_team_owner_required",
             "PASSED",
-            "The technical owner may not be the sole team owner.",
+            "Configuration requires the technical user as sole Team owner and personal users as members; current state is unverified.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "current_team_ownership_unverified", "REVIEW_REQUIRED",
+            "Offline configuration and historical owner evidence do not prove current group/Team ownership.",
             owner_gate_required=True,
         ),
         _readiness_check(
@@ -574,13 +580,13 @@ def build_application_owner_readiness(
         ),
         _readiness_check(
             "technical_owner_license_terms_review",
-            "REVIEW_REQUIRED" if technical_owner_license_review_required else "PASSED",
+            "REVIEW_REQUIRED",
             "Technical-owner license evidence is missing and needs terms/license review."
             if technical_owner_license_count is None
             else (
                 "The technical owner is unlicensed in evidence and needs terms/license review."
                 if technical_owner_license_count == 0
-                else "The technical owner has assigned license evidence."
+                else "Historical assigned-license evidence does not prove terms/usage approval of sole technical ownership."
             ),
             owner_gate_required=True,
         ),
@@ -590,7 +596,7 @@ def build_application_owner_readiness(
 
     return {
         "schema_version": "nac.m365-application-owner-readiness/v0.1",
-        "status": "FAILED" if failed_checks else "PASSED",
+        "status": "FAILED" if failed_checks else ("REVIEW_REQUIRED" if review_checks else "PASSED"),
         "summary": {
             "graph_base_url": graph["base_url"],
             "graph_rest_only": graph["rest_only"],
@@ -616,12 +622,9 @@ def build_application_owner_readiness(
             "technical_owner_license_terms_review_required": technical_owner[
                 "license_terms_review_required"
             ],
-            "technical_owner_must_not_be_sole_team_owner": team_owner_policy[
-                "technical_owner_user_must_not_be_sole_owner"
-            ],
-            "licensed_human_team_owner_required": team_owner_policy[
-                "licensed_human_team_owner_required"
-            ],
+            "technical_user_sole_team_owner_required": team_owner_policy["sole_team_owner_required"],
+            "standard_user_team_role": team_owner_policy["standard_user_team_role"],
+            "current_team_ownership_verified": False,
             "provisioning_app_count": len(provisioning_apps),
             "runtime_app_count": len(runtime_apps),
             "provisioner_site_permission_admin_required": (
@@ -631,9 +634,7 @@ def build_application_owner_readiness(
             "provisioner_site_permission_admin_applied": (
                 site_admin_permission_recorded
             ),
-            "historical_applied_state_operationally_accepted": (
-                not applied_state or site_admin_permission_recorded
-            ),
+            "historical_applied_state_operationally_accepted": False,
             "runtime_sites_selected_required": (
                 set(runtime_app.get("bootstrap_application_permissions", []))
                 == {"Sites.Selected"}

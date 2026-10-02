@@ -18,7 +18,8 @@
   "governance": {
     "standard_users_must_not_hold_m365_admin_permissions": true,
     "privileged_changes_must_run_through_app_or_api": true,
-    "human_team_owner_still_required": true,
+    "technical_user_sole_team_owner_required": true,
+    "standard_users_team_members_only": true,
     "privileged_change_audit_required": true,
     "owner_gate_required_for_live_apply": true
   },
@@ -36,7 +37,7 @@
     "lookup_strategy": "user_principal_name",
     "allowed_as_direct_application_owner": true,
     "allowed_as_team_creation_anchor": true,
-    "must_not_be_sole_team_owner": true,
+    "must_be_sole_team_owner": true,
     "must_not_hold_m365_admin_roles": true,
     "license_terms_review_required": true
   },
@@ -88,10 +89,11 @@
     }
   ],
   "team_owner_policy": {
-    "technical_owner_user_may_be_owner": true,
-    "technical_owner_user_must_not_be_sole_owner": true,
-    "licensed_human_team_owner_required": true,
-    "verify_existing_team_owners_before_membership_mutation": true
+    "technical_owner_user_principal_name": "funktion8@funktion8.de",
+    "sole_team_owner_required": true,
+    "standard_user_team_role": "member",
+    "verify_group_and_team_owners_before_first_write": true,
+    "automatic_existing_owner_migration_allowed": false
   },
   "provisioned_state": {
     "source": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",

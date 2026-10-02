@@ -5,6 +5,7 @@ from typing import Any, Protocol
 
 from .graph_client import GraphHttpError
 from .privileged_change import validate_privileged_change_config
+from .team_ownership import TECHNICAL_OWNER_UPN, bound_workspaces
 
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -115,7 +116,7 @@ def _resolve_delegated_actor(
 
 
 def _resolve_technical_owner(client: GraphWriteClient, user_principal_name: str) -> dict[str, Any]:
-    users = _paged(
+    users = _complete_owner_collection(
         client,
         "/users?"
         + urllib.parse.urlencode(
@@ -125,7 +126,26 @@ def _resolve_technical_owner(client: GraphWriteClient, user_principal_name: str)
             }
         ),
     )
-    return _single(users, f"technical owner {user_principal_name}")
+    user = _single(users, "configured technical owner")
+    if (not isinstance(user.get("id"), str) or not user["id"].strip()
+            or not isinstance(user.get("userPrincipalName"), str)
+            or user["userPrincipalName"].casefold() != user_principal_name.casefold()):
+        raise RuntimeError("technical-owner lookup does not match the configured user")
+    licenses = user.get("assignedLicenses", [])
+    if not isinstance(licenses, list) or any(not isinstance(item, dict) for item in licenses):
+        raise RuntimeError("technical-owner license metadata must be a list of objects")
+    return user
+
+
+def _complete_owner_collection(client: GraphWriteClient, path: str) -> list[dict[str, Any]]:
+    page = client.get(path)
+    if (not isinstance(page, dict) or "@odata.nextLink" in page
+            or not isinstance(page.get("value"), list)
+            or any(not isinstance(item, dict) for item in page["value"])):
+        # Partial or paginated evidence cannot establish the exact owner set.
+        # Never follow a provider-selected continuation URL during this preflight.
+        raise RuntimeError("team-owner preflight requires complete, unpaginated evidence")
+    return page["value"]
 
 
 def _verify_team_owners(
@@ -134,26 +154,50 @@ def _verify_team_owners(
     technical_owner_id: str,
 ) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
-    for workspace in _workspaces(provisioned_state):
-        owners = _paged(
+    for workspace in bound_workspaces(provisioned_state):
+        owners = _complete_owner_collection(
             client,
-            f"/groups/{workspace['team_id']}/owners/microsoft.graph.user?"
-            + urllib.parse.urlencode({"$select": "id,displayName,userPrincipalName,assignedLicenses"}),
+            f"/groups/{workspace['team_id']}/owners?"
+            + urllib.parse.urlencode({"$select": "id,userPrincipalName"}),
         )
-        licensed_human_owners = [
-            owner
-            for owner in owners
-            if owner.get("id") != technical_owner_id and len(owner.get("assignedLicenses", [])) > 0
-        ]
-        if not licensed_human_owners:
-            raise RuntimeError(f"{workspace['team_display_name']} must retain at least one licensed human owner")
+        if (len(owners) != 1
+                or owners[0].get("@odata.type") != "#microsoft.graph.user"
+                or owners[0].get("id") != technical_owner_id
+                or not isinstance(owners[0].get("userPrincipalName"), str)
+                or owners[0]["userPrincipalName"].casefold() != TECHNICAL_OWNER_UPN.casefold()):
+            raise RuntimeError("group must have exactly the configured technical user as owner")
+        members = _complete_owner_collection(
+            client, f"/teams/{workspace['team_id']}/members?"
+            + urllib.parse.urlencode({"$select": "id,userId,roles"}),
+        )
+        seen_users: set[str] = set()
+        seen_memberships: set[str] = set()
+        team_owner_ids: list[str] = []
+        for member in members:
+            user_id = member.get("userId")
+            membership_id = member.get("id")
+            roles = member.get("roles")
+            if (member.get("@odata.type") != "#microsoft.graph.aadUserConversationMember"
+                    or not isinstance(user_id, str) or not user_id.strip()
+                    or not isinstance(membership_id, str) or not membership_id.strip()
+                    or user_id in seen_users or membership_id in seen_memberships
+                    or roles not in ([], ["guest"], ["owner"])):
+                raise RuntimeError("team-owner preflight requires complete, unique member roles")
+            seen_users.add(user_id)
+            seen_memberships.add(membership_id)
+            if roles == ["owner"]:
+                team_owner_ids.append(user_id)
+        if team_owner_ids != [technical_owner_id]:
+            raise RuntimeError("Team must have exactly the configured technical user as owner")
         checks.append(
             {
                 "workspaceId": workspace["id"],
                 "teamDisplayName": workspace["team_display_name"],
                 "ownerCount": len(owners),
-                "licensedHumanOwnerCount": len(licensed_human_owners),
-                "owners": [_owner_view(owner) for owner in owners],
+                "teamOwnerCount": len(team_owner_ids),
+                "technicalOwnerOnly": True,
+                "standardUsersMembersOnly": True,
+                "groupAndTeamOwnersVerified": True,
             }
         )
     return checks

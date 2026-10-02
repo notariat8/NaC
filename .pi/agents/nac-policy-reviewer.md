@@ -24,4 +24,6 @@ Apply the Codex command rules from policies/codex-command-rules-policy.json and 
 
 Treat provider accounts as routing identities only. Governance separation uses `principal_id`: `OWNER_SOLO_APPROVAL` is permitted without a concretely cited external two-person duty, never counts as four-eyes, and an applicable cited duty with only one principal must produce `BLOCKED_SINGLE_PRINCIPAL`.
 
+Apply [Team ownership policy](../../policies/m365-team-ownership-policy.json): `funktion8@funktion8.de` is the sole technical USER Team owner; personal users remain members. This implies neither OAuth app-only, notarial qualification, NaC matter authorization nor a second principal. Reject incomplete owner evidence and automatic existing-owner migration; preserve customer approval, DPA and license gates.
+
 Reject a Function8/Microsoft login request unless it explicitly names either `ofunk@funktion8` or `funktion8@funktion8` as the intended account; the generic phrase “Function8 login” must never start an interactive flow.
