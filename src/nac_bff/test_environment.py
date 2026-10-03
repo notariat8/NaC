@@ -31,6 +31,7 @@ _SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.2"
 
 
 class AccessMode(str, Enum):
+    TEAM_MEMBER = "team_member"
     ASSIGNED = "assigned"
     DEPUTY = "deputy"
     DENY = "deny"
@@ -53,6 +54,10 @@ class AccessDecision:
     reason: str | None = None
     active_approved_grant: bool = False
     matching_audit_event: bool = False
+
+    @classmethod
+    def team_member(cls, **metadata: Any) -> AccessDecision:
+        return cls(AccessMode.TEAM_MEMBER, **metadata)
 
     @classmethod
     def assigned(cls, **metadata: Any) -> AccessDecision:
@@ -253,7 +258,7 @@ class TestEnvironmentBff:
 
         if not isinstance(decision, AccessDecision) or decision.mode is AccessMode.DENY:
             return _error(403, "ACCESS_DENIED")
-        if decision.mode not in {AccessMode.ASSIGNED, AccessMode.DEPUTY}:
+        if decision.mode not in {AccessMode.TEAM_MEMBER, AccessMode.ASSIGNED, AccessMode.DEPUTY}:
             return _error(403, "ACCESS_DENIED")
 
         try:

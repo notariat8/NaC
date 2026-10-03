@@ -107,7 +107,7 @@ class _WorkspacePort:
 
 
 class AzureBffCompositionTests(unittest.TestCase):
-    def test_second_subject_native_deputy_through_both_http_endpoints(self) -> None:
+    def test_explicit_legacy_deputy_through_both_http_endpoints(self) -> None:
         try:
             from fastapi.testclient import TestClient
         except ImportError:
@@ -150,11 +150,13 @@ class AzureBffCompositionTests(unittest.TestCase):
                 return {"value": [{"id": "synthetic-item", "fields": fields}]}
 
         graph = _Graph()
+        from nac_bff.live_access_decision import LiveAccessDecisionAdapter
         app = create_app_from_env(
             env, validator_factory=lambda **_: lambda _: ValidatedClaims(
                 object_id=subject, tenant_id=ALLOWED_TENANT_ID, subject=subject,
             ),
             token_provider_factory=lambda _: object(), graph_client_factory=lambda _: graph,
+            access_port_factory=LiveAccessDecisionAdapter,
             workspace_port_factory=lambda _: _WorkspacePort(),
         )
         with TestClient(app) as client:
@@ -169,7 +171,7 @@ class AzureBffCompositionTests(unittest.TestCase):
         self.assertEqual(len(graph.paths), 6)
         self.assertTrue(all(unquote(path).startswith("/sites/" + SYNTHETIC_SITE_ID + "/lists/") for path in graph.paths))
 
-    def test_missing_person_binding_config_is_unready_before_factories(self) -> None:
+    def test_invalid_person_binding_config_is_unready_before_factories(self) -> None:
         try:
             from fastapi.testclient import TestClient
         except ImportError:
@@ -180,7 +182,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             calls.append("factory")
             raise AssertionError("no factory may run")
 
-        for value in (None, "PRIVATE_BINDING_SENTINEL"):
+        for value in ("PRIVATE_BINDING_SENTINEL",):
             env = _environment()
             if value is None:
                 env.pop("NAC_BFF_PERSON_BINDINGS_JSON")
@@ -200,6 +202,59 @@ class AzureBffCompositionTests(unittest.TestCase):
                     self.assertEqual(response.status_code, 401)
                     self.assertNotIn(b"PRIVATE_BINDING_SENTINEL", response.content)
         self.assertEqual(calls, [])
+
+    def test_default_team_reader_without_person_binding_through_both_endpoints(self) -> None:
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("FastAPI runtime dependencies are not installed")
+        from nac_bff.team_membership import TEAM_ID, SITE_URL
+        subject = "00000000-0000-0000-0000-00000000000a"
+        env = _environment()
+        env["NAC_BFF_TENANT_ID"] = ALLOWED_TENANT_ID
+        env["M365_TENANT_ID"] = ALLOWED_TENANT_ID
+        env.pop("NAC_BFF_PERSON_BINDINGS_JSON")
+
+        class _Graph:
+            base_url = "https://graph.microsoft.com/v1.0"
+            redirects_allowed = False
+            retains_error_body = False
+            member = True
+
+            def get(self, path):
+                decoded = unquote(path)
+                if decoded.startswith(f"/groups/{TEAM_ID}/members?"):
+                    return {"value": [{"id": subject}] if self.member else []}
+                if decoded.startswith(f"/groups/{TEAM_ID}/sites/root?"):
+                    return {"id": SYNTHETIC_SITE_ID, "webUrl": SITE_URL}
+                if decoded.startswith(f"/groups/{TEAM_ID}?"):
+                    return {"id": TEAM_ID, "groupTypes": ["Unified"],
+                            "resourceProvisioningOptions": ["Team"]}
+                if "/lists/588d4a41-f538-4f37-acfb-63ff283e0910/" in path:
+                    return {"value": [{"id": "synthetic-item", "fields": {
+                        "NacCaseId": ALLOWED_MATTER_ID, "NotarTeam": "NaC-Notar-01"}}]}
+                raise AssertionError("unexpected Graph target")
+
+        graph = _Graph()
+        app = create_app_from_env(
+            env, validator_factory=lambda **_: lambda _: ValidatedClaims(
+                object_id=subject, tenant_id=ALLOWED_TENANT_ID, subject=subject),
+            token_provider_factory=lambda _: object(), graph_client_factory=lambda _: graph,
+            workspace_port_factory=lambda _: _WorkspacePort(),
+        )
+        with TestClient(app) as client:
+            for is_member, expected_status in ((True, 200), (False, 403)):
+                graph.member = is_member
+                for suffix in ("", "/workbench-snapshot"):
+                    response = client.get(
+                        f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/{ALLOWED_MATTER_ID}{suffix}",
+                        params={"purpose": ALLOWED_PURPOSE},
+                        headers={"Authorization": "Bearer offline-test"})
+                    self.assertEqual(response.status_code, expected_status)
+                    self.assertEqual(response.headers["cache-control"], "no-store")
+                    if is_member:
+                        self.assertIn(b"team_member", response.content)
+                        self.assertNotIn(b"LookupId", response.content)
 
     def test_503_runtime_log_accepts_only_fixed_non_sensitive_stage(self) -> None:
         with patch("nac_bff.composition._UNAVAILABLE_LOGGER.warning") as warning:

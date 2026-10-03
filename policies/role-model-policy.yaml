@@ -1,6 +1,14 @@
 version: 1
 status: mandatory
 
+m365_team_reader:
+  authorization_source: current_team_membership
+  can_read_all_matters_of_own_team: true
+  individual_matter_assignment_required: false
+  grants_professional_role: false
+  grants_write_approval_or_deputy: false
+  allows_other_team_matters: false
+
 principles:
   - everyone_can_open_ticket
   - permission_by_role_and_qualification
@@ -108,5 +116,6 @@ external_access:
     requires_timeboxed_access: true
 
 team_visibility:
+  applies_to: git_case_repository_permissions_not_m365_matter_read
   notary_must_see_all_notary_case_repos: true
   employees_without_repo_assignment_have_no_access: true

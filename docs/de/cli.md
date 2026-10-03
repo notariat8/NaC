@@ -1,5 +1,10 @@
 # NaC-CLI: Technische Steuerfläche Hinter Der Bürooberfläche
 
+Der BFF-Lesepfad prüft die aktuelle Mitgliedschaft im fest gebundenen Notar-Team.
+Mitglieder brauchen keine Einzelzuordnung für das Aktenlesen. Die CLI verleiht
+dadurch keine Fach-, Schreib- oder Freigaberechte; eine Bereitstellung bleibt
+ein gesonderter Vorgang. Siehe [Zugriffspolicy](../../policies/access-control-policy.yaml).
+
 Status: erste zentrale CLI umgesetzt am 2026-05-19
 
 ## Plattformgrenze für M365/SPFx

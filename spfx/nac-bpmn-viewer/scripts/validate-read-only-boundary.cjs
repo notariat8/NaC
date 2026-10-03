@@ -16,18 +16,18 @@ const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([
   ['webparts/nacBpmnViewer/components/NacBpmnViewer.tsx', '2e5e3bd8fcc4563ddb3d9a31b8aa8e841e10e74cafe9b17f410ede3028e55eac'],
   ['webparts/nacBpmnViewer/components/NacWorkbenchHost.styles.ts', '8d515bedcd7aced91b3e7c532145e21250e1da312e77e36bcb260220d95e1907'],
   ['webparts/nacBpmnViewer/components/NacWorkbenchHost.tsx', '4ce9d83b7e88dbb8253c493481f98a8d7a91626396628ade0c32c94ddd171b7a'],
-  ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87'],
+  ['webparts/nacBpmnViewer/components/WorkspaceViewModel.ts', '52b8de9d069aaf9a75e4fdce488a44f5f3426425465f8a41a943f2929a99b8e6'],
   ['webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts', 'd5b357e7b60f4de60152908d0356fab7233c73fe9e59584ec3f8ef4c2d324f4f'],
   ['webparts/nacBpmnViewer/services/ClientObservationReceipt.ts', 'c26e78e456608fc02881a93112647520ee5b6fa9894887cd3e524bbc5f49c382'],
   ['webparts/nacBpmnViewer/services/ClientHttpObservationReceipt.ts', 'b6526b244893aca86d2db366149befdc1165abda7c1f8d3a222943a6818fd19b'],
-  ['webparts/nacBpmnViewer/services/NacBffClient.ts', 'c6917d234502b4275eba81201e4f4514fcf5c20b57727debd1826bbb1e44cac8'],
+  ['webparts/nacBpmnViewer/services/NacBffClient.ts', '83d090b0f772397e4083a48c5348a66efa4b3456d2448be7992629f5cc06b0a9'],
   ['webparts/nacBpmnViewer/services/NacBffHttpAccessDeniedError.ts', 'dc1afdda00772f4989873d34044e42f8a4dfab569a30b112fd97b2322c5db5c3'],
-  ['workbench/core/WorkbenchContracts.ts', '8eebbb61b8d2b173568ba3022fcec20ccaf76d5a21f3be7dbec8707271db3fba'],
+  ['workbench/core/WorkbenchContracts.ts', '2cbbaf7d9d57854fb07f53da2dabe56e091d5309b93ef9c15a903115debe9439'],
   ['workbench/core/WorkbenchSelectors.ts', '3e3dcf923d999254a5d92ecfbbab17642c5635d026a52bb3a0260607143b6a5c'],
-  ['workbench/core/parseWorkbenchSnapshot.ts', '2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df'],
-  ['workbench/nac/NacWorkbenchProjection.ts', 'fcdb4d90b21b19e5bb97ddd96816e14a4d6067109c4113b9c0e9fe0a1d5f92b9'],
+  ['workbench/core/parseWorkbenchSnapshot.ts', '5872203ad499ad745052f01b2c8a32421772b876d39e029be40f640bb5f74887'],
+  ['workbench/nac/NacWorkbenchProjection.ts', 'f877560f0127672cad4418064cdcedb749dd97b7c363bc2b10b2aa278d4445ae'],
   ['workbench/react/WorkbenchPanel.styles.ts', '96fa6de6f294373d091b96daa80c5ca92487646a12506e7fd519abdf056519ff'],
-  ['workbench/react/WorkbenchPanel.tsx', '4a181e0681ac11a1a5bb8ffa107f7b76a65e7ac90f0327b9eae02ad63efeecd4']
+  ['workbench/react/WorkbenchPanel.tsx', 'bbe51bf10212e50f2bf4f3b29e426b272cb782956ceddf32bb8a0ca8eb280843']
 ]);
 const EXPECTED_EXPORTS = new Map([
   ['NAC_BFF_RESOURCE_URI', 'api://funktion8.de/nac-bff'],

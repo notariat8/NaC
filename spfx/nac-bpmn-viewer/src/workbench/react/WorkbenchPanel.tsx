@@ -59,7 +59,7 @@ export function WorkbenchPanel(props: WorkbenchPanelProps): React.ReactElement {
       {view === 'decisions' && <Decisions snapshot={snapshot} />}
     </main>
     <aside>
-      <section><h2>Zugriff</h2><strong>{snapshot.access.mode}</strong><p>gültig bis {formatDate(snapshot.access.expiresAt)}</p></section>
+      <section><h2>Zugriff</h2><strong>{snapshot.access.mode === 'team_member' ? 'Mitglied des Notar-Teams' : snapshot.access.mode}</strong><p>gültig bis {formatDate(snapshot.access.expiresAt)}</p></section>
       <section><h2>Assistenz</h2>{snapshot.agents.map(agent => <p key={agent.id}><strong>{agent.label}</strong><br />{agent.status}: {agent.detail}</p>)}</section>
       <section><h2>Aktionsgrenze</h2>{snapshot.capabilities.map(capability => <p key={capability.id} className="nacWorkbench__denied">Gesperrt: {capability.mode}<br /><small>{capability.reason}</small></p>)}</section>
     </aside>

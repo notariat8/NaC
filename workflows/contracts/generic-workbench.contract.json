@@ -32,7 +32,7 @@
     "bpmn": "non_authoritative_model_reference"
   },
   "access": {
-    "allowed_modes": ["assigned", "deputy"],
+    "allowed_modes": ["team_member", "assigned", "deputy"],
     "lease_binding_requires": ["subject_id", "role", "workspace_id", "matter_id", "purpose"],
     "deputy_requires": ["decision_id", "decision_version", "subject_id", "role", "workspace_id", "matter_id", "purpose", "issued_at", "expires_at", "reason"],
     "refresh": "before_lease_expiry",

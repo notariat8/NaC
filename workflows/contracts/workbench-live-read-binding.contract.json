@@ -43,10 +43,12 @@
   },
   "access": {
     "allowed_modes": [
+      "team_member",
       "assigned",
       "deputy"
     ],
     "ui_supported_roles": [
+      "team_reader",
       "notary",
       "notary_clerk",
       "deputy_notary",

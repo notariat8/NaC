@@ -23,3 +23,6 @@ Work only from the scoped prompt and referenced files. Do not depend on or reque
 Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when selecting validation commands: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
 
 Require negative validation for same-principal account aliases, uncited requirement claims, `OWNER_SOLO_APPROVAL` being recorded as non-four-eyes, and `BLOCKED_SINGLE_PRINCIPAL` when a cited applicable two-person duty cannot be satisfied.
+# Team-based matter read policy
+
+Apply policies/access-control-policy.yaml and policies/role-model-policy.yaml: current server-verified membership of the bound notary Team grants read access to its matters without individual assignment. It grants no professional qualification, write, approval or deputy rights; deny other Teams and incomplete membership evidence.

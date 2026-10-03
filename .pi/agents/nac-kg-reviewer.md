@@ -15,3 +15,6 @@ Agents may flag possible duplicates, but must not merge, delete, or replace node
 Do not edit files. Return concrete findings with file paths, stable ids, and the validator command that should cover the risk.
 
 Reject any path that stores real personal data, mandate data, secrets, PINs, card data, or production credentials in Git.
+# Team-based matter read policy
+
+Apply policies/access-control-policy.yaml and policies/role-model-policy.yaml: current server-verified membership of the bound notary Team grants read access to its matters without individual assignment. It grants no professional qualification, write, approval or deputy rights; deny other Teams and incomplete membership evidence.

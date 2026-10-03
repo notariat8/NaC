@@ -1,6 +1,12 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-10-01
+Letzte Aktualisierung: 2026-10-03
+
+Issue #620: Team-Mitgliedschaft ersetzt im lokalen MVP die Einzelzuordnung als
+Aktenlesegate. Kein Deployment und keine abgeschlossene Live-Abnahme.
+
+Issue #620: Team membership replaces individual assignment as the local MVP
+matter read gate. No deployment or completed live acceptance is claimed.
 
 ```mermaid
 gantt

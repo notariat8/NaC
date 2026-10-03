@@ -1,5 +1,11 @@
 # START HERE: Operational Entry Into NaC
 
+**Matter reading in the notary Team:** One Team per notary.
+Members whose current membership is verified server-side may read its matters
+without an additional individual assignment. Membership grants no professional
+qualification, write, approval or deputy rights. Other Teams remain denied.
+See the [access policy](../../policies/access-control-policy.yaml).
+
 Status: binding start path
 Last content update: 2026-10-02
 

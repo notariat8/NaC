@@ -1,0 +1,26 @@
+{
+  "schema_version": "nac.m365-team-matter-read/v1",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "status": "local_implementation_not_deployed",
+  "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a",
+  "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+  "workspace_id": "notary_team_01",
+  "access_mode": "team_member",
+  "role": "team_reader",
+  "maximum_members": 100,
+  "maximum_lease_seconds": 300,
+  "pagination_allowed": false,
+  "individual_assignment_required": false,
+  "positive_membership_cache_allowed": false,
+  "membership_grants_professional_role": false,
+  "membership_grants_write_approval_or_deputy": false,
+  "cross_team_access_allowed": false,
+  "live_acceptance": {
+    "status": "NOT_EXECUTED",
+    "current_member_without_assignment_required": true,
+    "current_nonmember_denial_required": true,
+    "historical_assignment_or_deputy_evidence_sufficient": false,
+    "runtime_membership_read_permission_required": true,
+    "automatic_permission_change_allowed": false
+  }
+}

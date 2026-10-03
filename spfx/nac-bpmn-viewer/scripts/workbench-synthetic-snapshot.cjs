@@ -13,11 +13,11 @@ const snapshot = {
     purpose: 'view_synthetic_matter_workspace'
   },
   access: {
-    mode: 'assigned',
+    mode: 'team_member',
     decisionId: 'access:NAC-SYN-MATTER-001:1',
     decisionVersion: 'policy-v1',
     subjectId: 'actor:synthetic:001',
-    role: 'notary',
+    role: 'team_reader',
     workspaceId: 'notary_team_01',
     matterId: 'NAC-SYN-MATTER-001',
     purpose: 'view_synthetic_matter_workspace',

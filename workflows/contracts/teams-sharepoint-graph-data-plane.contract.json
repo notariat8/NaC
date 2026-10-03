@@ -1,4 +1,7 @@
 {
+  "matter_read_authority": "current_server_verified_membership_of_bound_notary_team",
+  "team_members_can_read_all_team_matters": true,
+  "team_membership_grants_qualification_or_write": false,
   "schema_version": "nac.m365-data-plane/v0.1",
   "contract_id": "m365.teams_sharepoint_graph_data_plane",
   "title": "Teams SharePoint Graph Data Plane",

@@ -228,6 +228,31 @@ LiveAccessDecisionPortAdapter = LiveAccessDecisionAdapter
 GraphAccessDecisionPortAdapter = LiveAccessDecisionAdapter
 
 
+class TeamReadAccessDecisionAdapter(LiveAccessDecisionAdapter):
+    """Team membership grants read access only; no domain role is inferred."""
+
+    def _decide(self, *, actor_id: object, tenant_id: object,
+                workspace_id: object, matter_id: object, purpose: object) -> AccessDecision:
+        from .team_membership import FixedTeamMembership
+        if (tenant_id != self._expected_tenant_id
+                or workspace_id != ALLOWED_WORKSPACE_ID
+                or matter_id != ALLOWED_MATTER_ID or purpose != ALLOWED_PURPOSE):
+            return AccessDecision.deny()
+        if not FixedTeamMembership(self._client).contains(actor_id):
+            return AccessDecision.deny()
+        cases = read_bounded_collection(
+            self._client, binding=synthetic_list_binding("Akten"),
+            fields=("NacCaseId", "NotarTeam"),
+            filter_expression=_equals("NacCaseId", ALLOWED_MATTER_ID),
+            top=2, max_items=2,
+        )
+        if (len(cases) != 1 or cases[0].get("NacCaseId") != ALLOWED_MATTER_ID
+                or cases[0].get("NotarTeam") != SYNTHETIC_NOTARY_TEAM):
+            return AccessDecision.deny()
+        return _allowed_decision(mode="team_member", actor_id=actor_id,
+                                 role="team_reader", reference=_reference_time(self))
+
+
 def _allowed_decision(
     *,
     mode: str,
@@ -256,6 +281,8 @@ def _allowed_decision(
         "active_approved_grant": active_approved_grant,
         "matching_audit_event": matching_audit_event,
     }
+    if mode == "team_member":
+        return AccessDecision.team_member(**metadata)
     if mode == "assigned":
         return AccessDecision.assigned(**metadata)
     return AccessDecision.deputy(**metadata)

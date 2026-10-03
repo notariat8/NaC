@@ -3,7 +3,9 @@
 const childProcess = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 let chromium;
 let playwrightVersion;
@@ -19,7 +21,7 @@ if (playwrightVersion !== '1.55.0') {
 
 const packageRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(packageRoot, '..', '..');
-const fixturePath = '/tmp/nac-spfx-role-deadline-cockpit.html';
+const fixturePath = path.join(os.tmpdir(), 'nac-spfx-role-deadline-cockpit.html');
 const outputRoot = path.resolve(process.argv[2] || '/tmp/nac-spfx-role-deadline-evidence');
 const CURRENT_STEP = 'Task_EntwurfAbstimmen';
 const DEADLINE_STEP = 'Task_NachweiseNachhalten';
@@ -171,7 +173,7 @@ async function capture() {
         viewport: { width: visualCase.width, height: visualCase.height },
         deviceScaleFactor: 1
       });
-      await page.goto('file://' + fixturePath + visualCase.query, { waitUntil: 'load' });
+      await page.goto(pathToFileURL(fixturePath).href + visualCase.query, { waitUntil: 'load' });
       await page.waitForFunction(() => document.documentElement.dataset.nacVisualReady === 'true');
       if (visualCase.containerWidth !== undefined) {
         await page.evaluate(width => {

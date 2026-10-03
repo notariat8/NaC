@@ -1,6 +1,14 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-10-01
+Letzte Aktualisierung: 2026-10-03
+
+Issue #620: Aktuelle Mitgliedschaft im jeweiligen Notar-Team ist das Aktenleserecht.
+Die lokale MVP-Umsetzung ersetzt Einzelzuordnung als Lesegate; Fach-, Schreib-,
+Freigabe- und Vertretungsrechte bleiben getrennt. Live-Abnahme weiterhin offen.
+
+Issue #620: Current membership in the respective notary Team grants matter read
+access. The local MVP replaces individual assignment as a read gate; professional,
+write, approval and deputy rights remain separate. Live acceptance is pending.
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter

@@ -177,7 +177,7 @@ class SharePointPersonBindingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "^SharePoint person bindings are invalid$"):
                 parse_person_bindings(raw, expected_tenant_id=TENANT)
 
-    def test_missing_invalid_config_stops_before_all_composition_factories(self) -> None:
+    def test_invalid_present_config_stops_before_all_composition_factories(self) -> None:
         env = {
             "M365_TENANT_ID": TENANT, "NAC_BFF_TENANT_ID": TENANT,
             "NAC_BFF_AUDIENCE": "synthetic-audience", "NAC_BFF_REQUIRED_SCOPE": "Matter.Read",
@@ -188,7 +188,7 @@ class SharePointPersonBindingTests(unittest.TestCase):
             calls.append("factory")
             raise AssertionError("factory must not execute")
 
-        for raw in (None, "private-invalid", json.dumps({**_payload(), "tenant_id": OTHER})):
+        for raw in ("", "private-invalid", json.dumps({**_payload(), "tenant_id": OTHER})):
             values = dict(env)
             if raw is not None:
                 values["NAC_BFF_PERSON_BINDINGS_JSON"] = raw
@@ -199,6 +199,23 @@ class SharePointPersonBindingTests(unittest.TestCase):
                     workspace_port_factory=unexpected,
                 )
         self.assertEqual(calls, [])
+
+    def test_team_read_composition_does_not_require_person_mapping(self) -> None:
+        env = {"M365_TENANT_ID": TENANT, "NAC_BFF_TENANT_ID": TENANT,
+               "NAC_BFF_AUDIENCE": "synthetic-audience", "NAC_BFF_REQUIRED_SCOPE": "Matter.Read"}
+        captured = []
+
+        def access_factory(client, **kwargs):
+            captured.append(kwargs)
+            return object()
+
+        with (patch("nac_bff.composition.create_fastapi_app", return_value=object()),
+              patch("nac_bff.composition._claims_dependency", return_value=lambda: None)):
+            build_configured_app(env, validator_factory=lambda **_: lambda _: None,
+                                 token_provider_factory=lambda _: object(),
+                                 graph_client_factory=lambda _: _Graph(),
+                                 access_port_factory=access_factory)
+        self.assertIsNone(captured[0]["person_bindings"])
 
     def test_composition_injects_binding_into_existing_access_port(self) -> None:
         env = {

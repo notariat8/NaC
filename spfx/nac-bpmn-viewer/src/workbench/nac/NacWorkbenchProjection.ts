@@ -3,6 +3,7 @@ import { parseWorkbenchSnapshotJson } from '../core/parseWorkbenchSnapshot';
 
 export const NAC_WORKBENCH_PRODUCER_ID = 'nac-bff';
 export const NAC_WORKBENCH_SUPPORTED_ROLES = [
+  'team_reader',
   'notary',
   'notary_clerk',
   'deputy_notary',

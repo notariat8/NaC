@@ -296,7 +296,9 @@ def _project_access(
     )
     if item["mode"] == "deny":
         raise WorkbenchProjectionError("deny must not produce a snapshot")
-    mode = _enum(item["mode"], "access.mode", {"assigned", "deputy"})
+    mode = _enum(item["mode"], "access.mode", {"team_member", "assigned", "deputy"})
+    if mode == "team_member" and actor_role != "team_reader":
+        raise WorkbenchProjectionError("Team membership is not a domain role")
     issued = _timestamp(item["issuedAt"])
     expires = _timestamp(item["expiresAt"])
     if issued > observed or issued > generated:

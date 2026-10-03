@@ -5,6 +5,15 @@ import { WorkbenchSnapshot } from '../core/WorkbenchContracts';
 import { WorkbenchPanel } from './WorkbenchPanel';
 
 describe('generic workbench panel', () => {
+  it('labels Team read membership without a professional role', () => {
+    const snapshot = { ...VALID_WORKBENCH_SNAPSHOT, access: {
+      ...VALID_WORKBENCH_SNAPSHOT.access, mode: 'team_member', role: 'team_reader'
+    } } as WorkbenchSnapshot;
+    const markup = renderToStaticMarkup(<WorkbenchPanel snapshot={snapshot}
+      now={() => new Date('2026-08-01T09:01:00Z')} />);
+    expect(markup).toContain('Mitglied des Notar-Teams');
+    expect(markup).not.toContain('team_member');
+  });
   it('renders a quiet, read-only active-matter workspace', () => {
     const markup = renderToStaticMarkup(<WorkbenchPanel
       snapshot={VALID_WORKBENCH_SNAPSHOT as WorkbenchSnapshot}

@@ -256,6 +256,7 @@ def _validated_access_projection(
     if not isinstance(decision, AccessDecision) or decision.mode not in {
         AccessMode.ASSIGNED,
         AccessMode.DEPUTY,
+        AccessMode.TEAM_MEMBER,
     }:
         return None
     required = (
@@ -290,7 +291,11 @@ def _validated_access_projection(
         or (expires - issued).total_seconds() > 300
     ):
         return None
-    if decision.mode is AccessMode.ASSIGNED:
+    if decision.mode is AccessMode.TEAM_MEMBER:
+        if (decision.role != "team_reader" or decision.reason is not None
+                or decision.active_approved_grant or decision.matching_audit_event):
+            return None
+    elif decision.mode is AccessMode.ASSIGNED:
         if decision.role not in ALLOWED_ASSIGNED_ROLES or decision.reason is not None:
             return None
     elif (

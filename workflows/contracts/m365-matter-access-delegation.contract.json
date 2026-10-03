@@ -3,7 +3,7 @@
   "contract_id": "m365.matter_access_delegation",
   "title": "M365 matter visibility and deputy delegation boundary",
   "status": "offline_contract_no_live_apply",
-  "last_update": "2026-07-07",
+  "last_update": "2026-10-03",
   "purpose": "Bind notarial matter visibility to the assigned notary team and define timeboxed deputy access with reason, approver, revocation and audit evidence. The contract is evaluated offline first and uses Microsoft Graph REST request plans only.",
   "source_documents": {
     "teams_sharepoint_schema": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
@@ -21,6 +21,9 @@
     "graph_beta_allowed": false
   },
   "scope": {
+    "team_membership_grants_read_of_all_team_matters": true,
+    "individual_assignment_required_for_team_read": false,
+    "team_membership_grants_domain_approval_or_write": false,
     "offline_plan_only": true,
     "executes_graph_requests_now": false,
     "tenant_mutation_allowed_now": false,
@@ -32,6 +35,8 @@
     "owner_gate_required_before_future_apply": true
   },
   "workspace_model": {
+    "primary_assignment_is_organizational_not_required_for_member_read": true,
+    "current_other_team_members_denied": true,
     "team_strategy": "team_per_notary_team",
     "default_visibility": "private",
     "one_team_for_all_notary_users_allowed": false,

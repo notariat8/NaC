@@ -16,7 +16,7 @@
       },
       "imageWidth": 1280,
       "imageHeight": 659,
-      "sha256": "25e659f743c00f8c04c38b4e6f1278b234788f2388b2fcb37349fa2c1cbab5f8"
+      "sha256": "8415126f32cef09988a8df78785fe1074a5fb3db02b490c451d565286b3daf27"
     },
     {
       "id": "VIS-725-02",
@@ -29,7 +29,7 @@
       },
       "imageWidth": 600,
       "imageHeight": 974,
-      "sha256": "854b9f842bf608909ea62129602a4b18bc843ba785c0d27092ce286275c10d27"
+      "sha256": "ef1b91fb32f4ae67e8b7eac8f1a229cacf8662b3dbe80cd8b24b9f20a75e24fe"
     },
     {
       "id": "VIS-725-03",
@@ -42,7 +42,7 @@
       },
       "imageWidth": 390,
       "imageHeight": 949,
-      "sha256": "48ee7850a8e072d83000b5c6ad20677a450ebb018ba6cff37e3f03ae3247ff33"
+      "sha256": "d056f920f21896b877003c30fbbe4dd93a80e95d63971ff89d758f0b45ac342e"
     },
     {
       "id": "VIS-725-04",
@@ -68,7 +68,7 @@
       },
       "imageWidth": 680,
       "imageHeight": 222,
-      "sha256": "299d22796b233ab830412302f5599ceeab47a4baf8841c6b3b80eda7344f1892"
+      "sha256": "059a96c4a5336ae45c6ccb3a617ba817ef0668bcf3f24a80680a15c42603fa16"
     },
     {
       "id": "VIS-725-06",
@@ -95,7 +95,7 @@
     },
     "client": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",
-      "sha256": "c6917d234502b4275eba81201e4f4514fcf5c20b57727debd1826bbb1e44cac8"
+      "sha256": "83d090b0f772397e4083a48c5348a66efa4b3456d2448be7992629f5cc06b0a9"
     },
     "clientReceipt": {
       "relativePath": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/ClientObservationReceipt.ts",
@@ -107,15 +107,15 @@
     },
     "parser": {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/core/parseWorkbenchSnapshot.ts",
-      "sha256": "2db397063395acb473ced6559328d02ee2e4eeca7b4cca20b539e3d322f8e5df"
+      "sha256": "5872203ad499ad745052f01b2c8a32421772b876d39e029be40f640bb5f74887"
     },
     "projection": {
       "relativePath": "spfx/nac-bpmn-viewer/src/workbench/nac/NacWorkbenchProjection.ts",
-      "sha256": "fcdb4d90b21b19e5bb97ddd96816e14a4d6067109c4113b9c0e9fe0a1d5f92b9"
+      "sha256": "f877560f0127672cad4418064cdcedb749dd97b7c363bc2b10b2aa278d4445ae"
     },
     "contract": {
       "relativePath": "workflows/contracts/workbench-live-read-binding.contract.json",
-      "sha256": "0a05baa59ba9e1004d08db210176e2c3d45439eba12749bf9c1c104a54dee28c"
+      "sha256": "cb246db9b3044fdf4190c2192567d4eef813b16f32d07e33cc87f589c801f5bb"
     }
   },
   "visualHarness": [
@@ -133,7 +133,7 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/workbench-live-read-synthetic-snapshot.cjs",
-      "sha256": "61e88c7d64482c4625219628ca4eda4d6083b4e0a0ab1de89a388e749570034b"
+      "sha256": "f988369826ad0580466aa24f42f1314bfe605fb12d4eaf5dc225481ad917e068"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/scripts/generate-workbench-live-read-visual-fixture.cjs",
@@ -163,15 +163,15 @@
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/core/parseWorkbenchSnapshot.js",
-      "sha256": "cf0f2192996fc09c8af564872864fdea98fff05f03c4e0801fed15df38125cc9"
+      "sha256": "0e8e90acb0b03b5f9980bc5be1de10a059d9fa0d5ebb918a375aa97d24d70eb0"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/nac/NacWorkbenchProjection.js",
-      "sha256": "9aabd37d0abf046c8e5a623e66e3928ec5d2a53a3ea26047e707831708175cb9"
+      "sha256": "7e0bbcfe396f6590e3178a5058527d3d8040a31edaf640578ef1305bdcf1d5ba"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.js",
-      "sha256": "c0b263278fc2b3da12301f54394a4a1c6852961412524b1d529ba006a009c617"
+      "sha256": "20a43474195a0cd4fe796666f2ff0ac2b631b28613d67e37d055d0f78f729a37"
     },
     {
       "relativePath": "spfx/nac-bpmn-viewer/lib-commonjs/workbench/react/WorkbenchPanel.styles.js",
