@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -228,6 +229,7 @@ def validate() -> list[str]:
     errors.extend(_validate_docs())
     errors.extend(_validate_quality_gate())
     errors.extend(_validate_spfx_ast_gate())
+    errors.extend(_validate_spfx_source_hash_bindings())
     errors.extend(_validate_spfx_source_boundary())
     errors.extend(_validate_bpmn_test_fixture())
     errors.extend(_validate_diagram_js_styles())
@@ -715,6 +717,45 @@ def _validate_spfx_ast_gate() -> list[str]:
         errors.append(
             f"missing visual evidence capture: {VISUAL_EVIDENCE_CAPTURE.relative_to(REPO_ROOT)}"
         )
+    return errors
+
+
+def _validate_spfx_source_hash_bindings() -> list[str]:
+    """Check the existing positive manifest without Node or installed TS dependencies.
+
+    This supplements, never replaces, the AST guard executed by npm build.
+    Hash updates remain explicit reviewed source changes, not auto-approval.
+    """
+    if not READ_ONLY_AST_VALIDATOR.is_file():
+        return ["read-only guard literal manifest is missing"]
+    source = READ_ONLY_AST_VALIDATOR.read_text(encoding="utf-8")
+    manifests = re.findall(
+        r"const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map\(\[(.*?)\]\);",
+        source, flags=re.DOTALL,
+    )
+    if len(manifests) != 1:
+        return ["read-only guard requires exactly one literal manifest"]
+    entry_pattern = r"\[\s*'([^']+)'\s*,\s*'([0-9a-f]{64})'\s*\]"
+    entries = re.findall(entry_pattern, manifests[0])
+    remainder = re.sub(entry_pattern, "", manifests[0])
+    if not entries or remainder.strip(" \t\r\n,"):
+        return ["read-only guard literal manifest contains unsupported entries"]
+    paths = [entry[0] for entry in entries]
+    errors: list[str] = []
+    if len(paths) != len(set(paths)):
+        errors.append("read-only guard literal manifest contains duplicate entries")
+    actual = {
+        path.relative_to(SPFX_SOURCE_ROOT).as_posix(): path
+        for path in SPFX_SOURCE_ROOT.rglob("*")
+        if path.is_file() and path.suffix in {".ts", ".tsx"}
+        and not path.name.endswith((".test.ts", ".test.tsx"))
+    }
+    if not actual or set(paths) != set(actual):
+        errors.append("read-only guard production file set does not match the literal manifest")
+    expected = dict(entries)
+    for relative, path in sorted(actual.items()):
+        if expected.get(relative) != _sha256(path):
+            errors.append(f"read-only guard source hash mismatch: {relative}")
     return errors
 
 

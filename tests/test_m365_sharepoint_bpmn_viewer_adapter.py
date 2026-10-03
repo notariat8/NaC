@@ -16,6 +16,7 @@ from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import (
     _validate_contract,
     _validate_diagram_js_styles,
     _validate_spfx_ast_gate,
+    _validate_spfx_source_hash_bindings,
     _validate_visual_evidence_manifest,
 )
 
@@ -244,6 +245,57 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_spfx_build_is_bound_to_the_typescript_ast_validator(self) -> None:
         self.assertEqual(_validate_spfx_ast_gate(), [])
+
+    def test_read_only_guard_hashes_match_all_production_sources(self) -> None:
+        self.assertEqual(_validate_spfx_source_hash_bindings(), [])
+
+    def _guard_hash_errors(self, mutate):
+        original = adapter_validator.READ_ONLY_AST_VALIDATOR.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            guard = Path(temp_dir) / "guard.cjs"
+            guard.write_text(mutate(original), encoding="utf-8")
+            with patch.object(adapter_validator, "READ_ONLY_AST_VALIDATOR", guard):
+                return _validate_spfx_source_hash_bindings()
+
+    def test_guard_hash_binding_rejects_stale_digest(self) -> None:
+        errors = self._guard_hash_errors(lambda text: text.replace(
+            "0a72850c1d59efb07d092137f890ab7c75fc26165cd94213e367c1b3040f7a27",
+            "0" * 64, 1))
+        self.assertTrue(any("source hash mismatch" in error for error in errors), errors)
+
+    def test_guard_hash_binding_rejects_missing_entry(self) -> None:
+        errors = self._guard_hash_errors(lambda text: "\n".join(
+            line for line in text.splitlines()
+            if not line.lstrip().startswith("['workbench/core/WorkbenchContracts.ts',")))
+        self.assertTrue(any("file set" in error for error in errors), errors)
+
+    def test_guard_hash_binding_rejects_duplicate_entry(self) -> None:
+        errors = self._guard_hash_errors(lambda text: text.replace(
+            "const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([",
+            "const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([\n"
+            "['workbench/core/WorkbenchContracts.ts', '" + "0" * 64 + "'],", 1))
+        self.assertTrue(any("duplicate" in error for error in errors), errors)
+
+    def test_guard_hash_binding_rejects_missing_manifest(self) -> None:
+        for replacement in ("REMOVED_SOURCE_SHA256", "EXPECTED_PRODUCTION_SOURCE_SHA256_ALIAS"):
+            with self.subTest(replacement=replacement):
+                errors = self._guard_hash_errors(lambda text: text.replace(
+                    "const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([",
+                    "const " + replacement + " = new Map([", 1))
+                self.assertTrue(any("literal manifest" in error for error in errors), errors)
+
+    def test_guard_hash_binding_rejects_dynamic_entry(self) -> None:
+        errors = self._guard_hash_errors(lambda text: text.replace(
+            "const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([",
+            "const EXPECTED_PRODUCTION_SOURCE_SHA256 = new Map([\n"
+            "...runtimeSourceBindings,", 1))
+        self.assertTrue(any("unsupported entries" in error for error in errors), errors)
+
+    def test_guard_hash_binding_is_called_by_complete_validator(self) -> None:
+        with patch.object(adapter_validator, "_validate_spfx_source_hash_bindings",
+                          return_value=["guard-regression-sentinel"]) as check:
+            self.assertIn("guard-regression-sentinel", adapter_validator.validate())
+            check.assert_called_once_with()
 
     def test_bpmn_test_fixture_is_hermetic_and_canonical(self) -> None:
         self.assertEqual(_validate_bpmn_test_fixture(), [])
