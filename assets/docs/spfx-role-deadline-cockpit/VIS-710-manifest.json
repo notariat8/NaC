@@ -1,7 +1,7 @@
 {
   "schemaVersion": "nac.spfx-role-deadline-visual-evidence/v0.2",
   "browser": "Chromium 140.0.7339.16",
-  "nodeVersion": "v22.14.0",
+  "nodeVersion": "v22.23.2",
   "playwrightVersion": "1.55.0",
   "embeddedAssets": [
     {
@@ -18,7 +18,7 @@
   "tenantAccess": false,
   "componentE2e": false,
   "evidenceKind": "offline_visual_contract",
-  "aggregateSourceSha256": "7dcd9ff69422fc169c8fbf35c2f96e5878bd46c1b2b9d73b103a36b02a2c4546",
+  "aggregateSourceSha256": "b206ced25ba62b4b7dfee891dc40b58babadc5c97007e82ddedbce4ddef62eed",
   "sourceInputs": [
     {
       "path": "bpmn/immobilienkaufvertrag.bpmn",
@@ -34,7 +34,7 @@
     },
     {
       "path": "spfx/nac-bpmn-viewer/scripts/capture-role-deadline-visual-evidence.cjs",
-      "sha256": "04e21f54c52c77f8b5ebdd44f44749b29c462cda4adf58d892033b8db92641f5"
+      "sha256": "082ea36e34f258835ee3fc73f53de4d450a31fbde436d8372a7d99dd6caadd10"
     },
     {
       "path": "spfx/nac-bpmn-viewer/scripts/generate-role-deadline-visual-fixture.cjs",
@@ -54,14 +54,14 @@
     },
     {
       "path": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/WorkspaceViewModel.ts",
-      "sha256": "1adcdd1ab8e894c1d86760d7ff6fe02bc4a34675e88bd0fc6163b6d5d46bfc87"
+      "sha256": "52b8de9d069aaf9a75e4fdce488a44f5f3426425465f8a41a943f2929a99b8e6"
     }
   ],
   "evidence": [
     {
       "id": "VIS-710-01",
       "file": "VIS-710-01-desktop-light.png",
-      "sha256": "2643246809d562fd4252ddcaf191cc5d5f21d89d99924210fef082c96683f6fe",
+      "sha256": "eeb006899c8a42d3621eddfa85a59ed6490d560fb3630618bfb4dd14803c5bb5",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -72,7 +72,7 @@
       "recoveryVerified": false,
       "checks": {
         "rootWidth": 1392,
-        "rootHeight": 867,
+        "rootHeight": 944,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],
@@ -103,7 +103,7 @@
     {
       "id": "VIS-710-02",
       "file": "VIS-710-02-narrow-light.png",
-      "sha256": "1293bf100440e44fdc349afc06c8298f2f379f0e37f3dad37134095779aaa86f",
+      "sha256": "7672d42dd1f9bdd6959f641927d602ff318450c7edc46a22de624df1b3229425",
       "viewport": {
         "width": 390,
         "height": 844
@@ -114,7 +114,7 @@
       "recoveryVerified": false,
       "checks": {
         "rootWidth": 390,
-        "rootHeight": 1669,
+        "rootHeight": 1753,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],
@@ -145,7 +145,7 @@
     {
       "id": "VIS-710-03",
       "file": "VIS-710-03-desktop-dark.png",
-      "sha256": "dee4419cf1e4257bf72d2258a495795571b8f300c9dd185abf0cdd89c584bb2d",
+      "sha256": "ea98ad163e0def9ebdb7e4eada61eb7680ce9229d46e0e478509c2f9c369e679",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -156,7 +156,7 @@
       "recoveryVerified": false,
       "checks": {
         "rootWidth": 1392,
-        "rootHeight": 760,
+        "rootHeight": 826,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],
@@ -187,7 +187,7 @@
     {
       "id": "VIS-710-04",
       "file": "VIS-710-04-narrow-dark-empty.png",
-      "sha256": "09584ea09b65af2f82c55d1523e42d7f506e478f666d27c57151b20589d521e8",
+      "sha256": "487b4c478a3752c30c1217c572b1adee393cbbcd85533a94e8cf14c471f4d57a",
       "viewport": {
         "width": 390,
         "height": 844
@@ -198,7 +198,7 @@
       "recoveryVerified": true,
       "checks": {
         "rootWidth": 390,
-        "rootHeight": 1388,
+        "rootHeight": 1444,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],
@@ -225,7 +225,7 @@
     {
       "id": "VIS-710-05",
       "file": "VIS-710-05-error-retry.png",
-      "sha256": "279cea846cdc544100c81da7aee596f007ccf7006af741d0f93f3cfdec4eb559",
+      "sha256": "0fc4aa091fcd2b61e710f0a3f3d2519c35590c0135a651a2a68101d6bf1713d4",
       "viewport": {
         "width": 390,
         "height": 320
@@ -236,7 +236,7 @@
       "recoveryVerified": true,
       "checks": {
         "rootWidth": 390,
-        "rootHeight": 104,
+        "rootHeight": 108,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],
@@ -261,7 +261,7 @@
     {
       "id": "VIS-710-06",
       "file": "VIS-710-06-narrow-container-light.png",
-      "sha256": "d0a67f9e33d62856a7d9534668aabc1beef54250fe2ce28489c665af2cd2decc",
+      "sha256": "9505fa63278182a7b2c23ab37a339309fed8ff88dbff76de0e67b7204ccf890e",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -272,7 +272,7 @@
       "recoveryVerified": false,
       "checks": {
         "rootWidth": 390,
-        "rootHeight": 1781,
+        "rootHeight": 1874,
         "documentOverflow": false,
         "containerOverflow": false,
         "containerOverflowElements": [],

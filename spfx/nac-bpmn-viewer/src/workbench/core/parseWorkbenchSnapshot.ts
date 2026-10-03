@@ -164,7 +164,7 @@ function containsUnpairedSurrogate(value: unknown): boolean {
 
 function validateAccess(value: unknown, scope: unknown, now: number, generatedAt: number, projectionExpiresAt: number): void {
   if (!record(value) || !record(scope) || !exact(value, ACCESS_KEYS) ||
-      !['assigned', 'deputy'].includes(String(value.mode)) || !id(value.decisionId) ||
+      !['team_member', 'assigned', 'deputy'].includes(String(value.mode)) || !id(value.decisionId) ||
       !id(value.decisionVersion) || !id(value.subjectId) || !id(value.role) ||
       !id(value.workspaceId) || !id(value.matterId) || !id(value.purpose) ||
       value.workspaceId !== scope.workspaceId || value.matterId !== scope.matterId ||
@@ -180,6 +180,7 @@ function validateAccess(value: unknown, scope: unknown, now: number, generatedAt
     expiresAt - issuedAt > MAX_LEASE_MS
   ) fail();
   if (value.mode === 'deputy' ? !displayText(value.reason) : value.reason !== null) fail();
+  if (value.mode === 'team_member' && value.role !== 'team_reader') fail();
 }
 
 function validateMatter(value: unknown, matterId: unknown): void {

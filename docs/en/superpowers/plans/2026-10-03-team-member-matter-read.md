@@ -16,7 +16,10 @@ Status: Owner approved the spec; local implementation, no deployment.
    No permission expansion or token/provider action in local tests.
    Concrete edges: `GET /groups/{boundTeamId}?$select=id,groupTypes,resourceProvisioningOptions`,
    `GET /groups/{boundTeamId}/sites/root?$select=id,webUrl` and
-   `GET /groups/{boundTeamId}/members/microsoft.graph.user?$select=id&$top=100`.
+   `GET /groups/{boundTeamId}/members?$select=id&$top=100`.
+   No OData type cast: it requires a potentially delayed index and additional
+   advanced-query parameters. See the
+   [official members API](https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0).
    `{boundTeamId}` is the fixed provisioned MVP Team ID, not a request ID.
    Runtime membership reads need Application `GroupMember.Read.All` or proven
    existing stronger read permissions; site reads require existing

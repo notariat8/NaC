@@ -16,7 +16,10 @@ Status: Spec vom Owner freigegeben; lokale Umsetzung, kein Deployment.
    Keine Rechteausweitung oder Token-/Provideraktion im lokalen Test.
    Konkrete Kanten: `GET /groups/{boundTeamId}?$select=id,groupTypes,resourceProvisioningOptions`,
    `GET /groups/{boundTeamId}/sites/root?$select=id,webUrl` und
-   `GET /groups/{boundTeamId}/members/microsoft.graph.user?$select=id&$top=100`.
+   `GET /groups/{boundTeamId}/members?$select=id&$top=100`.
+   Kein OData-Typcast: Dieser verlangt einen eventuell verzögerten Index und
+   zusätzliche Advanced-Query-Parameter. Siehe die
+   [offizielle Mitglieder-API](https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0).
    `{boundTeamId}` ist die feste provisionierte MVP-Team-ID, keine Request-ID.
    Mitgliedschaft liest die Runtime über Application `GroupMember.Read.All`
    oder nachgewiesene bestehende stärkere Leserechte; Site-Lesen erfordert

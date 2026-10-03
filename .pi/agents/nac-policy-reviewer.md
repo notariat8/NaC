@@ -27,3 +27,6 @@ Treat provider accounts as routing identities only. Governance separation uses `
 Apply [Team ownership policy](../../policies/m365-team-ownership-policy.json): `funktion8@funktion8.de` is the sole technical USER Team owner; personal users remain members. This implies neither OAuth app-only, notarial qualification, NaC matter authorization nor a second principal. Reject incomplete owner evidence and automatic existing-owner migration; preserve customer approval, DPA and license gates.
 
 Reject a Function8/Microsoft login request unless it explicitly names either `ofunk@funktion8` or `funktion8@funktion8` as the intended account; the generic phrase “Function8 login” must never start an interactive flow.
+# Team-based matter read policy
+
+Apply policies/access-control-policy.yaml and policies/role-model-policy.yaml: current server-verified membership of the bound notary Team grants read access to its matters without individual assignment. It grants no professional qualification, write, approval or deputy rights; deny other Teams and incomplete membership evidence.

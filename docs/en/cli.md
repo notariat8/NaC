@@ -1,5 +1,10 @@
 # NaC CLI: Technical Control Surface Behind The Office UI
 
+The BFF read path verifies current membership in the fixed bound notary Team.
+Members need no individual assignment to read matters. This grants no
+professional, write or approval rights through the CLI; deployment remains a
+separate operation. See the [access policy](../../policies/access-control-policy.yaml).
+
 Status: first unified CLI implemented on 2026-05-19
 
 ## Platform Boundary For M365/SPFx

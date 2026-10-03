@@ -84,6 +84,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 ## Governance-Identität
 
+- Ein Team pro Notar: Nachgewiesene aktuelle Mitgliedschaft berechtigt zum Lesen und Öffnen aller Akten dieses Teams, ohne zusätzliche Einzelzuordnung. Maßgeblich ist [die Zugriffspolicy](policies/access-control-policy.yaml); andere Teams, notarielle Qualifikation sowie Schreib-, Freigabe- und Vertretungsrechte sind dadurch nicht freigegeben.
+
 - Provider-qualifizierte Accounts (`<provider>:<login>`) werden in [policies/github-identity-registry.json](policies/github-identity-registry.json) auf stabile `principal_id`-Werte abgebildet. Governance-Rollen und Qualifikationen gehören ausschließlich zum Principal.
 - Vier-Augen-, Funktionstrennungs- und Approver-versus-Operator-Prüfungen vergleichen ausschließlich `principal_id`. Verschiedene Accounts desselben Principals gelten niemals als zwei Personen. Rohe Login-Strings sind keine Governance-Identitäten.
 - Account-Routing und Zugriffsrechte bleiben provider- und kontospezifisch; die gemeinsame Principal-ID erweitert keine Account-Berechtigung.

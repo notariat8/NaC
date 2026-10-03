@@ -28,6 +28,17 @@
       "release_binding": "draft only until first AI-enabled release package",
       "component_extensions": [
         {
+          "id": "notary-team-member-matter-read",
+          "version": "0.1",
+          "lifecycle_state": "local_implementation_not_deployed",
+          "human_review_owner": "owner_solo_approval_source_bound",
+          "approval_mode": "OWNER_SOLO_APPROVAL",
+          "release_readiness": "blocked",
+          "artifact": "src/nac_bff/team_membership.py",
+          "external_model_calls": false,
+          "authorization_boundary": "fixed_team_site_membership_read_only_no_professional_role"
+        },
+        {
           "id": "m365-bff-failed-partial-safe-completion-contract",
           "version": "0.1",
           "lifecycle_state": "offline_verification_only",

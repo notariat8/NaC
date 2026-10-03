@@ -69,7 +69,7 @@ export interface NacBffWorkspace {
       readonly sha256: string;
       readonly xml: string;
     };
-    readonly accessMode: 'assigned' | 'deputy';
+    readonly accessMode: 'team_member' | 'assigned' | 'deputy';
   };
 }
 
@@ -284,7 +284,7 @@ function parseWorkspaceValue(value: unknown): NacBffWorkspace {
     !isBoundedText(matter.displayName, 160) ||
     !isBoundedText(matter.status, 80) ||
     !isIsoTimestamp(matter.deadline) ||
-    (matter.accessMode !== 'assigned' && matter.accessMode !== 'deputy') ||
+    (matter.accessMode !== 'team_member' && matter.accessMode !== 'assigned' && matter.accessMode !== 'deputy') ||
     !Array.isArray(matter.tasks) ||
     matter.tasks.length > 16 ||
     !matter.tasks.every(isTask)

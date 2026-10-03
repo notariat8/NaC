@@ -1,6 +1,17 @@
 version: 1
 status: mandatory
 
+m365_matter_read_access:
+  one_team_per_notary: true
+  team_members_can_read_all_team_matters: true
+  individual_matter_assignment_required_for_read: false
+  current_server_verified_membership_required: true
+  trusted_team_site_matter_binding_required: true
+  cross_team_access_allowed: false
+  membership_implies_notarial_qualification: false
+  membership_implies_write_or_approval: false
+  incomplete_membership_evidence: deny
+
 m365_team_ownership:
   policy: policies/m365-team-ownership-policy.json
   technical_user_is_sole_team_owner: true
@@ -35,6 +46,7 @@ organization_project:
     - decision_type
 
 access_defaults:
+  applies_to: git_case_repository_permissions_not_m365_matter_read
   notary_must_see_all_notary_case_repos: true
   employees_without_repo_assignment_have_no_access: true
   external_guest_default_permission: read

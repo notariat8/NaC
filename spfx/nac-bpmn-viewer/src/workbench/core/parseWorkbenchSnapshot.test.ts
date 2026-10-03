@@ -147,6 +147,19 @@ function canonicalJson(value: unknown): string {
 }
 
 describe('generic workbench runtime contract', () => {
+  it('accepts neutral Team read access without granting a qualified role', async () => {
+    const snapshot = { ...VALID_WORKBENCH_SNAPSHOT, access: {
+      ...VALID_WORKBENCH_SNAPSHOT.access, mode: 'team_member', role: 'team_reader'
+    } };
+    const parsed = await parseWorkbenchSnapshotJson(signedWorkbenchSnapshotJson(snapshot), '2026-08-01T09:01:00Z');
+    expect(parsed.access.mode).toBe('team_member');
+    expect(parsed.access.role).toBe('team_reader');
+    for (const role of ['notary', 'notary_clerk', 'deputy']) {
+      await expect(parseWorkbenchSnapshotJson(signedWorkbenchSnapshotJson({
+        ...snapshot, access: { ...snapshot.access, role }
+      }), '2026-08-01T09:01:00Z')).rejects.toThrow('WORKBENCH_SNAPSHOT_INVALID');
+    }
+  });
   it('matches the live-read Unicode canonicalization fixture', () => {
     const canonical = canonicalWorkbenchJson(LIVE_CANONICALIZATION.content);
     expect(canonical).toBe(LIVE_CANONICALIZATION.canonical_utf8_json);

@@ -698,7 +698,8 @@ class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
                 "current valid-deputy decision",
             ),
             "AC-620-05": (
-                "Unassigned users",
+                "Nonmembers of the bound notary Team",
+                "Team members may read without individual matter assignment",
                 "workspace, matter, purpose or filter",
                 "fail closed",
                 "without revealing whether the matter exists",

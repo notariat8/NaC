@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from dataclasses import replace
 import json
 from pathlib import Path
 import unittest
@@ -147,6 +148,27 @@ class WorkbenchEndpointTests(unittest.TestCase):
             unavailable_diagnostic_sink=diagnostic_sink,
         )
         return endpoint, access, graph, bpmn
+
+    def test_team_reader_snapshot_has_no_qualified_role_or_actions(self) -> None:
+        base = _assigned_decision()
+        decision = replace(base, mode=AccessDecision.team_member().mode, role="team_reader")
+        endpoint, _, _, _ = self._endpoint(decision=decision)
+        response = endpoint.get_snapshot(claims=self.claims, workspace_id=ALLOWED_WORKSPACE_ID,
+                                         matter_id=ALLOWED_MATTER_ID, purpose=ALLOWED_PURPOSE)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.body["access"]["mode"], "team_member")
+        self.assertEqual(response.body["access"]["role"], "team_reader")
+        self.assertEqual(response.body["capabilities"], [])
+
+    def test_team_membership_cannot_assert_notarial_role_or_expired_access(self) -> None:
+        base = replace(_assigned_decision(), mode=AccessDecision.team_member().mode, role="team_reader")
+        for decision in (replace(base, role="notary"), replace(base, expires_at=ISSUED_AT),
+                         replace(base, active_approved_grant=True)):
+            endpoint, _, graph, _ = self._endpoint(decision=decision)
+            response = endpoint.get_snapshot(claims=self.claims, workspace_id=ALLOWED_WORKSPACE_ID,
+                                             matter_id=ALLOWED_MATTER_ID, purpose=ALLOWED_PURPOSE)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(graph.calls, [])
 
     def test_assigned_snapshot_is_minimal_bound_and_exactly_serialized(self) -> None:
         endpoint, access, graph, bpmn = self._endpoint()

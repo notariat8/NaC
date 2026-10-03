@@ -24,7 +24,7 @@ from .fastapi_adapter import (
     create_unconfigured_app,
     run_sync_with_request_budget,
 )
-from .live_access_decision import LiveAccessDecisionAdapter
+from .live_access_decision import LiveAccessDecisionAdapter, TeamReadAccessDecisionAdapter
 from .sharepoint_person_binding import parse_person_bindings
 from .synthetic_workspace_graph import (
     GRAPH_TOKEN_ACQUISITION_TIMEOUT_SECONDS,
@@ -208,7 +208,7 @@ def build_configured_app(
         [Mapping[str, str]], Any
     ] = managed_identity_token_provider_from_env,
     graph_client_factory: Callable[[Any], Any] = RawGraphV1Client,
-    access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
+    access_port_factory: Callable[..., Any] = TeamReadAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
     bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
     performance_lease_broker_factory: Callable[..., Any] = (
@@ -220,7 +220,7 @@ def build_configured_app(
     values = os.environ if env is None else env
     settings = BffSettings.from_env(values)
     try:
-        person_bindings = parse_person_bindings(
+        person_bindings = None if values.get("NAC_BFF_PERSON_BINDINGS_JSON") is None else parse_person_bindings(
             values.get("NAC_BFF_PERSON_BINDINGS_JSON"),
             expected_tenant_id=settings.tenant_id,
         )
@@ -300,7 +300,7 @@ def create_app_from_env(
         [Mapping[str, str]], Any
     ] = managed_identity_token_provider_from_env,
     graph_client_factory: Callable[[Any], Any] = RawGraphV1Client,
-    access_port_factory: Callable[..., Any] = LiveAccessDecisionAdapter,
+    access_port_factory: Callable[..., Any] = TeamReadAccessDecisionAdapter,
     workspace_port_factory: Callable[[Any], Any] = ConfiguredGraphRestPort,
     bpmn_asset_port_factory: Callable[[], Any] = CanonicalBpmnAssetFilePort,
     performance_lease_broker_factory: Callable[..., Any] = (

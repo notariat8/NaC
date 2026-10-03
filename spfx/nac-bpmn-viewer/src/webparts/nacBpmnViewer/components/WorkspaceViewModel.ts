@@ -92,6 +92,7 @@ export function classifyDeadline(
 }
 
 export function getAccessModeLabel(accessMode: AccessMode): string {
+  if (accessMode === 'team_member') return 'Mitglied des Notar-Teams';
   return accessMode === 'deputy'
     ? 'Aktive Vertretung (deputy)'
     : 'Zugeordnetes Team (assigned)';

@@ -1,5 +1,10 @@
 # pi-Projektpfad
 
+Für den BFF-Lesepfad gilt die [Zugriffspolicy](../policies/access-control-policy.yaml):
+Aktuell nachgewiesene Mitglieder des gebundenen Notar-Teams dürfen dessen Akten
+ohne Einzelzuordnung lesen. Mitgliedschaft verleiht keine Fach-, Schreib-,
+Freigabe- oder Vertretungsrechte; fremde Teams bleiben gesperrt.
+
 Status: verbindliche Plattformspur neben [Codex](../.codex)
 
 English summary: This directory makes [pi](https://pi.dev) the second official

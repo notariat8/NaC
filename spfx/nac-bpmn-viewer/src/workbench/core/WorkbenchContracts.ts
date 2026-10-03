@@ -20,7 +20,7 @@ export interface WorkbenchScope {
 }
 
 export interface WorkbenchAccessDecision {
-  readonly mode: 'assigned' | 'deputy';
+  readonly mode: 'team_member' | 'assigned' | 'deputy';
   readonly decisionId: string;
   readonly decisionVersion: string;
   readonly subjectId: string;

@@ -13,3 +13,6 @@ Check BPMN 2.0 files, nac: properties, role/channel/dataClass/approval/evidence/
 Do not edit files. Return findings with model path, element id when available, and the exact validator command.
 
 Flag process changes that lack privacy class, evidence path, human approval, or pull-request review.
+# Team-based matter read policy
+
+Apply policies/access-control-policy.yaml and policies/role-model-policy.yaml: current server-verified membership of the bound notary Team grants read access to its matters without individual assignment. It grants no professional qualification, write, approval or deputy rights; deny other Teams and incomplete membership evidence.

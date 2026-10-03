@@ -496,6 +496,10 @@ def _client_is_hardened(client: object) -> bool:
 
 
 def _validate_relative_graph_path(path: object) -> None:
+    # Only the three trusted MVP membership GETs are allowed outside /sites.
+    from .team_membership import MEMBERSHIP_PATHS
+    if type(path) is str and path in MEMBERSHIP_PATHS:
+        return
     if type(path) is not str or not path.startswith("/sites/"):
         raise ValueError("A fixed relative Microsoft Graph site path is required")
     parsed = urllib.parse.urlsplit(path)

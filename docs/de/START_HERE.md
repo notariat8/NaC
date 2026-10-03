@@ -1,5 +1,11 @@
 # START_HERE: Operativer Einstieg in NaC
 
+**Aktenlesen im Notar-Team:** Ein Team pro Notar. Aktuell
+serverseitig nachgewiesene Mitglieder dürfen dessen Akten lesen; eine zusätzliche
+Einzelzuordnung ist dafür nicht erforderlich. Dies verleiht keine notarielle
+Qualifikation und keine Schreib-, Freigabe- oder Vertretungsrechte. Andere Teams
+bleiben gesperrt. Siehe [Zugriffspolicy](../../policies/access-control-policy.yaml).
+
 Status: verbindlicher Startpfad
 Letzte inhaltliche Anpassung: 2026-10-02
 

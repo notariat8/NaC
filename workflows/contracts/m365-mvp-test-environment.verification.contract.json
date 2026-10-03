@@ -192,7 +192,7 @@
     },
     {
       "id": "AC-620-05",
-      "requirement": "Unassigned users and manipulated workspace, matter, purpose or filter inputs fail closed without revealing whether the matter exists or exposing its metadata."
+      "requirement": "Nonmembers of the bound notary Team and manipulated workspace, matter, purpose or filter inputs fail closed without revealing whether the matter exists or exposing its metadata. Team members may read without individual matter assignment or deputy approval."
     },
     {
       "id": "AC-620-06",
@@ -260,6 +260,14 @@
     "grants_current_write_authority": false
   },
   "final_bff_live_verification": {
+    "team_read_policy_revision": {
+      "authority": "current_server_verified_membership_of_bound_notary_team",
+      "positive_case": "team_member_without_individual_matter_assignment",
+      "negative_case": "authenticated_nonmember_of_bound_team",
+      "previous_assignment_and_deputy_evidence_proves_team_read_acceptance": false,
+      "new_current_member_and_nonmember_evidence_required": true,
+      "membership_grants_professional_or_action_rights": false
+    },
     "status_exact": "INCOMPLETE",
     "leading_issue_exact": "https://github.com/notariat8/NaC/issues/620",
     "runner_exact": "bounded current-state read-only acceptance reconciliation",
