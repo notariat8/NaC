@@ -1,6 +1,6 @@
 # Matter read access through membership of the notary Team
 
-Status: Owner's domain decision of 2026-10-03 recorded; written specification for review, no implementation or live authorization yet.
+Status: Owner approved the specification; local test-first implementation, no live authorization.
 
 ```nac-spec-traceability
 schema_version: nac.spec-traceability/v0.1
@@ -8,6 +8,7 @@ spec_id: team-member-matter-read-620
 leading_issue: https://github.com/notariat8/NaC/issues/620
 risk_gate: Policy
 delivery_mode: Protected PR
+plan: docs/en/superpowers/plans/2026-10-03-team-member-matter-read.md
 acceptance_ids:
   - AC-TEAMREAD-01
   - AC-TEAMREAD-02
@@ -16,6 +17,8 @@ acceptance_ids:
   - AC-TEAMREAD-05
   - AC-TEAMREAD-06
 validation_commands:
+  - python -m unittest discover -s tests -p test_nac_bff_team_membership.py
+  - python -m unittest discover -s tests -p test_nac_bff_workbench_endpoint.py
   - python scripts/validate_spec_traceability.py
   - python scripts/validate_language_parity.py
   - python scripts/validate_doc_links.py
