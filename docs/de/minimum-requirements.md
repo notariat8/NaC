@@ -19,7 +19,7 @@ Providerzugriff. Das Vorhandensein des Backends hebt die ausdrückliche
 Windows-Sperre für Live-Aktivierung und Recovery nicht auf.
 
 Status: verbindliche Day-0-Baseline
-Letzte inhaltliche Anpassung: 2026-09-19
+Letzte inhaltliche Anpassung: 2026-10-05
 
 ## Zweck
 
@@ -49,6 +49,46 @@ Der Base-Workspace ist die Mindestumgebung für Arbeit am Repository:
 | Python | `>= 3.11` | deterministische Checks, KG-Runtime, Workflow-Runtime |
 | Codex | erforderlich | Agentenunterstützte Mitarbeit |
 | `pandoc` | empfohlen | späterer Dokumentexport |
+
+### Python-Auswahl Für Lokale Agentenprüfungen
+
+`python_runtime_selection` in der [Technikpolicy](../../policies/technology-policy.yaml)
+ist die verbindliche Auswahlregel. Die bisherigen `python …`-Beispiele meinen
+den ausgewählten, geprüften Interpreter; sie verlangen kein ungeprüftes
+System-Python aus dem `PATH`.
+
+1. Eine ausdrücklich vorgegebene Projektumgebung samt Versions- und
+   Abhängigkeitsbindung hat Vorrang. Eine zufällig vorhandene `.venv` ist
+   dafür kein Beleg.
+2. Für übrige lokale Prüfungen im Codex-Desktop zuerst
+   `load_workspace_dependencies` aufrufen und den aktuell gemeldeten
+   Python-Pfad verwenden. Keinen Benutzerpfad oder Cacheversionspfad aus
+   früheren Sitzungen übernehmen.
+3. Den absoluten Interpreter auf Python `>= 3.11`, `encodings`,
+   Standardbibliothek und die für den jeweiligen Befehl benötigten
+   Projektimporte prüfen. Fehlende Abhängigkeiten sind eine konkrete Lücke,
+   keine automatische Installationsfreigabe.
+4. Diesen Interpreter für Folgebefehle beibehalten; Python-Unterprozesse nutzen
+   `sys.executable`. Bei fehlender Codex-Capability, insbesondere in pi/CLI,
+   eine vorhandene Projekt-/Systemlaufzeit mit denselben Prüfungen verwenden.
+   Ein nachgewiesen defektes PATH-Python nicht erneut starten. Keine globale
+   Python-/PATH-Änderung oder ungefragte Installation.
+
+Nach der Discovery `$nacPython` auf den gemeldeten vollständigen Pfad setzen.
+Dann in PowerShell beispielsweise:
+
+```powershell
+& $nacPython -c 'import encodings, json, pathlib, sys, unittest; assert sys.version_info >= (3, 11); print(sys.executable)'
+& $nacPython scripts/nac.py status
+& $nacPython scripts/nac.py doctor --profile strict
+```
+
+Die Nutzung einer bereits vorhandenen Laufzeit installiert keine neue
+Abhängigkeit und gibt keine Redistribution frei. Explizite CI-, Build-,
+Release-, SBOM- und produktive Runtime-Bindungen bleiben unverändert.
+Die [offizielle Dokumentation zu lokalen Codex-Umgebungen](https://learn.chatgpt.com/docs/environments/local-environment)
+beschreibt plattformspezifische Skripte; der konkrete Bundle-Pfad stammt aus
+der aktuellen Host-Toolausgabe, nicht aus einer fest eingebauten Repo-Annahme.
 
 Pflichtcheck:
 

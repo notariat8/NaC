@@ -7,7 +7,7 @@ Qualifikation und keine Schreib-, Freigabe- oder Vertretungsrechte. Andere Teams
 bleiben gesperrt. Siehe [Zugriffspolicy](../../policies/access-control-policy.yaml).
 
 Status: verbindlicher Startpfad
-Letzte inhaltliche Anpassung: 2026-10-02
+Letzte inhaltliche Anpassung: 2026-10-05
 
 Für Governance-Entscheidungen zählt der stabile Principal, nicht die Anzahl
 seiner Accounts. Ohne konkret zitierte externe Zwei-Personen-Pflicht ist
@@ -54,6 +54,19 @@ Dieses Dokument ist zu verwenden:
 - vor einem Push, wenn unklar ist, welche Gates und Gantts betroffen sind.
 
 ## Verbindliche Startsequenz
+
+Vor dem ersten Python-Befehl `python_runtime_selection` aus der
+[Technikpolicy](../../policies/technology-policy.yaml) anwenden: Im Codex-Desktop
+mit `load_workspace_dependencies` den aktuellen Python-Pfad ermitteln,
+Version und benötigte Importe prüfen und danach diesen absoluten Pfad benutzen.
+Eine ausdrücklich gebundene Projektumgebung hat Vorrang. Die folgenden
+`python …`-Beispiele stehen für diesen ausgewählten Interpreter, nicht für
+ungeprüftes PATH-Python. Der konkrete PowerShell-Aufruf steht in den
+[Mindestvoraussetzungen](minimum-requirements.md#python-auswahl-für-lokale-agentenprüfungen).
+Dies gilt auch für Unterprozesse. Keine wiederholten Starts eines defekten
+Interpreters, automatische Installation oder globale Python-/PATH-Änderung;
+CI- und Release-Bindungen bleiben unverändert. Ohne Codex-Discovery, insbesondere
+in pi/CLI, eine vorhandene Projekt-/Systemlaufzeit entsprechend prüfen.
 
 1. Repo-Regeln lesen:
    - [AGENTS.md](../../AGENTS.md), sofern im Workspace vorhanden.

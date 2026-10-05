@@ -16,10 +16,29 @@ approved_stack:
     operating_surface: nac_cli
     cli_entrypoint: nac
     cli_wrapper: scripts/nac.py
+    python_runtime_selection:
+      scope: local_agent_checks
+      codex_desktop_preferred: tool_discovered_bundled_python
+      discovery_tool: load_workspace_dependencies
+      explicit_project_environment: takes_precedence
+      other_environments: verified_project_or_system_python
+      executable_binding: absolute_path
+      minimum_version: "3.11"
+      smoke_test: version_and_required_imports
+      keep_selected_runtime: true
+      preserve_dependency_constraints: true
+      retry_broken_path_python: false
+      mutate_global_python_or_path: false
+      auto_install_runtime_or_packages: false
+      change_ci_or_release_runtime: false
     notes:
       - "Python implementiert Ausführung, Validierung und Integrationen."
       - "Fachlicher Ablauf wird primär als BPMN 2.0 modelliert."
       - "Neue NaC-Funktionalität muss über die zentrale nac-CLI erreichbar sein; direkte Skripte bleiben nur interne oder kompatible Bedienebenen."
+      - "Für lokale Codex-Desktop-Prüfungen zuerst die aktuell über load_workspace_dependencies gemeldete Python-Laufzeit mit absolutem Pfad verwenden; eine ausdrücklich gebundene Projektumgebung hat Vorrang."
+      - "Vor Nutzung Mindestversion, encodings/Standardbibliothek und benötigte Projektimporte prüfen; danach denselben Interpreter für Folgebefehle und Unterprozesse beibehalten."
+      - "Ohne Codex-Discovery-Capability, insbesondere in pi oder CLI, eine vorhandene Projekt-/Systemlaufzeit genauso prüfen. Defektes PATH-Python nicht wiederholt starten, keine Laufzeit ungefragt installieren und globale Python-/PATH-Einstellungen nicht ändern."
+      - "Diese Auswahlregel gilt nicht als Änderung oder Nachweis der explizit gebundenen CI-, Build-, Release-, SBOM- oder produktiven Laufzeit."
   visualization:
     canonical_business_model: bpmn_2_0
     canonical_source_format: bpmn_xml
