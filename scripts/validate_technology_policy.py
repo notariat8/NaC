@@ -6,6 +6,22 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_RUNTIME_POLICY = ("approved_stack", "process_logic", "python_runtime_selection")
+PYTHON_RUNTIME_MIRROR_FILES = (
+    "AGENTS.md",
+    "docs/de/START_HERE.md",
+    "docs/en/START_HERE.md",
+    "docs/de/minimum-requirements.md",
+    "docs/en/minimum-requirements.md",
+    ".pi/README.md",
+) + tuple(
+    f"{directory}/nac-{name}.{extension}"
+    for directory, extension in ((".codex/agents", "toml"), (".pi/agents", "md"))
+    for name in (
+        "scope-mapper", "policy-reviewer", "docs-parity-reviewer",
+        "validation-reviewer", "kg-reviewer", "bpmn-reviewer",
+    )
+)
 
 EXPECTED_SCALARS = {
     ("approved_stack", "documentation", "canonical_format"): "markdown",
@@ -24,15 +40,29 @@ EXPECTED_SCALARS = {
     ("approved_stack", "visualization", "validator"): "scripts/validate_bpmn_models.py",
     ("approved_stack", "visualization", "allowed_overview_format"): "mermaid",
     ("repository_constraints", "active_ai_ide"): "codex",
+    PYTHON_RUNTIME_POLICY + ("scope",): "local_agent_checks",
+    PYTHON_RUNTIME_POLICY + ("codex_desktop_preferred",): "tool_discovered_bundled_python",
+    PYTHON_RUNTIME_POLICY + ("discovery_tool",): "load_workspace_dependencies",
+    PYTHON_RUNTIME_POLICY + ("explicit_project_environment",): "takes_precedence",
+    PYTHON_RUNTIME_POLICY + ("other_environments",): "verified_project_or_system_python",
+    PYTHON_RUNTIME_POLICY + ("executable_binding",): "absolute_path",
+    PYTHON_RUNTIME_POLICY + ("minimum_version",): "3.11",
+    PYTHON_RUNTIME_POLICY + ("smoke_test",): "version_and_required_imports",
 }
 
 EXPECTED_TRUE_KEYS = (
     ("repository_constraints", "enforce_codex_agent_sync"),
+    PYTHON_RUNTIME_POLICY + ("keep_selected_runtime",),
+    PYTHON_RUNTIME_POLICY + ("preserve_dependency_constraints",),
 )
 
 EXPECTED_FALSE_KEYS = (
     ("repository_constraints", "cursor_workspace_files_allowed"),
     ("repository_constraints", "github_copilot_workspace_files_allowed"),
+    PYTHON_RUNTIME_POLICY + ("retry_broken_path_python",),
+    PYTHON_RUNTIME_POLICY + ("mutate_global_python_or_path",),
+    PYTHON_RUNTIME_POLICY + ("auto_install_runtime_or_packages",),
+    PYTHON_RUNTIME_POLICY + ("change_ci_or_release_runtime",),
 )
 
 EXPECTED_LISTS = {
@@ -276,6 +306,26 @@ def validate_required_sync_targets(root: Path) -> list[str]:
     return errors
 
 
+def validate_python_runtime_mirrors(root: Path) -> list[str]:
+    """Check instruction parity only; do not discover or launch local runtimes."""
+    if not (root / "policies/technology-policy.yaml").is_file():
+        return []
+    errors: list[str] = []
+    for rel_path in PYTHON_RUNTIME_MIRROR_FILES:
+        path = root / rel_path
+        if not path.is_file():
+            errors.append(f"Python-Laufzeitspiegel fehlt: {rel_path}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        if not all(marker in text for marker in (
+            "policies/technology-policy.yaml",
+            "python_runtime_selection",
+            "load_workspace_dependencies",
+        )):
+            errors.append(f"Python-Laufzeitregel fehlt im Spiegel: {rel_path}")
+    return errors
+
+
 def validate_forbidden_formats(root: Path) -> list[str]:
     errors: list[str] = []
     for path in iter_files(root):
@@ -316,6 +366,7 @@ def validate(repo_root: Path = REPO_ROOT) -> list[str]:
     root = repo_root.resolve()
     errors = validate_policy_structure(root)
     errors.extend(validate_required_sync_targets(root))
+    errors.extend(validate_python_runtime_mirrors(root))
     errors.extend(validate_forbidden_formats(root))
     errors.extend(validate_codex_only_workspace(root))
     return sorted(errors)

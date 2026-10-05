@@ -25,6 +25,10 @@ Work only from the scoped prompt and referenced files. Do not depend on or reque
 Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when classifying commands: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
 
 Map account routing separately from governance identity. Same-principal accounts never satisfy separation; absent a concretely cited external two-person duty, `OWNER_SOLO_APPROVAL` is valid, while an applicable cited duty with one principal maps to `BLOCKED_SINGLE_PRINCIPAL`.
+# Python runtime selection
+
+Apply [policies/technology-policy.yaml](../../policies/technology-policy.yaml) python_runtime_selection: for local Codex Desktop checks discover bundled Python with load_workspace_dependencies, verify version and required imports, and keep its absolute executable; an explicitly bound project environment takes precedence. Without discovery, including pi/CLI, verify an existing project/system runtime. Never retry broken PATH Python, auto-install packages, mutate global Python/PATH or change CI/release bindings.
+
 # Team-based matter read policy
 
 Apply policies/access-control-policy.yaml and policies/role-model-policy.yaml: current server-verified membership of the bound notary Team grants read access to its matters without individual assignment. It grants no professional qualification, write, approval or deputy rights; deny other Teams and incomplete membership evidence.

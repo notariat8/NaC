@@ -18,7 +18,7 @@ credential, network, or provider access. Backend availability does not lift the
 explicit Windows block on live activation and recovery.
 
 Status: binding day-0 baseline
-Last content update: 2026-09-19
+Last content update: 2026-10-05
 
 ## Purpose
 
@@ -47,6 +47,44 @@ The base workspace is the minimum environment for repository work:
 | Python | `>= 3.11` | deterministic checks, KG runtime, workflow runtime |
 | Codex | required | agent-assisted contribution |
 | `pandoc` | recommended | later document export |
+
+### Python Selection For Local Agent Checks
+
+`python_runtime_selection` in the [technology policy](../../policies/technology-policy.yaml)
+is the binding selection rule. Existing `python …` examples mean the selected,
+verified interpreter; they do not require unchecked system Python from `PATH`.
+
+1. An explicitly prescribed project environment, including its version and
+   dependency bindings, takes precedence. A coincidentally present `.venv`
+   does not establish such a requirement.
+2. For other local checks in Codex Desktop, first call
+   `load_workspace_dependencies` and use the currently reported Python path.
+   Do not reuse a user or cache-version path from an earlier session.
+3. Check the absolute interpreter for Python `>= 3.11`, `encodings`, the
+   standard library and the project imports required by the specific command.
+   Missing dependencies are a concrete gap, not automatic installation
+   authorization.
+4. Keep that interpreter for subsequent commands; Python child processes use
+   `sys.executable`. When Codex discovery is unavailable, particularly in
+   pi/CLI, verify an existing project/system runtime with the same checks.
+   Do not restart proven-broken PATH Python. Do not mutate global Python/PATH
+   or install without authority.
+
+After discovery, set `$nacPython` to the reported full path. Then, for example,
+run in PowerShell:
+
+```powershell
+& $nacPython -c 'import encodings, json, pathlib, sys, unittest; assert sys.version_info >= (3, 11); print(sys.executable)'
+& $nacPython scripts/nac.py status
+& $nacPython scripts/nac.py doctor --profile strict
+```
+
+Using an existing runtime installs no new dependency and grants no
+redistribution permission. Explicit CI, build, release, SBOM and production
+runtime bindings remain unchanged.
+The [official local Codex environments documentation](https://learn.chatgpt.com/docs/environments/local-environment)
+describes platform-specific scripts; the concrete bundle path comes from
+current host-tool output, not a fixed repository assumption.
 
 Mandatory check:
 

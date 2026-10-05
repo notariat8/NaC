@@ -7,7 +7,7 @@ qualification, write, approval or deputy rights. Other Teams remain denied.
 See the [access policy](../../policies/access-control-policy.yaml).
 
 Status: binding start path
-Last content update: 2026-10-02
+Last content update: 2026-10-05
 
 Governance decisions use the stable principal, not the number of accounts it
 controls. Without a specifically cited external two-person duty,
@@ -53,6 +53,19 @@ Use this document:
 - before a push when affected gates or Gantts are unclear.
 
 ## Binding Start Sequence
+
+Before the first Python command, apply `python_runtime_selection` from the
+[technology policy](../../policies/technology-policy.yaml): in Codex Desktop,
+use `load_workspace_dependencies` to discover the current Python path, check
+its version and required imports, then invoke that absolute path. An explicitly
+bound project environment takes precedence. The following `python …` examples
+mean this selected interpreter, not unchecked PATH Python. The concrete
+PowerShell invocation is in the
+[minimum requirements](minimum-requirements.md#python-selection-for-local-agent-checks).
+Keep that interpreter for child processes as well. Do not repeatedly start a
+broken interpreter, install automatically or mutate global Python/PATH;
+CI and release bindings remain unchanged. Without Codex discovery, particularly
+in pi/CLI, verify an existing project/system runtime in the same way.
 
 1. Read repository rules:
    - [AGENTS.md](../../AGENTS.md), if present in the workspace.

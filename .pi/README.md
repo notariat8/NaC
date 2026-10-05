@@ -19,6 +19,15 @@ synchron gepflegt, siehe [Plattform-Synchronität](../AGENTS.md#plattform-synchr
 
 ## Inhalt
 
+Für lokale Python-Prüfungen gilt `python_runtime_selection` aus der
+[Technikpolicy](../policies/technology-policy.yaml): Im Codex-Desktop liefert
+`load_workspace_dependencies` die bevorzugte Laufzeit. pi hat keine solche
+MCP-Capability und verwendet eine vorhandene, mit absolutem Pfad auf Version
+und benötigte Importe geprüfte Projekt-/Systemlaufzeit. Eine ausdrücklich
+gebundene Projektumgebung hat Vorrang; denselben Interpreter beibehalten,
+defektes PATH-Python nicht wiederholen und weder automatisch installieren
+noch globale Python-/PATH- oder CI-/Release-Bindungen ändern.
+
 | Pfad | Zweck |
 | --- | --- |
 | [agents/](agents) | Repo-lokale pi-Subagenten als Markdown mit Frontmatter (`name`, `description`, `tools`). Read-only-Spiegel der Codex-Review-Profile. |
