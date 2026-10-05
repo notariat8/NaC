@@ -16,8 +16,6 @@ from scripts.validate_notarial_onprem_connector_boundaries import validate_contr
 class NotarialOnPremConnectorBoundariesContractTests(unittest.TestCase):
     def test_contract_validator_accepts_repository_contract(self) -> None:
         self.assertEqual(validate_contract(), [])
-
-    def test_contract_is_archived_legacy_not_active_gate(self) -> None:
         contract = json.loads(
             (
                 REPO_ROOT

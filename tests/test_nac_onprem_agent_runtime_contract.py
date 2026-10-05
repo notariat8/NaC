@@ -16,8 +16,6 @@ from scripts.validate_nac_onprem_agent_runtime import validate_contract  # noqa:
 class NaCOnPremAgentRuntimeContractTests(unittest.TestCase):
     def test_contract_validator_accepts_repository_contract(self) -> None:
         self.assertEqual(validate_contract(), [])
-
-    def test_runtime_smoke_is_prepared_but_not_executed(self) -> None:
         contract = json.loads(
             (REPO_ROOT / "workflows" / "contracts" / "nac-onprem-agent-runtime.contract.json").read_text(
                 encoding="utf-8"
