@@ -356,6 +356,26 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
                 technology["on"]["pull_request"]["paths"],
             )
 
+    def test_ci_filter_change_keeps_visual_workflow_digest_bound(self) -> None:
+        import hashlib
+        import json
+
+        root = validate_technology_policy.REPO_ROOT
+        manifest = json.loads(
+            (root / "assets/docs/generic-workbench/VIS-721-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        workflow = ".github/workflows/quality-gate.yml"
+        sources = [
+            item for item in manifest["sources"]
+            if item.get("relativePath") == workflow
+        ]
+        self.assertEqual(len(sources), 1)
+        self.assertEqual(
+            sources[0]["sha256"], hashlib.sha256((root / workflow).read_bytes()).hexdigest()
+        )
+
     def test_policy_requires_all_sync_targets_to_exist(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
