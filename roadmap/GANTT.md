@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-10-03
+Letzte Aktualisierung: 2026-10-10
 
 Issue #620: Aktuelle Mitgliedschaft im jeweiligen Notar-Team ist das Aktenleserecht.
 Die lokale MVP-Umsetzung ersetzt Einzelzuordnung als Lesegate; Fach-, Schreib-,
@@ -269,3 +269,38 @@ die technische Mindestprüfung durch:
 5. Das Fortschrittsbild wird mindestens wöchentlich gepflegt; tagesaktuelle
    Änderungen erfolgen nur bei echter Roadmap-, Scope-, Status- oder
    Meilensteinwirkung.
+
+## Geplanter Workstream: Personen und zeitliche Nachlassszenarien
+
+Aufgenommen am 2026-10-10 über [Issue #772](https://github.com/notariat8/NaC/issues/772).
+Status: Backlog, noch nicht implementiert; bestehende aktive Prioritäten bleiben bestehen.
+Keine verbindlichen Kalendertermine vor Design und Aufwandsschätzung.
+
+Die [deutsche Roadmap](de/personen-nachlass-roadmap.md) beschreibt SharePoint als
+Zielkandidat für Personenstammdaten und Beziehungen, modulare JSON Schemas,
+10.000 synthetische Personen, Genogramme, einen Vermögensgraph und zeitliche
+Schenkungs-/Testaments-/Erbfallszenarien. JSON, RDF/Turtle und eine optionale
+Graphdatenbank werden über ein führendes Modell und messbare Entscheidungsgates
+verbunden. Produktive Personen- und Mandatsdaten bleiben außerhalb von Git.
+
+| Phase | Status | Abhängigkeit |
+| --- | --- | --- |
+| P0: Design und SharePoint-Speichergrenze | Geplant | Fachliche und technische Designprüfung |
+| P1: Personen- und Familienmodell | Geplant | P0 |
+| P2: Speicheradapter und 10.000er-Prototyp | Geplant | P1 |
+| P3: Genogramme und Codex-Anbindung | Geplant | P2 |
+| P4: Vermögensgraph und Schenkungen | Geplant | P1/P2 |
+| P5: Zeitliche Nachlassszenarien | Geplant | P3/P4 und freigegebene Fachregeln |
+| P6: Bedienung und Backend-Entscheidung | Geplant | Geprüfte Bausteine aus P1–P5 |
+
+### English orientation
+
+Added on 2026-10-10 through [issue #772](https://github.com/notariat8/NaC/issues/772).
+Status: planned backlog, not implemented; existing active priorities remain.
+No committed dates before design and estimation. The
+[English roadmap](en/personen-nachlass-roadmap.md) covers SharePoint person storage,
+modular JSON Schemas, 10,000 synthetic people, genograms, asset graphs and temporal
+gift/will/succession scenarios. P0 defines design/storage boundaries; P1 models
+people/family; P2 validates storage/scale; P3 renders genograms; P4 models assets;
+P5 simulates succession; P6 integrates operation and benchmarks backend choices.
+Production personal and mandate data remain outside Git.
