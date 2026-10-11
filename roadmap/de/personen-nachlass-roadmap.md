@@ -1,6 +1,6 @@
 # Roadmap: Personen, Genogramme, Vermögen und zeitliche Nachlassszenarien
 
-Stand: 2026-10-10 · Status: geplantes Backlog, noch nicht implementiert  
+Stand: 2026-10-11 · Status: geplantes Backlog, noch nicht implementiert  
 Auftrag und Akzeptanzkriterien: [Issue #772](https://github.com/notariat8/NaC/issues/772)  
 Einordnung: [Globale Roadmap](../GANTT.md)  
 Lizenz: CC-BY-4.0
@@ -69,6 +69,38 @@ Die Ausgabe soll Genogramm, Vermögen unmittelbar vor dem jeweiligen Todesfall, 
 Codex strukturiert Eingaben und schlägt nachvollziehbare Patches vor. Schema- und Referenzvalidierung, Diff und menschliche Bestätigung gehen einer Änderung voraus. Genogramme werden aus belegten Beziehungen erzeugt; Berechnungen laufen deterministisch in Python. Jede Ausgabe ist an Datenstand, Stichtag, Regelversion und Quellenreferenzen gebunden. Offene Tatsachen und fehlende Regeln führen zu markierten offenen Ergebnissen.
 
 Geplante Bedienaktionen sind Personen-/Beziehungsvalidierung, Genogramm-Export, Vermögensansicht zu einem Stichtag und Nachlassszenario-Vergleich über die zentrale nac-CLI und Bürooberfläche. Namen und Verträge werden in P0 festgelegt; diese Roadmap behauptet keine bereits verfügbaren Befehle.
+
+## Erweiterung: Unternehmen, Beteiligung und Geschäftsführung
+
+Ergänzt am 2026-10-11 im Scope von [Issue #772](https://github.com/notariat8/NaC/issues/772). Die Planung erweitert Personen um Beziehungen zu Organisationen im notariellen Gesellschafts- und Nachlasskontext. Sie enthält keine tatsächlichen Unternehmens- oder Rollenangaben einer Person.
+
+Eine Person bleibt ein einziger Stammdatensatz. Familienrolle, Gesellschaftsbeteiligung, Geschäftsführeramt, Anstellungsverhältnis und Vertretung sind getrennte, zeitabhängige Beziehungen. Aus dem Geschäftsführeramt wird keine Beteiligung abgeleitet; aus einem Anteil keine Geschäftsführungsbefugnis. Die konkrete Rechtsform und das anwendbare Recht bleiben Pflichtangaben.
+
+| Modellbaustein | Geplante Felder und Bedeutung |
+| --- | --- |
+| Organisation | organization_id, Name, Rechtsform, Sitz, Register und Registernummer, Quellen-/Dokumentreferenzen und Prüfstatus. Rechtsformgerechte Modellierung; keine Gleichsetzung aller Unternehmen mit juristischen Personen. |
+| Organfunktion | role_assignment_id, person_id, organization_id, Funktion, Bestellung, Annahme, Ende, Gültigkeitszeitraum und Nachweis. Mehrere Unternehmen und mehrere Geschäftsführer pro Unternehmen möglich. |
+| Vertretung | Einzel-/Gesamtvertretung, erforderliche Kombinationen, dokumentierte Beschränkungen, gegebenenfalls §-181-BGB-Befreiung, Registerstand und Gültigkeit. Vollmacht und Prokura als eigene Rechtsgrundlagen. |
+| Beteiligung | participation_id, Anteilsinhaber (Person oder Organisation), Unternehmen, identifizierter Geschäftsanteil, Nominalbetrag/Quote, Stimmrechte, Bewertungsstichtag und Übertragungsereignisse. Unbekannte Beteiligung ist kein Nullanteil. |
+| Rechte und Pflichten | Getrennte Anstellungs-/Vergütungs-, Darlehens-, Bürgschafts- und sonstige Anspruchs-/Verpflichtungsbeziehungen, soweit für den notariellen Fall relevant; keine pauschale persönliche Haftung aus dem Amt ableiten. |
+| Nachfolgeregeln und Nachweise | Gesellschaftsvertrag, Gesellschafterliste, Registerauszug, Bestellungsbeschluss, relevante Vollmachten und Verfügungen als geschützte referenzierte Dokumente mit Version und zeitlicher Bindung. |
+
+Beispiel für die GmbH: Geschäftsanteile sind nach [§ 15 Abs. 1 GmbHG](https://www.gesetze-im-internet.de/gmbhg/__15.html) vererblich. Die GmbH hat selbständige Rechte und Pflichten ([§ 13 GmbHG](https://www.gesetze-im-internet.de/gmbhg/__13.html)); Geschäftsführer vertreten sie nach [§ 35 GmbHG](https://www.gesetze-im-internet.de/gmbhg/__35.html). Das Modell trennt deshalb Anteilserbfolge, Unternehmensvermögen und Organ-/Vertretungsnachfolge. Ein Erbe wird nicht allein durch die Erbschaft zum Geschäftsführer. Unternehmensvermögen wird nicht zusätzlich zum Anteilswert als Privatvermögen des Gesellschafters gezählt. Übertragungs-, Einziehungs-, Abfindungs- und Nachfolgeklauseln werden als rechtsform- und dokumentabhängige Prüfpunkte geführt, nicht als pauschale Ergebnisregel.
+
+### SharePoint- und Graph-Anbindung
+
+Zusätzlich zum Personenspeicher sind getrennte Listen für Organisationen, Organfunktionen/Vertretung und Beteiligungen geplant; Dokumente verbleiben in geschützten Bibliotheken beziehungsweise Payload-Ablagen. Alle Beziehungen verweisen auf stabile fachliche IDs und tragen fachliche Gültigkeit, Erfassungszeit, Quelle und Prüfstatus. Personen werden nicht pro Unternehmen dupliziert.
+
+Die Graph-Projektion unterscheidet beispielsweise Person → ist Geschäftsführer von → Organisation, Person/Organisation → hält Anteil an → Organisation und Person/Organisation → ist Eigentümer von → Vermögensobjekt. Organstellung begründet weder automatisch SharePoint-Zugriff noch NaC-Freigaberechte; fachliche Vertretung und technische Autorisierung bleiben getrennt.
+
+### Roadmap-Wirkung und zusätzliche Akzeptanzkriterien
+
+- P0/P1: Organisationen und zeitabhängige Funktionen/Beteiligungen in das Modell aufnehmen. AC-06: eine Person kann ohne Dublette Familienmitglied, Geschäftsführer mehrerer Organisationen und gegebenenfalls Gesellschafter sein; unbestätigte Beteiligung bleibt unbekannt.
+- P2/P4: SharePoint-Adapter und Vermögensprojektion um diese Entitäten ergänzen. AC-07: Eigentum der Organisation, private Anteile, Darlehen und Bürgschaften bleiben unterscheidbar; Unternehmenswerte werden im Privatvermögen nicht doppelt gezählt.
+- P5: Tod, Ausfall, Amtsende und Anteilsübertragung als unterschiedliche Ereignisse prüfen. AC-08: Anteilserbfolge erzeugt keine automatische Organbestellung, Vollmacht oder technische Berechtigung; Änderungen der Vertretung werden anhand belegter Kombinationen und Dokumente geprüft.
+- P6: Familiengenogramm, Beteiligungsgraph und Vertretungsansicht aus demselben Datenstand anbieten. AC-09: Ansichten und Szenarien nennen Stichtag, Nachweise, offene Tatsachen und fehlende Regeln.
+
+Zusätzliche synthetische Referenzfälle: ein Geschäftsführer ohne Anteile; ein Gesellschafter-Geschäftsführer; zwei Geschäftsführer mit Gesamtvertretung; eine Beteiligung über eine Holding. Variiert werden Tod beziehungsweise Ausfall der Person, Eintritt eines Erben in die Anteilsposition und spätere Bestellung einer anderen Geschäftsführung. Fehlende Rechtsform, Satzung, Beteiligungsnachweise oder Vertretungsbelege führen zu offenen Prüfpunkten. Handlungsfähigkeit der Organisation und wirtschaftliche Erbfolgen werden getrennt angezeigt.
 
 ## Nächster Umsetzungsschritt
 

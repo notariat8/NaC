@@ -1,6 +1,6 @@
 # Roadmap: people, genograms, assets and temporal succession scenarios
 
-Updated: 2026-10-10 · Status: planned backlog, not implemented  
+Updated: 2026-10-11 · Status: planned backlog, not implemented  
 Request and acceptance criteria: [Issue #772](https://github.com/notariat8/NaC/issues/772)  
 Context: [Global roadmap](../GANTT.md)  
 License: CC-BY-4.0
@@ -69,6 +69,38 @@ Show the genogram, assets immediately before each death, completed transfers and
 Codex structures input and proposes traceable patches. Schema/reference validation, a diff and human confirmation precede changes. Genograms derive from evidenced relationships; calculations run deterministically in Python. Bind outputs to data version, date, rule version and source references. Missing facts or rules produce explicitly unresolved results.
 
 Planned operations include validating people/relationships, exporting a genogram, showing assets at a selected date and comparing succession scenarios through the central nac CLI and office UI. P0 will define names and contracts; this roadmap does not claim existing commands.
+
+## Extension: organizations, holdings and managing directors
+
+Added on 2026-10-11 within [issue #772](https://github.com/notariat8/NaC/issues/772). The planning extends people with organization relationships for notarial corporate and succession matters. It contains no actual company or role information about any person.
+
+A person remains a single master record. Family roles, ownership holdings, managing-director office, employment and representation are separate time-dependent relationships. Office does not imply ownership; ownership does not imply management authority. Legal form and applicable law are required inputs.
+
+| Model component | Planned fields and meaning |
+| --- | --- |
+| Organization | organization_id, name, legal form, registered office, register and registration number, source/document references and review status. Model legal forms appropriately rather than treating every enterprise as a legal person. |
+| Corporate office | role_assignment_id, person_id, organization_id, function, appointment, acceptance, termination, validity period and evidence. Support multiple companies and multiple directors per company. |
+| Representation | Individual/joint representation, required combinations, documented restrictions, any exemption under section 181 BGB, register status and validity. Powers of attorney and procuration have separate legal bases. |
+| Holding | participation_id, holder (person or organization), company, identified share, nominal amount/percentage, voting rights, valuation date and transfer events. Unknown ownership does not mean zero ownership. |
+| Rights and obligations | Separate employment/remuneration, loan, guarantee and other claim/obligation relationships relevant to the notarial matter; do not infer blanket personal liability from office. |
+| Succession rules and evidence | Articles, shareholder list, register extract, appointment resolution, relevant powers and dispositions as protected referenced documents with versions and temporal bindings. |
+
+GmbH example: shares are inheritable under [section 15(1) GmbHG](https://www.gesetze-im-internet.de/gmbhg/__15.html). A GmbH has independent rights and obligations ([section 13 GmbHG](https://www.gesetze-im-internet.de/gmbhg/__13.html)); its directors represent it under [section 35 GmbHG](https://www.gesetze-im-internet.de/gmbhg/__35.html). Consequently, separate share succession, company assets and office/representation succession. Inheritance alone does not appoint an heir as managing director. Do not count company assets again as a shareholder's private assets in addition to the share value. Transfer, redemption, compensation and succession clauses are legal-form- and document-specific review points rather than universal outcome rules.
+
+### SharePoint and graph integration
+
+Plan separate lists for organizations, corporate offices/representation and holdings alongside the person store; documents remain in protected libraries or payload stores. Relationships reference stable domain IDs and carry validity, recording time, sources and review status. Do not duplicate people for each company.
+
+Graph projections distinguish Person → is managing director of → Organization, Person/Organization → holds share in → Organization and Person/Organization → owns → Asset. Corporate office does not automatically grant SharePoint access or NaC approval rights; legal representation and technical authorization remain separate.
+
+### Roadmap effects and additional acceptance criteria
+
+- P0/P1: add organizations and time-dependent offices/holdings. AC-06: one person can be a family member, managing director of several organizations and, if evidenced, shareholder without duplicates; unconfirmed ownership remains unknown.
+- P2/P4: extend the SharePoint adapter and asset projection. AC-07: distinguish organizational ownership, private shares, loans and guarantees; avoid double-counting company value as private wealth.
+- P5: distinguish death, incapacity, end of office and share transfers. AC-08: share succession does not automatically appoint a director, grant a power or technical permission; evaluate representation changes from evidenced combinations and documents.
+- P6: offer family genogram, ownership graph and representation view from the same data version. AC-09: views and scenarios identify date, evidence, open facts and missing rules.
+
+Additional synthetic reference cases: a director without shares; a shareholder-director; two directors with joint representation; a holding-company ownership chain. Vary death or incapacity, an heir's entry into the ownership position and later appointment of a different director. Missing legal form, articles, ownership evidence or representation evidence creates open review points. Show organizational ability to act separately from economic succession effects.
 
 ## Next implementation step
 

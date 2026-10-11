@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-10-10
+Letzte Aktualisierung: 2026-10-11
 
 Issue #620: Aktuelle Mitgliedschaft im jeweiligen Notar-Team ist das Aktenleserecht.
 Die lokale MVP-Umsetzung ersetzt Einzelzuordnung als Lesegate; Fach-, Schreib-,
@@ -304,3 +304,19 @@ gift/will/succession scenarios. P0 defines design/storage boundaries; P1 models
 people/family; P2 validates storage/scale; P3 renders genograms; P4 models assets;
 P5 simulates succession; P6 integrates operation and benchmarks backend choices.
 Production personal and mandate data remain outside Git.
+
+### Scope-Erweiterung 2026-10-11: Gesellschaftsbeziehungen
+
+[Issue #772](https://github.com/notariat8/NaC/issues/772) umfasst zusätzlich
+Organisationen, zeitabhängige Geschäftsführer-/Vertretungsrollen und getrennte
+Gesellschaftsbeteiligungen. P0/P1 erweitern das Modell, P2/P4 Speicher und
+Vermögensprojektion, P5 Tod-/Ausfall-/Anteilsnachfolge-Szenarien und P6 die
+Vertretungsansicht. AC-06–AC-09 stehen in der deutschen Roadmap. Status bleibt
+geplantes Backlog; keine echten Personen-/Unternehmensdaten oder Tenant-Änderungen.
+
+English scope update: organizations, time-dependent managing-director and
+representation roles, and separate holdings are added to issue #772. P0/P1
+extend the model, P2/P4 storage and asset projections, P5 death/incapacity/share
+succession scenarios, and P6 representation views. AC-06–AC-09 are documented
+in the English roadmap. Status remains planned; no actual personal/company
+data or tenant changes.
