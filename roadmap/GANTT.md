@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-10-11
+Letzte Aktualisierung: 2026-10-12
 
 Issue #620: Aktuelle Mitgliedschaft im jeweiligen Notar-Team ist das Aktenleserecht.
 Die lokale MVP-Umsetzung ersetzt Einzelzuordnung als Lesegate; Fach-, Schreib-,
@@ -270,53 +270,27 @@ die technische Mindestprüfung durch:
    Änderungen erfolgen nur bei echter Roadmap-, Scope-, Status- oder
    Meilensteinwirkung.
 
-## Geplanter Workstream: Personen und zeitliche Nachlassszenarien
 
-Aufgenommen am 2026-10-10 über [Issue #772](https://github.com/notariat8/NaC/issues/772).
-Status: Backlog, noch nicht implementiert; bestehende aktive Prioritäten bleiben bestehen.
-Keine verbindlichen Kalendertermine vor Design und Aufwandsschätzung.
+## Externe Schema-Abhängigkeit: ontologie8/schema
 
-Die [deutsche Roadmap](de/personen-nachlass-roadmap.md) beschreibt SharePoint als
-Zielkandidat für Personenstammdaten und Beziehungen, modulare JSON Schemas,
-10.000 synthetische Personen, Genogramme, einen Vermögensgraph und zeitliche
-Schenkungs-/Testaments-/Erbfallszenarien. JSON, RDF/Turtle und eine optionale
-Graphdatenbank werden über ein führendes Modell und messbare Entscheidungsgates
-verbunden. Produktive Personen- und Mandatsdaten bleiben außerhalb von Git.
+Stand: 2026-10-12. Die gesamte Personen-/Familien-/Vermögens-/Unternehmens-
+und Zeitmodell-Roadmap aus [PR #773](https://github.com/notariat8/NaC/pull/773)
+wird im eigenständigen Projekt [ontologie8/schema](https://github.com/ontologie8/schema)
+geführt. [Deutsche Roadmap](https://github.com/ontologie8/schema/blob/main/roadmap/de/personen-nachlass-roadmap.md).
 
-| Phase | Status | Abhängigkeit |
-| --- | --- | --- |
-| P0: Design und SharePoint-Speichergrenze | Geplant | Fachliche und technische Designprüfung |
-| P1: Personen- und Familienmodell | Geplant | P0 |
-| P2: Speicheradapter und 10.000er-Prototyp | Geplant | P1 |
-| P3: Genogramme und Codex-Anbindung | Geplant | P2 |
-| P4: Vermögensgraph und Schenkungen | Geplant | P1/P2 |
-| P5: Zeitliche Nachlassszenarien | Geplant | P3/P4 und freigegebene Fachregeln |
-| P6: Bedienung und Backend-Entscheidung | Geplant | Geprüfte Bausteine aus P1–P5 |
+NaC ist späterer Consumer und hält keine eigene Kopie dieser Roadmap oder
+künftiger Domänenschemas. Bestehende NaC-Prozessverträge und usecase-lokale
+Knowledge Graphs bleiben NaC-Verantwortung. Eine spätere Integration bindet
+freigegebene unveränderliche Schema-/Artefaktversionen und führt eigene
+Kompatibilitätsprüfungen durch. Status: externe Planung; keine Adapter- oder
+Tenant-Implementierung durch diese Migration.
 
 ### English orientation
 
-Added on 2026-10-10 through [issue #772](https://github.com/notariat8/NaC/issues/772).
-Status: planned backlog, not implemented; existing active priorities remain.
-No committed dates before design and estimation. The
-[English roadmap](en/personen-nachlass-roadmap.md) covers SharePoint person storage,
-modular JSON Schemas, 10,000 synthetic people, genograms, asset graphs and temporal
-gift/will/succession scenarios. P0 defines design/storage boundaries; P1 models
-people/family; P2 validates storage/scale; P3 renders genograms; P4 models assets;
-P5 simulates succession; P6 integrates operation and benchmarks backend choices.
-Production personal and mandate data remain outside Git.
-
-### Scope-Erweiterung 2026-10-11: Gesellschaftsbeziehungen
-
-[Issue #772](https://github.com/notariat8/NaC/issues/772) umfasst zusätzlich
-Organisationen, zeitabhängige Geschäftsführer-/Vertretungsrollen und getrennte
-Gesellschaftsbeteiligungen. P0/P1 erweitern das Modell, P2/P4 Speicher und
-Vermögensprojektion, P5 Tod-/Ausfall-/Anteilsnachfolge-Szenarien und P6 die
-Vertretungsansicht. AC-06–AC-09 stehen in der deutschen Roadmap. Status bleibt
-geplantes Backlog; keine echten Personen-/Unternehmensdaten oder Tenant-Änderungen.
-
-English scope update: organizations, time-dependent managing-director and
-representation roles, and separate holdings are added to issue #772. P0/P1
-extend the model, P2/P4 storage and asset projections, P5 death/incapacity/share
-succession scenarios, and P6 representation views. AC-06–AC-09 are documented
-in the English roadmap. Status remains planned; no actual personal/company
-data or tenant changes.
+The complete people/family/assets/corporate/temporal roadmap from PR #773 is
+owned by [ontologie8/schema](https://github.com/ontologie8/schema).
+[English roadmap](https://github.com/ontologie8/schema/blob/main/roadmap/en/personen-nachlass-roadmap.md).
+NaC is a future consumer and maintains no copy of this roadmap or future domain
+schemas. Existing NaC process contracts and usecase-local KGs remain here.
+Future integration binds approved immutable schema/artifact versions with
+compatibility checks. Status: external planning; no adapter or tenant changes.
