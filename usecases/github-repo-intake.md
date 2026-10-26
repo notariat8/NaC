@@ -2,8 +2,6 @@
 
 Scan date: 2026-05-14
 
-Authenticated GitHub user: `ofunk-nvidia`
-
 ## Decision Summary
 
 | Repository | Decision | Reason |
