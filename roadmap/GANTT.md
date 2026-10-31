@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-10-03
+Letzte Aktualisierung: 2026-10-12
 
 Issue #620: Aktuelle Mitgliedschaft im jeweiligen Notar-Team ist das Aktenleserecht.
 Die lokale MVP-Umsetzung ersetzt Einzelzuordnung als Lesegate; Fach-, Schreib-,
@@ -269,3 +269,28 @@ die technische Mindestprüfung durch:
 5. Das Fortschrittsbild wird mindestens wöchentlich gepflegt; tagesaktuelle
    Änderungen erfolgen nur bei echter Roadmap-, Scope-, Status- oder
    Meilensteinwirkung.
+
+
+## Externe Schema-Abhängigkeit: ontologie8/schema
+
+Stand: 2026-10-12. Die gesamte Personen-/Familien-/Vermögens-/Unternehmens-
+und Zeitmodell-Roadmap aus [PR #773](https://github.com/notariat8/NaC/pull/773)
+wird im eigenständigen Projekt [ontologie8/schema](https://github.com/ontologie8/schema)
+geführt. [Deutsche Roadmap](https://github.com/ontologie8/schema/blob/main/roadmap/de/personen-nachlass-roadmap.md).
+
+NaC ist späterer Consumer und hält keine eigene Kopie dieser Roadmap oder
+künftiger Domänenschemas. Bestehende NaC-Prozessverträge und usecase-lokale
+Knowledge Graphs bleiben NaC-Verantwortung. Eine spätere Integration bindet
+freigegebene unveränderliche Schema-/Artefaktversionen und führt eigene
+Kompatibilitätsprüfungen durch. Status: externe Planung; keine Adapter- oder
+Tenant-Implementierung durch diese Migration.
+
+### English orientation
+
+The complete people/family/assets/corporate/temporal roadmap from PR #773 is
+owned by [ontologie8/schema](https://github.com/ontologie8/schema).
+[English roadmap](https://github.com/ontologie8/schema/blob/main/roadmap/en/personen-nachlass-roadmap.md).
+NaC is a future consumer and maintains no copy of this roadmap or future domain
+schemas. Existing NaC process contracts and usecase-local KGs remain here.
+Future integration binds approved immutable schema/artifact versions with
+compatibility checks. Status: external planning; no adapter or tenant changes.
